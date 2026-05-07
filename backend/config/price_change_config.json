@@ -1,0 +1,202 @@
+{
+  "presets": {
+    "favorite": {
+      "label": "持有",
+      "symbols": [
+        { "symbol": "SPY", "type": "stock", "name": "标普500指数ETF" },
+        { "symbol": "QQQ", "type": "stock", "name": "纳斯达克100指数ETF" },
+        { "symbol": "GOOGL", "type": "stock" },
+        { "symbol": "INTC", "type": "stock" },
+        { "symbol": "MRVL", "type": "stock" },
+        { "symbol": "MSFT", "type": "stock" },
+        { "symbol": "NVDA", "type": "stock" },
+        { "symbol": "TSM", "type": "stock" },
+        { "symbol": "ETH", "type": "crypto" },
+        { "symbol": "SOL", "type": "crypto" },
+        { "symbol": "SUI", "type": "crypto" },
+        { "symbol": "PAXG", "type": "crypto", "name": "PAX黄金" }
+      ]
+    },
+    "all": {
+      "label": "全部热门",
+      "symbols": [
+        { "symbol": "SPY", "type": "stock", "name": "标普500指数ETF" },
+        { "symbol": "QQQ", "type": "stock", "name": "纳斯达克100指数ETF" },
+        { "symbol": "000001", "type": "cn_stock", "name": "上证指数" },
+        { "symbol": "000905", "type": "cn_stock", "name": "中证500" },
+        { "symbol": "PAXG", "type": "crypto", "name": "PAX黄金" },
+        { "symbol": "BTC", "type": "crypto" },
+        { "symbol": "NVDA", "type": "stock" },
+        { "symbol": "AAPL", "type": "stock" },
+        { "symbol": "MSFT", "type": "stock" },
+        { "symbol": "GOOGL", "type": "stock" },
+        { "symbol": "AMZN", "type": "stock" },
+        { "symbol": "META", "type": "stock" },
+        { "symbol": "TSLA", "type": "stock" },
+        { "symbol": "ETH", "type": "crypto" },
+        { "symbol": "SOL", "type": "crypto" },
+        { "symbol": "BNB", "type": "crypto" }
+      ]
+    },
+    "tech": {
+      "label": "美股七姐妹",
+      "symbols": [
+        { "symbol": "NVDA", "type": "stock" },
+        { "symbol": "AAPL", "type": "stock" },
+        { "symbol": "MSFT", "type": "stock" },
+        { "symbol": "GOOGL", "type": "stock" },
+        { "symbol": "AMZN", "type": "stock" },
+        { "symbol": "META", "type": "stock" },
+        { "symbol": "TSLA", "type": "stock" }
+      ]
+    },
+    "hot": {
+      "label": "美股热门",
+      "symbols": [
+        { "symbol": "GOOGL", "type": "stock" },
+        { "symbol": "AVGO", "type": "stock" },
+        { "symbol": "AMZN", "type": "stock" },
+        { "symbol": "NVDA", "type": "stock" },
+        { "symbol": "INTC", "type": "stock" },
+        { "symbol": "MU", "type": "stock" },
+        { "symbol": "AMD", "type": "stock" },
+        { "symbol": "MRVL", "type": "stock" },
+        { "symbol": "ARM", "type": "stock" },
+        { "symbol": "WDC", "type": "stock" }
+      ]
+    },
+    "crypto": {
+      "label": "加密货币",
+      "symbols": [
+        { "symbol": "BTC", "type": "crypto" },
+        { "symbol": "ETH", "type": "crypto" },
+        { "symbol": "SOL", "type": "crypto" },
+        { "symbol": "BNB", "type": "crypto" },
+        { "symbol": "XRP", "type": "crypto" },
+        { "symbol": "ADA", "type": "crypto" },
+        { "symbol": "DOT", "type": "crypto" }
+      ]
+    },
+    "etf": {
+      "label": "主流 ETF",
+      "symbols": [
+        { "symbol": "SPY", "type": "stock", "name": "标普500指数ETF" },
+        { "symbol": "QQQ", "type": "stock", "name": "纳斯达克100指数ETF" },
+        { "symbol": "DIA", "type": "stock" },
+        { "symbol": "IWM", "type": "stock" },
+        { "symbol": "GLD", "type": "stock" },
+        { "symbol": "TLT", "type": "stock" },
+        { "symbol": "VTI", "type": "stock" }
+      ]
+    },
+    "cn": {
+      "label": "A股指数",
+      "symbols": [
+        { "symbol": "000001", "type": "cn_stock", "name": "上证指数" },
+        { "symbol": "000905", "type": "cn_stock", "name": "中证500" },
+        { "symbol": "000300", "type": "cn_stock", "name": "沪深300" },
+        { "symbol": "399006", "type": "cn_stock", "name": "创业板指" }
+      ]
+    }
+  },
+  "color_range": {
+    "min": -100,
+    "max": 100
+  },
+  "crypto": {
+    "binance_base_url": "https://api.binance.com",
+    "okx_base_url": "https://www.okx.com",
+    "coingecko_base_url": "https://api.coingecko.com/api/v3",
+    "coin_ids": {
+      "BTC": "bitcoin",
+      "ETH": "ethereum",
+      "SOL": "solana",
+      "BNB": "binancecoin",
+      "XRP": "ripple",
+      "ADA": "cardano",
+      "DOT": "polkadot",
+      "DOGE": "dogecoin",
+      "SHIB": "shiba-inu",
+      "AVAX": "avalanche-2",
+      "MATIC": "matic-network",
+      "LINK": "chainlink",
+      "UNI": "uniswap",
+      "ATOM": "cosmos",
+      "LTC": "litecoin",
+      "BCH": "bitcoin-cash",
+      "TRX": "tron",
+      "ETC": "ethereum-classic",
+      "XLM": "stellar",
+      "VET": "vechain",
+      "FIL": "filecoin",
+      "APT": "aptos",
+      "ARB": "arbitrum",
+      "OP": "optimism",
+      "SUI": "sui",
+      "PEPE": "pepe",
+      "WIF": "dogwifcoin",
+      "FLOKI": "floki",
+      "BONK": "bonk",
+      "AAVE": "aave",
+      "CRV": "curve-dao-token",
+      "MKR": "maker",
+      "COMP": "compound-governance-token",
+      "NEAR": "near",
+      "FTM": "fantom",
+      "EGLD": "elrond-erd-2",
+      "SAND": "the-sandbox",
+      "MANA": "decentraland",
+      "AXS": "axie-infinity",
+      "ALGO": "algorand",
+      "ICP": "internet-computer",
+      "HNT": "helium",
+      "QNT": "quant-network",
+      "ZEC": "zcash",
+      "DASH": "dash",
+      "EOS": "eos",
+      "IOTA": "iota",
+      "XTZ": "tezos",
+      "KSM": "kusama",
+      "YFI": "yearn-finance",
+      "SNX": "synthetix-network-token",
+      "SUSHI": "sushi",
+      "CAKE": "pancakeswap-token",
+      "DYDX": "dydx",
+      "GMX": "gmx",
+      "RUNE": "thorchain",
+      "FET": "fetch-ai",
+      "AGIX": "singularitynet",
+      "OCEAN": "ocean-protocol",
+      "GRT": "the-graph",
+      "ENJ": "enjincoin",
+      "CHZ": "chiliz",
+      "BAT": "basic-attention-token",
+      "ZIL": "zilliqa",
+      "WAVES": "waves",
+      "NEO": "neo",
+      "GALA": "gala",
+      "IMX": "immutable-x",
+      "SEI": "sei-network",
+      "TIA": "celestia",
+      "INJ": "injective-protocol",
+      "STRK": "starknet",
+      "SC": "siacoin",
+      "ANKR": "ankr",
+      "CELO": "celo",
+      "MINA": "mina-protocol",
+      "FLOW": "flow",
+      "KAVA": "kava",
+      "ROSE": "oasis-network",
+      "LUNC": "terra-luna",
+      "USTC": "terrausd",
+      "LUNA": "terra-luna-2",
+      "LDO": "lido-dao",
+      "FXS": "frax-share",
+      "CVX": "convex-finance",
+      "BAL": "balancer",
+      "1INCH": "1inch",
+      "ZRX": "0x",
+      "UMA": "uma"
+    }
+  }
+}
