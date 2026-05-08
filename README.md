@@ -234,6 +234,10 @@ PORT=8080 ./start.sh start
 │   │   └── price_change.py
 │   └── service/
 │       └── price_change/
+│           ├── calculations.py
+│           ├── common.py
+│           ├── config.py
+│           ├── fetchers.py
 │           └── price_change_service.py
 ├── frontend/
 │   ├── price-change.html

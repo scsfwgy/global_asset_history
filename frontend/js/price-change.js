@@ -1120,7 +1120,6 @@ function renderBtChart(equityCurve) {
 
   const W = 700, H = 220, PAD = { top: 32, right: 64, bottom: 30, left: 56 };
   const assetVals = sampledCurve.map((row) => row.value);
-  const investedVals = sampledCurve.map((row) => row.invested);
   const profitVals = sampledCurve.map((row) => row.value - row.invested);
   const minAssetVal = Math.min(...assetVals, 0);
   const maxAssetVal = Math.max(...assetVals, 0);

@@ -57,7 +57,11 @@ GlobalAssetHistory/
 │   │   └── price_change.py
 │   └── service/
 │       └── price_change/
-│           └── price_change_service.py
+│           ├── calculations.py          # 收益计算、日期计划、回测曲线构建
+│           ├── common.py                # PriceSeries、HTTP session、常量
+│           ├── config.py                # 配置加载与访问器
+│           ├── fetchers.py              # Yahoo/Binance/OKX/CoinGecko/East Money fetcher
+│           └── price_change_service.py  # 公共 API 与编排层
 ├── frontend/
 │   ├── price-change.html
 │   ├── css/app.css
@@ -113,12 +117,17 @@ GlobalAssetHistory/
 
 ### 3. Fetcher 注册表
 
-在 `backend/service/price_change/price_change_service.py` 中：
+在 `backend/service/price_change/fetchers.py` 中：
 
 - `_FETCHERS`：旧式 yearly fetcher
 - `_DAILY_SERIES_FETCHERS`：新版日线 fetcher
 
-新增资产类型时优先接 `_DAILY_SERIES_FETCHERS`。
+`price_change_service.py` 会复制这些注册表，并提供：
+
+- `register_fetcher(...)`
+- `register_daily_series_fetcher(...)`
+
+新增资产类型时优先接 daily-series fetcher。
 
 ### 4. 收益计算
 
