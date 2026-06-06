@@ -114,7 +114,7 @@
         summaryDiv.innerHTML = html;
 
         // Table
-        var headHtml = '<th>暴跌日期</th><th>暴跌前收盘价</th><th>暴跌日收盘价</th><th>跌幅</th><th>恢复日期</th><th>恢复天数</th><th>状态</th>';
+        var headHtml = '<th>暴跌日期</th><th>暴跌前收盘价</th><th>暴跌日收盘价</th><th>跌幅</th><th>触底日期</th><th>触底价格</th><th>触底跌幅</th><th>触底天数</th><th>恢复日期</th><th>恢复日收盘价</th><th>恢复天数</th><th>状态</th>';
         tableHead.innerHTML = headHtml;
 
         if (crashes.length === 0) {
@@ -138,7 +138,12 @@
                     '<td>' + c.pre_crash_close.toFixed(2) + '</td>' +
                     '<td style="color:var(--data-negative);">' + c.crash_close.toFixed(2) + '</td>' +
                     '<td style="color:var(--data-negative);font-weight:600;">' + c.drop_pct.toFixed(2) + '%</td>' +
+                    '<td>' + c.bottom_date + '</td>' +
+                    '<td style="color:var(--data-negative);">' + c.bottom_close.toFixed(2) + '</td>' +
+                    '<td style="color:var(--data-negative);font-weight:600;">' + c.bottom_pct.toFixed(2) + '%</td>' +
+                    '<td>' + c.days_to_bottom + '</td>' +
                     '<td>' + (c.recovery_date || "—") + '</td>' +
+                    '<td style="color:var(--data-positive);">' + (c.recovery_close != null ? c.recovery_close.toFixed(2) : "—") + '</td>' +
                     '<td>' + (c.recovery_days != null ? c.recovery_days : "—") + '</td>' +
                     '<td>' + statusHtml + '</td>' +
                     '</tr>';
