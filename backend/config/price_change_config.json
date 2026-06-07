@@ -89,6 +89,18 @@
         { "symbol": "VTI", "type": "stock" }
       ]
     },
+    "core_etf": {
+      "label": "核心美股ETF",
+      "symbols": [
+        { "symbol": "SPY", "type": "stock", "name": "标普500指数ETF" },
+        { "symbol": "VOO", "type": "stock", "name": "先锋标普500" },
+        { "symbol": "QQQ", "type": "stock", "name": "纳斯达克100指数ETF" },
+        { "symbol": "VGT", "type": "stock", "name": "信息技术ETF" },
+        { "symbol": "SMH", "type": "stock", "name": "半导体ETF" },
+        { "symbol": "DRAM", "type": "stock", "name": "内存/存储ETF" },
+        { "symbol": "EWY", "type": "stock", "name": "韩国市场ETF" }
+      ]
+    },
     "cn": {
       "label": "A股指数",
       "symbols": [

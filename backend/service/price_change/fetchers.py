@@ -439,6 +439,22 @@ def _cn_secid(symbol: str) -> str:
     return f"1.{s}"
 
 
+def _cn_stock_secid(code: str) -> str:
+    """Map individual A-share stock code to East Money secid format.
+
+    Individual stock exchange mapping (not indices):
+    - Shenzhen (0.): 000xxx, 001xxx, 002xxx, 003xxx, 300xxx, 301xxx
+    - Shanghai (1.): 600xxx, 601xxx, 603xxx, 605xxx, 688xxx
+    """
+    s = code.strip().upper()
+    if s[:3] in ("000", "001", "002", "003", "300", "301"):
+        return f"0.{s}"
+    if s[:3] in ("600", "601", "603", "605", "688"):
+        return f"1.{s}"
+    # Default: fall back to index-style mapping
+    return _cn_secid(s)
+
+
 def _parse_east_money_klines(data: List[str]) -> tuple:
     """Parse East Money kline strings into (timestamps, closes).
 
@@ -461,6 +477,34 @@ def _parse_east_money_klines(data: List[str]) -> tuple:
         except (ValueError, IndexError):
             continue
     return timestamps, closes
+
+
+def _parse_east_money_klines_full(data: List[str]) -> list:
+    """Parse East Money kline strings returning full OHLC + change_pct.
+
+    Each kline: "date,open,close,high,low,volume,amount,amplitude,
+                  change_pct,change_amount,turnover_rate"
+
+    Returns list of dicts with keys:
+        date_str, open, close, high, low, change_pct
+    """
+    results = []
+    for line in data:
+        parts = line.split(",")
+        if len(parts) < 9:
+            continue
+        try:
+            results.append({
+                "date_str": parts[0],
+                "open": float(parts[1]),
+                "close": float(parts[2]),
+                "high": float(parts[3]),
+                "low": float(parts[4]),
+                "change_pct": float(parts[8]) if parts[8] != "-" else 0.0,
+            })
+        except (ValueError, IndexError):
+            continue
+    return results
 
 
 _EAST_MONEY_PARAMS = {

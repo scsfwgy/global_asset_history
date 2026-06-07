@@ -20,6 +20,10 @@ from .calculations import (
     _series_points_in_range,
 )
 from .crash_stats import compute_crash_statistics
+from .leader_breakout import (
+    export_leader_breakout_excel as _export_leader_breakout_excel,
+    run_leader_breakout_scan as _run_leader_breakout_scan,
+)
 from .common import (
     DAILY_SERIES_TTL_SECONDS,
     ERROR_CACHE_TTL_SECONDS,
@@ -515,3 +519,46 @@ def get_crash_chart_data(payload: Dict) -> Dict:
         "trading_days": trading_days,
         "prices": prices,
     }
+
+
+def run_leader_breakout(payload: Dict) -> Dict:
+    """Scan 沪深主板 stocks for 龙头股回调冲击新高 patterns.
+
+    Request payload (all optional):
+        start_date: str (default "2024-09-30")
+        threshold: float (default 9.5) — limit-up detection threshold %
+        min_consecutive_days: int (default 6) — minimum consecutive limit-up days
+        workers: int (default 10)
+        force_refresh: bool (default false)
+        max_stocks: int (default 0 = all) — for testing
+    """
+    start_date = str(payload.get("start_date", "2024-09-30"))
+    threshold = float(payload.get("threshold", 9.5))
+    min_days = int(payload.get("min_consecutive_days", 6))
+    workers = int(payload.get("workers", 10))
+    force_refresh = bool(payload.get("force_refresh", False))
+    max_stocks = int(payload.get("max_stocks", 0))
+
+    if not start_date:
+        raise ValueError("start_date is required")
+    if threshold <= 0 or threshold > 10:
+        raise ValueError("threshold must be between 0 and 10")
+    if min_days < 2:
+        raise ValueError("min_consecutive_days must be at least 2")
+    if workers < 1 or workers > 50:
+        raise ValueError("workers must be between 1 and 50")
+
+    return _run_leader_breakout_scan(
+        start_date=start_date,
+        threshold=threshold,
+        min_consecutive_days=min_days,
+        workers=workers,
+        force_refresh=force_refresh,
+        max_stocks=max_stocks,
+    )
+
+
+def export_leader_breakout(payload: Dict) -> bytes:
+    """Run the scan (uses cache if available) and return Excel file bytes."""
+    result = run_leader_breakout(payload)
+    return _export_leader_breakout_excel(result)

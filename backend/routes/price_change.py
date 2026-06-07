@@ -15,6 +15,8 @@ from service.price_change.price_change_service import (
     run_dca_backtest,
     run_crash_stats,
     get_crash_chart_data,
+    run_leader_breakout,
+    export_leader_breakout,
 )
 
 logger = logging.getLogger(__name__)
@@ -198,4 +200,38 @@ def crash_chart():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.exception("Failed to get crash chart data: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@price_change_bp.route("/leader-breakout", methods=["POST"])
+def leader_breakout():
+    """Scan 沪深主板 stocks for 连续涨停龙头股回调冲击新高 patterns.
+
+    Long-running request (~2 min for full scan). Results cached 4 hours.
+    """
+    body = request.get_json(silent=True) or {}
+    try:
+        result = run_leader_breakout(body)
+        return jsonify(result)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.exception("Failed to run leader breakout scan: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@price_change_bp.route("/leader-breakout/export", methods=["POST"])
+def leader_breakout_export():
+    """Export leader breakout results as Excel file."""
+    body = request.get_json(silent=True) or {}
+    try:
+        excel_bytes = export_leader_breakout(body)
+        return excel_bytes, 200, {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": "attachment; filename=a_stock_leaders.xlsx",
+        }
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.exception("Failed to export leader breakout: %s", e)
         return jsonify({"error": str(e)}), 500

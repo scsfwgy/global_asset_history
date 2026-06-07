@@ -18,8 +18,10 @@ MAX_YEARLY_WORKERS = 6
 class ThreadLocalSession:
     """Small thread-safe session wrapper for concurrent market-data fetches."""
 
-    def __init__(self) -> None:
+    def __init__(self, trust_env: bool = True, verify: bool = True) -> None:
         self.headers: Dict[str, str] = {}
+        self.trust_env = trust_env
+        self.verify = verify
         self._local = threading.local()
 
     def _get(self) -> requests.Session:
@@ -27,6 +29,10 @@ class ThreadLocalSession:
         if session is None:
             session = requests.Session()
             session.headers.update(self.headers)
+            if not self.trust_env:
+                session.trust_env = False
+            if not self.verify:
+                session.verify = False
             self._local.session = session
         return session
 

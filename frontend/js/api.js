@@ -9,3 +9,5 @@ const DAILY_ENDPOINT = `${API_BASE}/api/price-change/daily`;
 const BACKTEST_ENDPOINT = `${API_BASE}/api/price-change/backtest`;
 const CRASH_STATS_ENDPOINT = `${API_BASE}/api/price-change/crash-stats`;
 const CRASH_CHART_ENDPOINT = `${API_BASE}/api/price-change/crash-chart`;
+const LEADER_BREAKOUT_ENDPOINT = `${API_BASE}/api/price-change/leader-breakout`;
+const LEADER_BREAKOUT_EXPORT_ENDPOINT = `${API_BASE}/api/price-change/leader-breakout/export`;
