@@ -52,8 +52,13 @@ def _cache_ttl(series: PriceSeries) -> int:
     return ERROR_CACHE_TTL_SECONDS if series.error else DAILY_SERIES_TTL_SECONDS
 
 
+# Bump this whenever the cached PriceSeries shape changes, so old entries (which
+# lack new fields) are abandoned instead of served stale. v2 added OHLC.
+_CACHE_SCHEMA_VERSION = "v2"
+
+
 def _redis_key(symbol: str, asset_type: str) -> str:
-    return f"daily:{asset_type}:{symbol}"
+    return f"{_CACHE_SCHEMA_VERSION}:daily:{asset_type}:{symbol}"
 
 
 def _serialize_series(series: PriceSeries) -> str:
