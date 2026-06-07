@@ -9,6 +9,7 @@ from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 
 from routes.price_change import price_change_bp
+from service.price_change import cache_store
 
 app = Flask(__name__, static_folder=None)
 CORS(app)
@@ -18,7 +19,12 @@ app.register_blueprint(price_change_bp)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
-# Visit counter — persisted to /tmp on Vercel, local file for dev
+# Visit counter.
+# Preferred: shared Redis INCR (atomic, cross-instance, survives cold starts).
+# Fallback (no Redis configured, e.g. local dev): a local JSON file. Note the
+# file fallback is per-instance and reset on serverless cold start — it is only
+# reliable on a persistent single-process server.
+_VISIT_KEY = "visit_count"
 _COUNTER_PATH = Path("/tmp/visit_count.json") if os.path.exists("/tmp") else \
     Path(__file__).resolve().parent / "config" / "visit_count.json"
 _counter_lock = threading.Lock()
@@ -45,6 +51,12 @@ def health():
 
 @app.route("/api/visits")
 def visits():
+    # Shared Redis path — atomic, correct across instances.
+    if cache_store.is_enabled():
+        count = cache_store.cache_incr(_VISIT_KEY)
+        if count is not None:
+            return jsonify({"count": count})
+        # Redis transiently unavailable — fall through to the file counter.
     with _counter_lock:
         count = _read_counter() + 1
         _write_counter(count)

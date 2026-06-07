@@ -228,6 +228,26 @@ GlobalAssetHistory/
 |------|--------|------|
 | `PORT` | `8730` | Flask 服务端口 |
 | `HOST` | `0.0.0.0` | Flask 监听地址 |
+| `UPSTASH_REDIS_REST_URL` | 无 | 共享缓存（Upstash Redis REST）地址，未配置则降级为进程内缓存 |
+| `UPSTASH_REDIS_REST_TOKEN` | 无 | Upstash Redis REST token |
+| `KV_REST_API_URL` | 无 | Vercel KV 地址（与 Upstash 命名二选一，自动识别） |
+| `KV_REST_API_TOKEN` | 无 | Vercel KV token |
+
+### 共享缓存（Upstash Redis）
+
+`backend/service/price_change/cache_store.py` 是一个无新依赖（仅用 `requests`）的
+Upstash REST 客户端，作为两级缓存的 L2：
+
+- L1 = 进程内 dict（热实例快，但 Serverless 冷启动被清空、多实例不共享）
+- L2 = 共享 Redis（跨实例、扛冷启动）
+
+接入后每个标的在 TTL（成功 6h / 错误 5min）内**全局最多向上游拉一次**，是
+Serverless 高并发下避免公共数据源限频的关键。访问计数器同样优先走 Redis 原子
+`INCR`。**未配置环境变量时全部优雅降级**，本地开发行为不变。
+
+Vercel 上接入：Marketplace → Upstash → 建 Redis → 连接到项目（自动注入上述
+环境变量）→ 重新部署，无需改代码。
+
 
 ## 修改建议
 

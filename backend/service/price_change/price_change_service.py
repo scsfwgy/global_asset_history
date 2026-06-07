@@ -1,11 +1,13 @@
 """Public API and orchestration for the price change feature."""
 
+import json
 import logging
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import asdict
 from datetime import datetime, timezone
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from .calculations import (
     _build_equity_curve,
@@ -32,9 +34,13 @@ from .common import (
 )
 from .config import get_color_range, get_presets
 from .fetchers import DAILY_SERIES_FETCHERS, FETCHERS
+from . import cache_store
 
 logger = logging.getLogger(__name__)
 
+# L1: in-process cache (fast, but per-instance — wiped on serverless cold start).
+# L2: shared Upstash Redis (cross-instance, survives cold starts). Falls back to
+# L1-only when Redis is not configured (local dev).
 _DAILY_SERIES_CACHE: Dict[Tuple[str, str], PriceSeries] = {}
 _CACHE_LOCK = threading.RLock()
 
@@ -46,11 +52,37 @@ def _cache_ttl(series: PriceSeries) -> int:
     return ERROR_CACHE_TTL_SECONDS if series.error else DAILY_SERIES_TTL_SECONDS
 
 
+def _redis_key(symbol: str, asset_type: str) -> str:
+    return f"daily:{asset_type}:{symbol}"
+
+
+def _serialize_series(series: PriceSeries) -> str:
+    return json.dumps(asdict(series), separators=(",", ":"))
+
+
+def _deserialize_series(raw: str) -> Optional[PriceSeries]:
+    try:
+        return PriceSeries(**json.loads(raw))
+    except (ValueError, TypeError) as e:
+        logger.warning("Failed to deserialize cached series: %s", e)
+        return None
+
+
 def _get_cached_daily_series(symbol: str, asset_type: str) -> PriceSeries | None:
     key = (asset_type, symbol)
+    # L1 — in-process
     with _CACHE_LOCK:
         series = _DAILY_SERIES_CACHE.get(key)
         if series and time.time() - series.fetched_at < _cache_ttl(series):
+            return series
+    # L2 — shared Redis. Redis EX handles expiry, but re-check fetched_at to
+    # guard against clock skew between the writer and this reader.
+    raw = cache_store.cache_get(_redis_key(symbol, asset_type))
+    if raw:
+        series = _deserialize_series(raw)
+        if series and time.time() - series.fetched_at < _cache_ttl(series):
+            with _CACHE_LOCK:
+                _DAILY_SERIES_CACHE[key] = series  # warm L1
             return series
     return None
 
@@ -59,6 +91,7 @@ def _set_cached_daily_series(symbol: str, asset_type: str, series: PriceSeries) 
     key = (asset_type, symbol)
     with _CACHE_LOCK:
         _DAILY_SERIES_CACHE[key] = series
+    cache_store.cache_set(_redis_key(symbol, asset_type), _serialize_series(series), _cache_ttl(series))
     return series
 
 
