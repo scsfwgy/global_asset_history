@@ -1,5 +1,6 @@
 {
   "outputDirectory": "frontend",
+  "regions": ["hkg1"],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
     { "source": "/", "destination": "/price-change.html" }

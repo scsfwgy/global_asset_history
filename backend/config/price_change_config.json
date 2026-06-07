@@ -104,7 +104,7 @@
     "max": 100
   },
   "crypto": {
-    "binance_base_url": "https://api.binance.com",
+    "binance_base_url": "https://data-api.binance.vision",
     "okx_base_url": "https://www.okx.com",
     "coingecko_base_url": "https://api.coingecko.com/api/v3",
     "coin_ids": {
