@@ -82,6 +82,13 @@
             color: var(--apple-text-secondary);
         }
 
+        .visit-badge {
+            font-size: 12px;
+            color: var(--apple-text-secondary);
+            margin-right: 12px;
+            user-select: none;
+        }
+
         /* Status — simplified, no pill */
         .status {
             display: flex;

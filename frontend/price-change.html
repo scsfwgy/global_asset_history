@@ -607,6 +607,7 @@
             </div>
         </div>
         <div class="status">
+            <span class="visit-badge" id="visitBadge">访问次数：⋯</span>
             <div class="status-dot" id="statusDot"></div>
             <span class="status-text" id="statusText">连接中...</span>
         </div>
@@ -834,6 +835,7 @@
     </main>
 
     <script src="js/api.js"></script>
+    <script>fetch('/api/visits').then(r=>r.json()).then(d=>{document.getElementById('visitBadge').textContent='访问次数：'+d.count}).catch(()=>{})</script>
     <script src="js/price-change.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/drilldown.js"></script>
