@@ -282,6 +282,9 @@
             .then(function (data) {
                 if (data.bars && data.bars.length > 0) {
                     _lastChartData = data;
+                    // Show note if premium is approximated
+                    var noteEl = document.getElementById("etfPremiumNote");
+                    if (noteEl) noteEl.style.display = data.premium_approx ? "" : "none";
                     renderChart();
                 } else {
                     document.getElementById("etfChartContainer").innerHTML =

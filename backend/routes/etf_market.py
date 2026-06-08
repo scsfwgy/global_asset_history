@@ -265,31 +265,43 @@ def history():
         # Amount: already in parsed from kline (万元), keep as-is
         # The amount field is already in yuan from the kline parser
 
-    # Fetch NAV history for premium calculation (best-effort)
+    # Fetch NAV history for premium calculation (best-effort).
+    # Falls back to live quote premium if NAV API is unreachable (e.g. from US servers).
     nav_map = _fetch_etf_nav(symbol, parsed[0]["date"], parsed[-1]["date"])
-    for p in parsed:
-        nav = nav_map.get(p["date"])
-        p["nav"] = nav
-        if nav and nav > 0:
-            p["premium_pct"] = round((p["close"] - nav) / nav * 100, 2)
-        else:
-            p["premium_pct"] = None
+    live_premium = _fetch_live_premium(symbol)
 
-    # Backfill latest premium from real-time quote (NAV has T+1 delay)
-    _backfill_live_premium(symbol, parsed)
+    if nav_map:
+        # Calculate premium from NAV vs market close
+        for p in parsed:
+            nav = nav_map.get(p["date"])
+            p["nav"] = nav
+            if nav and nav > 0:
+                p["premium_pct"] = round((p["close"] - nav) / nav * 100, 2)
+            else:
+                p["premium_pct"] = None
+        # Backfill the latest bar from live quote (NAV has T+1 delay)
+        if live_premium is not None and parsed:
+            last = parsed[-1]
+            if last.get("premium_pct") is None:
+                last["premium_pct"] = live_premium
+    elif live_premium is not None:
+        # NAV API unavailable — use live premium as approximation for all bars
+        for p in parsed:
+            p["premium_pct"] = live_premium
+            p["nav"] = None
 
+    premium_approx = bool(not nav_map and live_premium is not None)
     return jsonify({
         "symbol": symbol,
         "bars": parsed,
         "count": len(parsed),
         "has_premium": any(b["premium_pct"] is not None for b in parsed),
+        "premium_approx": premium_approx,
     })
 
 
-def _backfill_live_premium(symbol: str, bars: list) -> None:
-    """Backfill the last bar's premium from real-time quote (NAV has T+1 delay)."""
-    if not bars or bars[-1].get("premium_pct") is not None:
-        return
+def _fetch_live_premium(symbol: str) -> Optional[float]:
+    """Return the current premium rate from the Tencent real-time quote, or None."""
     try:
         tsym = _tencent_symbol(symbol)
         resp = requests.get(
@@ -299,9 +311,10 @@ def _backfill_live_premium(symbol: str, bars: list) -> None:
         resp.raise_for_status()
         parsed = _parse_tencent_quote(resp.text)
         if parsed and parsed.get("premium") is not None:
-            bars[-1]["premium_pct"] = parsed["premium"]
+            return parsed["premium"]
     except Exception as e:
-        logger.warning("Live premium backfill failed for %s: %s", symbol, e)
+        logger.warning("Live premium fetch failed for %s: %s", symbol, e)
+    return None
 
 
 def _fetch_etf_nav(symbol: str, start_date: str, end_date: str) -> dict:
