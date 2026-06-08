@@ -717,6 +717,21 @@
         }
         .wish-card-del:hover { opacity: 1; }
 
+    /* ETF market table */
+    .etf-th-sort { cursor: pointer; user-select: none; }
+    .etf-th-sort:hover { color: var(--apple-text-primary); }
+    .etf-th-sort .etf-sort-arrow { font-size: 10px; margin-left: 2px; opacity: 0.4; }
+    .etf-th-sort.active .etf-sort-arrow { opacity: 1; color: var(--apple-blue); }
+    .etf-th-num { text-align: right; }
+    #etfBody td { font-size: 13px; }
+    #etfBody tr.etf-row { cursor: pointer; }
+    #etfBody tr.etf-row:hover { background: rgba(255,255,255,0.05); }
+    #etfBody tr.etf-row.expanded { background: rgba(0,113,227,0.08); }
+    .etf-pos { color: var(--data-positive); }
+    .etf-neg { color: var(--data-negative); }
+    .etf-badge-sh { display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(255,69,58,0.15);color:var(--data-negative); }
+    .etf-badge-sz { display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(48,209,88,0.15);color:var(--data-positive); }
+    #etfChartContainer { overflow-x: auto; }
     </style>
     <!-- Analytics (Vercel + Cloudflare): injected only on the real deployed
          domain. On localhost the Vercel scripts 404 and the Cloudflare beacon
@@ -751,6 +766,7 @@
         </div>
         <div class="status">
             <div class="nav-links">
+                <a href="/etf-market">A股ETF行情</a>
                 <a href="https://xhslink.com/m/7GJMAttokzI" target="_blank" rel="noopener noreferrer">小红书<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6" fill="#FF2442"/><text x="12" y="16.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle" font-family="-apple-system,Helvetica,Arial,sans-serif">书</text></svg></a>
                 <a href="https://github.com/scsfwgy/global_asset_history" target="_blank" rel="noopener noreferrer">Github<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
             </div>
@@ -767,6 +783,7 @@
             <button class="tab-btn active" data-tab="yearly">历年涨跌幅</button>
             <button class="tab-btn" data-tab="backtest">回测</button>
             <button class="tab-btn" data-tab="crash">暴跌统计</button>
+            <button class="tab-btn" data-tab="etf">标普纳指追踪</button>
             <button class="tab-btn" data-tab="wishes">心愿墙</button>
         </nav>
 
@@ -982,6 +999,54 @@
         </div>
         </div><!-- /tab-leader -->
 
+        <!-- A股ETF 实时行情 -->
+        <div class="tab-panel" id="tab-etf">
+        <div class="pc-monthly">
+            <div class="pc-monthly-header">
+                <span class="pc-chart-title">📊 A股ETF 实时行情 — 追踪美股指数的境内ETF</span>
+                <span id="etfRefreshInfo" style="font-size:12px;color:var(--apple-text-secondary);margin-left:auto;"></span>
+                <button id="etfRefreshBtn" class="pc-btn" style="padding:4px 12px;font-size:12px;margin-left:10px;">刷新行情</button>
+            </div>
+            <div class="transfer-tabs" id="etfTabBar" style="margin-bottom:8px;">
+                <button class="transfer-tab active" data-etf-tab="nasdaq100">纳指100</button>
+                <button class="transfer-tab" data-etf-tab="sp500">标普500</button>
+            </div>
+            <div class="transfer-table-wrap" style="padding:0;">
+                <table class="transfer-table" id="etfTable">
+                    <thead>
+                        <tr>
+                            <th class="etf-th-sort" data-etf-col="code">代码 <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort" data-etf-col="name">名称 <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num active" data-etf-col="price" data-etf-dir="desc">最新价 <span class="etf-sort-arrow">▼</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="change_pct">涨跌幅 <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="open">开盘 <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="high">最高 <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="low">最低 <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="amplitude">振幅 <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="volume">成交量 <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="amount">成交额 <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="turnover">换手率 <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="mc_total">总市值(亿) <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="premium">溢价率 <span class="etf-sort-arrow">⇅</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="etfBody">
+                        <tr><td colspan="13" style="text-align:center;padding:24px;color:var(--apple-text-secondary);">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- ETF detail chart panel -->
+            <div id="etfDetail" style="display:none;margin-top:16px;background:var(--apple-surface-1);border-radius:12px;padding:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <span style="font-size:14px;font-weight:600;" id="etfDetailTitle"></span>
+                    <button id="etfDetailClose" class="pc-btn" style="padding:2px 10px;font-size:12px;">✕</button>
+                </div>
+                <div id="etfDetailStats" style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px;font-size:12px;color:var(--apple-text-secondary);"></div>
+                <div id="etfChartContainer"></div>
+            </div>
+        </div>
+        </div><!-- /tab-etf -->
+
         <!-- 心愿墙 -->
         <div class="tab-panel" id="tab-wishes">
         <div class="pc-monthly">
@@ -1045,6 +1110,7 @@
     <script src="js/backtest.js"></script>
     <script src="js/crash-stats.js"></script>
     <script src="js/leader-breakout.js"></script>
+    <script src="js/etf-market.js"></script>
     <script src="js/wishes.js"></script>
     <script>
         // Tab switching

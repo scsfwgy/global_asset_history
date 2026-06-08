@@ -10,6 +10,7 @@ from flask_cors import CORS
 
 from routes.price_change import price_change_bp
 from routes.wishes import wishes_bp
+from routes.etf_market import etf_market_bp
 from service.price_change import cache_store, diagnostics
 
 app = Flask(__name__, static_folder=None)
@@ -18,6 +19,7 @@ logging.basicConfig(level=logging.INFO)
 
 app.register_blueprint(price_change_bp)
 app.register_blueprint(wishes_bp)
+app.register_blueprint(etf_market_bp)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -44,6 +46,11 @@ def _read_counter() -> int:
 def _write_counter(count: int) -> None:
     _COUNTER_PATH.parent.mkdir(parents=True, exist_ok=True)
     _COUNTER_PATH.write_text(json.dumps({"count": count}))
+
+
+@app.route("/etf-market")
+def etf_market():
+    return send_from_directory(str(FRONTEND_DIR), "etf-market.html")
 
 
 @app.route("/api/health")

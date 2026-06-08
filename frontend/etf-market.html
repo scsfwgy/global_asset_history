@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股ETF 实时行情 — GlobalAssetHistory</title>
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .etf-market-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+        .etf-market-container h2 {
+            font-size: 18px; font-weight: 600; padding: 20px 0 16px;
+        }
+        .etf-sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        .etf-sortable:hover { color: var(--apple-text-primary); }
+        .etf-sortable .sort-arrow { font-size: 10px; margin-left: 2px; opacity: 0.4; }
+        .etf-sortable.active .sort-arrow { opacity: 1; color: var(--apple-blue); }
+        .etf-num { text-align: right; font-variant-numeric: tabular-nums; }
+        .etf-positive { color: var(--data-positive); }
+        .etf-negative { color: var(--data-negative); }
+        .etf-badge-sh {
+            display: inline-block; padding: 1px 6px; border-radius: 4px;
+            font-size: 11px; font-weight: 600;
+            background: rgba(255,69,58,0.15); color: var(--data-negative);
+        }
+        .etf-badge-sz {
+            display: inline-block; padding: 1px 6px; border-radius: 4px;
+            font-size: 11px; font-weight: 600;
+            background: rgba(48,209,88,0.15); color: var(--data-positive);
+        }
+        .etf-refresh-bar {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 12px; color: var(--apple-text-secondary);
+        }
+        .etf-refresh-bar .dot {
+            width: 6px; height: 6px; border-radius: 50%; background: var(--data-positive);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="logo">
+        <span class="header-left"><a href="/">⬅ GlobalAssetHistory</a></span>
+    </div>
+    <div class="etf-refresh-bar">
+        <span class="dot" id="refreshDot"></span>
+        <span id="refreshTime">--</span>
+        <button onclick="fetchQuotes()" style="background:var(--apple-surface-1);border:none;color:var(--apple-text-primary);padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer">刷新</button>
+    </div>
+</div>
+
+<div class="etf-market-container">
+    <h2>A股ETF 实时行情</h2>
+
+    <div class="transfer-tabs" id="tabBar">
+        <button class="transfer-tab active" data-tab="nasdaq100">纳指100</button>
+        <button class="transfer-tab" data-tab="sp500">标普500</button>
+    </div>
+
+    <div class="transfer-table-wrap" style="margin-top:12px">
+        <table class="transfer-table" id="etfTable">
+            <thead>
+                <tr>
+                    <th class="etf-sortable" data-col="code">代码 <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable" data-col="name">名称 <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num active" data-col="price" data-dir="desc">最新价 <span class="sort-arrow">▼</span></th>
+                    <th class="etf-sortable etf-num" data-col="change_pct">涨跌幅 <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="open">开盘 <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="high">最高 <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="low">最低 <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="amplitude">振幅 <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="volume">成交量(手) <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="amount">成交额 <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="turnover">换手率 <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="mc_total">总市值(亿) <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="premium">溢价率 <span class="sort-arrow">⇅</span></th>
+                </tr>
+            </thead>
+            <tbody id="etfBody">
+                <tr><td colspan="13" class="transfer-loading">加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="/js/etf-market.js"></script>
+</body>
+</html>
