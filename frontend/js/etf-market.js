@@ -37,6 +37,13 @@
     var _sortCol = "price";
     var _sortDir = "desc";
     var _expandedCode = null;
+    var _lastChartData = null;
+
+    /* ── Chart layer visibility ── */
+    function isLayerOn(name) {
+        var btn = document.querySelector('#etfChartToggles [data-etf-layer="' + name + '"]');
+        return btn ? btn.classList.contains("active") : true;
+    }
 
     /* ── Chart constants ── */
     var CHART_COLORS = {
@@ -85,6 +92,15 @@
         // Detail close
         var closeBtn = document.getElementById("etfDetailClose");
         if (closeBtn) closeBtn.addEventListener("click", function () { hideDetail(); });
+
+        // Chart layer toggles
+        document.querySelectorAll("#etfChartToggles .transfer-tab").forEach(function (btn) {
+            btn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                btn.classList.toggle("active");
+                if (_expandedCode) renderChartFromCache();
+            });
+        });
 
         fetchQuotes();
     }
@@ -258,7 +274,8 @@
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 if (data.bars && data.bars.length > 0) {
-                    renderChart(data.bars, code, name);
+                    _lastChartData = data;
+                    renderChart();
                 } else {
                     document.getElementById("etfChartContainer").innerHTML =
                         '<div style="text-align:center;padding:24px;color:var(--apple-text-secondary);">暂无历史数据</div>';
@@ -285,8 +302,16 @@
         return null;
     }
 
-    /* ── SVG Candlestick + change% chart ── */
-    function renderChart(bars, code, name) {
+    function renderChartFromCache() {
+        if (_lastChartData) renderChart();
+    }
+
+    /* ── SVG Candlestick + change% + premium chart ── */
+    function renderChart() {
+        var bars = _lastChartData.bars;
+        var hasPremium = _lastChartData.has_premium;
+        if (!bars || !bars.length) return;
+
         var W = 900, H = 340;
         var PAD = { top: 20, right: 20, bottom: 36, left: 56 };
         var plotW = W - PAD.left - PAD.right;
@@ -330,7 +355,12 @@
             svg += '<text x="' + (PAD.left - 6) + '" y="' + (y + 4) + '" fill="' + CHART_COLORS.textDim + '" font-size="10" text-anchor="end">' + val.toFixed(2) + "</text>";
         }
 
+        var showChange = isLayerOn("change");
+        var showCandle = isLayerOn("candle");
+        var showPremium = isLayerOn("premium");
+
         // Candlesticks
+        if (showCandle) {
         var slotW = Math.min(plotW / n, 10);
         bars.forEach(function (b, i) {
             var cx = xScale(i);
@@ -350,28 +380,56 @@
             var bodyTop = isUp ? yClose : yOpen;
             svg += '<rect x="' + (cx - bodyW / 2) + '" y="' + bodyTop + '" width="' + bodyW + '" height="' + bodyH + '" fill="' + color + '" stroke="' + color + '" stroke-width="0.5"/>';
         });
+        }
 
         // Daily change% line (overlay on a right-side scale)
-        if (bars.length > 1 && cPctMax > 0) {
-            var chY = function (cp) { return PAD.top + plotH / 2 - (cp / cPctMax) * (plotH / 2); };
-            var zeroY = chY(0);
-            var dimColor = "rgba(255,255,255,0.35)";
 
-            // Zero line
+        // --- Shared zero-reference line (used by both change% and premium) ---
+        var chY = function (cp) { return PAD.top + plotH / 2 - (cp / cPctMax) * (plotH / 2); };
+        var zeroY = chY(0);
+        var dimColor = "rgba(255,255,255,0.35)";
+
+        if ((showChange && cPctMax > 0) || showPremium) {
             svg += '<line x1="' + PAD.left + '" y1="' + zeroY + '" x2="' + (W - PAD.right) + '" y2="' + zeroY + '" stroke="' + dimColor + '" stroke-width="0.5" stroke-dasharray="3,3"/>';
+        }
 
-            // Change% labels on right
+        // --- Change% layer ---
+        if (showChange && bars.length > 1 && cPctMax > 0) {
             svg += '<text x="' + (W - PAD.right + 4) + '" y="' + (PAD.top + 12) + '" fill="' + dimColor + '" font-size="9">' + "+" + cPctMax.toFixed(1) + "%" + "<" + "/text>";
             svg += '<text x="' + (W - PAD.right + 4) + '" y="' + (zeroY + 4) + '" fill="' + dimColor + '" font-size="9">' + "0%" + "<" + "/text>";
             svg += '<text x="' + (W - PAD.right + 4) + '" y="' + (H - PAD.bottom + 4) + '" fill="' + dimColor + '" font-size="9">' + "-" + cPctMax.toFixed(1) + "%" + "<" + "/text>";
 
-            // Line
             var chPath = "";
             bars.forEach(function (b, i) {
                 var y = chY(b.change_pct);
                 chPath += (i === 0 ? "M" : "L") + xScale(i).toFixed(1) + "," + y.toFixed(1) + " ";
             });
             svg += '<path d="' + chPath + '" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+        }
+
+        // --- Premium rate layer ---
+        if (showPremium && hasPremium) {
+            var premValues = bars.map(function (b) { return b.premium_pct; }).filter(function (v) { return v != null; });
+            if (premValues.length > 0) {
+                var maxPrem = Math.max.apply(null, premValues.map(Math.abs));
+                if (maxPrem === 0) maxPrem = 1;
+                var premY = function (p) { return zeroY - (p / maxPrem) * (plotH / 2); };
+
+                // Premium line
+                var premPath = "";
+                bars.forEach(function (b, i) {
+                    if (b.premium_pct == null) return;
+                    var y = premY(b.premium_pct);
+                    premPath += (premPath ? "L" : "M") + xScale(i).toFixed(1) + "," + y.toFixed(1) + " ";
+                });
+                if (premPath) {
+                    svg += '<path d="' + premPath + '" fill="none" stroke="#ff9f0a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>';
+                }
+
+                // Premium labels on far right
+                svg += '<text x="' + (W - PAD.right + 40) + '" y="' + (PAD.top + 12) + '" fill="#ff9f0a" font-size="9">+' + maxPrem.toFixed(1) + "%" + "<" + "/text>";
+                svg += '<text x="' + (W - PAD.right + 40) + '" y="' + (H - PAD.bottom + 4) + '" fill="#ff9f0a" font-size="9">-' + maxPrem.toFixed(1) + "%" + "<" + "/text>";
+            }
         }
 
         // X-axis date labels
@@ -384,12 +442,22 @@
             svg += '<line x1="' + cx + '" y1="' + (H - PAD.bottom) + '" x2="' + cx + '" y2="' + (H - PAD.bottom + 5) + '" stroke="' + CHART_COLORS.textDim + '" stroke-width="0.5"/>';
         });
 
-        // Legend
-        svg += '<rect x="' + (PAD.left + 4) + '" y="' + (PAD.top + 2) + '" width="10" height="10" fill="' + CHART_COLORS.candleUp + '" rx="1"/>';
-        svg += '<text x="' + (PAD.left + 18) + '" y="' + (PAD.top + 11) + '" fill="' + CHART_COLORS.text + '" font-size="10">蜡烛图(OHLC)</text>';
-        var lg2x = PAD.left + 120;
-        svg += '<line x1="' + lg2x + '" y1="' + (PAD.top + 7) + '" x2="' + (lg2x + 22) + '" y2="' + (PAD.top + 7) + '" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/>';
-        svg += '<text x="' + (lg2x + 26) + '" y="' + (PAD.top + 11) + '" fill="' + CHART_COLORS.text + '" font-size="10">日涨跌幅</text>';
+        // Legend — only show active layers
+        var lgX = PAD.left + 4;
+        if (showCandle) {
+            svg += '<rect x="' + lgX + '" y="' + (PAD.top + 2) + '" width="10" height="10" fill="' + CHART_COLORS.candleUp + '" rx="1"/>';
+            svg += '<text x="' + (lgX + 14) + '" y="' + (PAD.top + 11) + '" fill="' + CHART_COLORS.text + '" font-size="10">蜡烛图</text>';
+            lgX += 68;
+        }
+        if (showChange) {
+            svg += '<line x1="' + lgX + '" y1="' + (PAD.top + 7) + '" x2="' + (lgX + 20) + '" y2="' + (PAD.top + 7) + '" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/>';
+            svg += '<text x="' + (lgX + 24) + '" y="' + (PAD.top + 11) + '" fill="' + CHART_COLORS.text + '" font-size="10">涨跌幅</text>';
+            lgX += 68;
+        }
+        if (showPremium && hasPremium) {
+            svg += '<line x1="' + lgX + '" y1="' + (PAD.top + 7) + '" x2="' + (lgX + 20) + '" y2="' + (PAD.top + 7) + '" stroke="#ff9f0a" stroke-width="1.8"/>';
+            svg += '<text x="' + (lgX + 24) + '" y="' + (PAD.top + 11) + '" fill="' + CHART_COLORS.text + '" font-size="10">溢价率</text>';
+        }
 
         document.getElementById("etfChartContainer").innerHTML =
             '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;font-family:-apple-system,SF Pro Text,Helvetica,Arial,sans-serif;">' +

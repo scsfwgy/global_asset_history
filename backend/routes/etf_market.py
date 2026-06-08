@@ -10,6 +10,13 @@ from flask import Blueprint, jsonify, request
 
 logger = logging.getLogger(__name__)
 
+# East Money fund NAV — tries to import akshare, falls back gracefully
+try:
+    import akshare as _ak
+    _HAS_AKSHARE = True
+except ImportError:
+    _HAS_AKSHARE = False
+
 etf_market_bp = Blueprint("etf_market", __name__, url_prefix="/api/etf-market")
 
 _TENCENT_QUOTE_URL = "https://qt.gtimg.cn/q="
@@ -254,8 +261,43 @@ def history():
         else:
             p["change_pct"] = 0
 
+    # Fetch NAV history for premium calculation (best-effort)
+    nav_map = _fetch_etf_nav(symbol, parsed[0]["date"], parsed[-1]["date"])
+    for p in parsed:
+        nav = nav_map.get(p["date"])
+        p["nav"] = nav
+        if nav and nav > 0:
+            p["premium_pct"] = round((p["close"] - nav) / nav * 100, 2)
+        else:
+            p["premium_pct"] = None
+
     return jsonify({
         "symbol": symbol,
         "bars": parsed,
         "count": len(parsed),
+        "has_premium": any(b["premium_pct"] is not None for b in parsed),
     })
+
+
+def _fetch_etf_nav(symbol: str, start_date: str, end_date: str) -> dict:
+    """Fetch ETF NAV history from East Money fund API. Returns {date_str: nav}."""
+    if not _HAS_AKSHARE:
+        return {}
+    try:
+        s = start_date.replace("-", "")
+        e = end_date.replace("-", "")
+        df = _ak.fund_etf_fund_info_em(fund=symbol, start_date=s, end_date=e)
+        if df is None or df.empty:
+            return {}
+        nav_map = {}
+        for _, row in df.iterrows():
+            dt = row["净值日期"]
+            if hasattr(dt, "strftime"):
+                dt = dt.strftime("%Y-%m-%d")
+            else:
+                dt = str(dt)[:10]
+            nav_map[dt] = float(row["单位净值"])
+        return nav_map
+    except Exception as e:
+        logger.warning("NAV fetch failed for %s: %s", symbol, e)
+        return {}

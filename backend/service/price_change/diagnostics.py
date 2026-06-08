@@ -95,6 +95,17 @@ def _probe_coingecko() -> Dict:
     return out
 
 
+def _probe_tencent() -> Dict:
+    """Tencent Finance real-time quote — used for A-share ETF & index data."""
+    resp = requests.get(
+        "https://qt.gtimg.cn/q=sh000001",
+        headers=_HEADERS,
+        timeout=_PROBE_TIMEOUT,
+    )
+    ok = resp.status_code == 200 and 'v_sh000001="' in resp.text
+    return {"ok": ok, "status": resp.status_code}
+
+
 def _probe_east_money() -> Dict:
     # No dedicated health endpoint; ask for a tiny slice of the SSE Composite.
     resp = requests.get(
@@ -121,6 +132,7 @@ _PROBES: List = [
     ("binance", "crypto", _probe_binance),
     ("okx", "crypto", _probe_okx),
     ("coingecko", "crypto", _probe_coingecko),
+    ("tencent", "cn_stock", _probe_tencent),
     ("eastmoney", "cn_stock", _probe_east_money),
 ]
 
