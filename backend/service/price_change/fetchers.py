@@ -609,7 +609,7 @@ def _fetch_daily_series_cn_stock_tencent(symbol: str) -> PriceSeries:
 
         data = body.get("data", {})
         stock_data = data.get(tencent_sym, {})
-        days = stock_data.get("day", [])
+        days = stock_data.get("day") or stock_data.get("qfqday", [])
         if not days:
             break
 

@@ -212,7 +212,7 @@ def history():
             break
 
         stock_data = body.get("data", {}).get(tsym, {})
-        page_rows = stock_data.get("day", [])
+        page_rows = stock_data.get("day") or stock_data.get("qfqday", [])
         if not page_rows:
             break
 
