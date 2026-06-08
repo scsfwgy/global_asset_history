@@ -718,8 +718,26 @@
         .wish-card-del:hover { opacity: 1; }
 
     </style>
-    <script defer src="/_vercel/insights/script.js"></script>
-    <script defer src="/_vercel/speed-insights/script.js"></script>
+    <!-- Analytics (Vercel + Cloudflare): injected only on the real deployed
+         domain. On localhost the Vercel scripts 404 and the Cloudflare beacon
+         fails CORS (its RUM endpoint rejects the localhost origin), so we skip
+         them locally to keep the dev console clean. Production is unaffected. -->
+    <script>
+      (function () {
+        var h = location.hostname;
+        if (h === "localhost" || h === "127.0.0.1" || h === "0.0.0.0" || h === "") return;
+        var add = function (src, beacon) {
+          var s = document.createElement("script");
+          s.defer = true;
+          s.src = src;
+          if (beacon) s.setAttribute("data-cf-beacon", beacon);
+          document.head.appendChild(s);
+        };
+        add("/_vercel/insights/script.js");
+        add("/_vercel/speed-insights/script.js");
+        add("https://static.cloudflareinsights.com/beacon.min.js", '{"token": "02266fe1fd774187841f500f874e823e"}');
+      })();
+    </script>
 </head>
 <body>
     <header class="header">
