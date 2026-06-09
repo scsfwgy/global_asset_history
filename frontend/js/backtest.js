@@ -1,5 +1,16 @@
 /** Backtest controls, chart, and result table. */
 
+function getChartColors() {
+  const s = getComputedStyle(document.documentElement);
+  return {
+    invested: s.getPropertyValue('--apple-chart-invested').trim() || 'rgba(255,255,255,0.55)',
+    guide: s.getPropertyValue('--apple-chart-guide').trim() || 'rgba(255,255,255,0.18)',
+    tooltipBg: s.getPropertyValue('--apple-tooltip-bg').trim() || 'rgba(24,24,26,0.96)',
+    tooltipBorder: s.getPropertyValue('--apple-tooltip-border').trim() || 'rgba(255,255,255,0.12)',
+    tooltipText: s.getPropertyValue('--apple-tooltip-text').trim() || '#fff',
+  };
+}
+
 function getBacktestSampleSize() {
   const raw = parseInt(btSampleSize?.value, 10);
   return Number.isFinite(raw) ? Math.max(BACKTEST_MIN_SAMPLE, raw) : BACKTEST_DEFAULT_SAMPLE;
@@ -116,6 +127,7 @@ async function runBacktest() {
 
 function renderBtChart(equityCurve) {
   if (!equityCurve || equityCurve.length === 0) return;
+  const c = getChartColors();
   const sampledCurve = sampleEvenly(equityCurve, getBacktestSampleSize());
 
   const W = 700, H = 220, PAD = { top: 32, right: 64, bottom: 30, left: 56 };
@@ -183,7 +195,7 @@ function renderBtChart(equityCurve) {
     const profitY1 = profitYPos(sampledCurve[i].value - sampledCurve[i].invested), profitY2 = profitYPos(sampledCurve[i + 1].value - sampledCurve[i + 1].invested);
     const investedY1 = assetYPos(sampledCurve[i].invested), investedY2 = assetYPos(sampledCurve[i + 1].invested);
     assetLines += `<line x1="${x1}" y1="${assetY1}" x2="${x2}" y2="${assetY2}" stroke="#2997ff" stroke-width="1.5" stroke-linecap="round" opacity="0.9"/>`;
-    investedLine += `<line x1="${x1}" y1="${investedY1}" x2="${x2}" y2="${investedY2}" stroke="rgba(255,255,255,0.55)" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>`;
+    investedLine += `<line x1="${x1}" y1="${investedY1}" x2="${x2}" y2="${investedY2}" stroke="${c.invested}" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>`;
   }
   sampledCurve.forEach((row, idx) => {
     profitPolylinePoints.push({ x: xPos(idx), y: profitYPos(row.value - row.invested), profit: row.value - row.invested });
@@ -245,7 +257,7 @@ function renderBtChart(equityCurve) {
   const legend = `
     <rect x="${PAD.left}" y="14" width="8" height="2.5" rx="1.25" fill="#2997ff"/>
     <text x="${PAD.left + 12}" y="17" fill="var(--apple-text-secondary)" font-size="10">总资产</text>
-    <rect x="${PAD.left + 60}" y="14" width="8" height="2.5" rx="1.25" fill="rgba(255,255,255,0.55)"/>
+    <rect x="${PAD.left + 60}" y="14" width="8" height="2.5" rx="1.25" fill="${c.invested}"/>
     <text x="${PAD.left + 72}" y="17" fill="var(--apple-text-secondary)" font-size="10">累计投入</text>
     <rect x="${PAD.left + 136}" y="11" width="8" height="8" rx="1.5" fill="rgba(48,209,88,0.22)" stroke="rgba(48,209,88,0.88)"/>
     <text x="${PAD.left + 148}" y="17" fill="var(--apple-text-secondary)" font-size="10">总收益</text>
@@ -270,13 +282,13 @@ function renderBtChart(equityCurve) {
 
   const tooltip = `
     <g id="btTooltip" style="display:none;pointer-events:none;">
-      <line id="btTooltipGuide" x1="0" y1="${PAD.top}" x2="0" y2="${PAD.top + ch}" stroke="rgba(255,255,255,0.18)" stroke-width="1" stroke-dasharray="4,3"/>
-      <rect id="btTooltipBg" x="0" y="0" width="168" height="88" rx="8" fill="rgba(24,24,26,0.96)" stroke="rgba(255,255,255,0.12)"/>
-      <text id="btTooltipDate" x="10" y="16" fill="#fff" font-size="11"></text>
+      <line id="btTooltipGuide" x1="0" y1="${PAD.top}" x2="0" y2="${PAD.top + ch}" stroke="${c.guide}" stroke-width="1" stroke-dasharray="4,3"/>
+      <rect id="btTooltipBg" x="0" y="0" width="168" height="88" rx="8" fill="${c.tooltipBg}" stroke="${c.tooltipBorder}"/>
+      <text id="btTooltipDate" x="10" y="16" fill="${c.tooltipText}" font-size="11"></text>
       <text id="btTooltipAsset" x="10" y="32" fill="#2997ff" font-size="11"></text>
       <text id="btTooltipInvested" x="10" y="48" fill="var(--apple-text-secondary)" font-size="11"></text>
       <text id="btTooltipProfit" x="10" y="64" fill="#30d158" font-size="11"></text>
-      <text id="btTooltipReturn" x="10" y="80" fill="#fff" font-size="11"></text>
+      <text id="btTooltipReturn" x="10" y="80" fill="${c.tooltipText}" font-size="11"></text>
     </g>
   `;
 

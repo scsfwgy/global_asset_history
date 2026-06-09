@@ -60,17 +60,22 @@
         return active ? active.dataset.etfChart : "candle";
     }
 
-    /* ── Chart constants ── */
-    var CHART_COLORS = {
-        candleUp: "#30d158",
-        candleDown: "#ff453a",
-        grid: "rgba(255,255,255,0.08)",
-        text: "rgba(255,255,255,0.6)",
-        textDim: "rgba(255,255,255,0.35)",
-        dim: "rgba(255,255,255,0.35)",
-        crosshair: "rgba(255,255,255,0.25)",
-        tooltipBg: "rgba(0,0,0,0.85)",
-    };
+    /* ── Chart colors (read from CSS variables for theme support) ── */
+    function getEtfChartColors() {
+        var s = getComputedStyle(document.documentElement);
+        return {
+            candleUp: "#30d158",
+            candleDown: "#ff453a",
+            grid: s.getPropertyValue('--apple-chart-grid').trim() || 'rgba(255,255,255,0.08)',
+            text: s.getPropertyValue('--apple-chart-text').trim() || 'rgba(255,255,255,0.6)',
+            textDim: s.getPropertyValue('--apple-chart-text-dim').trim() || 'rgba(255,255,255,0.35)',
+            dim: s.getPropertyValue('--apple-chart-text-dim').trim() || 'rgba(255,255,255,0.35)',
+            crosshair: s.getPropertyValue('--apple-chart-crosshair').trim() || 'rgba(255,255,255,0.25)',
+            tooltipBg: s.getPropertyValue('--apple-tooltip-bg').trim() || 'rgba(0,0,0,0.85)',
+            tooltipText: s.getPropertyValue('--apple-tooltip-text').trim() || '#fff',
+            chartColor: s.getPropertyValue('--apple-chart-color').trim() || 'rgba(255,255,255,0.7)',
+        };
+    }
 
     /* ── Init ── */
     function init() {
@@ -415,6 +420,7 @@
         var hasPremium = _lastChartData.has_premium;
         if (!bars || !bars.length) return;
 
+        var CLR = getEtfChartColors();
         var chartType = activeChartType();
         var W = 900, H = 340;
         var PAD = { top: 20, right: 20, bottom: 36, left: 56 };
@@ -430,9 +436,9 @@
 
         // Crosshair + hover tooltip layer
         var hoverId = "etfHover_" + chartType;
-        svg += '<line id="' + hoverId + '_line" x1="0" y1="0" x2="0" y2="' + H + '" stroke="' + CHART_COLORS.crosshair + '" stroke-width="1" stroke-dasharray="4,2" style="display:none;pointer-events:none"' + "/>";
-        svg += '<rect id="' + hoverId + '_tip" x="0" y="0" width="160" height="1" rx="6" fill="' + CHART_COLORS.tooltipBg + '" style="display:none;pointer-events:none"' + "/>";
-        svg += '<text id="' + hoverId + '_text" x="0" y="0" fill="#fff" font-size="11" style="display:none;pointer-events:none"' + ">" + C + "text>";
+        svg += '<line id="' + hoverId + '_line" x1="0" y1="0" x2="0" y2="' + H + '" stroke="' + CLR.crosshair + '" stroke-width="1" stroke-dasharray="4,2" style="display:none;pointer-events:none"' + "/>";
+        svg += '<rect id="' + hoverId + '_tip" x="0" y="0" width="160" height="1" rx="6" fill="' + CLR.tooltipBg + '" style="display:none;pointer-events:none"' + "/>";
+        svg += '<text id="' + hoverId + '_text" x="0" y="0" fill="' + CLR.tooltipText + '" font-size="11" style="display:none;pointer-events:none"' + ">" + C + "text>";
 
         // Invisible hover zones
         var slotW = plotW / Math.max(n - 1, 1);
@@ -515,6 +521,7 @@
 
     /* ── buildChartBody — single-type chart rendering ── */
     function buildChartBody(chartType, bars, hasPremium, W, H, PAD, plotW, plotH, n, xScale) {
+        var CLR = getEtfChartColors();
         var svg = '<rect width="' + W + '" height="' + H + '" fill="transparent"' + "/>";
         var gridLines = 5;
 
@@ -533,15 +540,15 @@
             for (var g = 0; g <= gridLines; g++) {
                 var val = minV + (vRange / gridLines) * g;
                 var y = yScale(val);
-                svg += '<line x1="' + PAD.left + '" y1="' + y + '" x2="' + (W - PAD.right) + '" y2="' + y + '" stroke="' + CHART_COLORS.grid + '" stroke-width="0.5"' + "/>";
-                svg += '<text x="' + (PAD.left - 6) + '" y="' + (y + 4) + '" fill="' + CHART_COLORS.textDim + '" font-size="10" text-anchor="end">' + val.toFixed(2) + C + "text>";
+                svg += '<line x1="' + PAD.left + '" y1="' + y + '" x2="' + (W - PAD.right) + '" y2="' + y + '" stroke="' + CLR.grid + '" stroke-width="0.5"' + "/>";
+                svg += '<text x="' + (PAD.left - 6) + '" y="' + (y + 4) + '" fill="' + CLR.textDim + '" font-size="10" text-anchor="end">' + val.toFixed(2) + C + "text>";
             }
 
             var slotW = Math.min(plotW / n, 10);
             for (var i = 0; i < n; i++) {
                 var b = bars[i], cx = xScale(i);
                 var isUp = b.close >= b.open;
-                var color = isUp ? CHART_COLORS.candleUp : CHART_COLORS.candleDown;
+                var color = isUp ? CLR.candleUp : CLR.candleDown;
                 var yHigh = yScale(b.high), yLow = yScale(b.low);
                 var yOpen = yScale(b.open), yClose = yScale(b.close);
 
@@ -552,13 +559,13 @@
                 var bodyTop = isUp ? yClose : yOpen;
                 svg += '<rect x="' + (cx - bodyW / 2) + '" y="' + bodyTop + '" width="' + bodyW + '" height="' + bodyH + '" fill="' + color + '" stroke="' + color + '" stroke-width="0.5"' + "/>";
             }
-            svg += '<text x="' + (PAD.left + 4) + '" y="' + (PAD.top + 11) + '" fill="' + CHART_COLORS.text + '" font-size="10">蜡烛图 (OHLC)' + C + "text>";
-            svg = addXAxis(svg, bars, n, xScale, H, PAD);
+            svg += '<text x="' + (PAD.left + 4) + '" y="' + (PAD.top + 11) + '" fill="' + CLR.text + '" font-size="10">蜡烛图 (OHLC)' + C + "text>";
+            svg = addXAxis(svg, bars, n, xScale, H, PAD, CLR);
             return svg;
         }
 
         // ── LINE CHARTS (change%, premium, amplitude, amount) ──
-        var values = [], label = "", unit = "", color = "rgba(255,255,255,0.7)", symmetric = false;
+        var values = [], label = "", unit = "", color = CLR.chartColor, symmetric = false;
 
         if (chartType === "change") {
             for (var i = 0; i < n; i++) values.push(bars[i].change_pct);
@@ -601,17 +608,17 @@
         for (var g = 0; g <= gridLines; g++) {
             var val = dataMin + (dRange / gridLines) * g;
             var y = ly(val);
-            svg += '<line x1="' + PAD.left + '" y1="' + y + '" x2="' + (W - PAD.right) + '" y2="' + y + '" stroke="' + CHART_COLORS.grid + '" stroke-width="0.5"' + "/>";
+            svg += '<line x1="' + PAD.left + '" y1="' + y + '" x2="' + (W - PAD.right) + '" y2="' + y + '" stroke="' + CLR.grid + '" stroke-width="0.5"' + "/>";
             var lbl;
             if (chartType === "amount") lbl = (val / 1e8).toFixed(1);
             else lbl = val.toFixed(1) + unit;
-            svg += '<text x="' + (PAD.left - 6) + '" y="' + (y + 4) + '" fill="' + CHART_COLORS.textDim + '" font-size="10" text-anchor="end">' + lbl + C + "text>";
+            svg += '<text x="' + (PAD.left - 6) + '" y="' + (y + 4) + '" fill="' + CLR.textDim + '" font-size="10" text-anchor="end">' + lbl + C + "text>";
         }
 
         // Zero line for symmetric charts
         if (symmetric) {
             var zy = ly(0);
-            svg += '<line x1="' + PAD.left + '" y1="' + zy + '" x2="' + (W - PAD.right) + '" y2="' + zy + '" stroke="' + CHART_COLORS.textDim + '" stroke-width="0.5" stroke-dasharray="3,3"' + "/>";
+            svg += '<line x1="' + PAD.left + '" y1="' + zy + '" x2="' + (W - PAD.right) + '" y2="' + zy + '" stroke="' + CLR.textDim + '" stroke-width="0.5" stroke-dasharray="3,3"' + "/>";
         }
 
         // Data line
@@ -631,19 +638,19 @@
             svg += '<path d="' + areaPath + '" fill="rgba(48,209,88,0.08)"' + "/>";
         }
 
-        svg += '<text x="' + (PAD.left + 4) + '" y="' + (PAD.top + 11) + '" fill="' + CHART_COLORS.text + '" font-size="10">' + label + " (" + unit + ")" + C + "text>";
-        svg = addXAxis(svg, bars, n, xScale, H, PAD);
+        svg += '<text x="' + (PAD.left + 4) + '" y="' + (PAD.top + 11) + '" fill="' + CLR.text + '" font-size="10">' + label + " (" + unit + ")" + C + "text>";
+        svg = addXAxis(svg, bars, n, xScale, H, PAD, CLR);
         return svg;
     }
 
-    function addXAxis(svg, bars, n, xScale, H, PAD) {
+    function addXAxis(svg, bars, n, xScale, H, PAD, CLR) {
         var labelEvery = Math.max(1, Math.floor(n / 6));
         for (var i = 0; i < n; i++) {
             if (i % labelEvery !== 0 && i !== n - 1) continue;
             var cx = xScale(i);
             var ds = bars[i].date.slice(5);
-            svg += '<text x="' + cx + '" y="' + (H - PAD.bottom + 16) + '" fill="' + CHART_COLORS.textDim + '" font-size="9" text-anchor="middle">' + ds + C + "text>";
-            svg += '<line x1="' + cx + '" y1="' + (H - PAD.bottom) + '" x2="' + cx + '" y2="' + (H - PAD.bottom + 5) + '" stroke="' + CHART_COLORS.textDim + '" stroke-width="0.5"' + "/>";
+            svg += '<text x="' + cx + '" y="' + (H - PAD.bottom + 16) + '" fill="' + CLR.textDim + '" font-size="9" text-anchor="middle">' + ds + C + "text>";
+            svg += '<line x1="' + cx + '" y1="' + (H - PAD.bottom) + '" x2="' + cx + '" y2="' + (H - PAD.bottom + 5) + '" stroke="' + CLR.textDim + '" stroke-width="0.5"' + "/>";
         }
         return svg;
     }
