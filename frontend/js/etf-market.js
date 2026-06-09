@@ -201,7 +201,8 @@
         var num = function (val, dec, unit) {
             if (val == null) return '<td' + R + '><span style="color:var(--apple-text-tertiary);">--' + C + 'span>' + C + 'td>';
             var d = val.toFixed(dec);
-            if (unit) d += unit;
+            if (unit === "%") d += "%";
+            else if (unit) d += unit;
             return '<td' + R + '>' + d + C + 'td>';
         };
 
@@ -210,7 +211,8 @@
             if (val == null) return '<td' + R + '><span style="color:var(--apple-text-tertiary);">--' + C + 'span>' + C + 'td>';
             var cls = val > 0 ? "etf-pos" : val < 0 ? "etf-neg" : "";
             var d = (val > 0 ? "+" : "") + val.toFixed(dec);
-            if (unit) d += unit;
+            if (unit === "%") d += "%";
+            else if (unit) d += unit;
             return '<td' + R + ' class="' + cls + '">' + d + C + 'td>';
         };
 
@@ -245,11 +247,11 @@
             "<td>" + badge + code + C + "td>" +
             "<td>" + name + C + "td>" +
             "<td style=\"font-weight:600;text-align:right;\">" + (has && q.price != null ? q.price.toFixed(3) : '<span style="color:var(--apple-text-tertiary);">--' + C + 'span>') + C + "td>" +
-            pctCell(has ? q.change_pct : null, 2) +
+            pctCell(has ? q.change_pct : null, 2, "%") +
             num(has ? q.mc_total : null, 2) +
             feeStrCell(has ? q.mgmt_fee : null) +
             feeStrCell(has ? q.custody_fee : null) +
-            num(has ? q.total_fee : null, 2, "pct") +
+            num(has ? q.total_fee : null, 2, "%") +
             num(has ? q.fee_per_10k : null, 0, "元") +
             costPctCell(has ? q.premium : null, 2) +
             pctCell(has ? q.premium_cost_per_10k : null, 0, "元") +

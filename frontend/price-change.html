@@ -719,12 +719,17 @@
 
     /* ETF market table */
     #etfTable { table-layout: fixed; width: 100%; }
-    .etf-th-sort { cursor: pointer; user-select: none; padding: 10px 14px; overflow: hidden; text-overflow: ellipsis; }
-    .etf-th-sort:hover { color: var(--apple-text-primary); }
-    .etf-th-sort .etf-sort-arrow { font-size: 10px; margin-left: 2px; opacity: 0.4; }
-    .etf-th-sort.active .etf-sort-arrow { opacity: 1; color: var(--apple-blue); }
-    .etf-th-num { text-align: right; }
-    #etfBody td { font-size: 13px; padding: 8px 14px; }
+    #etfTable th:nth-child(1) { width: 9%; }   /* 代码 */
+    #etfTable th:nth-child(2) { width: 12%; }  /* 名称 */
+    /* ID-scoped to beat `.transfer-table th` (specificity 0,1,1); otherwise
+       header padding/text-align fall back to the generic table rule and the
+       numeric headers stay left-aligned while the body cells go right. */
+    #etfTable th.etf-th-sort { cursor: pointer; user-select: none; padding: 8px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #etfTable th.etf-th-sort:hover { color: var(--apple-text-primary); }
+    #etfTable th.etf-th-sort .etf-sort-arrow { font-size: 10px; margin-left: 2px; opacity: 0.4; }
+    #etfTable th.etf-th-sort.active .etf-sort-arrow { opacity: 1; color: var(--apple-blue); }
+    #etfTable th.etf-th-num { text-align: right; }
+    #etfBody td { font-size: 13px; padding: 8px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     #etfBody tr.etf-row { cursor: pointer; transition: background 0.1s; }
     #etfBody tr.etf-row:hover { background: rgba(255,255,255,0.04); }
     #etfBody tr.etf-row.expanded { background: rgba(0,113,227,0.06); }
@@ -732,7 +737,7 @@
     #etfBody td:nth-child(1),
     #etfBody td:nth-child(2) { text-align: left; }
     #etfBody td:nth-child(n+3) { text-align: right; }
-    /* Row-level coloring (etf-pos/etf-neg) overrides the td:nth-child color */
+    /* Row-level coloring (etf-pos/etf-neg) */
     #etfBody td.etf-pos { color: var(--data-positive); }
     #etfBody td.etf-neg { color: var(--data-negative); }
     .etf-badge-sh { display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(255,69,58,0.12);color:var(--data-negative); }
