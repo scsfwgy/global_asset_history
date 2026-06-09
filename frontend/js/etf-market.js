@@ -35,6 +35,15 @@
                 { code: "159652", name: "易方达" },
             ],
         },
+        global_others: {
+            label: "其它",
+            symbols: [
+                { code: "513310", name: "华泰柏瑞" },
+                { code: "161128", name: "易方达" },
+                { code: "501225", name: "全球芯片" },
+                { code: "160644", name: "鹏华" },
+            ],
+        },
     };
 
     /* ── State ── */
