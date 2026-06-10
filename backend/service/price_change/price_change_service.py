@@ -13,6 +13,7 @@ from .calculations import (
     _build_equity_curve,
     _compute_daily_returns_for_month,
     _compute_monthly_returns,
+    _compute_money_weighted_annualized_return,
     _compute_yearly_returns,
     _generate_schedule_dates,
     _normalize_frequency,
@@ -345,6 +346,7 @@ def run_dca_backtest(payload: Dict) -> Dict:
     execution_dates = _resolve_execution_points(price_points, schedule_dates)
 
     cashflows: List[dict] = []
+    irr_cashflows: List[Tuple] = []
     executed_points: List[Tuple] = []
     cumulative_units = 0.0
 
@@ -352,6 +354,7 @@ def run_dca_backtest(payload: Dict) -> Dict:
     if initial_amount > 0:
         initial_units = initial_amount / first_trade_price
         cumulative_units += initial_units
+        irr_cashflows.append((first_trade_date, -initial_amount))
         cashflows.append({
             "date": first_trade_date.isoformat(),
             "planned_date": start_date.isoformat(),
@@ -367,6 +370,7 @@ def run_dca_backtest(payload: Dict) -> Dict:
             break
         units = amount / price
         cumulative_units += units
+        irr_cashflows.append((exec_date, -amount))
         executed_points.append((exec_date, price, amount, units, cumulative_units))
         cashflows.append({
             "date": exec_date.isoformat(),
@@ -391,10 +395,12 @@ def run_dca_backtest(payload: Dict) -> Dict:
     final_value = cumulative_units * last_price
     profit = final_value - invested
     return_pct = 0.0 if invested == 0 else (profit / invested) * 100
-    days = max((last_date - first_trade_date).days, 1)
-    annualized_return_pct = 0.0
-    if invested > 0 and final_value > 0:
-        annualized_return_pct = ((final_value / invested) ** (365 / days) - 1) * 100
+    money_weighted_return = _compute_money_weighted_annualized_return(
+        cashflows=irr_cashflows,
+        final_date=last_date,
+        final_value=final_value,
+    )
+    annualized_return_pct = (money_weighted_return or 0.0) * 100
 
     return {
         "symbol": symbol,

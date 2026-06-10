@@ -391,7 +391,7 @@ function renderBacktestResult(symbol, result) {
       <div class="pc-bt-summary-val ${summary.profit >= 0 ? "bt-val-positive" : "bt-val-negative"}">${summary.profit >= 0 ? "+" : ""}$${(summary.profit || 0).toFixed(2)} (${summary.return_pct >= 0 ? "+" : ""}${(summary.return_pct || 0).toFixed(2)}%)</div>
     </div>
     <div class="pc-bt-summary-item">
-      <div class="pc-bt-summary-label">年化</div>
+      <div class="pc-bt-summary-label has-tip" title="IRR年化是资金加权年化收益率：按每一笔投入的实际成交日期计算现金流，期末资产作为最终回收金额。它比一次性买入CAGR更适合定投回测。">IRR年化</div>
       <div class="pc-bt-summary-val">${summary.annualized_return_pct >= 0 ? "+" : ""}${(summary.annualized_return_pct || 0).toFixed(2)}%</div>
     </div>
     <div class="pc-bt-summary-item">

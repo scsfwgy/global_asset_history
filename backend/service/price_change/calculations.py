@@ -119,6 +119,77 @@ def _series_points_in_range(
     return points
 
 
+def _compute_money_weighted_annualized_return(
+    cashflows: List[Tuple[date, float]],
+    final_date: date,
+    final_value: float,
+) -> Optional[float]:
+    """Compute XIRR-style annualized return for dated investment cash flows.
+
+    Cash flows use the investor perspective: contributions are negative, and
+    the final market value is a positive terminal cash flow. This is the right
+    annualized metric for DCA because each contribution only earns returns for
+    the time it is actually invested.
+    """
+    if final_value <= 0:
+        return None
+
+    dated_flows = [(flow_date, amount) for flow_date, amount in cashflows if amount]
+    if not dated_flows:
+        return None
+    dated_flows.append((final_date, final_value))
+
+    first_date = min(flow_date for flow_date, _ in dated_flows)
+    if max((flow_date - first_date).days for flow_date, _ in dated_flows) <= 0:
+        return None
+
+    has_positive = any(amount > 0 for _, amount in dated_flows)
+    has_negative = any(amount < 0 for _, amount in dated_flows)
+    if not has_positive or not has_negative:
+        return None
+
+    def xnpv(rate: float) -> float:
+        base = 1 + rate
+        return sum(
+            amount / (base ** ((flow_date - first_date).days / 365.0))
+            for flow_date, amount in dated_flows
+        )
+
+    low = -0.999999
+    high = 1.0
+    low_val = xnpv(low)
+    high_val = xnpv(high)
+
+    # Expand the upper bound until it brackets the root. Conventional DCA cash
+    # flows are monotonic, so bisection is stable once signs differ.
+    for _ in range(64):
+        if low_val == 0:
+            return low
+        if high_val == 0:
+            return high
+        if low_val * high_val < 0:
+            break
+        high *= 2
+        high_val = xnpv(high)
+    else:
+        return None
+
+    for _ in range(100):
+        mid = (low + high) / 2
+        mid_val = xnpv(mid)
+        if abs(mid_val) < 1e-7:
+            return mid
+        if low_val * mid_val <= 0:
+            high = mid
+            high_val = mid_val
+        else:
+            low = mid
+            low_val = mid_val
+
+    return (low + high) / 2
+
+
+
 def _normalize_frequency(frequency: str) -> str:
     clean = (frequency or "monthly").strip().lower()
     if clean not in {"once", "daily", "weekly", "monthly"}:
