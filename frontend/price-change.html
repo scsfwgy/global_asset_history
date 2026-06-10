@@ -1080,10 +1080,12 @@
                             <th class="etf-th-sort etf-th-num" data-etf-col="fee_per_10k">万元年费 <span class="etf-sort-arrow">⇅</span></th>
                             <th class="etf-th-sort etf-th-num" data-etf-col="premium">溢价率 <span class="etf-sort-arrow">⇅</span></th>
                             <th class="etf-th-sort etf-th-num" data-etf-col="premium_cost_per_10k">溢价万元盈亏 <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="tracking_error_30d_pct"><span class="has-tip" title="30日追踪误差 = 最近30个共同交易日内，每日（A股ETF涨跌幅 - 对应美股ETF涨跌幅）的累计值。越接近0，说明这段时间跟得越贴近；正数表示A股ETF累计跑赢，负数表示累计跑输。">30日追踪误差</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="profit_diff_30d_per_10k"><span class="has-tip" title="30日万元收益差 = 最近30个共同交易日内，分别投入10000元到当前A股ETF和对应美股ETF（纳指组用QQQ，标普组用SPY）后的收益差额。正数表示A股ETF多赚，负数表示少赚。">30日万元收益差</span> <span class="etf-sort-arrow">⇅</span></th>
                         </tr>
                     </thead>
                     <tbody id="etfBody">
-                        <tr><td colspan="11" style="text-align:center;padding:24px;color:var(--apple-text-secondary);">加载中...</td></tr>
+                        <tr><td colspan="12" style="text-align:center;padding:24px;color:var(--apple-text-secondary);">加载中...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1097,7 +1099,8 @@
                 <div id="etfPremiumNote" style="display:none;font-size:11px;color:#ff9f0a;margin:10px 0 4px;">⚠ 溢价率历史数据暂不可用，当前显示为实时溢价率参考值</div>
                 <div style="display:flex;gap:8px;align-items:center;margin:12px 0 8px;" id="etfChartToggles">
                     <span style="font-size:11px;color:var(--apple-text-tertiary);">指标:</span>
-                    <button class="transfer-tab active" data-etf-chart="candle">蜡烛图</button>
+                    <button class="transfer-tab active" data-etf-chart="compare">涨跌幅对比</button>
+                    <button class="transfer-tab" data-etf-chart="candle">蜡烛图</button>
                     <button class="transfer-tab" data-etf-chart="change">涨跌幅</button>
                     <button class="transfer-tab" data-etf-chart="premium">溢价率</button>
                     <button class="transfer-tab" data-etf-chart="amplitude">振幅</button>

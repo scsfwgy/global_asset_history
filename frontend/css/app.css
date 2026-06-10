@@ -1385,7 +1385,9 @@
         }
 
         .vix-advice-label.has-tip,
-        .pc-bt-summary-label.has-tip {
+        .pc-bt-summary-label.has-tip,
+        .etf-th-sort .has-tip,
+        .etf-ds-label.has-tip {
             cursor: help;
             text-decoration-line: underline;
             text-decoration-style: dashed;

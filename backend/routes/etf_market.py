@@ -2,10 +2,14 @@
 
 import json
 import logging
+import math
 import re
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+
+from service.price_change.price_change_service import _fetch_daily_series_cached
 
 import requests
 from flask import Blueprint, jsonify, request
@@ -37,6 +41,40 @@ def _load_fee_data() -> None:
 
 _TENCENT_QUOTE_URL = "https://qt.gtimg.cn/q="
 _REQUEST_TIMEOUT = 10
+_TRACKING_ERROR_TTL_SECONDS = 6 * 60 * 60
+_CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "price_change_config.json"
+_tracking_error_cache: dict[str, tuple[float, dict]] = {}
+_benchmark_map: dict[str, tuple[str, str]] = {}
+
+
+def _load_benchmark_map() -> dict[str, tuple[str, str]]:
+    """Build ETF → benchmark mapping from the shared preset config."""
+    global _benchmark_map
+    if _benchmark_map:
+        return _benchmark_map
+    try:
+        with open(_CONFIG_PATH, "r", encoding="utf-8") as f:
+            presets = json.load(f).get("presets", {})
+    except Exception as e:
+        logger.warning("Failed to load ETF benchmark config from %s: %s", _CONFIG_PATH, e)
+        presets = {}
+
+    mapping: dict[str, tuple[str, str]] = {}
+    for entry in presets.get("cn_etf_nasdaq100", {}).get("symbols", []):
+        symbol = str(entry.get("symbol", "")).strip()
+        if symbol:
+            mapping[symbol] = ("QQQ", "QQQ")
+    for entry in presets.get("cn_etf_sp500", {}).get("symbols", []):
+        symbol = str(entry.get("symbol", "")).strip()
+        if symbol:
+            mapping[symbol] = ("SPY", "SPY")
+    _benchmark_map = mapping
+    return _benchmark_map
+
+
+def _benchmark_for_etf(symbol: str) -> tuple[Optional[str], Optional[str]]:
+    """Return Yahoo benchmark symbol and display label for supported ETFs."""
+    return _load_benchmark_map().get(symbol.strip(), (None, None))
 
 # ---------------------------------------------------------------------------
 # Field indices for Tencent real-time quote (split by "~")
@@ -154,6 +192,193 @@ def _parse_fee_pct(raw: str | None) -> float | None:
         return None
 
 
+def _daily_return_map_from_rows(rows: list[dict]) -> dict[str, float]:
+    result = {}
+    for i in range(1, len(rows)):
+        prev = rows[i - 1].get("close")
+        curr = rows[i].get("close")
+        if prev and curr:
+            result[rows[i]["date"]] = curr / prev - 1
+    return result
+
+
+def _series_close_map(series) -> dict[str, float]:
+    result = {}
+    for ts, close in zip(series.timestamps, series.closes):
+        if close is None:
+            continue
+        dt = datetime.fromtimestamp(ts, tz=timezone.utc).date().isoformat()
+        result[dt] = float(close)
+    return result
+
+
+def _daily_return_map_from_series(series) -> dict[str, float]:
+    result = {}
+    items = []
+    for ts, close in zip(series.timestamps, series.closes):
+        if close is None:
+            continue
+        dt = datetime.fromtimestamp(ts, tz=timezone.utc).date().isoformat()
+        items.append((dt, float(close)))
+    for i in range(1, len(items)):
+        prev = items[i - 1][1]
+        curr = items[i][1]
+        if prev:
+            result[items[i][0]] = curr / prev - 1
+    return result
+
+
+def _tracking_error_pct(values: list[float]) -> Optional[float]:
+    if len(values) < 2:
+        return None
+    avg = sum(values) / len(values)
+    variance = sum((v - avg) ** 2 for v in values) / (len(values) - 1)
+    return round(math.sqrt(variance) * math.sqrt(252) * 100, 2)
+
+
+def _fetch_etf_history_rows(symbol: str, days: int = 120) -> list[dict]:
+    """Fetch ETF daily rows with date and close, oldest to newest."""
+    tsym = _tencent_symbol(symbol)
+    end_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    all_rows = []
+    max_pages = 10
+
+    for _ in range(max_pages):
+        try:
+            resp = requests.get(
+                "https://proxy.finance.qq.com/ifzqgtimg/appstock/app/newfqkline/get",
+                params={"param": f"{tsym},day,,{end_date},640,qfq"},
+                timeout=_REQUEST_TIMEOUT,
+            )
+            resp.raise_for_status()
+            body = resp.json()
+        except requests.RequestException as e:
+            logger.warning("Tencent kline fetch failed for tracking error %s: %s", tsym, e)
+            return []
+
+        if body.get("code") != 0:
+            break
+
+        stock_data = body.get("data", {}).get(tsym, {})
+        page_rows = stock_data.get("day") or stock_data.get("qfqday", [])
+        if not page_rows:
+            break
+
+        all_rows.extend(page_rows)
+        if len(all_rows) >= days or len(page_rows) < 640:
+            break
+        end_date = page_rows[0][0]
+
+    seen = set()
+    parsed = []
+    for row in reversed(all_rows):
+        if row[0] in seen:
+            continue
+        seen.add(row[0])
+        try:
+            parsed.append({"date": row[0], "close": float(row[2])})
+        except (ValueError, IndexError):
+            continue
+
+    return list(reversed(parsed[:days]))
+
+
+def _compute_tracking_error_history(symbol: str, etf_rows: list[dict]) -> dict:
+    """Compute rolling annualized tracking error vs the ETF benchmark."""
+    benchmark_symbol, benchmark_label = _benchmark_for_etf(symbol)
+    if not benchmark_symbol or not etf_rows:
+        return {"available": False, "benchmark": benchmark_label, "current": None, "avg": None, "history": []}
+
+    cache_key = f"{symbol}:{etf_rows[0]['date']}:{etf_rows[-1]['date']}:{len(etf_rows)}"
+    cached = _tracking_error_cache.get(cache_key)
+    if cached and time.time() - cached[0] < _TRACKING_ERROR_TTL_SECONDS:
+        return cached[1]
+
+    benchmark = _fetch_daily_series_cached(benchmark_symbol, "stock")
+    if benchmark.error:
+        data = {
+            "available": False,
+            "benchmark": benchmark_label,
+            "benchmark_symbol": benchmark_symbol,
+            "error": benchmark.error,
+            "current": None,
+            "avg": None,
+            "history": [],
+        }
+        _tracking_error_cache[cache_key] = (time.time(), data)
+        return data
+
+    etf_returns = _daily_return_map_from_rows(etf_rows)
+    benchmark_returns = _daily_return_map_from_series(benchmark)
+    benchmark_closes = _series_close_map(benchmark)
+    dates = sorted(set(etf_returns) & set(benchmark_returns))
+    deviations = [(dt, etf_returns[dt] - benchmark_returns[dt]) for dt in dates]
+
+    window = 60
+    history = []
+    for idx in range(len(deviations)):
+        if idx + 1 < window:
+            continue
+        slice_vals = [v for _, v in deviations[idx + 1 - window:idx + 1]]
+        te = _tracking_error_pct(slice_vals)
+        if te is not None:
+            history.append({"date": deviations[idx][0], "tracking_error_pct": te})
+
+    comparison = []
+    if dates:
+        first_date = dates[0]
+        etf_close_by_date = {row["date"]: row["close"] for row in etf_rows if row.get("close")}
+        first_etf_close = etf_close_by_date.get(first_date)
+        first_benchmark_close = benchmark_closes.get(first_date)
+        if first_etf_close and first_benchmark_close:
+            for dt in dates:
+                etf_close = etf_close_by_date.get(dt)
+                benchmark_close = benchmark_closes.get(dt)
+                if not etf_close or not benchmark_close:
+                    continue
+                etf_return_pct = (etf_close / first_etf_close - 1) * 100
+                benchmark_return_pct = (benchmark_close / first_benchmark_close - 1) * 100
+                etf_profit_per_10k = etf_return_pct * 100
+                benchmark_profit_per_10k = benchmark_return_pct * 100
+                comparison.append({
+                    "date": dt,
+                    "etf_return_pct": round(etf_return_pct, 2),
+                    "benchmark_return_pct": round(benchmark_return_pct, 2),
+                    "excess_return_pct": round(etf_return_pct - benchmark_return_pct, 2),
+                    "etf_profit_per_10k": round(etf_profit_per_10k, 0),
+                    "benchmark_profit_per_10k": round(benchmark_profit_per_10k, 0),
+                    "profit_diff_per_10k": round(etf_profit_per_10k - benchmark_profit_per_10k, 0),
+                })
+
+    current = history[-1]["tracking_error_pct"] if history else None
+    avg = round(sum(item["tracking_error_pct"] for item in history) / len(history), 2) if history else None
+
+    recent_deviations = deviations[-30:]
+    tracking_error_30d_pct = round(sum(v for _, v in recent_deviations) * 100, 2) if recent_deviations else None
+    profit_diff_30d_per_10k = None
+    if len(comparison) >= 2:
+        start = comparison[-31] if len(comparison) > 30 else comparison[0]
+        end = comparison[-1]
+        etf_30d_return = (1 + end["etf_return_pct"] / 100) / (1 + start["etf_return_pct"] / 100) - 1
+        benchmark_30d_return = (1 + end["benchmark_return_pct"] / 100) / (1 + start["benchmark_return_pct"] / 100) - 1
+        profit_diff_30d_per_10k = round((etf_30d_return - benchmark_30d_return) * 10000, 0)
+
+    data = {
+        "available": bool(history),
+        "benchmark": benchmark_label,
+        "benchmark_symbol": benchmark_symbol,
+        "window_days": window,
+        "current": current,
+        "avg": avg,
+        "tracking_error_30d_pct": tracking_error_30d_pct,
+        "profit_diff_30d_per_10k": profit_diff_30d_per_10k,
+        "history": history,
+        "comparison": comparison,
+    }
+    _tracking_error_cache[cache_key] = (time.time(), data)
+    return data
+
+
 @etf_market_bp.route("/quote", methods=["GET"])
 def quote():
     """Return real-time quotes for a list of ETF symbols.
@@ -214,6 +439,14 @@ def quote():
             q["premium_cost_per_10k"] = -round(10000 * premium / 100, 0)
         else:
             q["premium_cost_per_10k"] = None
+
+        tracking_rows = _fetch_etf_history_rows(q["code"], 180)
+        tracking = _compute_tracking_error_history(q["code"], tracking_rows) if tracking_rows else None
+        q["tracking_error_avg"] = tracking.get("avg") if tracking else None
+        q["tracking_error_current"] = tracking.get("current") if tracking else None
+        q["tracking_error_benchmark"] = tracking.get("benchmark") if tracking else None
+        q["tracking_error_30d_pct"] = tracking.get("tracking_error_30d_pct") if tracking else None
+        q["profit_diff_30d_per_10k"] = tracking.get("profit_diff_30d_per_10k") if tracking else None
 
     return jsonify({
         "quotes": results,
@@ -409,6 +642,26 @@ def history():
         total_fee = None
         fee_per_10k = None
 
+    tracking_error = _compute_tracking_error_history(symbol, parsed)
+    tracking_by_date = {
+        item["date"]: item["tracking_error_pct"]
+        for item in tracking_error.get("history", [])
+    }
+    comparison_by_date = {
+        item["date"]: item
+        for item in tracking_error.get("comparison", [])
+    }
+    for p in parsed:
+        p["tracking_error_pct"] = tracking_by_date.get(p["date"])
+        comp = comparison_by_date.get(p["date"])
+        if comp:
+            p["etf_cum_return_pct"] = comp.get("etf_return_pct")
+            p["benchmark_cum_return_pct"] = comp.get("benchmark_return_pct")
+            p["excess_cum_return_pct"] = comp.get("excess_return_pct")
+            p["etf_profit_per_10k"] = comp.get("etf_profit_per_10k")
+            p["benchmark_profit_per_10k"] = comp.get("benchmark_profit_per_10k")
+            p["profit_diff_per_10k"] = comp.get("profit_diff_per_10k")
+
     return jsonify({
         "symbol": symbol,
         "bars": parsed,
@@ -427,6 +680,12 @@ def history():
             "custody_fee": custody_fee,
             "total_fee": total_fee,
             "fee_per_10k": fee_per_10k,
+            "tracking_error_avg": tracking_error.get("avg"),
+            "tracking_error_current": tracking_error.get("current"),
+            "tracking_error_benchmark": tracking_error.get("benchmark"),
+            "tracking_error_window_days": tracking_error.get("window_days"),
+            "tracking_error_30d_pct": tracking_error.get("tracking_error_30d_pct"),
+            "profit_diff_30d_per_10k": tracking_error.get("profit_diff_30d_per_10k"),
         },
     })
 
