@@ -79,19 +79,21 @@
             min-height: 100vh;
         }
 
-        /* Header — Apple glass nav */
+        /* Header — hero-style brand area */
         .header {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            min-height: 58px;
-            padding: 0 24px;
+            position: relative;
+            z-index: 10;
+            min-height: 104px;
+            padding: 22px 32px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            background: var(--apple-header-bg);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
-            backdrop-filter: saturate(180%) blur(20px);
+            align-items: flex-start;
+            gap: 24px;
+            background:
+                radial-gradient(circle at 18% 0%, rgba(0, 113, 227, 0.24), transparent 34%),
+                radial-gradient(circle at 82% 18%, rgba(90, 200, 250, 0.16), transparent 32%),
+                linear-gradient(180deg, var(--apple-surface-1), var(--apple-bg));
+            border-bottom: 1px solid var(--apple-divider);
         }
 
         .logo { display: flex; align-items: center; gap: 12px; }
@@ -99,22 +101,35 @@
         .header-left {
             display: flex;
             align-items: center;
+            align-self: center;
             gap: 16px;
+            min-width: 0;
         }
 
         .nav-links {
             display: flex;
-            gap: 18px;
+            gap: 8px;
         }
 
         .nav-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            border: 1px solid var(--apple-divider);
+            border-radius: 999px;
+            background: var(--apple-overlay-light);
             font-size: 13px;
             color: var(--apple-text-secondary);
             text-decoration: none;
-            transition: color 0.15s;
+            transition: color 0.15s, border-color 0.15s, background 0.15s;
         }
 
-        .nav-links a:hover { color: var(--apple-text-primary); }
+        .nav-links a:hover {
+            color: var(--apple-text-primary);
+            border-color: var(--apple-hover-border);
+            background: var(--apple-overlay);
+        }
         .nav-links a.active { color: var(--apple-blue); }
 
         .logo-icon {
@@ -122,17 +137,28 @@
         }
 
         .logo-text h1 {
-            font-size: 20px;
-            font-weight: 600;
+            font-size: 26px;
+            font-weight: 700;
             color: var(--apple-text-primary);
-            letter-spacing: -0.2px;
-            line-height: 1.2;
+            letter-spacing: -0.6px;
+            line-height: 1.12;
+        }
+
+        .logo-text h1 a {
+            display: block;
+            width: fit-content;
+            margin-top: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            color: var(--apple-blue) !important;
+            opacity: 0.9;
         }
 
         .logo-text p {
-            font-size: 13px;
+            font-size: 14px;
             color: var(--apple-text-secondary);
-            margin-top: 4px;
+            margin-top: 8px;
         }
 
         .logo-text p a {
@@ -152,9 +178,33 @@
         /* Status — simplified, no pill */
         .status {
             display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+            padding: 0;
+            margin-top: 2px;
+        }
+
+        .status-row {
+            display: flex;
             align-items: center;
-            gap: 18px;
-            padding: 4px 0;
+            justify-content: flex-end;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .site-url {
+            color: #30d158;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            letter-spacing: -0.01em;
+        }
+
+        .site-url:hover {
+            color: #30d158;
+            text-decoration: none;
+            opacity: 0.82;
         }
 
         .status-conn {
@@ -1176,9 +1226,24 @@
 
         @media (max-width: 768px) {
             .header, .main { padding: 14px; }
-            .header { height: auto; min-height: 48px; }
+            .header {
+                min-height: 0;
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 14px;
+            }
             .header-left { width: 100%; flex-direction: column; align-items: flex-start; gap: 8px; }
-            .nav-links { gap: 14px; flex-wrap: wrap; }
+            .status {
+                width: 100%;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .status-row {
+                justify-content: flex-start;
+                gap: 10px;
+            }
+            .site-url { align-self: flex-start; }
+            .nav-links { gap: 8px; flex-wrap: wrap; }
             .controls-bar { flex-direction: column; align-items: stretch; }
             .control-group { justify-content: space-between; }
             .token-key-input { min-width: 100%; }
@@ -1236,10 +1301,10 @@
 
         /* Header secondary line for VIX badge */
         .vix-header-line {
-            font-size: 13px;
             color: var(--apple-text-secondary);
-            margin-top: 2px;
-            margin-bottom: 6px;
+            margin-top: 0;
+            margin-bottom: 0;
+            line-height: 1;
         }
 
         /* Header badge */
@@ -1255,29 +1320,37 @@
             vertical-align: middle;
         }
 
+        .vix-header-badge.zone-loading {
+            background: var(--apple-overlay);
+            color: var(--apple-text-secondary);
+        }
+        .vix-header-badge.zone-error {
+            background: rgba(255, 69, 58, 0.14);
+            color: var(--data-negative);
+        }
         .vix-header-badge.zone-extreme-low {
-            background: rgba(48, 209, 88, 0.15);
-            color: var(--data-positive);
+            background: rgba(255, 69, 58, 0.14);
+            color: var(--data-negative);
         }
         .vix-header-badge.zone-low {
             background: rgba(48, 209, 88, 0.10);
             color: #30d158;
         }
         .vix-header-badge.zone-normal {
-            background: rgba(90, 200, 250, 0.12);
-            color: #5ac8fa;
+            background: rgba(48, 209, 88, 0.16);
+            color: var(--data-positive);
         }
         .vix-header-badge.zone-elevated {
-            background: rgba(255, 159, 10, 0.12);
-            color: #ff9f0a;
+            background: rgba(48, 209, 88, 0.22);
+            color: var(--data-positive);
         }
         .vix-header-badge.zone-high {
-            background: rgba(255, 159, 10, 0.18);
-            color: #ff9f0a;
+            background: rgba(48, 209, 88, 0.30);
+            color: var(--data-positive);
         }
         .vix-header-badge.zone-extreme {
-            background: rgba(255, 69, 58, 0.18);
-            color: var(--data-negative);
+            background: rgba(48, 209, 88, 0.38);
+            color: var(--data-positive);
         }
 
         /* VIX advice card */
@@ -1343,28 +1416,28 @@
         }
 
         .vix-advice-zone.zone-extreme-low {
-            background: rgba(48, 209, 88, 0.15);
-            color: var(--data-positive);
+            background: rgba(255, 69, 58, 0.14);
+            color: var(--data-negative);
         }
         .vix-advice-zone.zone-low {
             background: rgba(48, 209, 88, 0.10);
             color: #30d158;
         }
         .vix-advice-zone.zone-normal {
-            background: rgba(90, 200, 250, 0.12);
-            color: #5ac8fa;
+            background: rgba(48, 209, 88, 0.16);
+            color: var(--data-positive);
         }
         .vix-advice-zone.zone-elevated {
-            background: rgba(255, 159, 10, 0.12);
-            color: #ff9f0a;
+            background: rgba(48, 209, 88, 0.22);
+            color: var(--data-positive);
         }
         .vix-advice-zone.zone-high {
-            background: rgba(255, 159, 10, 0.18);
-            color: #ff9f0a;
+            background: rgba(48, 209, 88, 0.30);
+            color: var(--data-positive);
         }
         .vix-advice-zone.zone-extreme {
-            background: rgba(255, 69, 58, 0.18);
-            color: var(--data-negative);
+            background: rgba(48, 209, 88, 0.38);
+            color: var(--data-positive);
         }
 
         .vix-advice-tip {

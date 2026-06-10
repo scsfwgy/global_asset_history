@@ -57,7 +57,6 @@ const btAnimSeconds = $("pcBtAnimSeconds");
 const btSymbolInput = $("btSymbolInput");
 const btTypeSelect = $("btTypeSelect");
 const btRun = $("pcBtRun");
-const btClose = $("pcBtClose");
 const btResult = $("pcBtResult");
 const btSummary = $("pcBtSummary");
 const btHead = $("pcBtHead");
@@ -591,10 +590,6 @@ async function init() {
   // Backtest buttons
   if (btRun) btRun.addEventListener("click", runBacktest);
   if (btFrequency) btFrequency.addEventListener("change", updateBacktestFrequencyUI);
-  if (btClose) btClose.addEventListener("click", () => {
-    btWrap.style.display = "none";
-    btResult.style.display = "none";
-  });
 
   // Repopulate the backtest symbol dropdown each time the 回测 tab opens, since
   // symbols may have been added/removed in the 历年涨跌幅 tab and the backtest
