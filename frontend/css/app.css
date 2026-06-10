@@ -85,7 +85,7 @@
             top: 0;
             z-index: 100;
             min-height: 58px;
-            padding: 0 62px 0 24px;
+            padding: 0 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -1309,6 +1309,14 @@
         .vix-advice-label {
             font-size: 11px;
             color: var(--apple-text-tertiary);
+        }
+
+        .vix-advice-label.has-tip {
+            cursor: help;
+            text-decoration-line: underline;
+            text-decoration-style: dashed;
+            text-decoration-thickness: 1px;
+            text-underline-offset: 3px;
         }
 
         .vix-advice-value {
