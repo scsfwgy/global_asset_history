@@ -196,6 +196,44 @@
         { "symbol": "AXTI", "type": "stock" },
         { "symbol": "IHRT", "type": "stock" }
       ]
+    },
+    "nvidia_investments_us": {
+      "label": "英伟达投资（美股）",
+      "symbols": [
+        { "symbol": "INTC", "type": "stock" },
+        { "symbol": "CRWV", "type": "stock" },
+        { "symbol": "SNPS", "type": "stock" },
+        { "symbol": "COHR", "type": "stock" },
+        { "symbol": "NOK", "type": "stock" },
+        { "symbol": "NBIS", "type": "stock" },
+        { "symbol": "GENB", "type": "stock" }
+      ]
+    },
+    "trump_holdings_us": {
+      "label": "川普持仓（美股）",
+      "symbols": [
+        { "symbol": "DJT", "type": "stock" },
+        { "symbol": "NVDA", "type": "stock" },
+        { "symbol": "AAPL", "type": "stock" },
+        { "symbol": "MSFT", "type": "stock" },
+        { "symbol": "AMZN", "type": "stock" },
+        { "symbol": "META", "type": "stock" },
+        { "symbol": "AVGO", "type": "stock" },
+        { "symbol": "SNPS", "type": "stock" },
+        { "symbol": "CDNS", "type": "stock" },
+        { "symbol": "TXN", "type": "stock" },
+        { "symbol": "ORCL", "type": "stock" },
+        { "symbol": "NOW", "type": "stock" },
+        { "symbol": "ADBE", "type": "stock" },
+        { "symbol": "WDAY", "type": "stock" },
+        { "symbol": "DELL", "type": "stock" },
+        { "symbol": "INTC", "type": "stock" },
+        { "symbol": "BA", "type": "stock" },
+        { "symbol": "COST", "type": "stock" },
+        { "symbol": "NFLX", "type": "stock" },
+        { "symbol": "PARA", "type": "stock" },
+        { "symbol": "AIFC", "type": "stock" }
+      ]
     }
   },
   "color_range": {
