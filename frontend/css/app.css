@@ -90,10 +90,47 @@
             align-items: flex-start;
             gap: 24px;
             background:
-                radial-gradient(circle at 18% 0%, rgba(0, 113, 227, 0.24), transparent 34%),
-                radial-gradient(circle at 82% 18%, rgba(90, 200, 250, 0.16), transparent 32%),
-                linear-gradient(180deg, var(--apple-surface-1), var(--apple-bg));
+                radial-gradient(circle at 18% 0%, var(--vix-header-glow-a, rgba(0, 113, 227, 0.24)), transparent 34%),
+                radial-gradient(circle at 82% 18%, var(--vix-header-glow-b, rgba(90, 200, 250, 0.16)), transparent 32%),
+                linear-gradient(180deg, var(--vix-header-tint, var(--apple-surface-1)), var(--apple-bg));
             border-bottom: 1px solid var(--apple-divider);
+            transition: background 0.45s ease;
+        }
+
+        .header.vix-bg-extreme-low {
+            --vix-header-glow-a: rgba(255, 69, 58, 0.16);
+            --vix-header-glow-b: rgba(255, 159, 10, 0.08);
+            --vix-header-tint: rgba(255, 69, 58, 0.045);
+        }
+
+        .header.vix-bg-low {
+            --vix-header-glow-a: rgba(255, 69, 58, 0.10);
+            --vix-header-glow-b: rgba(255, 159, 10, 0.055);
+            --vix-header-tint: rgba(255, 69, 58, 0.03);
+        }
+
+        .header.vix-bg-normal {
+            --vix-header-glow-a: rgba(0, 113, 227, 0.06);
+            --vix-header-glow-b: rgba(90, 200, 250, 0.04);
+            --vix-header-tint: var(--apple-surface-1);
+        }
+
+        .header.vix-bg-elevated {
+            --vix-header-glow-a: rgba(48, 209, 88, 0.16);
+            --vix-header-glow-b: rgba(48, 209, 88, 0.10);
+            --vix-header-tint: rgba(48, 209, 88, 0.055);
+        }
+
+        .header.vix-bg-high {
+            --vix-header-glow-a: rgba(48, 209, 88, 0.22);
+            --vix-header-glow-b: rgba(48, 209, 88, 0.14);
+            --vix-header-tint: rgba(48, 209, 88, 0.075);
+        }
+
+        .header.vix-bg-extreme {
+            --vix-header-glow-a: rgba(0, 255, 106, 0.40);
+            --vix-header-glow-b: rgba(48, 209, 88, 0.28);
+            --vix-header-tint: rgba(0, 255, 106, 0.14);
         }
 
         .logo { display: flex; align-items: center; gap: 12px; }
@@ -1318,6 +1355,8 @@
             font-weight: 600;
             white-space: nowrap;
             vertical-align: middle;
+            cursor: help;
+            text-decoration: none;
         }
 
         .vix-header-badge.zone-loading {
@@ -1333,12 +1372,12 @@
             color: var(--data-negative);
         }
         .vix-header-badge.zone-low {
-            background: rgba(48, 209, 88, 0.10);
-            color: #30d158;
+            background: rgba(255, 69, 58, 0.10);
+            color: var(--data-negative);
         }
         .vix-header-badge.zone-normal {
-            background: rgba(48, 209, 88, 0.16);
-            color: var(--data-positive);
+            background: var(--apple-overlay);
+            color: var(--apple-text-primary);
         }
         .vix-header-badge.zone-elevated {
             background: rgba(48, 209, 88, 0.22);
@@ -1349,8 +1388,9 @@
             color: var(--data-positive);
         }
         .vix-header-badge.zone-extreme {
-            background: rgba(48, 209, 88, 0.38);
-            color: var(--data-positive);
+            background: rgba(0, 255, 106, 0.28);
+            color: #00d85a;
+            box-shadow: 0 0 0 1px rgba(0, 255, 106, 0.14) inset;
         }
 
         /* VIX advice card */
@@ -1423,12 +1463,12 @@
             color: var(--data-negative);
         }
         .vix-advice-zone.zone-low {
-            background: rgba(48, 209, 88, 0.10);
-            color: #30d158;
+            background: rgba(255, 69, 58, 0.10);
+            color: var(--data-negative);
         }
         .vix-advice-zone.zone-normal {
-            background: rgba(48, 209, 88, 0.16);
-            color: var(--data-positive);
+            background: var(--apple-overlay);
+            color: var(--apple-text-primary);
         }
         .vix-advice-zone.zone-elevated {
             background: rgba(48, 209, 88, 0.22);
@@ -1439,8 +1479,9 @@
             color: var(--data-positive);
         }
         .vix-advice-zone.zone-extreme {
-            background: rgba(48, 209, 88, 0.38);
-            color: var(--data-positive);
+            background: rgba(0, 255, 106, 0.28);
+            color: #00d85a;
+            box-shadow: 0 0 0 1px rgba(0, 255, 106, 0.14) inset;
         }
 
         .vix-advice-tip {

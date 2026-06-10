@@ -41,12 +41,12 @@
 
     function vixZone(vixVal) {
         if (vixVal == null || isNaN(vixVal)) return null;
-        if (vixVal < 12)  return { label: "极度安逸", tip: "市场过度安逸，风险补偿偏低，不建议追高，可适当配置对冲", cls: "zone-extreme-low", recommend: false };
-        if (vixVal < 15)  return { label: "低波动",   tip: "市场平静，波动率处于低位，正常定投即可",       cls: "zone-low", recommend: true };
-        if (vixVal < 20)  return { label: "正常区间", tip: "波动率正常，坚持长期投资策略",                 cls: "zone-normal", recommend: true };
-        if (vixVal < 25)  return { label: "恐惧上升", tip: "恐慌情绪升温，市场回调中，关注分批买入机会",   cls: "zone-elevated", recommend: true };
-        if (vixVal < 30)  return { label: "高度恐惧", tip: "市场恐慌加剧，长期投资者可考虑加大定投力度",   cls: "zone-high", recommend: true };
-        return              { label: "极度恐慌", tip: "危机模式！历史大底区域往往出现在此区间，激进者可重仓买入", cls: "zone-extreme", recommend: true };
+        if (vixVal < 12)  return { label: "极度安逸", tip: "利润让飞，分批获利，不建议追高", cls: "zone-extreme-low", recommend: false };
+        if (vixVal < 15)  return { label: "低波动",   tip: "右侧轻仓，左侧观望，不宜追高", cls: "zone-low", recommend: false };
+        if (vixVal < 20)  return { label: "正常区间", tip: "均值回归，按计划执行，坚持定投", cls: "zone-normal", recommend: null };
+        if (vixVal < 25)  return { label: "恐惧上升", tip: "市场回调，动用预备资金，分批买入", cls: "zone-elevated", recommend: true };
+        if (vixVal < 35)  return { label: "高度恐惧", tip: "阶段底部，逢低扫货，加大定投", cls: "zone-high", recommend: true };
+        return              { label: "极端恐慌", tip: "历史级买点，千载难逢的机会！激进买入但保留子弹", cls: "zone-extreme", recommend: true };
     }
 
     function readCount() {
@@ -112,7 +112,9 @@
         card.style.display = "";
         if (valEl) {
             valEl.textContent = vixVal.toFixed(2);
-            valEl.style.color = zone.recommend ? "var(--data-positive)" : "var(--data-negative)";
+            valEl.style.color = zone.recommend === true ? "var(--data-positive)" :
+                                zone.recommend === false ? "var(--data-negative)" :
+                                "var(--apple-text-primary)";
         }
         if (zoneEl) { zoneEl.textContent = zone.label; zoneEl.className = "vix-advice-zone " + zone.cls; }
         if (pctEl) {
@@ -145,13 +147,35 @@
         }
     }
 
+    function vixRuleTip() {
+        return "VIX区间及建议规则：\n" +
+            "<12  极度安逸  ❌不建议追高（利润让飞/分批获利）\n" +
+            "12-15  低波动    ❌不宜追高（右侧轻仓/左侧观望）\n" +
+            "15-20  正常区间  ✅坚持定投（均值回归/按计划执行）\n" +
+            "20-25  恐惧上升  ✅分批买入（市场回调/动用预备）\n" +
+            "25-35  高度恐惧  ✅加大定投（阶段底部/逢低扫货）\n" +
+            ">=35  极端恐慌  ✅激进买入（历史级买点/保留子弹）";
+    }
+
     function setHeaderBadgeStatus(text, cls) {
         var line = $("vixHeaderLine");
         var badge = $("vixHeaderBadge");
         if (!badge || !line) return;
+        updateHeaderBackground(null);
         line.style.display = "";
         badge.textContent = text;
         badge.className = "vix-header-badge " + (cls || "zone-loading");
+        badge.title = vixRuleTip();
+    }
+
+    function updateHeaderBackground(zone) {
+        var header = document.querySelector(".header");
+        if (!header) return;
+        ["extreme-low", "low", "normal", "elevated", "high", "extreme"].forEach(function (key) {
+            header.classList.remove("vix-bg-" + key);
+        });
+        if (!zone || !zone.cls) return;
+        header.classList.add("vix-bg-" + zone.cls.replace("zone-", ""));
     }
 
     function updateHeaderBadge(vixVal) {
@@ -161,17 +185,19 @@
         if (vixVal == null || isNaN(vixVal)) { setHeaderBadgeStatus("VIX 加载失败", "zone-error"); return; }
 
         var zone = vixZone(vixVal);
-        if (!zone) { setHeaderBadgeStatus("VIX 加载失败", "zone-error"); return; }
+        if (!zone) { setHeaderBadgeStatus("VIX 加载失败", "zone-error"); updateHeaderBackground(null); return; }
 
+        updateHeaderBackground(zone);
         line.style.display = "";
         badge.textContent = "VIX " + vixVal.toFixed(2) + " · " +
-            (vixVal >= 30 ? "✅极度恐慌，激进买入" :
+            (vixVal >= 35 ? "✅极端恐慌，激进买入" :
              vixVal >= 25 ? "✅高度恐惧，加大定投" :
              vixVal >= 20 ? "✅恐惧上升，分批买入" :
              vixVal >= 15 ? "✅正常区间，坚持定投" :
-             vixVal >= 12 ? "✅低波动，正常定投" :
+             vixVal >= 12 ? "❌低波动，不宜追高" :
              "❌极度安逸，不建议追高");
         badge.className = "vix-header-badge " + zone.cls;
+        badge.title = vixRuleTip();
     }
 
     function normalizePriceSeries(points, stepWise) {
@@ -470,6 +496,20 @@
         }
     }
 
+    function initDemoControls() {
+        var tabs = document.querySelectorAll("#vixDemoTabs .transfer-tab");
+        tabs.forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var val = parseFloat(btn.dataset.vixDemo);
+                if (!Number.isFinite(val)) return;
+                tabs.forEach(function (b) { b.classList.remove("active"); });
+                btn.classList.add("active");
+                updateHeaderBadge(val);
+                updateVixAdvice(val, _vixData && _vixData.stats ? _vixData.stats : {});
+            });
+        });
+    }
+
     function onTabActivated() {
         if (!_vixData) { _vixHidden = {}; fetchVixData(); }
     }
@@ -496,6 +536,7 @@
         fetchLatestVix();
         initPeriodTabs();
         initReloadControls();
+        initDemoControls();
         var vixTab = document.querySelector('.tab-btn[data-tab="vix"]');
         if (vixTab) vixTab.addEventListener("click", onTabActivated);
         if (document.getElementById("tab-vix") && document.getElementById("tab-vix").classList.contains("active")) onTabActivated();
