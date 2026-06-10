@@ -158,6 +158,44 @@
         { "symbol": "000300", "type": "cn_stock", "name": "沪深300" },
         { "symbol": "399006", "type": "cn_stock", "name": "创业板指" }
       ]
+    },
+    "serenity_holdings_us": {
+      "label": "Serenity持仓（美股）",
+      "symbols": [
+        { "symbol": "NVDA", "type": "stock" },
+        { "symbol": "MU", "type": "stock" },
+        { "symbol": "AMD", "type": "stock" },
+        { "symbol": "ASML", "type": "stock" },
+        { "symbol": "MRVL", "type": "stock" },
+        { "symbol": "NOK", "type": "stock" },
+        { "symbol": "COHR", "type": "stock" },
+        { "symbol": "NBIS", "type": "stock" },
+        { "symbol": "IBIT", "type": "stock" },
+        { "symbol": "GFS", "type": "stock" },
+        { "symbol": "SMCI", "type": "stock" },
+        { "symbol": "SWKS", "type": "stock" },
+        { "symbol": "JBL", "type": "stock" },
+        { "symbol": "QRVO", "type": "stock" },
+        { "symbol": "AMKR", "type": "stock" },
+        { "symbol": "LSCC", "type": "stock" },
+        { "symbol": "CLS", "type": "stock" },
+        { "symbol": "FN", "type": "stock" },
+        { "symbol": "HIMS", "type": "stock" },
+        { "symbol": "SLAB", "type": "stock" },
+        { "symbol": "TSEM", "type": "stock" },
+        { "symbol": "SYNA", "type": "stock" },
+        { "symbol": "WOLF", "type": "stock" },
+        { "symbol": "LITE", "type": "stock" },
+        { "symbol": "ETHA", "type": "stock" },
+        { "symbol": "VICR", "type": "stock" },
+        { "symbol": "VCYT", "type": "stock" },
+        { "symbol": "MXL", "type": "stock" },
+        { "symbol": "AAOI", "type": "stock" },
+        { "symbol": "LPKF", "type": "stock" },
+        { "symbol": "VLN", "type": "stock" },
+        { "symbol": "AXTI", "type": "stock" },
+        { "symbol": "IHRT", "type": "stock" }
+      ]
     }
   },
   "color_range": {
