@@ -30,10 +30,10 @@
     function getVixColors() {
         var s = getComputedStyle(document.documentElement);
         return {
-            grid: s.getPropertyValue('--apple-chart-grid').trim() || 'rgba(255,255,255,0.08)',
-            text: s.getPropertyValue('--apple-chart-text').trim() || 'rgba(255,255,255,0.6)',
-            textDim: s.getPropertyValue('--apple-chart-text-dim').trim() || 'rgba(255,255,255,0.35)',
-            crosshair: s.getPropertyValue('--apple-chart-crosshair').trim() || 'rgba(255,255,255,0.25)',
+            grid: s.getPropertyValue('--apple-chart-grid').trim() || 'rgba(255,255,255,0.10)',
+            text: s.getPropertyValue('--apple-chart-text').trim() || 'rgba(255,255,255,0.75)',
+            textDim: s.getPropertyValue('--apple-chart-text-dim').trim() || 'rgba(255,255,255,0.50)',
+            crosshair: s.getPropertyValue('--apple-chart-crosshair').trim() || 'rgba(255,255,255,0.32)',
             tooltipBg: s.getPropertyValue('--apple-tooltip-bg').trim() || 'rgba(0,0,0,0.85)',
             tooltipText: s.getPropertyValue('--apple-tooltip-text').trim() || '#fff',
         };

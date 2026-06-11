@@ -30,11 +30,11 @@
             --apple-tooltip-bg: rgba(24, 24, 26, 0.96);
             --apple-tooltip-border: rgba(255, 255, 255, 0.12);
             --apple-tooltip-text: #ffffff;
-            --apple-chart-grid: rgba(255, 255, 255, 0.08);
-            --apple-chart-text: rgba(255, 255, 255, 0.6);
-            --apple-chart-text-dim: rgba(255, 255, 255, 0.35);
-            --apple-chart-crosshair: rgba(255, 255, 255, 0.25);
-            --apple-chart-color: rgba(255, 255, 255, 0.7);
+            --apple-chart-grid: rgba(255, 255, 255, 0.10);
+            --apple-chart-text: rgba(255, 255, 255, 0.75);
+            --apple-chart-text-dim: rgba(255, 255, 255, 0.50);
+            --apple-chart-crosshair: rgba(255, 255, 255, 0.32);
+            --apple-chart-color: rgba(255, 255, 255, 0.80);
         }
 
         [data-theme="light"] {

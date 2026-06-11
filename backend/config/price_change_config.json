@@ -107,35 +107,36 @@
     "cn_etf_nasdaq100": {
       "label": "纳指ETF追踪（A股）",
       "symbols": [
-        { "symbol": "513300", "type": "cn_stock", "name": "华夏纳指100ETF" },
-        { "symbol": "513110", "type": "cn_stock", "name": "华泰柏瑞纳指100ETF" },
-        { "symbol": "159655", "type": "cn_stock", "name": "华安纳指100ETF" },
-        { "symbol": "159660", "type": "cn_stock", "name": "博时纳指100ETF" },
-        { "symbol": "159632", "type": "cn_stock", "name": "易方达纳指100ETF" },
-        { "symbol": "159501", "type": "cn_stock", "name": "招商纳指100ETF" },
-        { "symbol": "159513", "type": "cn_stock", "name": "富国纳指100" },
-        { "symbol": "159696", "type": "cn_stock", "name": "摩根纳指100" },
-        { "symbol": "159529", "type": "cn_stock", "name": "汇添富纳斯达克ETF" },
-        { "symbol": "513100", "type": "cn_stock", "name": "国泰纳斯达克100ETF" },
-        { "symbol": "159941", "type": "cn_stock", "name": "广发纳指ETF" }
+        { "symbol": "513300", "type": "cn_stock", "name": "纳斯达克ETF华夏" },
+        { "symbol": "513110", "type": "cn_stock", "name": "纳指ETF华泰柏瑞" },
+        { "symbol": "159655", "type": "cn_stock", "name": "标普500ETF华夏" },
+        { "symbol": "159660", "type": "cn_stock", "name": "纳指ETF汇添富" },
+        { "symbol": "159632", "type": "cn_stock", "name": "纳斯达克ETF华安" },
+        { "symbol": "159501", "type": "cn_stock", "name": "纳指ETF嘉实" },
+        { "symbol": "159513", "type": "cn_stock", "name": "纳斯达克100ETF大成" },
+        { "symbol": "159696", "type": "cn_stock", "name": "纳指ETF易方达" },
+        { "symbol": "159529", "type": "cn_stock", "name": "标普消费ETF景顺" },
+        { "symbol": "513100", "type": "cn_stock", "name": "纳指ETF国泰" },
+        { "symbol": "159941", "type": "cn_stock", "name": "纳指ETF广发" },
+        { "symbol": "159659", "type": "cn_stock", "name": "纳斯达克100ETF招商" }
       ]
     },
     "cn_etf_sp500": {
       "label": "标普ETF追踪（A股）",
       "symbols": [
-        { "symbol": "513650", "type": "cn_stock", "name": "华夏标普500ETF" },
-        { "symbol": "159612", "type": "cn_stock", "name": "国泰标普500ETF" },
-        { "symbol": "513500", "type": "cn_stock", "name": "博时标普500ETF" },
-        { "symbol": "159652", "type": "cn_stock", "name": "易方达标普500ETF" }
+        { "symbol": "513650", "type": "cn_stock", "name": "标普500ETF南方" },
+        { "symbol": "159612", "type": "cn_stock", "name": "标普500ETF国泰" },
+        { "symbol": "513500", "type": "cn_stock", "name": "标普500ETF博时" },
+        { "symbol": "159652", "type": "cn_stock", "name": "有色ETF汇添富" }
       ]
     },
     "cn_etf_others": {
       "label": "其它ETF追踪（A股）",
       "symbols": [
-        { "symbol": "513310", "type": "cn_stock", "name": "华泰柏瑞跨境ETF" },
-        { "symbol": "161128", "type": "cn_stock", "name": "易方达标普信息LOF" },
+        { "symbol": "513310", "type": "cn_stock", "name": "中韩半导体ETF华泰柏瑞" },
+        { "symbol": "161128", "type": "cn_stock", "name": "标普信息科技LOF" },
         { "symbol": "501225", "type": "cn_stock", "name": "全球芯片LOF" },
-        { "symbol": "160644", "type": "cn_stock", "name": "鹏华美国房地产" }
+        { "symbol": "160644", "type": "cn_stock", "name": "港美互联网LOF" }
       ]
     },
     "hot_crypto": {

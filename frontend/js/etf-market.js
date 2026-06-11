@@ -29,20 +29,19 @@
         return active ? active.dataset.etfChart : "candle";
     }
 
-    /* ── Chart colors (read from CSS variables for theme support) ── */
+    /* ── Chart colors — use CSS variable references so SVG auto-adapts to theme changes ── */
     function getEtfChartColors() {
-        var s = getComputedStyle(document.documentElement);
         return {
             candleUp: "#30d158",
             candleDown: "#ff453a",
-            grid: s.getPropertyValue('--apple-chart-grid').trim() || 'rgba(255,255,255,0.08)',
-            text: s.getPropertyValue('--apple-chart-text').trim() || 'rgba(255,255,255,0.6)',
-            textDim: s.getPropertyValue('--apple-chart-text-dim').trim() || 'rgba(255,255,255,0.35)',
-            dim: s.getPropertyValue('--apple-chart-text-dim').trim() || 'rgba(255,255,255,0.35)',
-            crosshair: s.getPropertyValue('--apple-chart-crosshair').trim() || 'rgba(255,255,255,0.25)',
-            tooltipBg: s.getPropertyValue('--apple-tooltip-bg').trim() || 'rgba(0,0,0,0.85)',
-            tooltipText: s.getPropertyValue('--apple-tooltip-text').trim() || '#fff',
-            chartColor: s.getPropertyValue('--apple-chart-color').trim() || 'rgba(255,255,255,0.7)',
+            grid: 'var(--apple-chart-grid)',
+            text: 'var(--apple-chart-text)',
+            textDim: 'var(--apple-chart-text-dim)',
+            dim: 'var(--apple-chart-text-dim)',
+            crosshair: 'var(--apple-chart-crosshair)',
+            tooltipBg: 'var(--apple-tooltip-bg)',
+            tooltipText: 'var(--apple-tooltip-text)',
+            chartColor: 'var(--apple-chart-color)',
         };
     }
 
@@ -120,6 +119,13 @@
     } else {
         init();
     }
+
+    // Hook into theme-switch refresh chain (follows same pattern as vix-chart.js)
+    var _origEtfRefresh = window._refreshCharts;
+    window._refreshCharts = function () {
+        if (typeof _origEtfRefresh === "function") _origEtfRefresh();
+        if (typeof window._refreshEtfChart === "function") window._refreshEtfChart();
+    };
 
     /* ── Fetch real-time quotes ── */
     function fetchQuotes() {
@@ -412,6 +418,11 @@
         return null;
     }
 
+    // Expose for theme-toggle re-render
+    window._refreshEtfChart = function () {
+        if (_expandedCode && _lastChartData && _lastChartData.bars) renderChart();
+    };
+
     /* ── SVG Chart — single selected type ── */
     function renderChart() {
         var bars = _lastChartData.bars;
@@ -575,10 +586,11 @@
             if (etfPath) svg += '<path d="' + etfPath + '" fill="none" stroke="#2997ff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"' + "/>";
             if (benchmarkPath) svg += '<path d="' + benchmarkPath + '" fill="none" stroke="#ff9f0a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"' + "/>";
             var benchmarkName = _lastChartData && _lastChartData.stats && _lastChartData.stats.tracking_error_benchmark ? _lastChartData.stats.tracking_error_benchmark : "基准";
-            svg += '<rect x="' + (PAD.left + 4) + '" y="11" width="8" height="3" rx="1" fill="#2997ff"' + "/>";
-            svg += '<text x="' + (PAD.left + 16) + '" y="16" fill="' + CLR.text + '" font-size="10">A股ETF万元收益' + C + "text>";
-            svg += '<rect x="' + (PAD.left + 116) + '" y="11" width="8" height="3" rx="1" fill="#ff9f0a"' + "/>";
-            svg += '<text x="' + (PAD.left + 128) + '" y="16" fill="' + CLR.text + '" font-size="10">' + benchmarkName + '万元收益' + C + "text>";
+            // Legend: larger indicators + readable spacing
+            svg += '<rect x="' + (PAD.left + 4) + '" y="7" width="10" height="10" rx="3" fill="#2997ff"' + "/>";
+            svg += '<text x="' + (PAD.left + 20) + '" y="16" fill="' + CLR.text + '" font-size="11">A股ETF万元收益' + C + "text>";
+            svg += '<rect x="' + (PAD.left + 140) + '" y="7" width="10" height="10" rx="3" fill="#ff9f0a"' + "/>";
+            svg += '<text x="' + (PAD.left + 156) + '" y="16" fill="' + CLR.text + '" font-size="11">' + benchmarkName + '万元收益' + C + "text>";
             svg = addXAxis(svg, bars, n, xScale, H, PAD, CLR);
             return svg;
         }
@@ -617,7 +629,7 @@
                 var bodyTop = isUp ? yClose : yOpen;
                 svg += '<rect x="' + (cx - bodyW / 2) + '" y="' + bodyTop + '" width="' + bodyW + '" height="' + bodyH + '" fill="' + color + '" stroke="' + color + '" stroke-width="0.5"' + "/>";
             }
-            svg += '<text x="' + (PAD.left + 4) + '" y="' + (PAD.top + 11) + '" fill="' + CLR.text + '" font-size="10">蜡烛图 (OHLC)' + C + "text>";
+            svg += '<text x="' + (PAD.left + 4) + '" y="' + (PAD.top + 12) + '" fill="' + CLR.text + '" font-size="11">蜡烛图 (OHLC)' + C + "text>";
             svg = addXAxis(svg, bars, n, xScale, H, PAD, CLR);
             return svg;
         }
@@ -699,7 +711,7 @@
             svg += '<path d="' + areaPath + '" fill="rgba(48,209,88,0.08)"' + "/>";
         }
 
-        svg += '<text x="' + (PAD.left + 4) + '" y="' + (PAD.top + 11) + '" fill="' + CLR.text + '" font-size="10">' + label + " (" + unit + ")" + C + "text>";
+        svg += '<text x="' + (PAD.left + 4) + '" y="' + (PAD.top + 12) + '" fill="' + CLR.text + '" font-size="11">' + label + " (" + unit + ")" + C + "text>";
         svg = addXAxis(svg, bars, n, xScale, H, PAD, CLR);
         return svg;
     }
