@@ -50,8 +50,7 @@ function renderMonthlyCard(symbol, type, year, months) {
   title.className = "pc-monthly-title";
   title.textContent = `${label} — ${year} 年月度涨跌幅`;
   const closeBtn = document.createElement("button");
-  closeBtn.className = "pc-btn";
-  closeBtn.style.cssText = "padding:4px 10px;font-size:12px;";
+  closeBtn.className = "pc-btn pc-btn-sm";
   closeBtn.textContent = "关闭";
   closeBtn.addEventListener("click", () => card.remove());
   header.appendChild(title);
@@ -114,7 +113,7 @@ function renderDailyBlock(symbol, year, month, days, mountEl) {
         return `<div class="pc-daily-block" style="background:${colors.bg};">
           <div class="pc-month-num">${d.day}日</div>
           <div class="pc-month-val" style="color:${colors.text};">${formatted}</div>
-          <div style="font-size:10px;color:var(--apple-text-tertiary);margin-top:4px;">${d.close}</div>
+          <div style="font-size:var(--text-xs);color:var(--apple-text-tertiary);margin-top:4px;">${d.close}</div>
         </div>`;
       }).join("")}
     </div>

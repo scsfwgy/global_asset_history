@@ -32,7 +32,7 @@
             padding: 7px 12px;
             background: var(--apple-surface-1);
             border: 1px solid var(--apple-divider);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             color: var(--apple-text-primary);
             font-size: 13px;
             outline: none;
@@ -47,7 +47,7 @@
             padding: 7px 10px;
             background: var(--apple-surface-1);
             border: 1px solid var(--apple-divider);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             color: var(--apple-text-primary);
             font-size: 13px;
             outline: none;
@@ -59,7 +59,7 @@
             padding: 7px 10px;
             background: var(--apple-surface-1);
             border: 1px solid var(--apple-divider);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             color: var(--apple-text-primary);
             font-size: 13px;
             outline: none;
@@ -76,7 +76,7 @@
             background: var(--apple-surface-1);
             color: var(--apple-text-primary);
             font-size: 13px;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             cursor: pointer;
             transition: all var(--transition-fast);
             white-space: nowrap;
@@ -88,6 +88,7 @@
         .pc-btn.danger { border-color: var(--data-negative); color: var(--data-negative); }
         .pc-btn.danger:hover { background: var(--data-negative); color: #fff; }
         .pc-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .pc-btn-sm { padding: var(--space-xs) 10px; font-size: var(--text-xs); border-radius: var(--radius-md); }
 
         .pc-presets {
             display: flex;
@@ -109,7 +110,7 @@
             padding: 4px 10px;
             background: var(--apple-surface-1);
             border: 1px solid var(--apple-divider);
-            border-radius: 999px;
+            border-radius: var(--radius-full);
             color: var(--apple-text-secondary);
             font-size: 12px;
             cursor: pointer;
@@ -135,7 +136,7 @@
             padding: 4px 10px;
             background: rgba(0, 113, 227, 0.15);
             border: 1px solid rgba(0, 113, 227, 0.3);
-            border-radius: 999px;
+            border-radius: var(--radius-full);
             font-size: 12px;
             color: var(--apple-blue);
         }
@@ -153,7 +154,7 @@
         /* ─── Table ─── */
         .pc-table-wrap {
             overflow-x: auto;
-            border-radius: 12px;
+            border-radius: var(--radius-lg);
             background: var(--apple-surface-1);
             box-shadow: var(--apple-card-shadow);
         }
@@ -210,21 +211,20 @@
             background: var(--apple-overlay);
         }
         .pc-table tbody tr:hover td:first-child {
-            background: var(--apple-surface-1);
-            /* keep sticky column bg consistent but add subtle highlight */;
+            background: var(--apple-overlay);
         }
 
         .pc-table tbody tr:nth-child(even) td {
             background: var(--apple-overlay-subtle);
         }
         .pc-table tbody tr:nth-child(even) td:first-child {
-            background: var(--apple-surface-1);
+            background: var(--apple-overlay-subtle);
         }
         .pc-table tbody tr:nth-child(even):hover td {
             background: var(--apple-overlay);
         }
         .pc-table tbody tr:nth-child(even):hover td:first-child {
-            background: var(--apple-surface-1);
+            background: var(--apple-overlay);
         }
 
         .pc-empty {
@@ -242,7 +242,7 @@
             margin-bottom: 12px;
             padding: 10px 14px;
             border: 1px solid var(--apple-divider);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             background: var(--apple-surface-1);
             color: var(--apple-text-secondary);
             font-size: 12px;
@@ -256,7 +256,7 @@
             padding: 12px 16px;
             background: rgba(255, 69, 58, 0.1);
             border: 1px solid rgba(255, 69, 58, 0.3);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             color: var(--data-negative);
             font-size: 13px;
             margin-bottom: 12px;
@@ -299,7 +299,7 @@
             cursor: pointer;
             transition: all var(--transition-fast);
             margin-bottom: -1px;
-            border-radius: 6px 6px 0 0;
+            border-radius: var(--radius-sm) 6px 0 0;
         }
 
         .tab-btn:hover { color: var(--apple-text-primary); }
@@ -340,7 +340,7 @@
         .pc-monthly {
             margin-top: 24px;
             background: var(--apple-surface-1);
-            border-radius: 12px;
+            border-radius: var(--radius-lg);
             padding: 20px;
             box-shadow: var(--apple-card-shadow);
         }
@@ -372,7 +372,7 @@
         .pc-month-block {
             text-align: center;
             padding: 12px 6px;
-            border-radius: 10px;
+            border-radius: var(--radius-md);
             background: var(--apple-surface-2);
             transition: transform var(--transition-fast);
             cursor: pointer;
@@ -399,7 +399,7 @@
         .pc-daily-block {
             text-align: center;
             padding: 10px 6px;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             background: var(--apple-surface-2);
         }
 
@@ -421,7 +421,7 @@
             padding: 7px 12px;
             background: var(--apple-surface-1);
             border: 1px solid var(--apple-divider);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             color: var(--apple-text-primary);
             font-size: 13px;
             outline: none;
@@ -436,7 +436,7 @@
             gap: 20px;
             padding: 12px 16px;
             background: var(--apple-surface-2);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             margin-bottom: 14px;
         }
 
@@ -511,7 +511,7 @@
             text-align: center;
             padding: 12px 8px;
             background: var(--apple-surface-2);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
         }
 
         .crash-summary-label {
@@ -529,7 +529,7 @@
         .crash-status {
             display: inline-block;
             padding: 2px 10px;
-            border-radius: 999px;
+            border-radius: var(--radius-full);
             font-size: var(--text-xs);
             font-weight: 600;
         }
@@ -601,14 +601,14 @@
             pointer-events: none;
             background: var(--apple-surface-1);
             border: 1px solid var(--apple-divider);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             padding: 8px 12px;
             font-size: 12px;
             color: var(--apple-text-primary);
             display: none;
             z-index: 20;
             white-space: nowrap;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            box-shadow: var(--apple-shadow-tooltip);
         }
 
         @media (max-width: 768px) {
@@ -660,7 +660,7 @@
         .header-settings-wrap { position: relative; }
         .header-settings-btn {
             width: 28px; height: 28px;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             border: none;
             background: transparent;
             color: var(--apple-text-tertiary);
@@ -681,7 +681,7 @@
             content: '';
             position: absolute;
             inset: -4px;
-            border-radius: 12px;
+            border-radius: var(--radius-lg);
             background: transparent;
             box-shadow: 0 0 0 0 rgba(0,113,227,0.5);
             animation: settings-ring 2s ease-out 3;
@@ -714,15 +714,15 @@
             min-width: 210px;
             background: var(--apple-surface-1);
             border: 1px solid var(--apple-divider);
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--apple-shadow-popover);
             padding: 6px;
             z-index: 100;
         }
         .header-settings-menu a {
             display: flex; align-items: center; gap: 8px;
             padding: 8px 12px;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             font-size: 13px;
             color: var(--apple-text-primary);
             text-decoration: none;
@@ -742,7 +742,7 @@
         }
         .header-settings-theme-row {
             cursor: pointer;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             transition: background 0.12s;
         }
         .header-settings-theme-row:hover { background: var(--apple-overlay); }
@@ -771,7 +771,7 @@
 
         .wish-form {
             background: var(--apple-surface-2);
-            border-radius: 10px;
+            border-radius: var(--radius-md);
             padding: 14px;
             margin-bottom: 20px;
         }
@@ -784,7 +784,7 @@
             padding: 10px 12px;
             background: var(--apple-surface-1);
             border: 1px solid var(--apple-divider);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             color: var(--apple-text-primary);
             font-size: 14px;
             font-family: inherit;
@@ -805,7 +805,7 @@
             display: inline-flex;
             align-items: center;
             cursor: pointer;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             overflow: hidden;
             line-height: 0;
             min-width: 120px;
@@ -817,7 +817,7 @@
             margin-top: 10px;
             font-size: 13px;
             padding: 8px 12px;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
         }
         .wish-msg.is-error { background: rgba(255, 69, 58, 0.1); color: var(--data-negative); }
         .wish-msg.is-ok { background: rgba(48, 209, 88, 0.12); color: var(--data-positive); }
@@ -830,7 +830,7 @@
 
         .wish-card {
             background: var(--apple-surface-2);
-            border-radius: 10px;
+            border-radius: var(--radius-md);
             padding: 14px 16px;
             position: relative;
             display: flex;
@@ -867,7 +867,7 @@
         .wish-card-reply {
             background: rgba(0, 113, 227, 0.08);
             border-left: 3px solid var(--apple-blue);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             padding: 8px 10px;
             font-size: 12px;
             line-height: 1.5;
@@ -903,7 +903,7 @@
             padding: 6px 8px;
             background: var(--apple-surface-1);
             border: 1px solid var(--apple-divider);
-            border-radius: 7px;
+            border-radius: var(--radius-md);
             color: var(--apple-text-primary);
             font-size: 12px;
             font-family: inherit;
@@ -934,12 +934,26 @@
     /* Row-level coloring (etf-pos/etf-neg) */
     #etfBody td.etf-pos { color: var(--data-positive); }
     #etfBody td.etf-neg { color: var(--data-negative); }
-    .etf-badge-sh { display:inline-block;padding:1px 6px;border-radius:4px;font-size:var(--text-xs);font-weight:600;background:rgba(255,69,58,0.12);color:var(--data-negative); }
-    .etf-badge-sz { display:inline-block;padding:1px 6px;border-radius:4px;font-size:var(--text-xs);font-weight:600;background:rgba(48,209,88,0.12);color:var(--data-positive); }
+    .etf-badge-sh { display:inline-block;padding:1px 6px;border-radius:var(--radius-sm);font-size:var(--text-xs);font-weight:600;background:rgba(255,69,58,0.12);color:var(--data-negative); }
+    .etf-badge-sz { display:inline-block;padding:1px 6px;border-radius:var(--radius-sm);font-size:var(--text-xs);font-weight:600;background:rgba(48,209,88,0.12);color:var(--data-positive); }
     #etfChartContainer { overflow-x: auto; scrollbar-width: none; }
     #etfChartContainer::-webkit-scrollbar { display: none; }
     #etfDetailStats { border-spacing: 0; margin-bottom: 10px; white-space: nowrap; }
-    #etfDetail { scrollbar-width: none; }
+    #etfDetail {
+        scrollbar-width: none;
+        display: block;
+        max-height: 0;
+        opacity: 0;
+        margin-top: 0;
+        overflow: hidden;
+        transition: max-height var(--transition-slow), opacity var(--transition-normal), margin-top var(--transition-normal);
+    }
+    #etfDetail.open {
+        max-height: 4000px;
+        opacity: 1;
+        margin-top: 20px;
+        overflow-x: auto;
+    }
     #etfDetail::-webkit-scrollbar { display: none; }
     #etfDetailStats td.etf-ds-label { color: var(--apple-text-tertiary); font-size: var(--text-xs); padding-right: 4px; }
     #etfDetailStats td.etf-ds-val { color: var(--apple-text-primary); font-variant-numeric: tabular-nums; padding-right: 22px; }
@@ -948,6 +962,22 @@
     #etfDetailStats td.etf-ds-val.etf-pos { color: var(--data-positive); }
     #etfDetailStats td.etf-ds-val.etf-neg { color: var(--data-negative); }
     #etfDetailStats tr { border-bottom: none; }
+    /* ETF chart type toggle buttons — same visuals as .transfer-tab but semantically distinct */
+    .etf-chart-tab {
+        padding: 6px 14px;
+        border: none;
+        background: transparent;
+        color: var(--apple-text-secondary);
+        font-size: 12px;
+        font-weight: 500;
+        border-radius: 7px;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .etf-chart-tab:hover { color: var(--apple-text-primary); }
+    .etf-chart-tab.active { background: var(--apple-blue); color: #fff; }
     </style>
     <!-- Analytics (Vercel + Cloudflare): injected only on the real deployed
          domain. On localhost the Vercel scripts 404 and the Cloudflare beacon
@@ -1075,7 +1105,7 @@
         <div id="pcChartWrap" class="pc-monthly" style="display:none;">
             <div class="pc-monthly-header">
                 <span class="pc-chart-title">历年涨跌幅走势</span>
-                <button id="pcChartClose" class="pc-btn" style="padding:4px 10px;font-size:12px;">关闭</button>
+                <button id="pcChartClose" class="pc-btn pc-btn-sm">关闭</button>
             </div>
             <div id="pcChartSvg"></div>
         </div>
@@ -1200,7 +1230,7 @@
         <div class="pc-monthly">
             <div class="pc-monthly-header">
                 <span class="pc-chart-title">🐉 A股龙头股回调冲击新高统计</span>
-                <span style="font-size:11px;color:var(--apple-text-tertiary);">沪深主板 · 不含ST/创业板/科创板 · 连续涨停≥6天 · 按首次涨停日期从近到远</span>
+                <span style="font-size:var(--text-xs);color:var(--apple-text-tertiary);">沪深主板 · 不含ST/创业板/科创板 · 连续涨停≥6天 · 按首次涨停日期从近到远</span>
             </div>
             <div class="pc-bt-row">
                 <span class="pc-bt-label">开始日期</span>
@@ -1241,7 +1271,7 @@
             <div class="pc-monthly-header">
                 <span class="pc-chart-title">📊 A股ETF 实时行情 — 追踪美股指数的境内ETF</span>
                 <span id="etfRefreshInfo" style="font-size:12px;color:var(--apple-text-secondary);margin-left:auto;"></span>
-                <button id="etfRefreshBtn" class="pc-btn" style="padding:4px 12px;font-size:12px;margin-left:10px;">刷新行情</button>
+                <button id="etfRefreshBtn" class="pc-btn pc-btn-sm" style="margin-left:10px;">刷新行情</button>
             </div>
             <div class="transfer-tabs" id="etfTabBar" style="margin-bottom:8px;">
                 <button class="transfer-tab active" data-etf-tab="nasdaq100">纳指100</button>
@@ -1273,21 +1303,21 @@
                 </table>
             </div>
             <!-- ETF detail chart panel -->
-            <div id="etfDetail" style="display:none;margin-top:20px;background:var(--apple-surface-1);border-radius:12px;padding:20px 20px 16px;overflow-x:auto;">
+            <div id="etfDetail" style="background:var(--apple-surface-1);padding:20px 20px 16px;overflow-x:auto;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--apple-divider);">
                     <span style="font-size:14px;font-weight:600;" id="etfDetailTitle"></span>
-                    <button id="etfDetailClose" class="pc-btn" style="padding:2px 10px;font-size:12px;">✕</button>
+                    <button id="etfDetailClose" class="pc-btn pc-btn-sm">✕</button>
                 </div>
                 <table id="etfDetailStats" style="border-collapse:collapse;"><tbody></tbody></table>
-                <div id="etfPremiumNote" style="display:none;font-size:11px;color:#ff9f0a;margin:10px 0 4px;">⚠ 溢价率历史数据暂不可用，当前显示为实时溢价率参考值</div>
+                <div id="etfPremiumNote" style="display:none;font-size:var(--text-xs);color:#ff9f0a;margin:10px 0 4px;">⚠ 溢价率历史数据暂不可用，当前显示为实时溢价率参考值</div>
                 <div style="display:flex;gap:8px;align-items:center;margin:12px 0 8px;" id="etfChartToggles">
-                    <span style="font-size:11px;color:var(--apple-text-tertiary);">指标:</span>
-                    <button class="transfer-tab active" data-etf-chart="compare">涨跌幅对比</button>
-                    <button class="transfer-tab" data-etf-chart="candle">蜡烛图</button>
-                    <button class="transfer-tab" data-etf-chart="change">涨跌幅</button>
-                    <button class="transfer-tab" data-etf-chart="premium">溢价率</button>
-                    <button class="transfer-tab" data-etf-chart="amplitude">振幅</button>
-                    <button class="transfer-tab" data-etf-chart="amount">成交额</button>
+                    <span style="font-size:var(--text-xs);color:var(--apple-text-tertiary);">指标:</span>
+                    <button class="etf-chart-tab active" data-etf-chart="compare">涨跌幅对比</button>
+                    <button class="etf-chart-tab" data-etf-chart="candle">蜡烛图</button>
+                    <button class="etf-chart-tab" data-etf-chart="change">涨跌幅</button>
+                    <button class="etf-chart-tab" data-etf-chart="premium">溢价率</button>
+                    <button class="etf-chart-tab" data-etf-chart="amplitude">振幅</button>
+                    <button class="etf-chart-tab" data-etf-chart="amount">成交额</button>
                 </div>
                 <div id="etfChartContainer"></div>
             </div>
@@ -1308,7 +1338,7 @@
                 <div style="display:flex;align-items:center;gap:6px;margin-left:10px;">
                     <span class="pc-bt-label">条数</span>
                     <input type="number" id="vixCountInput" class="pc-bt-input" value="30" min="5" max="2000" step="5" style="width:82px;">
-                    <button id="vixReloadBtn" class="pc-btn" style="padding:6px 12px;font-size:12px;">加载</button>
+                    <button id="vixReloadBtn" class="pc-btn pc-btn-sm">加载</button>
                 </div>
                 <div class="transfer-tabs" id="vixDemoTabs" style="display:none;margin-left:10px;">
                     <button class="transfer-tab" data-vix-demo="10">红10</button>

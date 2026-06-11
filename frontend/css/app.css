@@ -34,6 +34,9 @@
             --apple-tooltip-bg: rgba(24, 24, 26, 0.96);
             --apple-tooltip-border: rgba(255, 255, 255, 0.12);
             --apple-tooltip-text: #ffffff;
+            /* Elevation shadows (theme-aware) */
+            --apple-shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.45);
+            --apple-shadow-tooltip: 0 4px 16px rgba(0, 0, 0, 0.4);
             --apple-chart-grid: rgba(255, 255, 255, 0.10);
             --apple-chart-text: rgba(255, 255, 255, 0.75);
             --apple-chart-text-dim: rgba(255, 255, 255, 0.50);
@@ -57,6 +60,11 @@
             --transition-fast: 0.15s ease;
             --transition-normal: 0.25s ease;
             --transition-slow: 0.4s ease;
+            /* Border-radius scale */
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-full: 999px;
         }
 
         [data-theme="light"] {
@@ -86,6 +94,9 @@
             --apple-tooltip-bg: rgba(255, 255, 255, 0.96);
             --apple-tooltip-border: rgba(0, 0, 0, 0.10);
             --apple-tooltip-text: #1d1d1f;
+            /* Elevation shadows (theme-aware) */
+            --apple-shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.12);
+            --apple-shadow-tooltip: 0 4px 16px rgba(0, 0, 0, 0.10);
             --apple-chart-grid: rgba(0, 0, 0, 0.06);
             --apple-chart-text: rgba(0, 0, 0, 0.50);
             --apple-chart-text-dim: rgba(0, 0, 0, 0.28);
@@ -180,7 +191,7 @@
             gap: 4px;
             padding: 6px 10px;
             border: 1px solid var(--apple-divider);
-            border-radius: 999px;
+            border-radius: var(--radius-full);
             background: var(--apple-overlay-light);
             font-size: 13px;
             color: var(--apple-text-secondary);
@@ -343,7 +354,7 @@
         .chart-type-toggle {
             display: flex;
             background: var(--apple-surface-1);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             padding: 2px;
             gap: 2px;
         }
@@ -355,7 +366,7 @@
             color: var(--apple-text-secondary);
             font-size: 13px;
             font-weight: 500;
-            border-radius: 7px;
+            border-radius: var(--radius-md);
             cursor: pointer;
             transition: all var(--transition-fast);
         }
@@ -368,7 +379,7 @@
             padding: 7px 14px;
             background: var(--apple-surface-1);
             border: 1px solid var(--apple-divider);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             color: var(--apple-text-primary);
             font-size: 13px;
             cursor: pointer;
@@ -389,7 +400,7 @@
             padding: 7px 12px;
             background: var(--apple-surface-1);
             border: 1px solid var(--apple-divider);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             color: var(--apple-text-primary);
             font-size: 13px;
             outline: none;
@@ -408,7 +419,7 @@
             background: var(--apple-surface-1);
             color: var(--apple-text-primary);
             font-size: 13px;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             cursor: pointer;
             transition: all var(--transition-fast);
         }
@@ -427,7 +438,7 @@
         .token-key-source-chip {
             padding: 4px 10px;
             background: var(--apple-surface-1);
-            border-radius: 999px;
+            border-radius: var(--radius-full);
             color: var(--apple-text-secondary);
             font-size: 12px;
             white-space: nowrap;
@@ -445,7 +456,7 @@
             gap: 8px;
             padding: 6px 12px;
             background: var(--apple-surface-1);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             border: 1px solid var(--apple-divider);
         }
 
@@ -453,7 +464,7 @@
             padding: 5px 10px;
             background: var(--apple-surface-2);
             border: 1px solid var(--apple-divider);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             color: var(--apple-text-primary);
             font-size: 13px;
             outline: none;
@@ -488,7 +499,7 @@
         .info-chip {
             padding: 4px 10px;
             background: var(--apple-surface-1);
-            border-radius: 6px;
+            border-radius: var(--radius-sm);
             color: var(--apple-text-secondary);
         }
 
@@ -500,8 +511,8 @@
         /* Hero: Total Assets card */
         .hero-card {
             background: var(--apple-surface-1);
-            border-radius: 12px;
-            padding: 28px 32px;
+            border-radius: var(--radius-lg);
+            padding: 20px 24px;
             margin-bottom: 16px;
             text-align: center;
         }
@@ -522,12 +533,12 @@
         }
 
         .hero-value {
-            font-size: 48px;
+            font-size: 36px;
             font-weight: 600;
             color: var(--apple-text-primary);
-            letter-spacing: -0.96px;
-            line-height: 1.07;
-            margin-bottom: 16px;
+            letter-spacing: -0.72px;
+            line-height: 1.1;
+            margin-bottom: 12px;
         }
 
         .hero-change {
@@ -541,7 +552,7 @@
             font-size: 16px;
             font-weight: 600;
             padding: 8px 18px;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             background: var(--apple-surface-2);
             display: inline-flex;
             align-items: center;
@@ -567,7 +578,7 @@
         /* Stat cards — no borders, no hover chrome */
         .stat-card {
             background: var(--apple-surface-1);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             padding: 20px;
             transition: none;
         }
@@ -616,7 +627,7 @@
             font-size: var(--text-xs);
             font-weight: 500;
             padding: 3px 8px;
-            border-radius: 5px;
+            border-radius: var(--radius-sm);
             background: var(--apple-surface-2);
             display: flex;
             align-items: center;
@@ -670,7 +681,7 @@
 
         .chart-card {
             background: var(--apple-surface-1);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             padding: 24px;
         }
 
@@ -750,7 +761,7 @@
             align-items: center;
             gap: 16px;
             padding: 12px 14px;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             background: var(--apple-overlay-subtle);
         }
 
@@ -829,7 +840,7 @@
         /* Transfer Records Section */
         .transfer-section {
             background: var(--apple-surface-1);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             margin-bottom: 32px;
             overflow: hidden;
         }
@@ -868,7 +879,7 @@
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
             background: var(--apple-surface-2);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             padding: 3px;
             gap: 3px;
             flex-shrink: 0;
@@ -883,7 +894,7 @@
             color: var(--apple-text-secondary);
             font-size: 12px;
             font-weight: 500;
-            border-radius: 7px;
+            border-radius: var(--radius-md);
             cursor: pointer;
             transition: all var(--transition-fast);
             white-space: nowrap;
@@ -940,7 +951,7 @@
         .transfer-table .exchange-badge {
             display: inline-block;
             padding: 2px 8px;
-            border-radius: 5px;
+            border-radius: var(--radius-sm);
             font-size: var(--text-xs);
             font-weight: 600;
         }
@@ -980,7 +991,7 @@
 
         .token-summary-card {
             background: var(--apple-surface-1);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             padding: 20px 24px;
             margin-bottom: 24px;
         }
@@ -989,7 +1000,7 @@
             margin-top: -8px;
             margin-bottom: 16px;
             padding: 10px 14px;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             background: var(--apple-overlay-subtle);
             border: 1px solid var(--apple-overlay);
             color: var(--apple-text-secondary);
@@ -1010,7 +1021,7 @@
 
         .summary-card {
             background: var(--apple-overlay-subtle);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             padding: 16px 18px;
         }
 
@@ -1041,7 +1052,7 @@
 
         .token-key-panel {
             background: var(--apple-surface-1);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             padding: 18px 20px;
             margin-bottom: 24px;
         }
@@ -1082,7 +1093,7 @@
 
         .token-account-card {
             background: var(--apple-surface-1);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             padding: 20px 24px;
             margin-bottom: 24px;
         }
@@ -1106,7 +1117,7 @@
             display: inline-flex;
             align-items: center;
             padding: 4px 10px;
-            border-radius: 999px;
+            border-radius: var(--radius-full);
             background: rgba(48, 209, 88, 0.15);
             color: rgba(48, 209, 88, 0.95);
             font-size: 12px;
@@ -1121,7 +1132,7 @@
 
         .token-account-item {
             background: var(--apple-overlay-subtle);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             padding: 16px 18px;
         }
 
@@ -1168,7 +1179,7 @@
         .token-progress-track {
             width: 100%;
             height: 10px;
-            border-radius: 999px;
+            border-radius: var(--radius-full);
             background: var(--apple-overlay-medium);
             overflow: hidden;
         }
@@ -1183,7 +1194,7 @@
 
         .token-table-card {
             background: var(--apple-surface-1);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             overflow: hidden;
         }
 
@@ -1206,7 +1217,7 @@
             display: inline-flex;
             align-items: center;
             padding: 3px 8px;
-            border-radius: 999px;
+            border-radius: var(--radius-full);
             background: var(--apple-overlay-medium);
             color: var(--apple-text-primary);
             font-size: var(--text-xs);
@@ -1245,7 +1256,7 @@
             background: transparent;
             color: var(--apple-text-secondary);
             font-size: 13px;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             cursor: pointer;
             transition: all var(--transition-fast);
         }
@@ -1327,7 +1338,7 @@
             .stat-card { padding: 14px 16px; }
             .chart-header { flex-direction: column; align-items: flex-start; }
             .chart-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
-            .chart-card { padding: 16px; border-radius: 6px; }
+            .chart-card { padding: 16px; border-radius: var(--radius-sm); }
             .secondary-charts { gap: 16px; }
             .token-analysis-chart {
                 height: 280px;
@@ -1376,7 +1387,7 @@
             align-items: center;
             gap: 6px;
             padding: 2px 10px;
-            border-radius: 999px;
+            border-radius: var(--radius-full);
             font-size: 12px;
             font-weight: 600;
             white-space: nowrap;
@@ -1424,7 +1435,7 @@
             margin-bottom: 16px;
             padding: 14px 18px;
             background: var(--apple-surface-2);
-            border-radius: 10px;
+            border-radius: var(--radius-md);
             border: 1px solid var(--apple-divider);
         }
 
@@ -1479,7 +1490,7 @@
             font-size: 14px;
             font-weight: 600;
             padding: 2px 10px;
-            border-radius: 999px;
+            border-radius: var(--radius-full);
             display: inline-block;
             width: fit-content;
         }

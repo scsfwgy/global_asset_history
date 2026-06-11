@@ -25,7 +25,7 @@
 
     /* ── Chart type selection (single-select) ── */
     function activeChartType() {
-        var active = document.querySelector('#etfChartToggles .transfer-tab.active');
+        var active = document.querySelector('#etfChartToggles .etf-chart-tab.active');
         return active ? active.dataset.etfChart : "candle";
     }
 
@@ -102,10 +102,10 @@
         if (closeBtn) closeBtn.addEventListener("click", function () { hideDetail(); });
 
         // Chart type selector (single-select, radio style)
-        document.querySelectorAll("#etfChartToggles .transfer-tab").forEach(function (btn) {
+        document.querySelectorAll("#etfChartToggles .etf-chart-tab").forEach(function (btn) {
             btn.addEventListener("click", function (e) {
                 e.stopPropagation();
-                document.querySelectorAll("#etfChartToggles .transfer-tab").forEach(function (b) { b.classList.remove("active"); });
+                document.querySelectorAll("#etfChartToggles .etf-chart-tab").forEach(function (b) { b.classList.remove("active"); });
                 btn.classList.add("active");
                 if (_expandedCode) renderChart();
             });
@@ -348,7 +348,7 @@
 
         tbody.appendChild(tr1);
 
-        document.getElementById("etfDetail").style.display = "block";
+        document.getElementById("etfDetail").classList.add("open");
 
         // Fetch history and render chart
         fetch("/api/etf-market/history?symbol=" + code + "&days=120")
@@ -405,7 +405,7 @@
 
     function hideDetail() {
         _expandedCode = null;
-        document.getElementById("etfDetail").style.display = "none";
+        document.getElementById("etfDetail").classList.remove("open");
         renderTable();
     }
 
