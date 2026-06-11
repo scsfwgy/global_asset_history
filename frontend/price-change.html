@@ -641,6 +641,29 @@
         }
         .header-settings-btn:hover { color: var(--apple-text-primary); }
         .header-settings-btn svg { width: 18px; height: 18px; }
+        /* Hint animation: pulse + rotate to suggest hidden content. Triggered via JS after 10s. */
+        .header-settings-btn.hint {
+            animation: settings-hint 1.6s ease-in-out;
+            color: var(--apple-blue);
+        }
+        @keyframes settings-hint {
+            0%   { transform: scale(1) rotate(0deg); }
+            15%  { transform: scale(1.15) rotate(15deg); }
+            30%  { transform: scale(0.95) rotate(-5deg); }
+            45%  { transform: scale(1.08) rotate(8deg); }
+            60%  { transform: scale(1) rotate(0deg); }
+            75%  { transform: scale(1.06) rotate(0deg); }
+            90%  { transform: scale(1) rotate(0deg); }
+            100% { transform: scale(1) rotate(0deg); color: var(--apple-text-tertiary); }
+        }
+        /* Breathing highlight for the new-feature link when menu is open */
+        .header-settings-menu a.highlight-link {
+            animation: link-breathe 2.4s ease-in-out infinite;
+        }
+        @keyframes link-breathe {
+            0%, 100% { background: transparent; }
+            50% { background: rgba(0,113,227,0.12); }
+        }
         .header-settings-menu {
             position: absolute; top: calc(100% + 8px); right: 0;
             min-width: 210px;
@@ -1353,19 +1376,31 @@
         (function () {
             var btn = document.getElementById('headerSettingsBtn');
             var menu = document.getElementById('headerSettingsMenu');
-            if (btn && menu) {
-                btn.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    var isOpen = menu.style.display === 'block';
-                    menu.style.display = isOpen ? 'none' : 'block';
-                });
-                document.addEventListener('click', function () {
-                    menu.style.display = 'none';
-                });
-                menu.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                });
-            }
+            if (!btn || !menu) return;
+
+            // 10s idle hint: subtle animation to reveal hidden content
+            setTimeout(function () {
+                btn.classList.add('hint');
+                // Clean up after animation ends so it doesn't retrigger
+                btn.addEventListener('animationend', function () {
+                    btn.classList.remove('hint');
+                }, { once: true });
+            }, 10000);
+
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var isOpen = menu.style.display === 'block';
+                menu.style.display = isOpen ? 'none' : 'block';
+                // Highlight the new-feature link when opening
+                var newLink = menu.querySelector('a[href*="kcn9via7j7oq"]');
+                if (!isOpen && newLink) newLink.classList.add('highlight-link');
+            });
+            document.addEventListener('click', function () {
+                menu.style.display = 'none';
+            });
+            menu.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
         })();
 
         // ─── Theme switching ───
