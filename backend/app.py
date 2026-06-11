@@ -80,6 +80,68 @@ def visits():
     return jsonify({"count": count})
 
 
+_LINK_CLICKS_PATH = Path("/tmp/link_clicks.json") if os.path.exists("/tmp") else \
+    Path(__file__).resolve().parent / "config" / "link_clicks.json"
+_link_clicks_lock = threading.Lock()
+
+
+def _read_link_clicks() -> dict:
+    try:
+        if _LINK_CLICKS_PATH.exists():
+            return json.loads(_LINK_CLICKS_PATH.read_text())
+    except Exception:
+        pass
+    return {}
+
+
+def _write_link_clicks(data: dict) -> None:
+    _LINK_CLICKS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _LINK_CLICKS_PATH.write_text(json.dumps(data))
+
+
+@app.route("/api/link-click", methods=["POST"])
+def link_click():
+    """Record a click on a tracked external link.
+    Body: {"name": "feishu_us_stock"}  — the link identifier.
+    """
+    body = request.get_json(silent=True) or {}
+    name = str(body.get("name", "")).strip()
+    if not name:
+        return jsonify({"error": "name is required"}), 400
+
+    # Shared Redis — atomic increment
+    if cache_store.is_enabled():
+        key = f"link_click:{name}"
+        count = cache_store.cache_incr(key)
+        if count is not None:
+            return jsonify({"name": name, "count": count})
+
+    # File fallback (local dev / Redis down)
+    with _link_clicks_lock:
+        data = _read_link_clicks()
+        data[name] = data.get(name, 0) + 1
+        _write_link_clicks(data)
+    return jsonify({"name": name, "count": data[name]})
+
+
+@app.route("/api/link-clicks", methods=["GET"])
+def link_clicks():
+    """Return click counts for all tracked links."""
+    # Known link names
+    names = ["feishu_us_stock", "github", "xiaohongshu"]
+    result = {}
+    if cache_store.is_enabled():
+        for name in names:
+            key = f"link_click:{name}"
+            val = cache_store.cache_get(key)
+            try:
+                result[name] = int(val) if val else 0
+            except (ValueError, TypeError):
+                result[name] = 0
+        return jsonify(result)
+    return jsonify(_read_link_clicks())
+
+
 @app.route("/")
 def index():
     return send_from_directory(str(FRONTEND_DIR), "price-change.html")

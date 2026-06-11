@@ -1401,6 +1401,26 @@
                 }, 6200);
             }, 10000);
 
+            // Track clicks on tracked external links
+            var TRACKED_LINKS = {
+                'feishu_us_stock': 'a[href*="kcn9via7j7oq"]',
+                'github': 'a[href*="github.com"]',
+                'xiaohongshu': 'a[href*="xhslink.com"]'
+            };
+            Object.keys(TRACKED_LINKS).forEach(function (name) {
+                var link = menu.querySelector(TRACKED_LINKS[name]);
+                if (link) {
+                    link.addEventListener('click', function () {
+                        fetch('/api/link-click', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: name }),
+                            keepalive: true
+                        }).catch(function () {});
+                    });
+                }
+            });
+
             btn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 var isOpen = menu.style.display === 'block';
