@@ -629,18 +629,18 @@
         /* ─── Header settings dropdown ─── */
         .header-settings-wrap { position: relative; }
         .header-settings-btn {
-            width: 32px; height: 32px;
-            border-radius: 50%;
-            border: 1px solid var(--apple-divider);
-            background: var(--apple-overlay-light);
-            color: var(--apple-text-secondary);
+            width: 28px; height: 28px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--apple-text-tertiary);
             cursor: pointer;
             display: inline-flex; align-items: center; justify-content: center;
             flex-shrink: 0;
-            transition: all 0.15s;
+            transition: color 0.15s;
         }
-        .header-settings-btn:hover { color: var(--apple-text-primary); border-color: var(--apple-hover-border); background: var(--apple-overlay); }
-        .header-settings-btn svg { width: 16px; height: 16px; }
+        .header-settings-btn:hover { color: var(--apple-text-primary); }
+        .header-settings-btn svg { width: 18px; height: 18px; }
         .header-settings-menu {
             position: absolute; top: calc(100% + 8px); right: 0;
             min-width: 210px;
