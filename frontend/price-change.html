@@ -641,20 +641,35 @@
         }
         .header-settings-btn:hover { color: var(--apple-text-primary); }
         .header-settings-btn svg { width: 18px; height: 18px; }
-        /* Hint animation: pulse + rotate to suggest hidden content. Triggered via JS after 10s. */
+        /* Hint animation: pulse + rotate + glow to reveal hidden content. Triggered via JS after 10s. */
         .header-settings-btn.hint {
-            animation: settings-hint 1.6s ease-in-out;
+            animation: settings-hint 2s ease-in-out 3;
             color: var(--apple-blue);
+            position: relative;
+        }
+        .header-settings-btn.hint::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 12px;
+            background: transparent;
+            box-shadow: 0 0 0 0 rgba(0,113,227,0.5);
+            animation: settings-ring 2s ease-out 3;
+            pointer-events: none;
         }
         @keyframes settings-hint {
             0%   { transform: scale(1) rotate(0deg); }
-            15%  { transform: scale(1.15) rotate(15deg); }
-            30%  { transform: scale(0.95) rotate(-5deg); }
-            45%  { transform: scale(1.08) rotate(8deg); }
-            60%  { transform: scale(1) rotate(0deg); }
-            75%  { transform: scale(1.06) rotate(0deg); }
-            90%  { transform: scale(1) rotate(0deg); }
+            15%  { transform: scale(1.25) rotate(25deg); }
+            30%  { transform: scale(0.9) rotate(-10deg); }
+            45%  { transform: scale(1.15) rotate(12deg); }
+            60%  { transform: scale(0.95) rotate(0deg); }
+            75%  { transform: scale(1.08) rotate(0deg); }
             100% { transform: scale(1) rotate(0deg); color: var(--apple-text-tertiary); }
+        }
+        @keyframes settings-ring {
+            0%   { box-shadow: 0 0 0 0 rgba(0,113,227,0.5); }
+            50%  { box-shadow: 0 0 0 8px rgba(0,113,227,0); }
+            100% { box-shadow: 0 0 0 0 rgba(0,113,227,0); }
         }
         /* Breathing highlight for the new-feature link when menu is open */
         .header-settings-menu a.highlight-link {
@@ -1378,13 +1393,12 @@
             var menu = document.getElementById('headerSettingsMenu');
             if (!btn || !menu) return;
 
-            // 10s idle hint: subtle animation to reveal hidden content
+            // 10s idle hint: pulse + rotate + ring glow (3 loops, 2s each → 6s total)
             setTimeout(function () {
                 btn.classList.add('hint');
-                // Clean up after animation ends so it doesn't retrigger
-                btn.addEventListener('animationend', function () {
+                setTimeout(function () {
                     btn.classList.remove('hint');
-                }, { once: true });
+                }, 6200);
             }, 10000);
 
             btn.addEventListener('click', function (e) {
