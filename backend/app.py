@@ -53,6 +53,21 @@ def etf_market():
     return send_from_directory(str(FRONTEND_DIR), "etf-market.html")
 
 
+@app.route("/yearly")
+@app.route("/backtest")
+@app.route("/crash")
+@app.route("/etf")
+@app.route("/etf/nasdaq100")
+@app.route("/etf/sp500")
+@app.route("/etf/global_others")
+@app.route("/vix")
+@app.route("/wishes")
+@app.route("/leader")
+@app.route("/settings")
+def serve_tab():
+    return send_from_directory(str(FRONTEND_DIR), "price-change.html")
+
+
 @app.route("/api/health")
 def health():
     return jsonify({"status": "ok"})

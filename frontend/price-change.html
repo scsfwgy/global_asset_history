@@ -1496,13 +1496,25 @@
             btn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 var isOpen = menu.style.display === 'block';
-                menu.style.display = isOpen ? 'none' : 'block';
-                // Highlight the new-feature link when opening
-                var newLink = menu.querySelector('a[href*="kcn9via7j7oq"]');
-                if (!isOpen && newLink) newLink.classList.add('highlight-link');
+                if (isOpen) {
+                    // Close: hide menu, restore previous tab path
+                    menu.style.display = 'none';
+                    var prev = (history.state && history.state._prev) || '/yearly';
+                    history.replaceState({}, '', prev);
+                } else {
+                    // Open: show menu, push /settings to history
+                    menu.style.display = 'block';
+                    var newLink = menu.querySelector('a[href*="kcn9via7j7oq"]');
+                    if (newLink) newLink.classList.add('highlight-link');
+                    history.pushState({ _settingsOpen: true, _prev: location.pathname }, '', '/settings');
+                }
             });
             document.addEventListener('click', function () {
-                menu.style.display = 'none';
+                if (menu.style.display === 'block') {
+                    menu.style.display = 'none';
+                    var prev = (history.state && history.state._prev) || '/yearly';
+                    history.replaceState({}, '', prev);
+                }
             });
             menu.addEventListener('click', function (e) {
                 e.stopPropagation();
@@ -1563,15 +1575,168 @@
             });
         })();
 
-        // Tab switching
-        document.querySelectorAll('.tab-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-                btn.classList.add('active');
-                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        // ─── Tab Routing (URL-based) ───
+        (function() {
+            var PATH_TO_TAB = {
+                '/': 'yearly',
+                '/yearly': 'yearly',
+                '/backtest': 'backtest',
+                '/crash': 'crash',
+                '/etf': 'etf',
+                '/etf/nasdaq100': 'etf',
+                '/etf/sp500': 'etf',
+                '/etf/global_others': 'etf',
+                '/vix': 'vix',
+                '/wishes': 'wishes',
+                '/leader': 'leader',
+                '/settings': 'yearly'
+            };
+            var TAB_TO_PATH = {
+                'yearly': '/yearly',
+                'backtest': '/backtest',
+                'crash': '/crash',
+                'etf': '/etf',
+                'vix': '/vix',
+                'wishes': '/wishes',
+                'leader': '/leader'
+            };
+
+            // ETF sub-tab path mapping (nasdaq100 / sp500 / global_others)
+            var ETF_SUB_PATH = {
+                'nasdaq100': '/etf/nasdaq100',
+                'sp500': '/etf/sp500',
+                'global_others': '/etf/global_others'
+            };
+
+            function tabFromPath(path) {
+                return PATH_TO_TAB[path] || null;
+            }
+
+            function etfSubFromPath(path) {
+                if (path.indexOf('/etf/') === 0) {
+                    var sub = path.split('/')[2];
+                    if (ETF_SUB_PATH[sub]) return sub;
+                }
+                return null;
+            }
+
+            function activateTab(tabName, updateUrl) {
+                var currentBtn = document.querySelector('.tab-btn.active');
+                var currentTab = currentBtn ? currentBtn.dataset.tab : null;
+                var isSameTab = currentTab === tabName;
+
+                document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+                document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+
+                var btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
+                if (btn) btn.classList.add('active');
+
+                var panel = document.getElementById('tab-' + tabName);
+                if (panel) panel.classList.add('active');
+
+                if (updateUrl && !isSameTab) {
+                    var path = TAB_TO_PATH[tabName] || '/yearly';
+                    history.pushState({ tab: tabName }, '', path);
+                }
+            }
+
+            // Tab button click handlers
+            document.querySelectorAll('.tab-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    // Close settings menu if open (visual only — tab pushState handles URL)
+                    var menu = document.getElementById('headerSettingsMenu');
+                    if (menu && menu.style.display === 'block') {
+                        menu.style.display = 'none';
+                    }
+                    activateTab(btn.dataset.tab, true);
+                });
             });
-        });
+
+            // ETF sub-tab click → update URL (replaceState to avoid flooding history)
+            document.querySelectorAll('#etfTabBar .transfer-tab').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var sub = btn.dataset.etfTab;
+                    var path = ETF_SUB_PATH[sub] || '/etf';
+                    history.replaceState({ tab: 'etf', etfSub: sub }, '', path);
+                });
+            });
+
+            // On page load: read URL and restore the correct tab
+            function restoreFromUrl() {
+                var tab = tabFromPath(location.pathname);
+                if (!tab) {
+                    // Unknown path: silently redirect to /yearly
+                    history.replaceState({ tab: 'yearly' }, '', '/yearly');
+                    return;
+                }
+                // '/' is an alias for yearly, already the default active panel
+                if (tab === 'yearly' && location.pathname === '/') return;
+
+                if (tab === 'leader') {
+                    activateTab('leader', false);
+                    return;
+                }
+
+                // Set DOM state without pushing history, then fire click for lazy-loads
+                activateTab(tab, false);
+                var btn = document.querySelector('.tab-btn[data-tab="' + tab + '"]');
+                if (btn) btn.click();
+
+                // If ETF tab with a sub-tab, activate the sub-tab
+                var etfSub = etfSubFromPath(location.pathname);
+                if (etfSub && tab === 'etf') {
+                    var subBtn = document.querySelector('#etfTabBar .transfer-tab[data-etf-tab="' + etfSub + '"]');
+                    if (subBtn) subBtn.click();
+                }
+
+                // If URL is /settings, auto-open the settings menu
+                if (location.pathname === '/settings') {
+                    var menu = document.getElementById('headerSettingsMenu');
+                    if (menu && menu.style.display !== 'block') {
+                        menu.style.display = 'block';
+                        // Set state so back button works from direct /settings visit
+                        history.replaceState({ _settingsOpen: true, _prev: '/yearly' }, '', '/settings');
+                    }
+                }
+            }
+
+            // Browser back/forward
+            window.addEventListener('popstate', function(e) {
+                // Sync settings menu visibility with URL
+                var menu = document.getElementById('headerSettingsMenu');
+                if (menu && location.pathname !== '/settings' && menu.style.display === 'block') {
+                    menu.style.display = 'none';
+                }
+                if (menu && location.pathname === '/settings' && menu.style.display !== 'block') {
+                    menu.style.display = 'block';
+                    return; // /settings is not a tab, stop here
+                }
+
+                var tab = (e.state && e.state.tab) ? e.state.tab : tabFromPath(location.pathname);
+                if (!tab) return;
+                if (tab === 'leader') {
+                    activateTab('leader', false);
+                    return;
+                }
+                activateTab(tab, false);
+                var btn = document.querySelector('.tab-btn[data-tab="' + tab + '"]');
+                if (btn) btn.click();
+
+                // If ETF tab with a sub-tab, activate the sub-tab
+                var etfSub2 = etfSubFromPath(location.pathname);
+                if (etfSub2 && tab === 'etf') {
+                    var subBtn2 = document.querySelector('#etfTabBar .transfer-tab[data-etf-tab="' + etfSub2 + '"]');
+                    if (subBtn2) subBtn2.click();
+                }
+            });
+
+            // Run restore after all other scripts have initialized
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', restoreFromUrl);
+            } else {
+                restoreFromUrl();
+            }
+        })();
     </script>
 </body>
 </html>
