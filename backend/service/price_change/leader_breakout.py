@@ -223,17 +223,53 @@ except ImportError:
     hk_js_decode = ""
 
 # Pre-compile the JS decoder once (thread-safe as long as single MiniRacer instance)
-_mini_racer = None  # Optional[MiniRacer]
+_mini_racer = None
+_js_runtime = None  # "mini_racer" | "execjs" | None
 
 
 def _get_mini_racer():
-    global _mini_racer
-    if py_mini_racer is None:
-        raise ImportError("py_mini_racer is not installed. Install with: pip install py_mini_racer")
+    """Return a MiniRacer instance, falling back to execjs (Node.js) on platforms
+    where py_mini_racer has native library issues (e.g. Apple Silicon)."""
+    global _mini_racer, _js_runtime
+    if _js_runtime:
+        return _mini_racer  # already initialized
+
+    if py_mini_racer is not None and _mini_racer is None:
+        try:
+            _mini_racer = py_mini_racer.MiniRacer()
+            _mini_racer.eval(hk_js_decode)
+            _js_runtime = "mini_racer"
+            logger.info("JS runtime: py_mini_racer")
+            return _mini_racer
+        except Exception as e:
+            logger.warning("py_mini_racer init failed (%s), falling back to execjs/Node.js", e)
+            _mini_racer = None
+
+    # Fallback: use execjs (requires Node.js)
     if _mini_racer is None:
-        _mini_racer = py_mini_racer.MiniRacer()
-        _mini_racer.eval(hk_js_decode)
+        try:
+            import execjs
+            _mini_racer = execjs  # not a MiniRacer, but we wrap call() below
+        except ImportError:
+            raise ImportError(
+                "JS 运行时不可用。py_mini_racer 初始化失败且 execjs 未安装。"
+                "请安装: pip install py_mini_racer 或 pip install PyExecJS"
+            )
+        _js_runtime = "execjs"
+        logger.info("JS runtime: execjs (Node.js)")
+        return _mini_racer
+
     return _mini_racer
+
+
+def _js_call(decoder_func_name: str, encoded_str: str) -> list:
+    """Call the JS decode function, abstracting over MiniRacer vs execjs."""
+    if _js_runtime == "execjs":
+        import execjs
+        ctx = execjs.compile(hk_js_decode)
+        return ctx.call(decoder_func_name, encoded_str)
+    else:
+        return _get_mini_racer().call(decoder_func_name, encoded_str)
 
 
 def _code_to_ak_symbol(code: str) -> str:
@@ -261,12 +297,12 @@ def _decode_sina_klines(raw_texts: Dict[str, str]) -> Dict:
     """Decode a batch of raw Sina JS texts into DataFrames. Call from main thread."""
     if pd is None:
         raise ImportError("pandas未安装，请联系管理员执行: pip install pandas")
-    mr = _get_mini_racer()
-    results: Dict[str, pd.DataFrame] = {}
+    _get_mini_racer()  # ensure JS runtime is initialized
+    results = {}
     for code, text in raw_texts.items():
         try:
             encoded = text.split("=")[1].split(";")[0].replace('"', "")
-            dict_list = mr.call("d", encoded)
+            dict_list = _js_call("d", encoded)
             df = pd.DataFrame(dict_list)
             df.index = pd.to_datetime(df["date"], errors="coerce").dt.date
             del df["date"]
