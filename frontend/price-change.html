@@ -554,27 +554,6 @@
             font-size: var(--text-xs); color: var(--apple-text-tertiary);
         }
 
-        /* ─── Symbol quick buttons (preset shortcuts) ─── */
-        .pc-symbol-quick {
-            display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-        }
-        .pc-symbol-quick-chip {
-            padding: 3px 10px;
-            background: var(--apple-surface-1);
-            border: 1px solid var(--apple-divider);
-            border-radius: var(--radius-full);
-            color: var(--apple-text-secondary);
-            font-size: 11px;
-            cursor: pointer;
-            transition: all var(--transition-fast);
-            user-select: none;
-            white-space: nowrap;
-        }
-        .pc-symbol-quick-chip:hover {
-            border-color: var(--apple-blue);
-            color: var(--apple-text-primary);
-        }
-
         /* ─── Autocomplete dropdown ─── */
         .pc-ac-dropdown {
             position: absolute; z-index: 200;
@@ -1181,7 +1160,6 @@
                 </select>
                 <button id="pcAddBtn" class="pc-btn primary">添加</button>
                 <button id="pcClearBtn" class="pc-btn danger">清空</button>
-                <div class="pc-symbol-quick" id="pcSymbolQuick"></div>
             </div>
             <div class="control-group">
                 <span class="control-label">统计周期</span>

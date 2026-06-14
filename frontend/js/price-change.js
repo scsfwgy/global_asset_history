@@ -806,59 +806,6 @@ async function init() {
     .then((r) => r.ok && setConnected(true))
     .catch(() => setConnected(false));
 
-  // ── Symbol quick buttons (preset shortcuts) ──
-  var QUICK_PRESET_KEYS = {
-    stock: ['core_us_etf', 'aggressive_us_etf', 'hot_us_stocks'],
-    cn_stock: ['cn_index', 'cn_etf_nasdaq100', 'cn_etf_sp500', 'cn_etf_others'],
-    crypto: ['hot_crypto']
-  };
-
-  function renderSymbolQuick(containerId, type, targetInputId) {
-    var container = document.getElementById(containerId);
-    if (!container) return;
-    var presetKeys = QUICK_PRESET_KEYS[type] || [];
-    var html = '';
-    presetKeys.forEach(function (key) {
-      var preset = PRESETS.find(function (p) { return p.key === key; });
-      if (!preset) return;
-      html += '<button class="pc-symbol-quick-chip" data-preset-key="' + key + '">' + preset.label + '</button>';
-    });
-    container.innerHTML = html;
-
-    // Click handler
-    container.querySelectorAll('.pc-symbol-quick-chip').forEach(function (chip) {
-      chip.addEventListener('click', function () {
-        var pKey = this.dataset.presetKey;
-        var preset = PRESETS.find(function (p) { return p.key === pKey; });
-        if (!preset || !preset.symbols) return;
-        if (targetInputId === 'pcSymbolInput') {
-          // Main page: add all symbols from the preset
-          preset.symbols.forEach(function (s) {
-            addSymbol(s.symbol, s.type);
-          });
-        } else {
-          // Backtest / crash: fill the input with the first symbol
-          var input = document.getElementById(targetInputId);
-          if (input && preset.symbols.length > 0) {
-            input.value = preset.symbols[0].symbol;
-            input.focus();
-          }
-        }
-      });
-    });
-  }
-
-  // Init quick buttons
-  if (document.getElementById('pcSymbolQuick')) {
-    renderSymbolQuick('pcSymbolQuick', 'stock', 'pcSymbolInput');
-    var pcTypeSel = document.getElementById('pcTypeSelect');
-    if (pcTypeSel) {
-      pcTypeSel.addEventListener('change', function () {
-        renderSymbolQuick('pcSymbolQuick', pcTypeSel.value, 'pcSymbolInput');
-      });
-    }
-  }
-
   // ── Autocomplete: build search index from all presets ──
   var _acIndex = [];
   var _acSeen = {};
