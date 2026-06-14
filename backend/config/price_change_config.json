@@ -1,33 +1,5 @@
 {
   "presets": {
-    "holdings_us": {
-      "label": "持有（美股）",
-      "symbols": [
-        { "symbol": "GOOGL", "type": "stock" },
-        { "symbol": "QQQ", "type": "stock", "name": "纳斯达克100ETF" },
-        { "symbol": "NVDA", "type": "stock" },
-        { "symbol": "INTC", "type": "stock" },
-        { "symbol": "AAPL", "type": "stock" },
-        { "symbol": "NOK", "type": "stock" },
-        { "symbol": "AVGO", "type": "stock" },
-        { "symbol": "DRAM", "type": "stock", "name": "内存/存储ETF" },
-        { "symbol": "EWY", "type": "stock", "name": "韩国市场ETF" },
-        { "symbol": "SMH", "type": "stock", "name": "半导体ETF" },
-        { "symbol": "VGT", "type": "stock", "name": "信息技术ETF" }
-      ]
-    },
-    "broad_index": {
-      "label": "大盘指数",
-      "symbols": [
-        { "symbol": "VIX", "type": "stock", "name": "恐慌指数" },
-        { "symbol": "SPY", "type": "stock", "name": "标普500ETF" },
-        { "symbol": "QQQ", "type": "stock", "name": "纳斯达克100ETF" },
-        { "symbol": "000001", "type": "cn_stock", "name": "上证指数" },
-        { "symbol": "000905", "type": "cn_stock", "name": "中证500" },
-        { "symbol": "BTC", "type": "crypto" },
-        { "symbol": "ETH", "type": "crypto" }
-      ]
-    },
     "core_us_etf": {
       "label": "核心ETF（美股）",
       "symbols": [
@@ -41,6 +13,37 @@
         { "symbol": "SOXX", "type": "stock", "name": "半导体产业链" }
       ]
     },
+    "cn_etf_nasdaq100": {
+      "label": "纳指ETF追踪（A股）",
+      "symbols": [
+        { "symbol": "513300", "type": "cn_stock", "name": "纳斯达克ETF华夏" },
+        { "symbol": "513110", "type": "cn_stock", "name": "纳指ETF华泰柏瑞" },
+        { "symbol": "159660", "type": "cn_stock", "name": "纳指ETF汇添富" },
+        { "symbol": "159632", "type": "cn_stock", "name": "纳斯达克ETF华安" },
+        { "symbol": "159501", "type": "cn_stock", "name": "纳指ETF嘉实" },
+        { "symbol": "159513", "type": "cn_stock", "name": "纳斯达克100ETF大成" },
+        { "symbol": "159696", "type": "cn_stock", "name": "纳指ETF易方达" },
+        { "symbol": "159529", "type": "cn_stock", "name": "标普消费ETF景顺" },
+        { "symbol": "513100", "type": "cn_stock", "name": "纳指ETF国泰" },
+        { "symbol": "159941", "type": "cn_stock", "name": "纳指ETF广发" },
+        { "symbol": "159659", "type": "cn_stock", "name": "纳斯达克100ETF招商" }
+      ]
+    },
+
+    "broad_index": {
+      "label": "大盘指数",
+      "symbols": [
+        { "symbol": "VIX", "type": "stock", "name": "恐慌指数" },
+        { "symbol": "SPY", "type": "stock", "name": "标普500ETF" },
+        { "symbol": "QQQ", "type": "stock", "name": "纳斯达克100ETF" },
+        { "symbol": "000001", "type": "cn_stock", "name": "上证指数" },
+        { "symbol": "000905", "type": "cn_stock", "name": "中证500" },
+        { "symbol": "BTC", "type": "crypto" },
+        { "symbol": "ETH", "type": "crypto" }
+      ]
+    },
+
+
     "aggressive_us_etf": {
       "label": "激进ETF（美股）",
       "symbols": [
@@ -105,22 +108,6 @@
         { "symbol": "GLD", "type": "stock", "name": "黄金ETF" }
       ]
     },
-    "cn_etf_nasdaq100": {
-      "label": "纳指ETF追踪（A股）",
-      "symbols": [
-        { "symbol": "513300", "type": "cn_stock", "name": "纳斯达克ETF华夏" },
-        { "symbol": "513110", "type": "cn_stock", "name": "纳指ETF华泰柏瑞" },
-        { "symbol": "159660", "type": "cn_stock", "name": "纳指ETF汇添富" },
-        { "symbol": "159632", "type": "cn_stock", "name": "纳斯达克ETF华安" },
-        { "symbol": "159501", "type": "cn_stock", "name": "纳指ETF嘉实" },
-        { "symbol": "159513", "type": "cn_stock", "name": "纳斯达克100ETF大成" },
-        { "symbol": "159696", "type": "cn_stock", "name": "纳指ETF易方达" },
-        { "symbol": "159529", "type": "cn_stock", "name": "标普消费ETF景顺" },
-        { "symbol": "513100", "type": "cn_stock", "name": "纳指ETF国泰" },
-        { "symbol": "159941", "type": "cn_stock", "name": "纳指ETF广发" },
-        { "symbol": "159659", "type": "cn_stock", "name": "纳斯达克100ETF招商" }
-      ]
-    },
     "cn_etf_sp500": {
       "label": "标普ETF追踪（A股）",
       "symbols": [
@@ -161,6 +148,7 @@
         { "symbol": "399006", "type": "cn_stock", "name": "创业板指" }
       ]
     },
+
     "serenity_holdings_us": {
       "label": "Serenity持仓（美股）",
       "symbols": [
