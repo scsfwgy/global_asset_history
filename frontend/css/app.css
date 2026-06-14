@@ -1472,6 +1472,26 @@
             text-underline-offset: 3px;
         }
 
+        /* ── Custom instant tooltip (replaces slow native title tooltip) ── */
+        .custom-tip {
+            position: fixed;
+            pointer-events: none;
+            z-index: 10000;
+            background: var(--apple-tooltip-bg);
+            color: var(--apple-tooltip-text);
+            border: 1px solid var(--apple-tooltip-border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            line-height: 1.5;
+            max-width: 320px;
+            word-wrap: break-word;
+            box-shadow: var(--apple-shadow-tooltip);
+            display: none;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
         .vix-advice-value {
             font-size: 24px;
             font-weight: 700;

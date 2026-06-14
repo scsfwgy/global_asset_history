@@ -420,35 +420,6 @@
         addLbl("换手率"); addVal(q && q.turnover != null ? q.turnover.toFixed(2)+"%" : "--");
 
         tbody.appendChild(tr);
-
-        // Row 3 — 30日 tracking metrics from history data (more accurate than real-time)
-        var tr3 = document.createElement("tr");
-        function l3(v, tip) { var t=document.createElement("td");t.textContent=v;t.className="etf-ds-label";if(tip){t.className+=" has-tip";t.title=tip;}tr3.appendChild(t); }
-        function v3(v, cls) { var t=document.createElement("td");t.textContent=v;t.className="etf-ds-val"+(cls?" "+cls:"");tr3.appendChild(t); }
-        function e3() { v3(""); }
-
-        var bm = st.nav_tracking_benchmark || st.tracking_error_benchmark || "QQQ/SPY";
-
-        // 30日真实误差 (price-level cumulative, from history)
-        l3("30日真实误差", "基于历史数据的30日真实误差：A股ETF价格涨跌幅 vs " + bm + "涨跌幅的累计差值。反映实际持有体验，含溢价波动影响。");
-        if (st.tracking_error_30d_pct != null) v3((st.tracking_error_30d_pct>0?"+":"") + st.tracking_error_30d_pct.toFixed(2) + "%", st.tracking_error_30d_pct>0?"etf-pos":"etf-neg");
-        else v3("--");
-
-        // 估值误差 (haoetf-style, single-day latest)
-        l3("估值误差", "与haoetf口径一致：T-2日净值×(1+T-1指数涨跌×仓位%) 估算T-1净值，与实际T-1净值的偏差。单日跟踪精度。");
-        if (st.valuation_error_latest != null) {
-            v3((st.valuation_error_latest > 0 ? '+' : '') + st.valuation_error_latest.toFixed(2) + "%");
-        } else v3("--");
-
-        // 30日万元收益差 (compound profit diff)
-        l3("30日万元收益差", "最近30日，分别投入1万元到此A股ETF vs " + bm + "的累计收益差额。正数=多赚，负数=少赚。");
-        if (st.profit_diff_30d_per_10k != null) v3((st.profit_diff_30d_per_10k>0?"+":"") + st.profit_diff_30d_per_10k.toFixed(0) + "元", st.profit_diff_30d_per_10k>0?"etf-pos":"etf-neg");
-        else v3("--");
-
-        // Fill remaining cells to match table width
-        for (var fi = 0; fi < 7; fi++) e3();
-
-        tbody.appendChild(tr3);
     }
 
     function hideDetail() {

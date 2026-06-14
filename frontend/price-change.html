@@ -1929,6 +1929,86 @@
                 restoreFromUrl();
             }
         })();
+
+        /* ── Custom instant tooltip system ──
+         * Replaces slow browser-native title tooltips (~0.5-1.5s delay)
+         * with an instant custom tooltip on .has-tip elements. */
+        (function() {
+            var tipEl = null;
+            var activeEl = null;
+            var savedTitle = null;
+
+            function ensureTip() {
+                if (tipEl) return;
+                tipEl = document.createElement('div');
+                tipEl.className = 'custom-tip';
+                document.body.appendChild(tipEl);
+            }
+
+            function show(e, el) {
+                ensureTip();
+                if (activeEl === el) return;
+                hide();
+                var text = el.getAttribute('title');
+                if (!text) return;
+                activeEl = el;
+                savedTitle = text;
+                el.removeAttribute('title');  // suppress native tooltip
+                tipEl.textContent = text;
+                tipEl.style.display = 'block';
+                reposition(e);
+            }
+
+            function hide() {
+                if (activeEl && savedTitle != null) {
+                    activeEl.setAttribute('title', savedTitle);
+                }
+                activeEl = null;
+                savedTitle = null;
+                if (tipEl) tipEl.style.display = 'none';
+            }
+
+            function reposition(e) {
+                if (!tipEl || tipEl.style.display === 'none') return;
+                var x = e.clientX + 12;
+                var y = e.clientY - 36;
+                // Keep inside viewport
+                var rect = tipEl.getBoundingClientRect();
+                if (x + rect.width + 10 > window.innerWidth) {
+                    x = e.clientX - rect.width - 12;
+                }
+                if (y < 10) {
+                    y = e.clientY + 16;
+                }
+                tipEl.style.left = x + 'px';
+                tipEl.style.top = y + 'px';
+            }
+
+            document.addEventListener('mouseover', function(e) {
+                var el = e.target.closest('.has-tip');
+                if (el && el.getAttribute('title')) {
+                    show(e, el);
+                } else if (!e.target.closest('.has-tip')) {
+                    hide();
+                }
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (!activeEl) return;
+                // Only reposition if still over the same .has-tip
+                if (e.target.closest('.has-tip') === activeEl) {
+                    reposition(e);
+                }
+            });
+
+            document.addEventListener('mouseout', function(e) {
+                if (!activeEl) return;
+                // Hide only when cursor leaves the .has-tip element entirely
+                if (!activeEl.contains(e.relatedTarget)) {
+                    hide();
+                }
+            });
+        })();
     </script>
 </body>
 </html>
