@@ -553,15 +553,29 @@ def history():
     live_premium = _fetch_live_premium(symbol)
 
     if nav_map:
-        # Calculate premium from NAV vs market close
+        # QDII ETFs (tracking overseas markets like Nasdaq / S&P 500):
+        # NAV is published T+1 (after US market close), so the A-share
+        # price on day T trades against the last known NAV — T-1.
+        # Premium(T) = (close(T) - NAV(T-1)) / NAV(T-1) × 100%
+        nav_dates_sorted = sorted(nav_map.keys())
         for p in parsed:
-            nav = nav_map.get(p["date"])
-            p["nav"] = nav
-            if nav and nav > 0:
-                p["premium_pct"] = round((p["close"] - nav) / nav * 100, 2)
+            p_date = p["date"]
+            prev_nav = None
+            prev_date = None
+            # Walk backwards through NAV dates to find most recent < p_date
+            for nd in reversed(nav_dates_sorted):
+                if nd < p_date:
+                    prev_nav = nav_map[nd]
+                    prev_date = nd
+                    break
+            p["nav"] = prev_nav
+            p["nav_date"] = prev_date
+            if prev_nav and prev_nav > 0:
+                p["premium_pct"] = round((p["close"] - prev_nav) / prev_nav * 100, 2)
             else:
                 p["premium_pct"] = None
-        # Backfill the latest bar from live quote (NAV has T+1 delay)
+        # Backfill the latest bar from live IOPV premium if T-1 NAV is still
+        # unavailable (edge case: very new ETF with no historical NAV).
         if live_premium is not None and parsed:
             last = parsed[-1]
             if last.get("premium_pct") is None:
