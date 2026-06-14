@@ -110,7 +110,6 @@
       "symbols": [
         { "symbol": "513300", "type": "cn_stock", "name": "纳斯达克ETF华夏" },
         { "symbol": "513110", "type": "cn_stock", "name": "纳指ETF华泰柏瑞" },
-        { "symbol": "159655", "type": "cn_stock", "name": "标普500ETF华夏" },
         { "symbol": "159660", "type": "cn_stock", "name": "纳指ETF汇添富" },
         { "symbol": "159632", "type": "cn_stock", "name": "纳斯达克ETF华安" },
         { "symbol": "159501", "type": "cn_stock", "name": "纳指ETF嘉实" },
@@ -128,6 +127,7 @@
         { "symbol": "513650", "type": "cn_stock", "name": "标普500ETF南方" },
         { "symbol": "159612", "type": "cn_stock", "name": "标普500ETF国泰" },
         { "symbol": "513500", "type": "cn_stock", "name": "标普500ETF博时" },
+        { "symbol": "159655", "type": "cn_stock", "name": "标普500ETF华夏" },
         { "symbol": "159652", "type": "cn_stock", "name": "有色ETF汇添富" }
       ]
     },
