@@ -1629,7 +1629,7 @@
                 <div class="transfer-tabs" id="kbSubTabs" style="margin-left:auto;">
                     <button class="transfer-tab active" data-kb-tab="how-to-buy">如何购买美股</button>
                     <button class="transfer-tab" data-kb-tab="etf-intro">核心ETF介绍</button>
-                    <button class="transfer-tab" data-kb-tab="event-myth">大事件魔咒</button>
+                    <button class="transfer-tab" data-kb-tab="event-myth">数据魔咒</button>
                 </div>
             </div>
 
@@ -2038,15 +2038,15 @@
 
             </div><!-- /kb-etf-intro -->
 
-            <!-- ====== 大事件魔咒 ====== -->
+            <!-- ====== 数据魔咒（全部魔咒一一对比） ====== -->
             <div class="kb-sub-panel" id="kb-event-myth" style="display:none;">
-
+            
             <div class="kb-section">
             <div class="kb-callout kb-callout-green">
-                <strong>结论先看：</strong>按 S&P 500 历史日线逐次计算，世界杯开幕后 20 个交易日平均收益为 <span class="kb-val-neg">-0.573% ↓</span>，中位数 <span class="kb-val-neg">-0.585% ↓</span>，上涨占比 45.5%；美国中期选举后 20 个交易日平均收益为 <span class="kb-val-pos">+0.910% ↑</span>，中位数 <span class="kb-val-pos">+1.023% ↑</span>，上涨占比 70.8%。2026 年世界杯已于 2026-06-11 开始；2026 美国中期选举为 2026-11-03，尚未发生。
+                <strong>核心结论：</strong>美股市场流传着各种"魔咒"传说。我们用 S&P 500 近百年历史日线（1927-2026）逐次检验了六大魔咒的统计表现。<strong>世界杯开幕偏空但极弱</strong>（后20日平均 -0.57%），<strong>美国中期选举偏稳</strong>（选后20日平均 +0.91%，上涨 70.8%），<strong>总统四年周期第三年最强</strong>（平均 +16.6%，上涨 82.6%），<strong>奥运开幕无明显方向</strong>（后20日平均 +2.7% 但方差极大）。这些规律是<strong>描述性统计</strong>，不是交易信号。
             </div>
             </div>
-
+            
             <div class="kb-section">
             <h3 class="kb-section-title">统计口径</h3>
             <div class="kb-table-wrap">
@@ -2054,48 +2054,40 @@
                 <thead><tr><th style="min-width:100px;">项目</th><th>口径</th></tr></thead>
                 <tbody>
                 <tr><td>主指数</td><td class="kb-text-left">S&P 500 指数日线收盘价</td></tr>
-                <tr><td>样本范围</td><td class="kb-text-left">世界杯开幕：1930-2026 共 23 次，其中 2026 只计算已发生且可取得行情的窗口；美国中期选举：1930-2026 共 25 次，其中 2026 尚未发生</td></tr>
-                <tr><td>对齐规则</td><td class="kb-text-left">事件自然日若不是交易日，取事件日之后第一个交易日作为对齐交易日</td></tr>
-                <tr><td>收益窗口</td><td class="kb-text-left">前 1/5/20 个交易日、后 1/5/20 个交易日；收益率 = 窗口终点收盘价 / 起点收盘价 - 1；未发生或窗口未完整的格子标注为未发生/未完整</td></tr>
                 <tr><td>数据来源</td><td class="kb-text-left">1927-12-30 至 2021-01-29 使用公开 GitHub 原始 CSV 镜像（Yahoo Finance 字段）；2021-02-01 至 2026-06-12 使用 FRED SP500 官方 CSV 补齐</td></tr>
+                <tr><td>对齐规则</td><td class="kb-text-left">事件自然日若不是交易日，取事件日之后第一个交易日作为对齐交易日</td></tr>
+                <tr><td>收益窗口</td><td class="kb-text-left">前 1/5/20 个交易日、后 1/5/20 个交易日；收益率 = 窗口终点收盘价 / 起点收盘价 - 1</td></tr>
                 </tbody>
             </table>
             </div>
             </div>
-
+            
             <div class="kb-section">
-            <h3 class="kb-section-title">最新事件</h3>
+            <h3 class="kb-section-title">全部魔咒一一对比</h3>
             <div class="kb-table-wrap">
             <table class="kb-table">
-                <thead><tr><th>事件</th><th>日期</th><th>附加信息</th><th>当前可用数据</th></tr></thead>
+                <thead><tr><th>魔咒</th><th>样本数</th><th>窗口</th><th>平均收益%</th><th>中位数%</th><th>上涨占比</th><th>强度判断</th></tr></thead>
                 <tbody>
-                <tr>
-                    <td>2026 世界杯开幕</td><td>2026-06-11</td><td>Canada/Mexico/United States</td><td class="kb-text-left">对齐交易日 2026-06-11；前 20 日 -0.671%，前 5 日 -2.505%，后 1 日 0.503%；后 5/20 日未完整</td>
-                </tr>
-                <tr>
-                    <td>2026 美国中期选举</td><td>2026-11-03</td><td>总统：Donald J. Trump</td><td class="kb-text-left">尚未发生，暂无事件前后行情窗口</td>
-                </tr>
+                <tr><td>⚽ 世界杯开幕</td><td>22</td><td>后20日</td><td class="kb-val-neg">-0.57</td><td class="kb-val-neg">-0.59</td><td>45.5%</td><td class="kb-text-left">偏空但极弱，方差巨大</td></tr>
+                <tr><td>🗳️ 美国中期选举</td><td>24</td><td>选后20日</td><td class="kb-val-pos">+0.91</td><td class="kb-val-pos">+1.02</td><td>70.8%</td><td class="kb-text-left">中等偏稳，方向一致性较好</td></tr>
+                <tr><td>🏛️ 总统四年（第1年）</td><td>24</td><td>全年</td><td class="kb-val-pos">+5.5</td><td class="kb-val-neg">-0.95</td><td>58.3%</td><td class="kb-text-left">开局偏平，方差最大</td></tr>
+                <tr><td>🏛️ 总统四年（第2年）</td><td>24</td><td>全年</td><td class="kb-val-pos">+6.9</td><td class="kb-val-pos">+1.68</td><td>62.5%</td><td class="kb-text-left">温和偏正</td></tr>
+                <tr><td>🏛️ 总统四年（第3年）</td><td>23</td><td>全年</td><td class="kb-val-pos">+16.6</td><td class="kb-val-pos">+17.27</td><td>82.6%</td><td class="kb-text-left"><strong>最强规律</strong>，上涨概率最高</td></tr>
+                <tr><td>🏛️ 总统四年（第4年）</td><td>23</td><td>全年</td><td class="kb-val-pos">+7.8</td><td class="kb-val-pos">+8.99</td><td>78.3%</td><td class="kb-text-left">偏正，大选年有支撑</td></tr>
+                <tr><td>🏅 奥运开幕</td><td>23</td><td>后20日</td><td class="kb-val-pos">+2.70</td><td class="kb-val-pos">+0.68</td><td>60.9%</td><td class="kb-text-left">偏正面但波动极大，参考意义有限</td></tr>
                 </tbody>
             </table>
             </div>
             </div>
-
+            
+            <!-- ====== 世界杯开幕魔咒 ====== -->
             <div class="kb-section">
-            <h3 class="kb-section-title">核心摘要</h3>
-            <div class="kb-grid">
-                <div class="kb-grid-col">
-                    <h4>⚽ 世界杯开幕</h4>
-                    <p style="font-size:13px;line-height:1.7;color:var(--apple-text-secondary);margin:0;">开幕后 1、5、20 个交易日的平均收益都为负，其中后 5 个交易日平均 <span class="kb-val-neg">-0.933% ↓</span>，上涨占比只有 31.8%。但极端年份差异很大，不能直接归因于世界杯。</p>
-                </div>
-                <div class="kb-grid-col">
-                    <h4>🗳️ 美国中期选举</h4>
-                    <p style="font-size:13px;line-height:1.7;color:var(--apple-text-secondary);margin:0;">中期选举前 20 个交易日平均 <span class="kb-val-pos">+2.812% ↑</span>，选后 20 个交易日平均 <span class="kb-val-pos">+0.910% ↑</span>。这个方向比世界杯更稳定，但依然不是每次都涨。</p>
-                </div>
+            <h3 class="kb-section-title">⚽ 世界杯开幕魔咒</h3>
+            <div class="kb-callout kb-callout-blue">
+                世界杯开幕后 1、5、20 个交易日的平均收益都为负（其中后 1 日上涨概率仅 26.1%），但极端年份差异很大，不能直接归因于世界杯。样本包括 1930-2026 共 23 届，其中 2026 年已发生（后 5/20 日未完整）。
             </div>
-            </div>
-
-            <div class="kb-section">
-            <h3 class="kb-section-title">S&P 500 汇总统计 — 世界杯开幕日前后</h3>
+            
+            <h3 class="kb-section-subtitle">S&P 500 汇总统计 — 世界杯开幕日前后</h3>
             <div class="kb-table-wrap">
             <table class="kb-table">
                 <thead><tr><th>窗口</th><th>样本数</th><th>平均收益%</th><th>中位数%</th><th>上涨占比</th><th>最差%</th><th>最好%</th></tr></thead>
@@ -2109,8 +2101,164 @@
                 </tbody>
             </table>
             </div>
-
-            <h3 class="kb-section-title" style="margin-top:24px;">S&P 500 汇总统计 — 美国中期选举日前后</h3>
+            
+            <h3 class="kb-section-subtitle">世界杯开幕 — S&P 500 逐届明细（近年倒序）</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>年份</th><th>举办国家</th><th>开幕日</th><th>前20日%</th><th>前5日%</th><th>后1日%</th><th>后5日%</th><th>后20日%</th></tr></thead>
+                <tbody>
+                <tr><td>2026</td><td>加拿大/墨西哥/美国</td><td>2026-06-11</td><td class="kb-val-neg">-0.671</td><td class="kb-val-neg">-2.505</td><td class="kb-val-pos">0.503</td><td>—</td><td>—</td></tr>
+                <tr><td>2022</td><td>卡塔尔</td><td>2022-11-20</td><td class="kb-val-pos">4.019</td><td class="kb-val-neg">-0.185</td><td class="kb-val-pos">1.358</td><td class="kb-val-pos">0.195</td><td class="kb-val-neg">-3.249</td></tr>
+                <tr><td>2018</td><td>俄罗斯</td><td>2018-06-14</td><td class="kb-val-pos">2.205</td><td class="kb-val-pos">0.437</td><td class="kb-val-neg">-0.102</td><td class="kb-val-neg">-1.176</td><td class="kb-val-pos">0.676</td></tr>
+                <tr><td>2014</td><td>巴西</td><td>2014-06-12</td><td class="kb-val-pos">2.202</td><td class="kb-val-neg">-0.533</td><td class="kb-val-pos">0.313</td><td class="kb-val-pos">1.522</td><td class="kb-val-pos">1.941</td></tr>
+                <tr><td>2010</td><td>南非</td><td>2010-06-11</td><td class="kb-val-neg">-5.688</td><td class="kb-val-pos">2.509</td><td class="kb-val-neg">-0.180</td><td class="kb-val-pos">2.374</td><td class="kb-val-neg">-1.177</td></tr>
+                <tr><td>2006</td><td>德国</td><td>2006-06-09</td><td class="kb-val-neg">-4.106</td><td class="kb-val-neg">-2.788</td><td class="kb-val-neg">-1.187</td><td class="kb-val-neg">-0.061</td><td class="kb-val-pos">1.201</td></tr>
+                <tr><td>2002</td><td>韩国/日本</td><td>2002-05-31</td><td class="kb-val-neg">-1.606</td><td class="kb-val-neg">-2.729</td><td class="kb-val-neg">-2.480</td><td class="kb-val-neg">-3.712</td><td class="kb-val-neg">-7.246</td></tr>
+                <tr><td>1998</td><td>法国</td><td>1998-06-10</td><td class="kb-val-neg">-0.315</td><td class="kb-val-pos">2.729</td><td class="kb-val-neg">-1.591</td><td class="kb-val-neg">-0.465</td><td class="kb-val-pos">4.161</td></tr>
+                <tr><td>1994</td><td>美国</td><td>1994-06-17</td><td class="kb-val-pos">0.432</td><td class="kb-val-neg">-0.048</td><td class="kb-val-neg">-0.648</td><td class="kb-val-neg">-3.414</td><td class="kb-val-neg">-0.705</td></tr>
+                <tr><td>1990</td><td>意大利</td><td>1990-06-08</td><td class="kb-val-pos">4.331</td><td class="kb-val-neg">-1.225</td><td class="kb-val-pos">0.814</td><td class="kb-val-pos">1.171</td><td class="kb-val-pos">0.226</td></tr>
+                <tr><td>1986</td><td>墨西哥</td><td>1986-05-31</td><td class="kb-val-pos">4.366</td><td class="kb-val-pos">1.529</td><td class="kb-val-pos">0.192</td><td class="kb-val-neg">-2.073</td><td class="kb-val-pos">2.367</td></tr>
+                <tr><td>1982</td><td>西班牙</td><td>1982-06-13</td><td class="kb-val-neg">-6.821</td><td class="kb-val-neg">-0.145</td><td class="kb-val-neg">-0.246</td><td class="kb-val-neg">-2.510</td><td class="kb-val-neg">-0.464</td></tr>
+                <tr><td>1978</td><td>阿根廷</td><td>1978-06-01</td><td class="kb-val-pos">1.132</td><td class="kb-val-pos">0.278</td><td class="kb-val-pos">0.812</td><td class="kb-val-pos">2.938</td><td class="kb-val-neg">-1.828</td></tr>
+                <tr><td>1974</td><td>西德</td><td>1974-06-13</td><td class="kb-val-pos">2.090</td><td class="kb-val-pos">0.413</td><td class="kb-val-neg">-1.126</td><td class="kb-val-neg">-4.473</td><td class="kb-val-neg">-9.952</td></tr>
+                <tr><td>1970</td><td>墨西哥</td><td>1970-05-31</td><td class="kb-val-neg">-1.928</td><td class="kb-val-pos">10.804</td><td class="kb-val-pos">0.000</td><td class="kb-val-neg">-1.991</td><td class="kb-val-neg">-6.359</td></tr>
+                <tr><td>1966</td><td>英格兰</td><td>1966-07-11</td><td class="kb-val-pos">1.168</td><td class="kb-val-pos">2.149</td><td class="kb-val-neg">-0.652</td><td class="kb-val-neg">-0.526</td><td class="kb-val-neg">-4.231</td></tr>
+                <tr><td>1962</td><td>智利</td><td>1962-05-30</td><td class="kb-val-neg">-9.638</td><td class="kb-val-neg">-2.422</td><td class="kb-val-neg">-0.419</td><td class="kb-val-neg">-2.063</td><td class="kb-val-neg">-8.754</td></tr>
+                <tr><td>1958</td><td>瑞典</td><td>1958-06-08</td><td class="kb-val-pos">1.089</td><td class="kb-val-pos">0.587</td><td class="kb-val-neg">-0.202</td><td class="kb-val-pos">1.369</td><td class="kb-val-pos">1.862</td></tr>
+                <tr><td>1954</td><td>瑞士</td><td>1954-06-16</td><td class="kb-val-pos">0.659</td><td class="kb-val-pos">3.162</td><td class="kb-val-neg">-0.275</td><td class="kb-val-pos">0.310</td><td class="kb-val-pos">3.960</td></tr>
+                <tr><td>1950</td><td>巴西</td><td>1950-06-24</td><td class="kb-val-neg">-2.999</td><td class="kb-val-neg">-4.281</td><td class="kb-val-neg">-1.104</td><td class="kb-val-neg">-2.595</td><td class="kb-val-neg">-4.859</td></tr>
+                <tr><td>1938</td><td>法国</td><td>1938-06-04</td><td class="kb-val-neg">-6.616</td><td class="kb-val-pos">4.957</td><td class="kb-val-neg">-0.411</td><td class="kb-val-neg">-2.259</td><td class="kb-val-pos">22.998</td></tr>
+                <tr><td>1934</td><td>意大利</td><td>1934-05-27</td><td class="kb-val-neg">-6.023</td><td class="kb-val-neg">-0.405</td><td class="kb-val-neg">-0.407</td><td class="kb-val-neg">-1.119</td><td class="kb-val-pos">1.322</td></tr>
+                <tr><td>1930</td><td>乌拉圭</td><td>1930-07-13</td><td class="kb-val-neg">-4.043</td><td class="kb-val-pos">7.716</td><td class="kb-val-neg">-0.187</td><td class="kb-val-neg">-1.966</td><td class="kb-val-neg">-4.494</td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+            
+            <!-- ====== 总统四年周期魔咒 ====== -->
+            <div class="kb-section">
+            <h3 class="kb-section-title">🏛️ 总统四年周期魔咒</h3>
+            
+            <div class="kb-callout kb-callout-blue">
+                总统四年周期中，<strong>第三年</strong>是 S&P 500 历史上最强的年份之一：平均 +16.6%，上涨概率高达 82.6%。第一年开局表现最弱（平均 +5.5%），第二年居中（+6.9%），第四年大选年表现也不错（+7.8%，上涨 78.3%）。这个模式在美国政治周期中比较稳定，但依然不是铁律——1937 年（罗斯福第一年）跌了 -38.6%，2008 年（小布什第四年）跌了 -38.5%。
+            </div>
+            
+            
+            <h3 class="kb-section-subtitle">总统四年周期 — 各任期年份 S&P 500 平均收益</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>任期年份</th><th>样本数</th><th>平均收益%</th><th>上涨占比</th><th>说明</th></tr></thead>
+                <tbody>
+                <tr><td>第1年（新任上任年）</td><td>24</td><td class="kb-val-pos">+5.5</td><td>58.3%</td><td class="kb-text-left">开局偏平，表现最不确定的年份</td></tr>
+                <tr><td>第2年（中期选举年）</td><td>24</td><td class="kb-val-pos">+6.9</td><td>62.5%</td><td class="kb-text-left">温和偏正，部分年份有调整</td></tr>
+                <tr><td>第3年（选前年）</td><td>23</td><td class="kb-val-pos">+16.6</td><td>82.6%</td><td class="kb-text-left"><strong>最强年份</strong>，几乎每次都大涨</td></tr>
+                <tr><td>第4年（大选年）</td><td>23</td><td class="kb-val-pos">+7.8</td><td>78.3%</td><td class="kb-text-left">偏正面，大选年政策预期提供支撑</td></tr>
+                </tbody>
+            </table>
+            </div>
+            
+            <h3 class="kb-section-subtitle">总统四年周期 — 逐年明细（2001-2026 近年倒序）</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>年份</th><th>在任总统</th><th>任期第几年</th><th>S&P 500 年收益%</th></tr></thead>
+                <tbody>
+                <tr><td>2026</td><td>唐纳德·特朗普</td><td>第2年</td><td class="kb-val-pos">+8.56</td></tr>
+                <tr><td>2025</td><td>唐纳德·特朗普</td><td>第1年</td><td class="kb-val-pos">+16.39</td></tr>
+                <tr><td>2024</td><td>乔·拜登</td><td>第4年</td><td class="kb-val-pos">+23.31</td></tr>
+                <tr><td>2023</td><td>乔·拜登</td><td>第3年</td><td class="kb-val-pos">+24.23</td></tr>
+                <tr><td>2022</td><td>乔·拜登</td><td>第2年</td><td class="kb-val-neg">-19.44</td></tr>
+                <tr><td>2021</td><td>乔·拜登</td><td>第1年</td><td class="kb-val-pos">+26.89</td></tr>
+                <tr><td>2020</td><td>唐纳德·特朗普</td><td>第4年</td><td class="kb-val-pos">+16.26</td></tr>
+                <tr><td>2019</td><td>唐纳德·特朗普</td><td>第3年</td><td class="kb-val-pos">+28.88</td></tr>
+                <tr><td>2018</td><td>唐纳德·特朗普</td><td>第2年</td><td class="kb-val-neg">-6.24</td></tr>
+                <tr><td>2017</td><td>唐纳德·特朗普</td><td>第1年</td><td class="kb-val-pos">+19.42</td></tr>
+                <tr><td>2016</td><td>贝拉克·奥巴马</td><td>第4年</td><td class="kb-val-pos">+9.54</td></tr>
+                <tr><td>2015</td><td>贝拉克·奥巴马</td><td>第3年</td><td class="kb-val-neg">-0.73</td></tr>
+                <tr><td>2014</td><td>贝拉克·奥巴马</td><td>第2年</td><td class="kb-val-pos">+11.39</td></tr>
+                <tr><td>2013</td><td>贝拉克·奥巴马</td><td>第1年</td><td class="kb-val-pos">+29.60</td></tr>
+                <tr><td>2012</td><td>贝拉克·奥巴马</td><td>第4年</td><td class="kb-val-pos">+13.41</td></tr>
+                <tr><td>2011</td><td>贝拉克·奥巴马</td><td>第3年</td><td class="kb-val-neg">-0.00</td></tr>
+                <tr><td>2010</td><td>贝拉克·奥巴马</td><td>第2年</td><td class="kb-val-pos">+12.78</td></tr>
+                <tr><td>2009</td><td>贝拉克·奥巴马</td><td>第1年</td><td class="kb-val-pos">+23.45</td></tr>
+                <tr><td>2008</td><td>乔治·W·布什</td><td>第4年</td><td class="kb-val-neg">-38.49</td></tr>
+                <tr><td>2007</td><td>乔治·W·布什</td><td>第3年</td><td class="kb-val-pos">+3.53</td></tr>
+                <tr><td>2006</td><td>乔治·W·布什</td><td>第2年</td><td class="kb-val-pos">+13.62</td></tr>
+                <tr><td>2005</td><td>乔治·W·布什</td><td>第1年</td><td class="kb-val-pos">+3.00</td></tr>
+                <tr><td>2004</td><td>乔治·W·布什</td><td>第4年</td><td class="kb-val-pos">+8.99</td></tr>
+                <tr><td>2003</td><td>乔治·W·布什</td><td>第3年</td><td class="kb-val-pos">+26.38</td></tr>
+                <tr><td>2002</td><td>乔治·W·布什</td><td>第2年</td><td class="kb-val-neg">-23.37</td></tr>
+                <tr><td>2001</td><td>乔治·W·布什</td><td>第1年</td><td class="kb-val-neg">-13.04</td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+            
+            <!-- ====== 奥运开幕魔咒 ====== -->
+            <div class="kb-section">
+            <h3 class="kb-section-title">🏅 奥运开幕魔咒</h3>
+            
+            <div class="kb-callout kb-callout-blue">
+                夏季奥运会开幕后 S&P 500 平均表现为正（后20日平均 +2.70%，上涨 60.9%），但方差极大——1932 年洛杉矶奥运会后 20 日暴涨 +40.4%，2000 年悉尼奥运会后暴跌 -6.3%。奥运开幕本身对美股大盘没有稳定的方向性影响。
+            </div>
+            
+            
+            <h3 class="kb-section-subtitle">S&P 500 汇总统计 — 奥运开幕日前后</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>窗口</th><th>样本数</th><th>平均收益%</th><th>中位数%</th><th>上涨占比</th></tr></thead>
+                <tbody>
+                <tr><td>前20交易日</td><td>23</td><td class="kb-val-pos">+2.90</td><td class="kb-val-pos">+2.07</td><td>69.6%</td></tr>
+                <tr><td>前5交易日</td><td>23</td><td class="kb-val-pos">+0.60</td><td class="kb-val-pos">+0.08</td><td>52.2%</td></tr>
+                <tr><td>后1交易日</td><td>23</td><td class="kb-val-neg">-0.20</td><td class="kb-val-neg">-0.16</td><td>43.5%</td></tr>
+                <tr><td>后5交易日</td><td>23</td><td class="kb-val-pos">+1.60</td><td class="kb-val-pos">+0.06</td><td>60.9%</td></tr>
+                <tr><td>后20交易日</td><td>23</td><td class="kb-val-pos">+2.70</td><td class="kb-val-pos">+0.68</td><td>60.9%</td></tr>
+                </tbody>
+            </table>
+            </div>
+            
+            <h3 class="kb-section-subtitle">奥运开幕 — S&P 500 逐届明细（近年倒序）</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>年份</th><th>举办国家</th><th>开幕日</th><th>前20日%</th><th>前5日%</th><th>后1日%</th><th>后5日%</th><th>后20日%</th></tr></thead>
+                <tbody>
+                <tr><td>2024</td><td>法国（巴黎）</td><td>2024-07-26</td><td class="kb-val-neg">-0.43</td><td class="kb-val-neg">-0.83</td><td class="kb-val-pos">+0.08</td><td class="kb-val-neg">-2.06</td><td class="kb-val-pos">+3.22</td></tr>
+                <tr><td>2020</td><td>日本（东京）</td><td>2021-07-23</td><td class="kb-val-pos">+3.41</td><td class="kb-val-pos">+1.96</td><td class="kb-val-pos">+0.24</td><td class="kb-val-neg">-0.38</td><td class="kb-val-pos">+0.68</td></tr>
+                <tr><td>2016</td><td>巴西（里约热内卢）</td><td>2016-08-05</td><td class="kb-val-pos">+2.49</td><td class="kb-val-pos">+0.43</td><td class="kb-val-neg">-0.09</td><td class="kb-val-pos">+0.05</td><td class="kb-val-neg">-0.13</td></tr>
+                <tr><td>2012</td><td>英国（伦敦）</td><td>2012-07-27</td><td class="kb-val-pos">+4.28</td><td class="kb-val-pos">+1.71</td><td class="kb-val-neg">-0.05</td><td class="kb-val-pos">+0.36</td><td class="kb-val-pos">+1.82</td></tr>
+                <tr><td>2008</td><td>中国（北京）</td><td>2008-08-08</td><td class="kb-val-pos">+4.59</td><td class="kb-val-pos">+2.86</td><td class="kb-val-pos">+0.69</td><td class="kb-val-pos">+0.15</td><td class="kb-val-neg">-2.20</td></tr>
+                <tr><td>2004</td><td>希腊（雅典）</td><td>2004-08-13</td><td class="kb-val-neg">-3.32</td><td class="kb-val-pos">+0.08</td><td class="kb-val-pos">+1.37</td><td class="kb-val-pos">+3.15</td><td class="kb-val-pos">+5.73</td></tr>
+                <tr><td>2000</td><td>澳大利亚（悉尼）</td><td>2000-09-15</td><td class="kb-val-neg">-2.02</td><td class="kb-val-neg">-1.92</td><td class="kb-val-neg">-1.45</td><td class="kb-val-neg">-1.17</td><td class="kb-val-neg">-6.25</td></tr>
+                <tr><td>1996</td><td>美国（亚特兰大）</td><td>1996-07-19</td><td class="kb-val-neg">-3.53</td><td class="kb-val-neg">-1.15</td><td class="kb-val-neg">-0.78</td><td class="kb-val-neg">-0.44</td><td class="kb-val-pos">+4.15</td></tr>
+                <tr><td>1992</td><td>西班牙（巴塞罗那）</td><td>1992-07-27</td><td class="kb-val-pos">+2.01</td><td class="kb-val-neg">-0.53</td><td class="kb-val-pos">+1.45</td><td class="kb-val-pos">+3.29</td><td class="kb-val-neg">-0.20</td></tr>
+                <tr><td>1988</td><td>韩国（首尔）</td><td>1988-09-19</td><td class="kb-val-pos">+3.30</td><td class="kb-val-pos">+0.88</td><td class="kb-val-pos">+0.34</td><td class="kb-val-pos">+0.02</td><td class="kb-val-pos">+2.82</td></tr>
+                <tr><td>1984</td><td>美国（洛杉矶）</td><td>1984-07-30</td><td class="kb-val-neg">-1.95</td><td class="kb-val-pos">+0.83</td><td class="kb-val-pos">+0.31</td><td class="kb-val-pos">+8.26</td><td class="kb-val-pos">+10.82</td></tr>
+                <tr><td>1980</td><td>苏联（莫斯科）</td><td>1980-07-21</td><td class="kb-val-pos">+7.41</td><td class="kb-val-pos">+2.08</td><td class="kb-val-neg">-0.26</td><td class="kb-val-neg">-0.88</td><td class="kb-val-pos">+0.72</td></tr>
+                <tr><td>1976</td><td>加拿大（蒙特利尔）</td><td>1976-07-19</td><td class="kb-val-pos">+0.51</td><td class="kb-val-neg">-1.52</td><td class="kb-val-neg">-0.55</td><td class="kb-val-neg">-0.21</td><td class="kb-val-pos">+0.13</td></tr>
+                <tr><td>1972</td><td>西德（慕尼黑）</td><td>1972-08-28</td><td class="kb-val-pos">+2.65</td><td class="kb-val-neg">-1.33</td><td class="kb-val-pos">+0.16</td><td class="kb-val-pos">+0.91</td><td class="kb-val-neg">-1.91</td></tr>
+                <tr><td>1968</td><td>墨西哥（墨西哥城）</td><td>1968-10-14</td><td class="kb-val-pos">+2.07</td><td class="kb-val-neg">-0.38</td><td class="kb-val-pos">+0.20</td><td class="kb-val-pos">+1.21</td><td class="kb-val-pos">+2.52</td></tr>
+                <tr><td>1964</td><td>日本（东京）</td><td>1964-10-12</td><td class="kb-val-pos">+2.43</td><td class="kb-val-pos">+0.59</td><td class="kb-val-neg">-0.33</td><td class="kb-val-neg">-0.36</td><td class="kb-val-neg">-0.47</td></tr>
+                <tr><td>1960</td><td>意大利（罗马）</td><td>1960-08-25</td><td class="kb-val-pos">+5.90</td><td class="kb-val-pos">+1.73</td><td class="kb-val-neg">-0.33</td><td class="kb-val-neg">-1.21</td><td class="kb-val-neg">-6.73</td></tr>
+                <tr><td>1956</td><td>澳大利亚（墨尔本）</td><td>1956-11-23</td><td class="kb-val-neg">-1.72</td><td class="kb-val-neg">-1.27</td><td class="kb-val-neg">-0.60</td><td class="kb-val-neg">-0.13</td><td class="kb-val-pos">+2.73</td></tr>
+                <tr><td>1952</td><td>芬兰（赫尔辛基）</td><td>1952-07-21</td><td class="kb-val-pos">+1.46</td><td class="kb-val-neg">-0.32</td><td class="kb-val-pos">+0.20</td><td class="kb-val-pos">+1.00</td><td class="kb-val-neg">-0.04</td></tr>
+                <tr><td>1948</td><td>英国（伦敦）</td><td>1948-07-29</td><td class="kb-val-neg">-4.12</td><td class="kb-val-neg">-0.99</td><td class="kb-val-neg">-1.25</td><td class="kb-val-pos">+0.25</td><td class="kb-val-neg">-0.06</td></tr>
+                <tr><td>1936</td><td>德国（柏林）</td><td>1936-08-03</td><td class="kb-val-pos">+6.49</td><td class="kb-val-neg">-1.49</td><td class="kb-val-neg">-0.25</td><td class="kb-val-pos">+1.82</td><td class="kb-val-pos">+0.50</td></tr>
+                <tr><td>1932</td><td>美国（洛杉矶）</td><td>1932-08-01</td><td class="kb-val-pos">+32.83</td><td class="kb-val-pos">+11.50</td><td class="kb-val-neg">-3.93</td><td class="kb-val-pos">+21.60</td><td class="kb-val-pos">+40.43</td></tr>
+                <tr><td>1928</td><td>荷兰（阿姆斯特丹）</td><td>1928-07-30</td><td class="kb-val-pos">+1.72</td><td class="kb-val-pos">+1.83</td><td class="kb-val-neg">-0.21</td><td class="kb-val-pos">+0.57</td><td class="kb-val-pos">+4.67</td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+            
+            <!-- ====== 美国中期选举魔咒 ====== -->
+            <div class="kb-section">
+            <h3 class="kb-section-title">🗳️ 美国中期选举魔咒</h3>
+            
+            <div class="kb-callout kb-callout-blue">
+                美国中期选举前 20 个交易日平均收益 <strong>+2.81%</strong>，选后 20 个交易日平均 <strong>+0.91%</strong>（上涨 70.8%）。这个方向比世界杯更稳定，反映了"不确定性落地"和政策预期重新定价的市场逻辑。但同样不是每次都涨，2026 年中期选举日为 2026-11-03（尚未发生）。
+            </div>
+            
+            
+            <h3 class="kb-section-subtitle">S&P 500 汇总统计 — 美国中期选举日前后</h3>
             <div class="kb-table-wrap">
             <table class="kb-table">
                 <thead><tr><th>窗口</th><th>样本数</th><th>平均收益%</th><th>中位数%</th><th>上涨占比</th><th>最差%</th><th>最好%</th></tr></thead>
@@ -2124,45 +2272,42 @@
                 </tbody>
             </table>
             </div>
-            </div>
-
-            <div class="kb-section">
-            <h3 class="kb-section-title">世界杯开幕 — S&P 500 逐次明细</h3>
-            <p style="font-size:13px;color:var(--apple-text-secondary);margin-bottom:10px;">仅展示近年核心数据，完整 1930-2026 明细请参考原文。</p>
+            
+            <h3 class="kb-section-subtitle">美国中期选举 — S&P 500 逐次明细（近年倒序）</h3>
             <div class="kb-table-wrap">
             <table class="kb-table">
-                <thead><tr><th>年份</th><th>事件</th><th>举办地</th><th>自然日</th><th>对齐交易日</th><th>前20日%</th><th>前5日%</th><th>后1日%</th><th>后5日%</th><th>后20日%</th></tr></thead>
+                <thead><tr><th>年份</th><th>事件</th><th>在任总统</th><th>自然日</th><th>前20日%</th><th>前5日%</th><th>后1日%</th><th>后5日%</th><th>后20日%</th></tr></thead>
                 <tbody>
-                <tr><td>2026</td><td>Canada/Mexico/US 2026</td><td>美加墨</td><td>2026-06-11</td><td>2026-06-11</td><td class="kb-val-neg">-0.671</td><td class="kb-val-neg">-2.505</td><td class="kb-val-pos">0.503</td><td>未完整</td><td>未完整</td></tr>
-                <tr><td>2022</td><td>Qatar 2022</td><td>卡塔尔</td><td>2022-11-20</td><td>2022-11-21</td><td class="kb-val-pos">4.019</td><td class="kb-val-neg">-0.185</td><td class="kb-val-pos">1.358</td><td class="kb-val-pos">0.195</td><td class="kb-val-neg">-3.249</td></tr>
-                <tr><td>2018</td><td>Russia 2018</td><td>俄罗斯</td><td>2018-06-14</td><td>2018-06-14</td><td class="kb-val-pos">2.205</td><td class="kb-val-pos">0.437</td><td class="kb-val-neg">-0.102</td><td class="kb-val-neg">-1.176</td><td class="kb-val-pos">0.676</td></tr>
-                <tr><td>2014</td><td>Brazil 2014</td><td>巴西</td><td>2014-06-12</td><td>2014-06-12</td><td class="kb-val-pos">2.202</td><td class="kb-val-neg">-0.533</td><td class="kb-val-pos">0.313</td><td class="kb-val-pos">1.522</td><td class="kb-val-pos">1.941</td></tr>
-                <tr><td>2010</td><td>South Africa 2010</td><td>南非</td><td>2010-06-11</td><td>2010-06-11</td><td class="kb-val-neg">-5.688</td><td class="kb-val-pos">2.509</td><td class="kb-val-neg">-0.180</td><td class="kb-val-pos">2.374</td><td class="kb-val-neg">-1.177</td></tr>
-                <tr><td>2006</td><td>Germany 2006</td><td>德国</td><td>2006-06-09</td><td>2006-06-09</td><td class="kb-val-neg">-4.106</td><td class="kb-val-neg">-2.788</td><td class="kb-val-neg">-1.187</td><td class="kb-val-neg">-0.061</td><td class="kb-val-pos">1.201</td></tr>
-                <tr><td>2002</td><td>Korea/Japan 2002</td><td>韩日</td><td>2002-05-31</td><td>2002-05-31</td><td class="kb-val-neg">-1.606</td><td class="kb-val-neg">-2.729</td><td class="kb-val-neg">-2.480</td><td class="kb-val-neg">-3.712</td><td class="kb-val-neg">-7.246</td></tr>
+                <tr><td>2026</td><td>US midterm 2026</td><td>唐纳德·特朗普</td><td>2026-11-03</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+                <tr><td>2022</td><td>US midterm 2022</td><td>乔·拜登</td><td>2022-11-08</td><td class="kb-val-pos">6.667</td><td class="kb-val-neg">-0.726</td><td class="kb-val-neg">-2.078</td><td class="kb-val-pos">4.274</td><td class="kb-val-pos">2.764</td></tr>
+                <tr><td>2018</td><td>US midterm 2018</td><td>唐纳德·特朗普</td><td>2018-11-06</td><td class="kb-val-neg">-4.336</td><td class="kb-val-pos">2.715</td><td class="kb-val-pos">2.121</td><td class="kb-val-neg">-1.207</td><td class="kb-val-neg">-2.159</td></tr>
+                <tr><td>2014</td><td>US midterm 2014</td><td>贝拉克·奥巴马</td><td>2014-11-04</td><td class="kb-val-pos">3.979</td><td class="kb-val-pos">1.363</td><td class="kb-val-pos">0.570</td><td class="kb-val-pos">1.371</td><td class="kb-val-pos">3.093</td></tr>
+                <tr><td>2010</td><td>US midterm 2010</td><td>贝拉克·奥巴马</td><td>2010-11-02</td><td class="kb-val-pos">2.827</td><td class="kb-val-pos">0.669</td><td class="kb-val-pos">0.368</td><td class="kb-val-pos">1.661</td><td class="kb-val-pos">1.047</td></tr>
+                <tr><td>2006</td><td>US midterm 2006</td><td>乔治·W·布什</td><td>2006-11-07</td><td class="kb-val-pos">2.174</td><td class="kb-val-pos">0.356</td><td class="kb-val-pos">0.208</td><td class="kb-val-pos">0.751</td><td class="kb-val-pos">2.174</td></tr>
+                <tr><td>2002</td><td>US midterm 2002</td><td>乔治·W·布什</td><td>2002-11-05</td><td class="kb-val-pos">14.632</td><td class="kb-val-pos">3.768</td><td class="kb-val-pos">0.914</td><td class="kb-val-neg">-3.544</td><td class="kb-val-pos">0.239</td></tr>
+                <tr><td>1998</td><td>US midterm 1998</td><td>比尔·克林顿</td><td>1998-11-03</td><td class="kb-val-pos">12.823</td><td class="kb-val-pos">4.271</td><td class="kb-val-pos">0.705</td><td class="kb-val-pos">1.568</td><td class="kb-val-pos">5.438</td></tr>
+                <tr><td>1994</td><td>US midterm 1994</td><td>比尔·克林顿</td><td>1994-11-08</td><td class="kb-val-neg">-0.030</td><td class="kb-val-neg">-0.591</td><td class="kb-val-neg">-0.054</td><td class="kb-val-neg">-0.133</td><td class="kb-val-neg">-3.097</td></tr>
+                <tr><td>1990</td><td>US midterm 1990</td><td>乔治·H·W·布什</td><td>1990-11-06</td><td class="kb-val-neg">-10.693</td><td class="kb-val-pos">0.782</td><td class="kb-val-pos">0.617</td><td class="kb-val-pos">0.160</td><td class="kb-val-pos">0.515</td></tr>
+                <tr><td>1986</td><td>US midterm 1986</td><td>罗纳德·里根</td><td>1986-11-04</td><td class="kb-val-pos">2.814</td><td class="kb-val-neg">-0.224</td><td class="kb-val-pos">0.921</td><td class="kb-val-neg">-0.489</td><td class="kb-val-pos">0.331</td></tr>
+                <tr><td>1982</td><td>US midterm 1982</td><td>罗纳德·里根</td><td>1982-11-02</td><td class="kb-val-pos">15.839</td><td class="kb-val-pos">5.267</td><td class="kb-val-pos">1.116</td><td class="kb-val-pos">1.104</td><td class="kb-val-pos">7.188</td></tr>
+                <tr><td>1978</td><td>US midterm 1978</td><td>吉米·卡特</td><td>1978-11-07</td><td class="kb-val-neg">-7.870</td><td class="kb-val-pos">1.526</td><td class="kb-val-pos">0.217</td><td class="kb-val-neg">-1.157</td><td class="kb-val-neg">-1.373</td></tr>
+                <tr><td>1974</td><td>US midterm 1974</td><td>杰拉尔德·福特</td><td>1974-11-05</td><td class="kb-val-neg">-10.462</td><td class="kb-val-neg">-6.943</td><td class="kb-val-pos">3.913</td><td class="kb-val-pos">2.340</td><td class="kb-val-neg">-1.277</td></tr>
+                <tr><td>1970</td><td>US midterm 1970</td><td>理查德·尼克松</td><td>1970-11-03</td><td class="kb-val-pos">1.206</td><td class="kb-val-pos">2.913</td><td class="kb-val-neg">-0.131</td><td class="kb-val-pos">0.851</td><td class="kb-val-pos">3.179</td></tr>
+                <tr><td>1966</td><td>US midterm 1966</td><td>林登·B·约翰逊</td><td>1966-11-08</td><td class="kb-val-pos">2.214</td><td class="kb-val-pos">5.026</td><td class="kb-val-pos">0.482</td><td class="kb-val-pos">0.827</td><td class="kb-val-pos">0.101</td></tr>
+                <tr><td>1962</td><td>US midterm 1962</td><td>约翰·F·肯尼迪</td><td>1962-11-06</td><td class="kb-val-pos">1.897</td><td class="kb-val-neg">-2.060</td><td class="kb-val-pos">0.646</td><td class="kb-val-pos">3.045</td><td class="kb-val-pos">3.589</td></tr>
+                <tr><td>1958</td><td>US midterm 1958</td><td>德怀特·D·艾森豪威尔</td><td>1958-11-04</td><td class="kb-val-pos">6.857</td><td class="kb-val-pos">2.270</td><td class="kb-val-neg">-0.600</td><td class="kb-val-pos">2.505</td><td class="kb-val-pos">1.999</td></tr>
+                <tr><td>1954</td><td>US midterm 1954</td><td>德怀特·D·艾森豪威尔</td><td>1954-11-02</td><td class="kb-val-pos">3.671</td><td class="kb-val-pos">1.848</td><td class="kb-val-pos">0.222</td><td class="kb-val-pos">2.260</td><td class="kb-val-pos">6.055</td></tr>
+                <tr><td>1950</td><td>US midterm 1950</td><td>哈里·S·杜鲁门</td><td>1950-11-07</td><td class="kb-val-pos">5.443</td><td class="kb-val-pos">0.306</td><td class="kb-val-neg">-1.252</td><td class="kb-val-neg">-2.352</td><td class="kb-val-pos">4.266</td></tr>
+                <tr><td>1946</td><td>US midterm 1946</td><td>哈里·S·杜鲁门</td><td>1946-11-05</td><td class="kb-val-pos">0.878</td><td class="kb-val-pos">1.339</td><td class="kb-val-neg">-0.042</td><td class="kb-val-neg">-4.859</td><td class="kb-val-neg">-5.716</td></tr>
+                <tr><td>1942</td><td>US midterm 1942</td><td>富兰克林·D·罗斯福</td><td>1942-11-03</td><td class="kb-val-neg">-2.967</td><td class="kb-val-pos">0.601</td><td class="kb-val-neg">-0.605</td><td class="kb-val-pos">0.979</td><td class="kb-val-pos">2.511</td></tr>
+                <tr><td>1938</td><td>US midterm 1938</td><td>富兰克林·D·罗斯福</td><td>1938-11-08</td><td class="kb-val-pos">7.157</td><td class="kb-val-pos">2.041</td><td class="kb-val-pos">0.667</td><td class="kb-val-pos">2.514</td><td class="kb-val-pos">3.533</td></tr>
+                <tr><td>1934</td><td>US midterm 1934</td><td>富兰克林·D·罗斯福</td><td>1934-11-06</td><td class="kb-val-pos">1.565</td><td class="kb-val-pos">0.065</td><td class="kb-val-pos">0.094</td><td class="kb-val-pos">2.590</td><td class="kb-val-pos">3.255</td></tr>
+                <tr><td>1930</td><td>US midterm 1930</td><td>赫伯特·胡佛</td><td>1930-11-04</td><td class="kb-val-neg">-2.440</td><td class="kb-val-pos">2.924</td><td class="kb-val-pos">1.508</td><td class="kb-val-pos">4.104</td><td class="kb-val-neg">-10.660</td></tr>
                 </tbody>
             </table>
             </div>
             </div>
-
-            <div class="kb-section">
-            <h3 class="kb-section-title">美国中期选举 — S&P 500 逐次明细（近年）</h3>
-            <div class="kb-table-wrap">
-            <table class="kb-table">
-                <thead><tr><th>年份</th><th>事件</th><th>当时总统</th><th>自然日</th><th>对齐交易日</th><th>前20日%</th><th>前5日%</th><th>后1日%</th><th>后5日%</th><th>后20日%</th></tr></thead>
-                <tbody>
-                <tr><td>2026</td><td>US midterm 2026</td><td>Donald J. Trump</td><td>2026-11-03</td><td>未发生</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-                <tr><td>2022</td><td>US midterm 2022</td><td>Joe Biden</td><td>2022-11-08</td><td>2022-11-08</td><td class="kb-val-pos">6.667</td><td class="kb-val-neg">-0.726</td><td class="kb-val-neg">-2.078</td><td class="kb-val-pos">4.274</td><td class="kb-val-pos">2.764</td></tr>
-                <tr><td>2018</td><td>US midterm 2018</td><td>Donald J. Trump</td><td>2018-11-06</td><td>2018-11-06</td><td class="kb-val-neg">-4.336</td><td class="kb-val-pos">2.715</td><td class="kb-val-pos">2.121</td><td class="kb-val-neg">-1.207</td><td class="kb-val-neg">-2.159</td></tr>
-                <tr><td>2014</td><td>US midterm 2014</td><td>Barack Obama</td><td>2014-11-04</td><td>2014-11-04</td><td class="kb-val-pos">3.979</td><td class="kb-val-pos">1.363</td><td class="kb-val-pos">0.570</td><td class="kb-val-pos">1.371</td><td class="kb-val-pos">3.093</td></tr>
-                <tr><td>2010</td><td>US midterm 2010</td><td>Barack Obama</td><td>2010-11-02</td><td>2010-11-02</td><td class="kb-val-pos">2.827</td><td class="kb-val-pos">0.669</td><td class="kb-val-pos">0.368</td><td class="kb-val-pos">1.661</td><td class="kb-val-pos">1.047</td></tr>
-                <tr><td>2006</td><td>US midterm 2006</td><td>George W. Bush</td><td>2006-11-07</td><td>2006-11-07</td><td class="kb-val-pos">2.174</td><td class="kb-val-pos">0.356</td><td class="kb-val-pos">0.208</td><td class="kb-val-pos">0.751</td><td class="kb-val-pos">2.174</td></tr>
-                <tr><td>2002</td><td>US midterm 2002</td><td>George W. Bush</td><td>2002-11-05</td><td>2002-11-05</td><td class="kb-val-pos">14.632</td><td class="kb-val-pos">3.768</td><td class="kb-val-pos">0.914</td><td class="kb-val-neg">-3.544</td><td class="kb-val-pos">0.239</td></tr>
-                </tbody>
-            </table>
-            </div>
-            </div>
-
+            
             <div class="kb-section">
             <h3 class="kb-section-title">交叉验证与注意事项</h3>
             <div class="kb-callout kb-callout-blue">
@@ -2171,10 +2316,12 @@
             <ul style="font-size:13px;line-height:1.8;color:var(--apple-text-secondary);padding-left:18px;margin:0;">
                 <li>世界杯样本的负收益并不等于世界杯导致美股下跌；很多年份同时处在加息、衰退、战争、估值调整或其他宏观环境中。</li>
                 <li>中期选举样本的短期偏强，更可能反映"不确定性落地"和政策预期重新定价，而不是选举日期本身有机械魔法。</li>
+                <li>总统四年周期的第三年效应最明显，但第四年（大选年）同样偏正，说明市场更关注经济基本面而非政治周期本身。</li>
+                <li>奥运开幕的数据几乎看不出任何稳定规律——大幅正收益和负收益交替出现，更像是随机波动。</li>
                 <li>这些统计是事件研究的<strong>描述性结果</strong>，不是交易信号；窗口收益没有控制利率、估值、盈利周期、经济衰退等变量。</li>
             </ul>
             </div>
-
+            
             <div class="kb-section">
             <h3 class="kb-section-title">可复核来源</h3>
             <ul class="kb-ref-list">
@@ -2186,8 +2333,9 @@
                 <li>🔗 <a href="https://www.whitehouse.gov/administration/donald-j-trump/" target="_blank" rel="noopener">White House</a></li>
             </ul>
             </div>
-
+            
             </div><!-- /kb-event-myth -->
+
 
         </div>
         </div><!-- /tab-knowledge -->
