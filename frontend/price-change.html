@@ -1077,6 +1077,171 @@
     .etf-chart-tab:hover { color: var(--apple-text-primary); }
     .etf-chart-tab.active { background: var(--apple-blue); color: #fff; }
 
+    /* ─── Knowledge Base (数据科普) ─── */
+    .kb-section { margin-bottom: 28px; }
+    .kb-section:last-child { margin-bottom: 0; }
+
+    .kb-section-title {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--apple-text-primary);
+        margin-bottom: 14px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--apple-divider);
+    }
+
+    .kb-section-subtitle {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--apple-text-primary);
+        margin: 20px 0 10px;
+    }
+
+    /* Callout boxes */
+    .kb-callout {
+        padding: 14px 18px;
+        border-radius: var(--radius-md);
+        font-size: 13px;
+        line-height: 1.65;
+        margin-bottom: 18px;
+    }
+    .kb-callout p { margin: 0 0 6px; }
+    .kb-callout p:last-child { margin-bottom: 0; }
+    .kb-callout strong { color: inherit; }
+
+    .kb-callout-green {
+        background: rgba(48, 209, 88, 0.08);
+        border: 1px solid rgba(48, 209, 88, 0.25);
+        color: var(--apple-text-primary);
+    }
+    .kb-callout-blue {
+        background: rgba(0, 113, 227, 0.06);
+        border: 1px solid rgba(0, 113, 227, 0.2);
+        color: var(--apple-text-primary);
+    }
+    .kb-callout-red {
+        background: rgba(255, 69, 58, 0.07);
+        border: 1px solid rgba(255, 69, 58, 0.2);
+        color: var(--apple-text-primary);
+    }
+    .kb-callout-yellow {
+        background: rgba(255, 159, 10, 0.07);
+        border: 1px solid rgba(255, 159, 10, 0.22);
+        color: var(--apple-text-primary);
+    }
+
+    /* Knowledge tables */
+    .kb-table-wrap {
+        overflow-x: auto;
+        margin-bottom: 16px;
+        border-radius: var(--radius-md);
+        background: var(--apple-surface-1);
+        box-shadow: var(--apple-card-shadow);
+    }
+
+    .kb-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    .kb-table th {
+        padding: 9px 12px;
+        background: var(--apple-surface-2);
+        font-weight: 600;
+        font-size: 11px;
+        color: var(--apple-text-tertiary);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        text-align: center;
+        border-bottom: 1px solid var(--apple-divider);
+        white-space: nowrap;
+    }
+
+    .kb-table th:first-child { text-align: left; }
+
+    .kb-table td {
+        padding: 8px 12px;
+        text-align: center;
+        border-bottom: 1px solid var(--apple-divider);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        color: var(--apple-text-primary);
+    }
+
+    .kb-table td:first-child { text-align: left; font-weight: 500; }
+
+    .kb-table tbody tr:last-child td { border-bottom: none; }
+
+    .kb-table tbody tr:hover td { background: var(--apple-overlay); }
+
+    .kb-table .kb-val-pos { color: var(--data-positive); font-weight: 600; }
+    .kb-table .kb-val-neg { color: var(--data-negative); font-weight: 600; }
+
+    /* Two-column grid */
+    .kb-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin-bottom: 18px;
+    }
+
+    .kb-grid-col {
+        background: var(--apple-surface-1);
+        border-radius: var(--radius-md);
+        padding: 16px 18px;
+        box-shadow: var(--apple-card-shadow);
+    }
+
+    .kb-grid-col h4 {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0 0 10px;
+        color: var(--apple-text-primary);
+    }
+
+    .kb-grid-col ul {
+        margin: 0;
+        padding-left: 18px;
+        font-size: 13px;
+        line-height: 1.7;
+        color: var(--apple-text-secondary);
+    }
+
+    .kb-grid-col li { margin-bottom: 4px; }
+    .kb-grid-col li:last-child { margin-bottom: 0; }
+
+    /* Reference list */
+    .kb-ref-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.8;
+    }
+
+    .kb-ref-list li { margin-bottom: 2px; }
+
+    .kb-ref-list a {
+        color: var(--apple-blue);
+        text-decoration: none;
+        word-break: break-all;
+    }
+
+    .kb-ref-list a:hover { text-decoration: underline; }
+
+    /* Narrow table columns */
+    .kb-col-narrow { min-width: 55px; max-width: 75px; }
+
+    .kb-text-left { text-align: left !important; }
+
+    @media (max-width: 768px) {
+        .kb-grid {
+            grid-template-columns: 1fr;
+        }
+        .kb-section-title { font-size: 15px; }
+    }
+
     </style>
     <!-- Analytics (Vercel + Cloudflare): injected only on the real deployed
          domain. On localhost the Vercel scripts 404 and the Cloudflare beacon
@@ -1145,6 +1310,7 @@
             <button class="tab-btn" data-tab="crash">暴跌统计</button>
             <button class="tab-btn" data-tab="etf">标普纳指追踪</button>
             <button class="tab-btn" data-tab="vix">VIX恐慌指数</button>
+            <button class="tab-btn" data-tab="knowledge">数据科普</button>
             <button class="tab-btn" data-tab="wishes">心愿墙</button>
         </nav>
 
@@ -1450,6 +1616,416 @@
         </div>
         </div><!-- /tab-vix -->
 
+        <!-- 数据科普 -->
+        <div class="tab-panel" id="tab-knowledge">
+        <div class="pc-monthly">
+            <div class="pc-monthly-header">
+                <span class="pc-chart-title">📚 数据科普</span>
+                <div class="transfer-tabs" id="kbSubTabs" style="margin-left:auto;">
+                    <button class="transfer-tab active" data-kb-tab="etf-intro">核心ETF介绍</button>
+                    <button class="transfer-tab" data-kb-tab="event-myth">大事件魔咒</button>
+                </div>
+            </div>
+
+            <!-- ====== 核心ETF介绍 ====== -->
+            <div class="kb-sub-panel active" id="kb-etf-intro">
+
+            <div class="kb-section">
+            <div class="kb-callout kb-callout-green">
+                <strong>一句话结论：</strong>核心 ETF 的价值不是"永远涨"，而是用一笔交易买到一篮子优质资产、透明规则、低成本和自动汰弱留强。它比押单只股票更适合做长期底仓；但越偏 QQQ、VGT、XLK、SMH、SOXX 这类成长/科技/半导体 ETF，收益弹性越大，回撤也越深。
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">八只 ETF 到底在买什么</h3>
+            <p style="font-size:13px;color:var(--apple-text-secondary);margin-bottom:12px;">ETF 不是一个代码，而是一篮子股票。核心问题不是"哪个名字更火"，而是它到底分散到多少家公司、前十大持仓有多集中、费用会不会长期侵蚀收益。</p>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead>
+                <tr>
+                    <th>代码</th><th>定位</th><th>费率</th><th>持仓数量</th><th>前十大占比</th><th>前五大持仓占比</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>SPY</td><td>标普500，最适合交易和高流动性需求</td><td>0.0945%</td><td>504</td><td>37.26%</td><td class="kb-text-left">NVDA 7.84%；AAPL 6.83%；MSFT 4.56%；AMZN 3.71%；GOOGL 3.30%</td>
+                </tr>
+                <tr>
+                    <td>VOO</td><td>标普500，长期低费率底仓</td><td>0.03%</td><td>519</td><td>38.37%</td><td class="kb-text-left">NVDA 7.84%；AAPL 6.44%；MSFT 4.89%；AMZN 4.19%；GOOGL 3.62%</td>
+                </tr>
+                <tr>
+                    <td>QQQ</td><td>纳斯达克100，偏大型成长与创新公司</td><td>0.18%</td><td>104</td><td>46.24%</td><td class="kb-text-left">NVDA 8.38%；AAPL 7.07%；MSFT 4.96%；MU 4.82%；AMZN 4.34%</td>
+                </tr>
+                <tr>
+                    <td>QQQM</td><td>纳斯达克100，QQQ 的低费率长期持有版本</td><td>0.15%</td><td>106</td><td>45.79%</td><td class="kb-text-left">NVDA 8.22%；AAPL 7.23%；MSFT 4.98%；MU 4.68%；AMZN 4.31%</td>
+                </tr>
+                <tr>
+                    <td>VGT</td><td>美国信息技术行业，科技集中度高</td><td>0.09%</td><td>322</td><td>59.76%</td><td class="kb-text-left">NVDA 18.60%；AAPL 14.82%；MSFT 10.02%；AVGO 4.60%；MU 2.62%</td>
+                </tr>
+                <tr>
+                    <td>XLK</td><td>S&P 500 科技板块，行业更窄</td><td>0.08%</td><td>72</td><td>62.16%</td><td class="kb-text-left">NVDA 13.23%；AAPL 11.53%；MSFT 7.70%；MU 7.25%；AMD 5.15%</td>
+                </tr>
+                <tr>
+                    <td>SMH</td><td>半导体产业链，主题最集中、弹性最大</td><td>0.35%</td><td>26</td><td>70.78%</td><td class="kb-text-left">NVDA 15.22%；TSM 9.72%；MU 7.60%；AMD 7.10%；INTC 6.88%</td>
+                </tr>
+                <tr>
+                    <td>SOXX</td><td>半导体产业链，规则更偏分散的半导体ETF</td><td>0.34%</td><td>30</td><td>62.00%</td><td class="kb-text-left">NVDA 10.84%；AVGO 9.70%；AMD 8.09%；QCOM 6.48%；TSM 6.21%</td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+            <div class="kb-callout kb-callout-blue">
+                持仓会每日或定期变化。上表持仓为 2026-06-11 至 2026-06-12 附近的公开披露；SPY/XLK 来自 State Street，VOO/VGT 参考 Vanguard/Schwab 披露，QQQ/QQQM 参考 Invesco/Schwab 披露，SMH 参考 VanEck/Schwab 披露，SOXX 参考 iShares/BlackRock 披露。
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">收益和回撤：不要只看谁涨得多</h3>
+            <p style="font-size:13px;color:var(--apple-text-secondary);margin-bottom:10px;">下表用 Nasdaq 历史收盘价计算价格收益，不含分红再投资；适合比较波动和回撤方向。</p>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead>
+                <tr>
+                    <th>代码</th><th>数据起点</th><th>截至</th><th>年数</th><th>价格年化</th><th>最大回撤</th><th>最好年度</th><th>最差年度</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>SPY</td><td>2016-06-13</td><td>2026-06-12</td><td>10.0</td><td class="kb-val-pos">+13.54%</td><td class="kb-val-neg">-34.10%</td><td class="kb-val-pos">+28.79%</td><td class="kb-val-neg">-19.95%</td>
+                </tr>
+                <tr>
+                    <td>VOO</td><td>2016-06-13</td><td>2026-06-12</td><td>10.0</td><td class="kb-val-pos">+13.57%</td><td class="kb-val-neg">-34.30%</td><td class="kb-val-pos">+28.77%</td><td class="kb-val-neg">-20.01%</td>
+                </tr>
+                <tr>
+                    <td>QQQ</td><td>2016-06-13</td><td>2026-06-12</td><td>10.0</td><td class="kb-val-pos">+20.92%</td><td class="kb-val-neg">-35.62%</td><td class="kb-val-pos">+54.84%</td><td class="kb-val-neg">-33.71%</td>
+                </tr>
+                <tr>
+                    <td>QQQM</td><td>2020-10-13</td><td>2026-06-12</td><td>5.7</td><td class="kb-val-pos">+17.18%</td><td class="kb-val-neg">-35.57%</td><td class="kb-val-pos">+54.98%</td><td class="kb-val-neg">-33.71%</td>
+                </tr>
+                <tr>
+                    <td>VGT</td><td>2016-06-13</td><td>2026-06-12</td><td>10.0</td><td class="kb-val-pos">+24.07%</td><td class="kb-val-neg">-35.46%</td><td class="kb-val-pos">+52.99%</td><td class="kb-val-neg">-30.86%</td>
+                </tr>
+                <tr>
+                    <td>XLK</td><td>2016-06-13</td><td>2026-06-12</td><td>10.0</td><td class="kb-val-pos">+23.88%</td><td class="kb-val-neg">-34.02%</td><td class="kb-val-pos">+56.16%</td><td class="kb-val-neg">-29.10%</td>
+                </tr>
+                <tr>
+                    <td>SMH</td><td>2016-06-13</td><td>2026-06-12</td><td>10.0</td><td class="kb-val-pos">+36.21%</td><td class="kb-val-neg">-45.30%</td><td class="kb-val-pos">+73.67%</td><td class="kb-val-neg">-35.70%</td>
+                </tr>
+                <tr>
+                    <td>SOXX</td><td>2016-06-13</td><td>2026-06-12</td><td>10.0</td><td class="kb-val-pos">+34.21%</td><td class="kb-val-neg">-46.24%</td><td class="kb-val-pos">+90.08%</td><td class="kb-val-neg">-37.09%</td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h4 class="kb-section-subtitle">近年年度价格收益</h4>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead>
+                <tr>
+                    <th>年度</th><th>SPY</th><th>VOO</th><th>QQQ</th><th>QQQM</th><th>VGT</th><th>XLK</th><th>SMH</th><th>SOXX</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr><td>2026 YTD至6/12</td><td class="kb-val-pos">+8.57%</td><td class="kb-val-pos">+8.54%</td><td class="kb-val-pos">+17.65%</td><td class="kb-val-pos">+17.66%</td><td class="kb-val-pos">+23.54%</td><td class="kb-val-pos">+28.07%</td><td class="kb-val-pos">+66.08%</td><td class="kb-val-pos">+90.08%</td></tr>
+                <tr><td>2025</td><td class="kb-val-pos">+16.64%</td><td class="kb-val-pos">+16.68%</td><td class="kb-val-pos">+20.40%</td><td class="kb-val-pos">+20.41%</td><td class="kb-val-pos">+21.32%</td><td class="kb-val-pos">+24.13%</td><td class="kb-val-pos">+47.12%</td><td class="kb-val-pos">+38.89%</td></tr>
+                <tr><td>2024</td><td class="kb-val-pos">+24.00%</td><td class="kb-val-pos">+24.15%</td><td class="kb-val-pos">+26.99%</td><td class="kb-val-pos">+27.01%</td><td class="kb-val-pos">+31.94%</td><td class="kb-val-pos">+24.05%</td><td class="kb-val-pos">+43.32%</td><td class="kb-val-pos">+16.41%</td></tr>
+                <tr><td>2023</td><td class="kb-val-pos">+24.81%</td><td class="kb-val-pos">+24.80%</td><td class="kb-val-pos">+54.84%</td><td class="kb-val-pos">+54.98%</td><td class="kb-val-pos">+52.99%</td><td class="kb-val-pos">+56.16%</td><td class="kb-val-pos">+73.67%</td><td class="kb-val-pos">+67.18%</td></tr>
+                <tr><td>2022</td><td class="kb-val-neg">-19.95%</td><td class="kb-val-neg">-20.01%</td><td class="kb-val-neg">-33.71%</td><td class="kb-val-neg">-33.71%</td><td class="kb-val-neg">-30.86%</td><td class="kb-val-neg">-29.10%</td><td class="kb-val-neg">-35.70%</td><td class="kb-val-neg">-37.09%</td></tr>
+                <tr><td>2021</td><td class="kb-val-pos">+28.79%</td><td class="kb-val-pos">+28.77%</td><td class="kb-val-pos">+28.63%</td><td class="kb-val-pos">+28.70%</td><td class="kb-val-pos">+31.69%</td><td class="kb-val-pos">+35.94%</td><td class="kb-val-pos">+41.09%</td><td class="kb-val-pos">+43.63%</td></tr>
+                <tr><td>2020</td><td class="kb-val-pos">+15.09%</td><td class="kb-val-pos">+15.17%</td><td class="kb-val-pos">+45.14%</td><td class="kb-val-pos">+6.49%</td><td class="kb-val-pos">+41.89%</td><td class="kb-val-pos">+39.22%</td><td class="kb-val-pos">+50.97%</td><td class="kb-val-pos">+47.95%</td></tr>
+                <tr><td>2019</td><td class="kb-val-pos">+28.65%</td><td class="kb-val-pos">+28.61%</td><td class="kb-val-pos">+37.27%</td><td>—</td><td class="kb-val-pos">+46.68%</td><td class="kb-val-pos">+47.81%</td><td class="kb-val-pos">+60.84%</td><td class="kb-val-pos">+59.00%</td></tr>
+                <tr><td>2018</td><td class="kb-val-neg">-7.01%</td><td class="kb-val-neg">-6.99%</td><td class="kb-val-neg">-2.67%</td><td>—</td><td class="kb-val-neg">-0.09%</td><td class="kb-val-neg">-4.26%</td><td class="kb-val-neg">-13.04%</td><td class="kb-val-neg">-10.04%</td></tr>
+                <tr><td>2017</td><td class="kb-val-pos">+18.48%</td><td class="kb-val-pos">+18.65%</td><td class="kb-val-pos">+30.30%</td><td>—</td><td class="kb-val-pos">+34.52%</td><td class="kb-val-pos">+31.07%</td><td class="kb-val-pos">+36.30%</td><td class="kb-val-pos">+38.37%</td></tr>
+                </tbody>
+            </table>
+            </div>
+            <div class="kb-callout kb-callout-red">
+                ⚠️ SMH、SOXX、VGT、XLK 的长期收益看起来更猛，是因为它们承担了更集中的行业风险。SOXX 近十年最大回撤约 -46.24%，SMH 约 -45.30%。这类 ETF 更像"卫星仓位"，不应被误认为比宽基 ETF 更稳。
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">相似 ETF 怎么选</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead>
+                <tr><th>组合</th><th>核心区别</th><th>更适合谁</th><th>一句话选择</th></tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>SPY vs VOO</td><td class="kb-text-left">二者都跟踪标普500，底层非常接近。SPY 费率约 0.0945%，交易量和期权生态更强；VOO 费率约 0.03%，更适合长期低成本持有。</td><td class="kb-text-left">SPY 适合高频交易、期权和流动性需求；VOO 适合买入并长期持有。</td><td>长期投资优先 VOO；交易工具优先 SPY。</td>
+                </tr>
+                <tr>
+                    <td>QQQ vs QQQM</td><td class="kb-text-left">二者都跟踪纳斯达克100。QQQ 历史更久、规模和成交更大、期权更活跃；QQQM 费率更低，更像长期持有版本。</td><td class="kb-text-left">QQQ 适合交易、期权和高流动性；QQQM 适合长期配置。</td><td>长期买 QQQM；交易用 QQQ。</td>
+                </tr>
+                <tr>
+                    <td>VGT vs XLK</td><td class="kb-text-left">二者都偏科技，但 VGT 覆盖更广，持仓数量更多；XLK 是 S&P 500 科技板块，持仓更少、更集中，通常更受少数超大科技股影响。</td><td class="kb-text-left">VGT 适合想买更广科技行业的人；XLK 适合想押 S&P 500 科技龙头的人。</td><td>想更分散选 VGT；想更集中龙头选 XLK。</td>
+                </tr>
+                <tr>
+                    <td>SMH vs SOXX</td><td class="kb-text-left">二者都买半导体。SMH 持仓更少、前十大更集中，单一龙头影响更大；SOXX 持仓约 30 只，规则更偏分散。</td><td class="kb-text-left">SMH 适合愿意承担更高集中度的人；SOXX 适合想买半导体但希望稍微分散的人。</td><td>想更强弹性选 SMH；想半导体内部分散一点选 SOXX。</td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">为什么核心 ETF 比买个股更适合多数人</h3>
+            <div class="kb-grid">
+                <div class="kb-grid-col">
+                    <h4>✅ 买 ETF 的优势</h4>
+                    <ul>
+                        <li><strong>分散单一公司风险：</strong>买 SPY/VOO 不是押某一家公司的财报，而是买美国大型公司的整体现金流。</li>
+                        <li><strong>规则透明：</strong>指数按规则纳入、剔除和调仓，长期会把衰弱公司降权或剔除。</li>
+                        <li><strong>低成本：</strong>VOO 费率 0.03%，VGT 0.09%，XLK 0.08%，长期成本远低于多数主动基金。</li>
+                        <li><strong>降低择股压力：</strong>不用判断今天该买 NVDA、AAPL、MSFT 还是 AMZN；指数自然按市值给权重。</li>
+                        <li><strong>更适合长期定投：</strong>波动还在，但持仓规则稳定，适合用纪律对抗情绪。</li>
+                    </ul>
+                </div>
+                <div class="kb-grid-col">
+                    <h4>⚠️ 买 ETF 的缺点</h4>
+                    <ul>
+                        <li><strong>无法只买赢家：</strong>ETF 会同时持有你喜欢和不喜欢的公司。</li>
+                        <li><strong>市值加权会追涨：</strong>大公司越涨权重越高，估值过热时集中度会上升。</li>
+                        <li><strong>不会逃顶：</strong>指数基金通常满仓跟踪指数，熊市也会一起跌。</li>
+                        <li><strong>主题 ETF 波动大：</strong>科技和半导体 ETF 可能长期优秀，但中途回撤很难受。</li>
+                        <li><strong>收益不可能超过最强个股：</strong>ETF 牺牲了暴富弹性，换来更高的生存概率。</li>
+                    </ul>
+                </div>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">长期价值：核心仓位和卫星仓位</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead>
+                <tr><th>仓位角色</th><th>适合 ETF</th><th>原因</th><th>风险提醒</th></tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>核心底仓</td><td>VOO / SPY</td><td class="kb-text-left">覆盖约 500 家美国大型公司，行业分散，费用低，适合长期持有。</td><td class="kb-text-left">仍会经历市场级别熊市，不能替代现金和债券。</td>
+                </tr>
+                <tr>
+                    <td>成长增强</td><td>QQQ / QQQM</td><td class="kb-text-left">集中在纳斯达克大型非金融公司，科技与创新属性更强。</td><td class="kb-text-left">估值和利率敏感，回撤通常比标普500更深。</td>
+                </tr>
+                <tr>
+                    <td>科技行业增强</td><td>VGT / XLK</td><td class="kb-text-left">直接押注美国科技板块，受 AI、软件、半导体周期影响大。</td><td class="kb-text-left">前十大占比接近或超过 60%，并不是真正宽基。</td>
+                </tr>
+                <tr>
+                    <td>高弹性主题</td><td>SMH / SOXX</td><td class="kb-text-left">集中半导体产业链，AI 资本开支周期中弹性强。</td><td class="kb-text-left">SMH 持仓约 26 只、SOXX 约 30 只，主题反转时回撤可能很深。</td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+            <div class="kb-callout kb-callout-yellow">
+                <strong>📌 投资建议：</strong>普通长期投资者可以先用 VOO 或 SPY 做 60%-80% 的核心底仓，再用 QQQM/QQQ 做 10%-25% 的成长增强；VGT、XLK、SMH、SOXX 更适合 0%-15% 的卫星仓位。半导体 ETF 不建议替代宽基 ETF 做核心仓，因为它们的产业周期和估值波动都更剧烈。
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">更具体的配置思路</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead>
+                <tr><th>投资者类型</th><th>示例框架</th><th>适合原因</th><th>提醒</th></tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>稳健型</td><td class="kb-text-left">VOO/SPY 80%-90%；QQQM/QQQ 10%-20%；不配或少量配主题ETF</td><td class="kb-text-left">核心放在宽基，避免过度押注科技和半导体。</td><td class="kb-text-left">仍然需要现金、债券或货币基金管理短期资金。</td>
+                </tr>
+                <tr>
+                    <td>均衡型</td><td class="kb-text-left">VOO/SPY 60%-75%；QQQM/QQQ 15%-25%；VGT/XLK/SMH/SOXX 5%-15%</td><td class="kb-text-left">保留宽基底仓，同时承认科技成长的长期驱动力。</td><td class="kb-text-left">主题仓位最好定期再平衡，涨多了要控制占比。</td>
+                </tr>
+                <tr>
+                    <td>进取型</td><td class="kb-text-left">VOO/SPY 40%-60%；QQQM/QQQ 20%-35%；科技/半导体 10%-25%</td><td class="kb-text-left">追求更高成长暴露，能承受更大净值波动。</td><td class="kb-text-left">需要心理上接受 30%-50% 的阶段性回撤。</td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">数据来源与复核链接</h3>
+            <ul class="kb-ref-list">
+                <li>行情：Nasdaq 历史收盘价 API，统计至 2026-06-12；收益为价格收益，不含分红再投资。</li>
+                <li>SPY · XLK：State Street ETF 官网，含费率、持仓和行业配置。</li>
+                <li>VOO · VGT：Vanguard 官网/顾问页及 Schwab 持仓页。</li>
+                <li>QQQ · QQQM：Invesco 官网及 Schwab 持仓页。</li>
+                <li>SMH：VanEck 官网、Fact Sheet 及 Schwab 持仓页。</li>
+                <li>SOXX：iShares/BlackRock 官网及持仓页。</li>
+            </ul>
+            <ul class="kb-ref-list" style="margin-top:8px;">
+                <li>🔗 <a href="https://www.ssga.com/us/en/intermediary/etfs/state-street-spdr-sp-500-etf-trust-spy" target="_blank" rel="noopener">SPY - State Street</a></li>
+                <li>🔗 <a href="https://investor.vanguard.com/investment-products/etfs/profile/voo" target="_blank" rel="noopener">VOO - Vanguard</a></li>
+                <li>🔗 <a href="https://www.invesco.com/us/en/financial-products/etfs/invesco-qqq-trust-series-1.html" target="_blank" rel="noopener">QQQ - Invesco</a></li>
+                <li>🔗 <a href="https://www.invesco.com/us/en/financial-products/etfs/invesco-nasdaq-100-etf.html" target="_blank" rel="noopener">QQQM - Invesco</a></li>
+                <li>🔗 <a href="https://investor.vanguard.com/investment-products/etfs/profile/vgt" target="_blank" rel="noopener">VGT - Vanguard</a></li>
+                <li>🔗 <a href="https://www.ssga.com/us/en/intermediary/etfs/state-street-technology-select-sector-spdr-etf-xlk" target="_blank" rel="noopener">XLK - State Street</a></li>
+                <li>🔗 <a href="https://www.vaneck.com/us/en/investments/semiconductor-etf-smh/" target="_blank" rel="noopener">SMH - VanEck</a></li>
+                <li>🔗 <a href="https://www.ishares.com/us/products/239705/ishares-semiconductor-etf" target="_blank" rel="noopener">SOXX - iShares</a></li>
+            </ul>
+            </div>
+
+            </div><!-- /kb-etf-intro -->
+
+            <!-- ====== 大事件魔咒 ====== -->
+            <div class="kb-sub-panel" id="kb-event-myth" style="display:none;">
+
+            <div class="kb-section">
+            <div class="kb-callout kb-callout-green">
+                <strong>结论先看：</strong>按 S&P 500 历史日线逐次计算，世界杯开幕后 20 个交易日平均收益为 <span class="kb-val-neg">-0.573% ↓</span>，中位数 <span class="kb-val-neg">-0.585% ↓</span>，上涨占比 45.5%；美国中期选举后 20 个交易日平均收益为 <span class="kb-val-pos">+0.910% ↑</span>，中位数 <span class="kb-val-pos">+1.023% ↑</span>，上涨占比 70.8%。2026 年世界杯已于 2026-06-11 开始；2026 美国中期选举为 2026-11-03，尚未发生。
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">统计口径</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th style="min-width:100px;">项目</th><th>口径</th></tr></thead>
+                <tbody>
+                <tr><td>主指数</td><td class="kb-text-left">S&P 500 指数日线收盘价</td></tr>
+                <tr><td>样本范围</td><td class="kb-text-left">世界杯开幕：1930-2026 共 23 次，其中 2026 只计算已发生且可取得行情的窗口；美国中期选举：1930-2026 共 25 次，其中 2026 尚未发生</td></tr>
+                <tr><td>对齐规则</td><td class="kb-text-left">事件自然日若不是交易日，取事件日之后第一个交易日作为对齐交易日</td></tr>
+                <tr><td>收益窗口</td><td class="kb-text-left">前 1/5/20 个交易日、后 1/5/20 个交易日；收益率 = 窗口终点收盘价 / 起点收盘价 - 1；未发生或窗口未完整的格子标注为未发生/未完整</td></tr>
+                <tr><td>数据来源</td><td class="kb-text-left">1927-12-30 至 2021-01-29 使用公开 GitHub 原始 CSV 镜像（Yahoo Finance 字段）；2021-02-01 至 2026-06-12 使用 FRED SP500 官方 CSV 补齐</td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">最新事件</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>事件</th><th>日期</th><th>附加信息</th><th>当前可用数据</th></tr></thead>
+                <tbody>
+                <tr>
+                    <td>2026 世界杯开幕</td><td>2026-06-11</td><td>Canada/Mexico/United States</td><td class="kb-text-left">对齐交易日 2026-06-11；前 20 日 -0.671%，前 5 日 -2.505%，后 1 日 0.503%；后 5/20 日未完整</td>
+                </tr>
+                <tr>
+                    <td>2026 美国中期选举</td><td>2026-11-03</td><td>总统：Donald J. Trump</td><td class="kb-text-left">尚未发生，暂无事件前后行情窗口</td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">核心摘要</h3>
+            <div class="kb-grid">
+                <div class="kb-grid-col">
+                    <h4>⚽ 世界杯开幕</h4>
+                    <p style="font-size:13px;line-height:1.7;color:var(--apple-text-secondary);margin:0;">开幕后 1、5、20 个交易日的平均收益都为负，其中后 5 个交易日平均 <span class="kb-val-neg">-0.933% ↓</span>，上涨占比只有 31.8%。但极端年份差异很大，不能直接归因于世界杯。</p>
+                </div>
+                <div class="kb-grid-col">
+                    <h4>🗳️ 美国中期选举</h4>
+                    <p style="font-size:13px;line-height:1.7;color:var(--apple-text-secondary);margin:0;">中期选举前 20 个交易日平均 <span class="kb-val-pos">+2.812% ↑</span>，选后 20 个交易日平均 <span class="kb-val-pos">+0.910% ↑</span>。这个方向比世界杯更稳定，但依然不是每次都涨。</p>
+                </div>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">S&P 500 汇总统计 — 世界杯开幕日前后</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>窗口</th><th>样本数</th><th>平均收益%</th><th>中位数%</th><th>上涨占比</th><th>最差%</th><th>最好%</th></tr></thead>
+                <tbody>
+                <tr><td>前20交易日</td><td>23</td><td class="kb-val-neg">-1.164</td><td class="kb-val-neg">-0.315</td><td>47.8%</td><td class="kb-val-neg">-9.638</td><td class="kb-val-pos">4.366</td></tr>
+                <tr><td>前5交易日</td><td>23</td><td class="kb-val-pos">0.870</td><td class="kb-val-pos">0.278</td><td>52.2%</td><td class="kb-val-neg">-4.281</td><td class="kb-val-pos">10.804</td></tr>
+                <tr><td>前1交易日</td><td>23</td><td class="kb-val-pos">0.216</td><td class="kb-val-pos">0.113</td><td>52.2%</td><td class="kb-val-neg">-5.381</td><td class="kb-val-pos">3.942</td></tr>
+                <tr><td>后1交易日</td><td>23</td><td class="kb-val-neg">-0.314</td><td class="kb-val-neg">-0.246</td><td>26.1%</td><td class="kb-val-neg">-2.480</td><td class="kb-val-pos">1.358</td></tr>
+                <tr><td>后5交易日</td><td>22</td><td class="kb-val-neg">-0.933</td><td class="kb-val-neg">-1.147</td><td>31.8%</td><td class="kb-val-neg">-4.473</td><td class="kb-val-pos">2.938</td></tr>
+                <tr><td>后20交易日</td><td>22</td><td class="kb-val-neg">-0.573</td><td class="kb-val-neg">-0.585</td><td>45.5%</td><td class="kb-val-neg">-9.952</td><td class="kb-val-pos">22.998</td></tr>
+                </tbody>
+            </table>
+            </div>
+
+            <h3 class="kb-section-title" style="margin-top:24px;">S&P 500 汇总统计 — 美国中期选举日前后</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>窗口</th><th>样本数</th><th>平均收益%</th><th>中位数%</th><th>上涨占比</th><th>最差%</th><th>最好%</th></tr></thead>
+                <tbody>
+                <tr><td>前20交易日</td><td>24</td><td class="kb-val-pos">2.812</td><td class="kb-val-pos">2.407</td><td>66.7%</td><td class="kb-val-neg">-10.693</td><td class="kb-val-pos">15.839</td></tr>
+                <tr><td>前5交易日</td><td>24</td><td class="kb-val-pos">1.669</td><td class="kb-val-pos">1.901</td><td>87.5%</td><td class="kb-val-neg">-6.943</td><td class="kb-val-pos">5.267</td></tr>
+                <tr><td>前1交易日</td><td>24</td><td class="kb-val-pos">0.349</td><td class="kb-val-pos">0.621</td><td>70.8%</td><td class="kb-val-neg">-4.305</td><td class="kb-val-pos">2.778</td></tr>
+                <tr><td>后1交易日</td><td>24</td><td class="kb-val-pos">0.346</td><td class="kb-val-pos">0.290</td><td>70.8%</td><td class="kb-val-neg">-2.078</td><td class="kb-val-pos">3.913</td></tr>
+                <tr><td>后5交易日</td><td>24</td><td class="kb-val-pos">0.472</td><td class="kb-val-pos">1.273</td><td>66.7%</td><td class="kb-val-neg">-4.859</td><td class="kb-val-pos">4.274</td></tr>
+                <tr><td>后20交易日</td><td>24</td><td class="kb-val-pos">0.910</td><td class="kb-val-pos">1.023</td><td>70.8%</td><td class="kb-val-neg">-10.660</td><td class="kb-val-pos">7.188</td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">世界杯开幕 — S&P 500 逐次明细</h3>
+            <p style="font-size:13px;color:var(--apple-text-secondary);margin-bottom:10px;">仅展示近年核心数据，完整 1930-2026 明细请参考原文。</p>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>年份</th><th>事件</th><th>举办地</th><th>自然日</th><th>对齐交易日</th><th>前20日%</th><th>前5日%</th><th>后1日%</th><th>后5日%</th><th>后20日%</th></tr></thead>
+                <tbody>
+                <tr><td>2026</td><td>Canada/Mexico/US 2026</td><td>美加墨</td><td>2026-06-11</td><td>2026-06-11</td><td class="kb-val-neg">-0.671</td><td class="kb-val-neg">-2.505</td><td class="kb-val-pos">0.503</td><td>未完整</td><td>未完整</td></tr>
+                <tr><td>2022</td><td>Qatar 2022</td><td>卡塔尔</td><td>2022-11-20</td><td>2022-11-21</td><td class="kb-val-pos">4.019</td><td class="kb-val-neg">-0.185</td><td class="kb-val-pos">1.358</td><td class="kb-val-pos">0.195</td><td class="kb-val-neg">-3.249</td></tr>
+                <tr><td>2018</td><td>Russia 2018</td><td>俄罗斯</td><td>2018-06-14</td><td>2018-06-14</td><td class="kb-val-pos">2.205</td><td class="kb-val-pos">0.437</td><td class="kb-val-neg">-0.102</td><td class="kb-val-neg">-1.176</td><td class="kb-val-pos">0.676</td></tr>
+                <tr><td>2014</td><td>Brazil 2014</td><td>巴西</td><td>2014-06-12</td><td>2014-06-12</td><td class="kb-val-pos">2.202</td><td class="kb-val-neg">-0.533</td><td class="kb-val-pos">0.313</td><td class="kb-val-pos">1.522</td><td class="kb-val-pos">1.941</td></tr>
+                <tr><td>2010</td><td>South Africa 2010</td><td>南非</td><td>2010-06-11</td><td>2010-06-11</td><td class="kb-val-neg">-5.688</td><td class="kb-val-pos">2.509</td><td class="kb-val-neg">-0.180</td><td class="kb-val-pos">2.374</td><td class="kb-val-neg">-1.177</td></tr>
+                <tr><td>2006</td><td>Germany 2006</td><td>德国</td><td>2006-06-09</td><td>2006-06-09</td><td class="kb-val-neg">-4.106</td><td class="kb-val-neg">-2.788</td><td class="kb-val-neg">-1.187</td><td class="kb-val-neg">-0.061</td><td class="kb-val-pos">1.201</td></tr>
+                <tr><td>2002</td><td>Korea/Japan 2002</td><td>韩日</td><td>2002-05-31</td><td>2002-05-31</td><td class="kb-val-neg">-1.606</td><td class="kb-val-neg">-2.729</td><td class="kb-val-neg">-2.480</td><td class="kb-val-neg">-3.712</td><td class="kb-val-neg">-7.246</td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">美国中期选举 — S&P 500 逐次明细（近年）</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>年份</th><th>事件</th><th>当时总统</th><th>自然日</th><th>对齐交易日</th><th>前20日%</th><th>前5日%</th><th>后1日%</th><th>后5日%</th><th>后20日%</th></tr></thead>
+                <tbody>
+                <tr><td>2026</td><td>US midterm 2026</td><td>Donald J. Trump</td><td>2026-11-03</td><td>未发生</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+                <tr><td>2022</td><td>US midterm 2022</td><td>Joe Biden</td><td>2022-11-08</td><td>2022-11-08</td><td class="kb-val-pos">6.667</td><td class="kb-val-neg">-0.726</td><td class="kb-val-neg">-2.078</td><td class="kb-val-pos">4.274</td><td class="kb-val-pos">2.764</td></tr>
+                <tr><td>2018</td><td>US midterm 2018</td><td>Donald J. Trump</td><td>2018-11-06</td><td>2018-11-06</td><td class="kb-val-neg">-4.336</td><td class="kb-val-pos">2.715</td><td class="kb-val-pos">2.121</td><td class="kb-val-neg">-1.207</td><td class="kb-val-neg">-2.159</td></tr>
+                <tr><td>2014</td><td>US midterm 2014</td><td>Barack Obama</td><td>2014-11-04</td><td>2014-11-04</td><td class="kb-val-pos">3.979</td><td class="kb-val-pos">1.363</td><td class="kb-val-pos">0.570</td><td class="kb-val-pos">1.371</td><td class="kb-val-pos">3.093</td></tr>
+                <tr><td>2010</td><td>US midterm 2010</td><td>Barack Obama</td><td>2010-11-02</td><td>2010-11-02</td><td class="kb-val-pos">2.827</td><td class="kb-val-pos">0.669</td><td class="kb-val-pos">0.368</td><td class="kb-val-pos">1.661</td><td class="kb-val-pos">1.047</td></tr>
+                <tr><td>2006</td><td>US midterm 2006</td><td>George W. Bush</td><td>2006-11-07</td><td>2006-11-07</td><td class="kb-val-pos">2.174</td><td class="kb-val-pos">0.356</td><td class="kb-val-pos">0.208</td><td class="kb-val-pos">0.751</td><td class="kb-val-pos">2.174</td></tr>
+                <tr><td>2002</td><td>US midterm 2002</td><td>George W. Bush</td><td>2002-11-05</td><td>2002-11-05</td><td class="kb-val-pos">14.632</td><td class="kb-val-pos">3.768</td><td class="kb-val-pos">0.914</td><td class="kb-val-neg">-3.544</td><td class="kb-val-pos">0.239</td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">交叉验证与注意事项</h3>
+            <div class="kb-callout kb-callout-blue">
+                <p>道琼斯工业指数通过 FRED 只能稳定取得 2016 年之后的日线，因此本文不把它作为长历史结论口径，只用于 2018、2022 近年窗口交叉查看。</p>
+            </div>
+            <ul style="font-size:13px;line-height:1.8;color:var(--apple-text-secondary);padding-left:18px;margin:0;">
+                <li>世界杯样本的负收益并不等于世界杯导致美股下跌；很多年份同时处在加息、衰退、战争、估值调整或其他宏观环境中。</li>
+                <li>中期选举样本的短期偏强，更可能反映"不确定性落地"和政策预期重新定价，而不是选举日期本身有机械魔法。</li>
+                <li>这些统计是事件研究的<strong>描述性结果</strong>，不是交易信号；窗口收益没有控制利率、估值、盈利周期、经济衰退等变量。</li>
+            </ul>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">可复核来源</h3>
+            <ul class="kb-ref-list">
+                <li>🔗 <a href="https://raw.githubusercontent.com/sonofhypnos/projects/master/_notebooks/%5EGSPC.csv" target="_blank" rel="noopener">GitHub 原始 CSV 镜像：^GSPC.csv</a></li>
+                <li>🔗 <a href="https://fred.stlouisfed.org/graph/fredgraph.csv?id=SP500" target="_blank" rel="noopener">FRED SP500 CSV</a></li>
+                <li>🔗 <a href="https://fred.stlouisfed.org/graph/fredgraph.csv?id=DJIA" target="_blank" rel="noopener">FRED DJIA CSV</a></li>
+                <li>🔗 <a href="https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026" target="_blank" rel="noopener">FIFA World Cup 26</a></li>
+                <li>🔗 <a href="https://www.fvap.gov/uploads/FVAP/VAO/PrimaryElectionsCalendar.pdf" target="_blank" rel="noopener">FVAP 2026 Election Calendar</a></li>
+                <li>🔗 <a href="https://www.whitehouse.gov/administration/donald-j-trump/" target="_blank" rel="noopener">White House</a></li>
+            </ul>
+            </div>
+
+            </div><!-- /kb-event-myth -->
+
+        </div>
+        </div><!-- /tab-knowledge -->
+
         <!-- 心愿墙 -->
         <div class="tab-panel" id="tab-wishes">
         <div class="pc-monthly">
@@ -1644,6 +2220,9 @@
                 '/etf/sp500': 'etf',
                 '/etf/global_others': 'etf',
                 '/vix': 'vix',
+                '/knowledge': 'knowledge',
+                '/knowledge/etf-intro': 'knowledge',
+                '/knowledge/event-myth': 'knowledge',
                 '/wishes': 'wishes',
                 '/settings': 'yearly'
             };
@@ -1653,6 +2232,7 @@
                 'crash': '/crash',
                 'etf': '/etf',
                 'vix': '/vix',
+                'knowledge': '/knowledge',
                 'wishes': '/wishes'
             };
 
@@ -1663,6 +2243,12 @@
                 'global_others': '/etf/global_others'
             };
 
+            // Knowledge sub-tab path mapping
+            var KB_SUB_PATH = {
+                'etf-intro': '/knowledge/etf-intro',
+                'event-myth': '/knowledge/event-myth'
+            };
+
             function tabFromPath(path) {
                 return PATH_TO_TAB[path] || null;
             }
@@ -1671,6 +2257,14 @@
                 if (path.indexOf('/etf/') === 0) {
                     var sub = path.split('/')[2];
                     if (ETF_SUB_PATH[sub]) return sub;
+                }
+                return null;
+            }
+
+            function kbSubFromPath(path) {
+                if (path.indexOf('/knowledge/') === 0) {
+                    var sub = path.split('/')[2];
+                    if (KB_SUB_PATH[sub]) return sub;
                 }
                 return null;
             }
@@ -1722,6 +2316,23 @@
                 });
             });
 
+            // Knowledge sub-tab click → show/hide panels + update URL
+            document.querySelectorAll('#kbSubTabs .transfer-tab').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var sub = btn.dataset.kbTab;
+                    // Toggle active class on sub-tab buttons
+                    document.querySelectorAll('#kbSubTabs .transfer-tab').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    // Show/hide sub-panels
+                    document.querySelectorAll('#tab-knowledge .kb-sub-panel').forEach(function(p) { p.style.display = 'none'; });
+                    var panel = document.getElementById('kb-' + sub);
+                    if (panel) panel.style.display = 'block';
+                    // Update URL
+                    var path = KB_SUB_PATH[sub] || '/knowledge';
+                    history.replaceState({ tab: 'knowledge', kbSub: sub }, '', path);
+                });
+            });
+
             // On page load: read URL and restore the correct tab
             function restoreFromUrl() {
                 var tab = tabFromPath(location.pathname);
@@ -1743,6 +2354,13 @@
                 if (etfSub && tab === 'etf') {
                     var subBtn = document.querySelector('#etfTabBar .transfer-tab[data-etf-tab="' + etfSub + '"]');
                     if (subBtn) subBtn.click();
+                }
+
+                // If Knowledge tab with a sub-tab, activate the sub-tab
+                var kbSub = kbSubFromPath(location.pathname);
+                if (kbSub && tab === 'knowledge') {
+                    var subBtn2 = document.querySelector('#kbSubTabs .transfer-tab[data-kb-tab="' + kbSub + '"]');
+                    if (subBtn2) subBtn2.click();
                 }
 
                 // If URL is /settings, auto-open the settings menu
@@ -1779,6 +2397,13 @@
                 if (etfSub2 && tab === 'etf') {
                     var subBtn2 = document.querySelector('#etfTabBar .transfer-tab[data-etf-tab="' + etfSub2 + '"]');
                     if (subBtn2) subBtn2.click();
+                }
+
+                // If Knowledge tab with a sub-tab, activate the sub-tab
+                var kbSub2 = kbSubFromPath(location.pathname);
+                if (kbSub2 && tab === 'knowledge') {
+                    var subBtn3 = document.querySelector('#kbSubTabs .transfer-tab[data-kb-tab="' + kbSub2 + '"]');
+                    if (subBtn3) subBtn3.click();
                 }
             });
 

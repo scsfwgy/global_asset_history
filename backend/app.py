@@ -61,6 +61,9 @@ def etf_market():
 @app.route("/etf/sp500")
 @app.route("/etf/global_others")
 @app.route("/vix")
+@app.route("/knowledge")
+@app.route("/knowledge/etf-intro")
+@app.route("/knowledge/event-myth")
 @app.route("/wishes")
 @app.route("/settings")
 def serve_tab():
