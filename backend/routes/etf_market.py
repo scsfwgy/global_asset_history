@@ -5,6 +5,7 @@ import logging
 import math
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -559,9 +560,13 @@ def quote():
         except Exception as e:
             logger.warning("Failed to parse Tencent quote line: %s", e)
 
-    # Augment with fund fee data from locally scraped JSON
-    _load_fee_data()
-    for q in results:
+    # Augment with fund fee data from locally scraped JSON.
+    # Each quote's enrichment (fees + tracking-error / NAV / benchmark fetches)
+    # is independent and network-bound, so we fan out across a thread pool.
+    # Wall-clock drops from sum(per-symbol) to max(per-symbol).
+    _load_fee_data()  # warm the module cache once before threads start
+
+    def _enrich_quote(q: dict) -> None:
         fee = _fee_data.get(q["code"], {})
         q["mgmt_fee"] = fee.get("mgmt_fee")       # e.g. "0.60%"
         q["custody_fee"] = fee.get("custody_fee") # e.g. "0.20%"
@@ -597,6 +602,19 @@ def quote():
         q["profit_diff_30d_per_10k"] = tracking.get("profit_diff_30d_per_10k") if tracking else None
         q["nav_tracking_mae_30d"] = tracking.get("nav_tracking_mae_30d") if tracking else None
         q["valuation_error_latest"] = tracking.get("valuation_error_latest") if tracking else None
+
+    if results:
+        max_workers = min(len(results), 8)
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = {pool.submit(_enrich_quote, q): q for q in results}
+            for fut in as_completed(futures):
+                try:
+                    fut.result()
+                except Exception as e:
+                    logger.warning(
+                        "Quote enrichment failed for %s: %s",
+                        futures[fut].get("code"), e,
+                    )
 
     return jsonify({
         "quotes": results,
