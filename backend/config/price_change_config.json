@@ -230,6 +230,7 @@
     "min": -100,
     "max": 100
   },
+  "color_scheme": "green_up",
   "crypto": {
     "binance_base_url": "https://data-api.binance.vision",
     "okx_base_url": "https://www.okx.com",

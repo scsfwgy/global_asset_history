@@ -254,8 +254,8 @@
 
         .pc-error {
             padding: 12px 16px;
-            background: rgba(255, 69, 58, 0.1);
-            border: 1px solid rgba(255, 69, 58, 0.3);
+            background: var(--data-negative-alpha-10);
+            border: 1px solid var(--data-negative-alpha-30);
             border-radius: var(--radius-md);
             color: var(--data-negative);
             font-size: 13px;
@@ -623,7 +623,7 @@
         }
 
         .crash-status.recovered {
-            background: rgba(48, 209, 88, 0.15);
+            background: var(--data-positive-alpha-15);
             color: var(--data-positive);
         }
 
@@ -917,8 +917,8 @@
             padding: 8px 12px;
             border-radius: var(--radius-md);
         }
-        .wish-msg.is-error { background: rgba(255, 69, 58, 0.1); color: var(--data-negative); }
-        .wish-msg.is-ok { background: rgba(48, 209, 88, 0.12); color: var(--data-positive); }
+        .wish-msg.is-error { background: var(--data-negative-alpha-10); color: var(--data-negative); }
+        .wish-msg.is-ok { background: var(--data-positive-alpha-12); color: var(--data-positive); }
 
         .wish-list {
             display: grid;
@@ -1110,8 +1110,8 @@
     .kb-callout strong { color: inherit; }
 
     .kb-callout-green {
-        background: rgba(48, 209, 88, 0.08);
-        border: 1px solid rgba(48, 209, 88, 0.25);
+        background: var(--data-positive-alpha-08);
+        border: 1px solid var(--data-positive-alpha-25);
         color: var(--apple-text-primary);
     }
     .kb-callout-blue {
@@ -1120,8 +1120,8 @@
         color: var(--apple-text-primary);
     }
     .kb-callout-red {
-        background: rgba(255, 69, 58, 0.07);
-        border: 1px solid rgba(255, 69, 58, 0.2);
+        background: var(--data-negative-alpha-07);
+        border: 1px solid var(--data-negative-alpha-20);
         color: var(--apple-text-primary);
     }
     .kb-callout-yellow {
@@ -1281,13 +1281,18 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     </button>
                     <div id="headerSettingsMenu" class="header-settings-menu" style="display:none;">
+                        <!-- System: connection status -->
+                        <div class="header-settings-info"><span class="status-dot" id="statusDot"></span> <span id="settingsConnLabel">连接中...</span></div>
                         <!-- System: theme -->
                         <div id="settingsThemeToggle" class="header-settings-info header-settings-theme-row">
                             <span class="header-settings-theme-icon" id="settingsThemeIcon">🌙</span>
                             <span id="settingsThemeLabel">深色模式</span>
                         </div>
-                        <!-- System: connection status -->
-                        <div class="header-settings-info"><span class="status-dot" id="statusDot"></span> <span id="settingsConnLabel">连接中...</span></div>
+                        <!-- System: color scheme -->
+                        <div id="settingsColorSchemeToggle" class="header-settings-info header-settings-theme-row">
+                            <span class="header-settings-theme-icon" id="settingsColorSchemeIcon">📈</span>
+                            <span id="settingsColorSchemeLabel">绿涨红跌</span>
+                        </div>
                         <!-- System: visit count -->
                         <div class="header-settings-info" id="settingsVisitCount">访问次数：⋯</div>
                         <div class="header-settings-sep"></div>
@@ -2206,6 +2211,64 @@
                     if (typeof window._refreshCharts === 'function') window._refreshCharts();
                 }
             });
+        })();
+
+        // ─── Color scheme switching (green-up/red-up) ───
+        (function() {
+            var COLOR_SCHEME_KEY = 'global-asset-history-color-scheme';
+            var html = document.documentElement;
+            var toggle = document.getElementById('settingsColorSchemeToggle');
+            var icon = document.getElementById('settingsColorSchemeIcon');
+            var label = document.getElementById('settingsColorSchemeLabel');
+
+            function updateColorSchemeUI(scheme) {
+                if (icon) icon.textContent = scheme === 'red_up' ? '📉' : '📈';
+                if (label) label.textContent = scheme === 'red_up' ? '红涨绿跌' : '绿涨红跌';
+            }
+
+            function applyColorScheme(scheme) {
+                if (scheme === 'red_up') {
+                    html.setAttribute('data-color-scheme', 'red_up');
+                } else {
+                    html.removeAttribute('data-color-scheme');
+                }
+                updateColorSchemeUI(scheme);
+                // Refresh any visible charts
+                if (typeof window._refreshCharts === 'function') window._refreshCharts();
+            }
+
+            // Initialize: localStorage override > backend config
+            var stored = localStorage.getItem(COLOR_SCHEME_KEY);
+            if (stored === 'green_up' || stored === 'red_up') {
+                applyColorScheme(stored);
+            }
+            // Backend config is fetched in price-change.js init; it will call applyColorScheme if no localStorage
+
+            // Toggle on click
+            if (toggle) {
+                toggle.addEventListener('click', function() {
+                    var current = html.getAttribute('data-color-scheme');
+                    var next = current === 'red_up' ? 'green_up' : 'red_up';
+                    applyColorScheme(next);
+                    localStorage.setItem(COLOR_SCHEME_KEY, next);
+                });
+            }
+
+            // Expose for use by other modules
+            window.getColorScheme = function() {
+                return html.getAttribute('data-color-scheme') || 'green_up';
+            };
+            window.applyColorScheme = applyColorScheme;
+            window.getDataColors = function() {
+                var s = getComputedStyle(html);
+                return {
+                    positive: s.getPropertyValue('--data-positive').trim() || '#30d158',
+                    negative: s.getPropertyValue('--data-negative').trim() || '#ff453a',
+                    positiveAlpha22: s.getPropertyValue('--data-positive-alpha-22').trim() || 'rgba(48,209,88,0.22)',
+                    positiveAlpha88: s.getPropertyValue('--data-positive-alpha-88').trim() || 'rgba(48,209,88,0.88)',
+                    negativeAlpha18: s.getPropertyValue('--data-negative-alpha-18').trim() || 'rgba(255,69,58,0.18)',
+                };
+            };
         })();
 
         // ─── Tab Routing (URL-based) ───

@@ -30,7 +30,7 @@ from .common import (
     PriceSeries,
     empty_series,
 )
-from .config import get_color_range, get_presets
+from .config import get_color_range, get_color_scheme, get_presets
 from .fetchers import DAILY_SERIES_FETCHERS, FETCHERS
 from . import cache_store
 

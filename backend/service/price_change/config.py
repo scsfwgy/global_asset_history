@@ -58,6 +58,11 @@ def get_color_range() -> Dict:
     return load_config().get("color_range", {"min": -100, "max": 100})
 
 
+def get_color_scheme() -> str:
+    """Return the color scheme: 'green_up' (default, international) or 'red_up' (A-share convention)."""
+    return load_config().get("color_scheme", "green_up")
+
+
 def crypto_config() -> Dict:
     return load_config().get("crypto", {})
 

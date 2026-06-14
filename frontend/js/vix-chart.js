@@ -10,11 +10,16 @@
  */
 
 (function () {
-    var VIX_COLORS = {
-        spy: "#2997ff",
-        qqq: "#e8a43e",
-        vix: "#ff453a",
-    };
+    function getVixColors() {
+        var s = getComputedStyle(document.documentElement);
+        return {
+            spy: "#2997ff",
+            qqq: "#e8a43e",
+            vix: s.getPropertyValue('--data-negative').trim() || '#ff453a',
+        };
+    }
+
+    var VIX_COLORS = getVixColors();
 
     function isStepWise(period) {
         return period === "1hour" || period === "daily";
@@ -254,9 +259,9 @@
         if (!container || !_vixData) return;
 
         var stepWise = isStepWise(_vixPeriod);
-        var spySeries = { key: "spy", name: "SPY", axis: "left", points: normalizePriceSeries(_vixData.spy || [], stepWise), color: VIX_COLORS.spy };
-        var qqqSeries = { key: "qqq", name: "QQQ", axis: "left", points: normalizePriceSeries(_vixData.qqq || [], stepWise), color: VIX_COLORS.qqq };
-        var vixSeries = { key: "vix", name: "VIX", axis: "right", points: vixValueSeries(_vixData.vix || []), color: VIX_COLORS.vix };
+        var spySeries = { key: "spy", name: "SPY", axis: "left", points: normalizePriceSeries(_vixData.spy || [], stepWise), color: getVixColors().spy };
+        var qqqSeries = { key: "qqq", name: "QQQ", axis: "left", points: normalizePriceSeries(_vixData.qqq || [], stepWise), color: getVixColors().qqq };
+        var vixSeries = { key: "vix", name: "VIX", axis: "right", points: vixValueSeries(_vixData.vix || []), color: getVixColors().vix };
         var allSeries = [spySeries, qqqSeries, vixSeries];
         var validSeries = allSeries.filter(function (s) { return s.points.length >= 2; });
 
@@ -309,7 +314,7 @@
             svg += '<line x1="' + PAD.left + '" y1="' + y + '" x2="' + (W - PAD.right) + '" y2="' + y + '" stroke="' + CLR.grid + '" stroke-width="0.5"/>';
             svg += '<text x="' + (PAD.left - 6) + '" y="' + (y + 4) + '" fill="' + CLR.textDim + '" font-size="10" text-anchor="end">' + leftVal.toFixed(1) + '%</text>';
             if (visibleRight.length) {
-                svg += '<text x="' + (W - PAD.right + 6) + '" y="' + (y + 4) + '" fill="' + VIX_COLORS.vix + '" font-size="10" text-anchor="start" opacity="0.75">' + rightVal.toFixed(1) + '</text>';
+                svg += '<text x="' + (W - PAD.right + 6) + '" y="' + (y + 4) + '" fill="' + getVixColors().vix + '" font-size="10" text-anchor="start" opacity="0.75">' + rightVal.toFixed(1) + '</text>';
             }
         }
 
@@ -347,7 +352,7 @@
         var leftLabel = stepWise ? "SPY/QQQ 逐期涨跌幅 %" : "SPY/QQQ 累计涨跌幅 %";
         svg += '<text x="8" y="14" fill="' + CLR.text + '" font-size="10">' + leftLabel + '</text>';
         if (visibleRight.length) {
-            svg += '<text x="' + (W - PAD.right + 2) + '" y="14" fill="' + VIX_COLORS.vix + '" font-size="10">VIX</text>';
+            svg += '<text x="' + (W - PAD.right + 2) + '" y="14" fill="' + getVixColors().vix + '" font-size="10">VIX</text>';
         }
 
         var labelEvery = Math.max(1, Math.floor(allDates.length / 8));

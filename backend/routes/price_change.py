@@ -13,6 +13,7 @@ from service.price_change.price_change_service import (
     fetch_monthly_returns_batch,
     get_presets,
     get_color_range,
+    get_color_scheme,
     run_dca_backtest,
     run_crash_stats,
     get_crash_chart_data,
@@ -33,7 +34,8 @@ def config():
         for k, v in presets_dict.items()
     ]
     color_range = get_color_range()
-    return jsonify({"presets": presets_list, "color_range": color_range})
+    color_scheme = get_color_scheme()
+    return jsonify({"presets": presets_list, "color_range": color_range, "color_scheme": color_scheme})
 
 
 @price_change_bp.route("/yearly", methods=["POST"])

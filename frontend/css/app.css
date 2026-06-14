@@ -19,6 +19,28 @@
             --data-binance: #e8a43e;
             --data-positive: #30d158;
             --data-negative: #ff453a;
+            --data-positive-alpha-08: rgba(48, 209, 88, 0.08);
+            --data-positive-alpha-10: rgba(48, 209, 88, 0.10);
+            --data-positive-alpha-12: rgba(48, 209, 88, 0.12);
+            --data-positive-alpha-15: rgba(48, 209, 88, 0.15);
+            --data-positive-alpha-18: rgba(48, 209, 88, 0.18);
+            --data-positive-alpha-22: rgba(48, 209, 88, 0.22);
+            --data-positive-alpha-25: rgba(48, 209, 88, 0.25);
+            --data-positive-alpha-28: rgba(48, 209, 88, 0.28);
+            --data-positive-alpha-30: rgba(48, 209, 88, 0.30);
+            --data-positive-alpha-88: rgba(48, 209, 88, 0.88);
+            --data-positive-alpha-95: rgba(48, 209, 88, 0.95);
+            --data-negative-alpha-07: rgba(255, 69, 58, 0.07);
+            --data-negative-alpha-10: rgba(255, 69, 58, 0.10);
+            --data-negative-alpha-12: rgba(255, 69, 58, 0.12);
+            --data-negative-alpha-14: rgba(255, 69, 58, 0.14);
+            --data-negative-alpha-15: rgba(255, 69, 58, 0.15);
+            --data-negative-alpha-18: rgba(255, 69, 58, 0.18);
+            --data-negative-alpha-20: rgba(255, 69, 58, 0.20);
+            --data-negative-alpha-30: rgba(255, 69, 58, 0.30);
+            --data-positive-bright: #00d85a;
+            --data-positive-bright-alpha-28: rgba(0, 255, 106, 0.28);
+            --data-positive-bright-shadow: rgba(0, 255, 106, 0.14);
             --data-total: #5ac8fa;
             /* Structural overlay colors (dark default) */
             --apple-header-bg: rgba(0, 0, 0, 0.8);
@@ -102,6 +124,35 @@
             --apple-chart-text-dim: rgba(0, 0, 0, 0.28);
             --apple-chart-crosshair: rgba(0, 0, 0, 0.18);
             --apple-chart-color: rgba(0, 0, 0, 0.65);
+        }
+
+        /* Red-up / green-down color scheme (A-share convention).
+           Swaps the semantic meaning of --data-positive and --data-negative. */
+        html[data-color-scheme="red_up"] {
+            --data-positive: #ff453a;
+            --data-positive-alpha-08: rgba(255, 69, 58, 0.08);
+            --data-positive-alpha-10: rgba(255, 69, 58, 0.10);
+            --data-positive-alpha-12: rgba(255, 69, 58, 0.12);
+            --data-positive-alpha-15: rgba(255, 69, 58, 0.15);
+            --data-positive-alpha-18: rgba(255, 69, 58, 0.18);
+            --data-positive-alpha-22: rgba(255, 69, 58, 0.22);
+            --data-positive-alpha-25: rgba(255, 69, 58, 0.25);
+            --data-positive-alpha-28: rgba(255, 69, 58, 0.28);
+            --data-positive-alpha-30: rgba(255, 69, 58, 0.30);
+            --data-positive-alpha-88: rgba(255, 69, 58, 0.88);
+            --data-positive-alpha-95: rgba(255, 69, 58, 0.95);
+            --data-negative: #30d158;
+            --data-negative-alpha-07: rgba(48, 209, 88, 0.07);
+            --data-negative-alpha-10: rgba(48, 209, 88, 0.10);
+            --data-negative-alpha-12: rgba(48, 209, 88, 0.12);
+            --data-negative-alpha-14: rgba(48, 209, 88, 0.14);
+            --data-negative-alpha-15: rgba(48, 209, 88, 0.15);
+            --data-negative-alpha-18: rgba(48, 209, 88, 0.18);
+            --data-negative-alpha-20: rgba(48, 209, 88, 0.20);
+            --data-negative-alpha-30: rgba(48, 209, 88, 0.30);
+            --data-positive-bright: #ff453a;
+            --data-positive-bright-alpha-28: rgba(255, 69, 58, 0.28);
+            --data-positive-bright-shadow: rgba(255, 69, 58, 0.14);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -445,8 +496,8 @@
         }
 
         .token-key-source-chip.is-input {
-            color: rgba(48, 209, 88, 0.95);
-            background: rgba(48, 209, 88, 0.15);
+            color: var(--data-positive-alpha-95);
+            background: var(--data-positive-alpha-15);
         }
 
         /* Custom date range */
@@ -1118,8 +1169,8 @@
             align-items: center;
             padding: 4px 10px;
             border-radius: var(--radius-full);
-            background: rgba(48, 209, 88, 0.15);
-            color: rgba(48, 209, 88, 0.95);
+            background: var(--data-positive-alpha-15);
+            color: var(--data-positive-alpha-95);
             font-size: 12px;
             font-weight: 600;
         }
@@ -1188,7 +1239,7 @@
             width: 0;
             height: 100%;
             border-radius: inherit;
-            background: linear-gradient(90deg, rgba(255, 159, 10, 0.95), rgba(48, 209, 88, 0.95));
+            background: linear-gradient(90deg, rgba(255, 159, 10, 0.95), var(--data-positive-alpha-95));
             transition: width var(--transition-fast);
         }
 
@@ -1401,15 +1452,15 @@
             color: var(--apple-text-secondary);
         }
         .vix-header-badge.zone-error {
-            background: rgba(255, 69, 58, 0.14);
+            background: var(--data-negative-alpha-14);
             color: var(--data-negative);
         }
         .vix-header-badge.zone-extreme-low {
-            background: rgba(255, 69, 58, 0.14);
+            background: var(--data-negative-alpha-14);
             color: var(--data-negative);
         }
         .vix-header-badge.zone-low {
-            background: rgba(255, 69, 58, 0.10);
+            background: var(--data-negative-alpha-10);
             color: var(--data-negative);
         }
         .vix-header-badge.zone-normal {
@@ -1417,17 +1468,17 @@
             color: var(--apple-text-primary);
         }
         .vix-header-badge.zone-elevated {
-            background: rgba(48, 209, 88, 0.22);
+            background: var(--data-positive-alpha-22);
             color: var(--data-positive);
         }
         .vix-header-badge.zone-high {
-            background: rgba(48, 209, 88, 0.30);
+            background: var(--data-positive-alpha-30);
             color: var(--data-positive);
         }
         .vix-header-badge.zone-extreme {
-            background: rgba(0, 255, 106, 0.28);
-            color: #00d85a;
-            box-shadow: 0 0 0 1px rgba(0, 255, 106, 0.14) inset;
+            background: var(--data-positive-bright-alpha-28);
+            color: var(--data-positive-bright);
+            box-shadow: 0 0 0 1px var(--data-positive-bright-shadow) inset;
         }
 
         /* VIX advice card */
@@ -1516,11 +1567,11 @@
         }
 
         .vix-advice-zone.zone-extreme-low {
-            background: rgba(255, 69, 58, 0.14);
+            background: var(--data-negative-alpha-14);
             color: var(--data-negative);
         }
         .vix-advice-zone.zone-low {
-            background: rgba(255, 69, 58, 0.10);
+            background: var(--data-negative-alpha-10);
             color: var(--data-negative);
         }
         .vix-advice-zone.zone-normal {
@@ -1528,17 +1579,17 @@
             color: var(--apple-text-primary);
         }
         .vix-advice-zone.zone-elevated {
-            background: rgba(48, 209, 88, 0.22);
+            background: var(--data-positive-alpha-22);
             color: var(--data-positive);
         }
         .vix-advice-zone.zone-high {
-            background: rgba(48, 209, 88, 0.30);
+            background: var(--data-positive-alpha-30);
             color: var(--data-positive);
         }
         .vix-advice-zone.zone-extreme {
-            background: rgba(0, 255, 106, 0.28);
-            color: #00d85a;
-            box-shadow: 0 0 0 1px rgba(0, 255, 106, 0.14) inset;
+            background: var(--data-positive-bright-alpha-28);
+            color: var(--data-positive-bright);
+            box-shadow: 0 0 0 1px var(--data-positive-bright-shadow) inset;
         }
 
         .vix-advice-tip {

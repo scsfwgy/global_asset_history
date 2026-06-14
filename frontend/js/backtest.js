@@ -8,6 +8,11 @@ function getChartColors() {
     tooltipBg: s.getPropertyValue('--apple-tooltip-bg').trim() || 'rgba(24,24,26,0.96)',
     tooltipBorder: s.getPropertyValue('--apple-tooltip-border').trim() || 'rgba(255,255,255,0.12)',
     tooltipText: s.getPropertyValue('--apple-tooltip-text').trim() || '#fff',
+    positive: s.getPropertyValue('--data-positive').trim() || '#30d158',
+    negative: s.getPropertyValue('--data-negative').trim() || '#ff453a',
+    positiveAlpha22: s.getPropertyValue('--data-positive-alpha-22').trim() || 'rgba(48,209,88,0.22)',
+    positiveAlpha88: s.getPropertyValue('--data-positive-alpha-88').trim() || 'rgba(48,209,88,0.88)',
+    negativeAlpha18: s.getPropertyValue('--data-negative-alpha-18').trim() || 'rgba(255,69,58,0.18)',
   };
 }
 
@@ -181,7 +186,7 @@ function renderBtChart(equityCurve) {
   for (let i = 0; i <= yTicks; i++) {
     const v = profitYMin + (profitYRange * i) / yTicks;
     const y = profitYPos(v);
-    rightAxis += `<text x="${W - PAD.right + 8}" y="${y + 4}" text-anchor="start" fill="#30d158" font-size="11">${v >= 0 ? "+" : ""}$${v.toFixed(0)}</text>`;
+    rightAxis += `<text x="${W - PAD.right + 8}" y="${y + 4}" text-anchor="start" fill="${c.positive}" font-size="11">${v >= 0 ? "+" : ""}$${v.toFixed(0)}</text>`;
   }
 
   const zeroY = assetYPos(0);
@@ -213,7 +218,7 @@ function renderBtChart(equityCurve) {
   sampledCurve.forEach((row, idx) => {
     profitPolylinePoints.push({ x: xPos(idx), y: profitYPos(row.value - row.invested), profit: row.value - row.invested });
     assetDots += `<circle cx="${xPos(idx)}" cy="${assetYPos(row.value)}" r="2.2" fill="#2997ff" stroke="var(--apple-bg)" stroke-width="0.8"/>`;
-    profitDots += `<circle cx="${xPos(idx)}" cy="${profitYPos(row.value - row.invested)}" r="2.2" fill="#30d158" stroke="var(--apple-bg)" stroke-width="0.8"/>`;
+    profitDots += `<circle cx="${xPos(idx)}" cy="${profitYPos(row.value - row.invested)}" r="2.2" fill="${c.positive}" stroke="var(--apple-bg)" stroke-width="0.8"/>`;
   });
 
   function buildAreaSegments(points) {
@@ -254,13 +259,13 @@ function renderBtChart(equityCurve) {
     }
 
     const positive = positiveSegments.length
-      ? `<path d="${positiveSegments.join(" ")}" fill="rgba(48,209,88,0.22)" stroke="none"/>`
+      ? `<path d="${positiveSegments.join(" ")}" fill="${c.positiveAlpha22}" stroke="none"/>`
       : "";
     const negative = negativeSegments.length
-      ? `<path d="${negativeSegments.join(" ")}" fill="rgba(255,69,58,0.18)" stroke="none"/>`
+      ? `<path d="${negativeSegments.join(" ")}" fill="${c.negativeAlpha18}" stroke="none"/>`
       : "";
     const stroke = points.length
-      ? `<polyline points="${points.map((p) => `${p.x},${p.y}`).join(" ")}" fill="none" stroke="rgba(48,209,88,0.88)" stroke-width="1.2"/>`
+      ? `<polyline points="${points.map((p) => `${p.x},${p.y}`).join(" ")}" fill="none" stroke="${c.positiveAlpha88}" stroke-width="1.2"/>`
       : "";
     return `${positive}${negative}${stroke}`;
   }
@@ -272,7 +277,7 @@ function renderBtChart(equityCurve) {
     <text x="${PAD.left + 12}" y="17" fill="var(--apple-text-secondary)" font-size="10">总资产</text>
     <rect x="${PAD.left + 60}" y="14" width="8" height="2.5" rx="1.25" fill="${c.invested}"/>
     <text x="${PAD.left + 72}" y="17" fill="var(--apple-text-secondary)" font-size="10">累计投入</text>
-    <rect x="${PAD.left + 136}" y="11" width="8" height="8" rx="1.5" fill="rgba(48,209,88,0.22)" stroke="rgba(48,209,88,0.88)"/>
+    <rect x="${PAD.left + 136}" y="11" width="8" height="8" rx="1.5" fill="${c.positiveAlpha22}" stroke="${c.positiveAlpha88}"/>
     <text x="${PAD.left + 148}" y="17" fill="var(--apple-text-secondary)" font-size="10">总收益</text>
   `;
 
@@ -300,7 +305,7 @@ function renderBtChart(equityCurve) {
       <text id="btTooltipDate" x="10" y="16" fill="${c.tooltipText}" font-size="11"></text>
       <text id="btTooltipAsset" x="10" y="32" fill="#2997ff" font-size="11"></text>
       <text id="btTooltipInvested" x="10" y="48" fill="var(--apple-text-secondary)" font-size="11"></text>
-      <text id="btTooltipProfit" x="10" y="64" fill="#30d158" font-size="11"></text>
+      <text id="btTooltipProfit" x="10" y="64" fill="${c.positive}" font-size="11"></text>
       <text id="btTooltipReturn" x="10" y="80" fill="${c.tooltipText}" font-size="11"></text>
     </g>
   `;
@@ -355,7 +360,7 @@ function renderBtChart(equityCurve) {
       if (tooltipInvested) tooltipInvested.textContent = `累计投入: $${invested.toFixed(2)}`;
       if (tooltipProfit) {
         tooltipProfit.textContent = `总收益: ${profit >= 0 ? "+" : ""}$${profit.toFixed(2)}`;
-        tooltipProfit.setAttribute("fill", profit >= 0 ? "#30d158" : "#ff453a");
+      tooltipProfit.setAttribute("fill", profit >= 0 ? c.positive : c.negative);
       }
       if (tooltipReturn) tooltipReturn.textContent = `回报率: ${returnPct >= 0 ? "+" : ""}${returnPct.toFixed(2)}%`;
       if (tooltipBg) tooltipBg.setAttribute("height", "88");

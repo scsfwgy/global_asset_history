@@ -31,9 +31,12 @@
 
     /* ── Chart colors — use CSS variable references so SVG auto-adapts to theme changes ── */
     function getEtfChartColors() {
+        var s = getComputedStyle(document.documentElement);
         return {
-            candleUp: "#30d158",
-            candleDown: "#ff453a",
+            candleUp: s.getPropertyValue('--data-positive').trim() || '#30d158',
+            candleDown: s.getPropertyValue('--data-negative').trim() || '#ff453a',
+            positive: s.getPropertyValue('--data-positive').trim() || '#30d158',
+            positiveAlpha08: s.getPropertyValue('--data-positive-alpha-08').trim() || 'rgba(48,209,88,0.08)',
             grid: 'var(--apple-chart-grid)',
             text: 'var(--apple-chart-text)',
             textDim: 'var(--apple-chart-text-dim)',
@@ -751,7 +754,7 @@
             label = "振幅"; unit = "%"; color = "#bf5af2";
         } else if (chartType === "amount") {
             for (var i = 0; i < n; i++) values.push(bars[i].amount);
-            label = "成交额"; unit = "亿"; color = "#30d158";
+            label = "成交额"; unit = "亿"; color = CLR.positive;
         } else {
             return null;
         }
@@ -808,7 +811,7 @@
         // Amount: fill area below line
         if (chartType === "amount" && path) {
             var areaPath = path + " L" + xScale(n - 1).toFixed(1) + "," + ly(0).toFixed(1) + " L" + xScale(0).toFixed(1) + "," + ly(0).toFixed(1) + " Z";
-            svg += '<path d="' + areaPath + '" fill="rgba(48,209,88,0.08)"' + "/>";
+            svg += '<path d="' + areaPath + '" fill="' + CLR.positiveAlpha08 + '"' + "/>";
         }
 
         svg += '<text x="' + (PAD.left + 4) + '" y="' + (PAD.top + 12) + '" fill="' + CLR.text + '" font-size="11">' + label + " (" + unit + ")" + C + "text>";

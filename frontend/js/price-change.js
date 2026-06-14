@@ -210,27 +210,29 @@ function addSymbol(symbol, type) {
 
 function cellColor(val, min, max) {
   // Multi-stop HSL gradient for richer color depth.
-  // Positive: light green → vibrant green → deep green
-  // Negative: light red → vibrant red → deep red
+  // Hues swap based on color scheme: green_up → positive=green(142°) negative=red(4°)
+  //                                red_up  → positive=red(4°)   negative=green(142°)
+  const isRedUp = (typeof window.getColorScheme === 'function' && window.getColorScheme() === 'red_up');
+  const posHue = isRedUp ? 4 : 142;   // positive hue
+  const negHue = isRedUp ? 142 : 4;    // negative hue
+
   if (val > 0) {
     const intensity = Math.min(val / max, 1);
-    // Green hue 142°: lightness 88%→35%, saturation 55%→85%, alpha grows
     const lightness = 88 - intensity * 53;
     const saturation = 55 + intensity * 30;
     const alpha = Math.min(0.18 + intensity * 0.72, 0.95);
     return {
-      bg: `hsla(142, ${Math.round(saturation)}%, ${Math.round(lightness)}%, ${alpha.toFixed(3)})`,
+      bg: `hsla(${posHue}, ${Math.round(saturation)}%, ${Math.round(lightness)}%, ${alpha.toFixed(3)})`,
       text: lightness < 50 ? "#fff" : "var(--data-positive)",
     };
   }
   if (val < 0) {
     const intensity = Math.min(Math.abs(val) / Math.abs(min), 1);
-    // Red hue 4°: lightness 88%→35%, saturation 55%→85%, alpha grows
     const lightness = 88 - intensity * 53;
     const saturation = 55 + intensity * 30;
     const alpha = Math.min(0.18 + intensity * 0.72, 0.95);
     return {
-      bg: `hsla(4, ${Math.round(saturation)}%, ${Math.round(lightness)}%, ${alpha.toFixed(3)})`,
+      bg: `hsla(${negHue}, ${Math.round(saturation)}%, ${Math.round(lightness)}%, ${alpha.toFixed(3)})`,
       text: lightness < 50 ? "#fff" : "var(--data-negative)",
     };
   }
@@ -435,14 +437,15 @@ function renderTable(result) {
 async function loadConfigFromServer() {
   try {
     const resp = await fetch(CONFIG_ENDPOINT);
-    if (!resp.ok) return { presets: [], colorRange: { min: -100, max: 100 } };
+    if (!resp.ok) return { presets: [], colorRange: { min: -100, max: 100 }, colorScheme: "green_up" };
     const cfg = await resp.json();
     return {
       presets: cfg.presets || [],
       colorRange: cfg.color_range || { min: -100, max: 100 },
+      colorScheme: cfg.color_scheme || "green_up",
     };
   } catch {
-    return { presets: [], colorRange: { min: -100, max: 100 } };
+    return { presets: [], colorRange: { min: -100, max: 100 }, colorScheme: "green_up" };
   }
 }
 
@@ -701,9 +704,17 @@ function exportCSV() {
 // ─── Init ───
 
 async function init() {
-  // Load config (presets + color range)
+  // Load config (presets + color range + color scheme)
   const cfg = await loadConfigFromServer();
   PRESETS = cfg.presets;
+
+  // Apply color scheme from backend if no localStorage override
+  if (typeof window.applyColorScheme === 'function') {
+    const COLOR_SCHEME_KEY = 'global-asset-history-color-scheme';
+    if (!localStorage.getItem(COLOR_SCHEME_KEY)) {
+      window.applyColorScheme(cfg.colorScheme || 'green_up');
+    }
+  }
 
   // Restore previous state from localStorage (before applying config defaults)
   var hadState = restoreState();

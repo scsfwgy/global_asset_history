@@ -206,18 +206,22 @@
     }
 
     /* ── SVG Chart ── */
-    var CHART_COLORS = {
-        line: "#2997ff",
-        preCrash: "var(--apple-text-tertiary)",
-        bottom: "#ff453a",
-        recovery: "#30d158",
-        crashDot: "#ff9f0a",
-        grid: "var(--apple-divider)",
-        up: "#30d158",
-        down: "#ff453a",
-    };
+    function getCrashChartColors() {
+        var s = getComputedStyle(document.documentElement);
+        return {
+            line: "#2997ff",
+            preCrash: "var(--apple-text-tertiary)",
+            bottom: s.getPropertyValue('--data-negative').trim() || '#ff453a',
+            recovery: s.getPropertyValue('--data-positive').trim() || '#30d158',
+            crashDot: "#ff9f0a",
+            grid: "var(--apple-divider)",
+            up: s.getPropertyValue('--data-positive').trim() || '#30d158',
+            down: s.getPropertyValue('--data-negative').trim() || '#ff453a',
+        };
+    }
 
     function renderCrashChart(chartData, crash) {
+        var C = getCrashChartColors();
         var prices = chartData.prices || [];
         if (prices.length < 2) {
             document.getElementById("crashChartContainer").innerHTML =
@@ -302,7 +306,7 @@
             prices.forEach(function (p, i) {
                 var cx = xPos(i);
                 var up = p.close >= p.open;
-                var color = up ? CHART_COLORS.up : CHART_COLORS.down;
+                var color = up ? C.up : C.down;
                 var yHigh = yPos(p.high);
                 var yLow = yPos(p.low);
                 var yOpen = yPos(p.open);
@@ -319,12 +323,12 @@
             prices.forEach(function (p, i) {
                 linePath += (i === 0 ? "M" : "L") + xPos(i) + "," + yPos(p.close);
             });
-            seriesSvg = '<path d="' + linePath + '" fill="none" stroke="' + CHART_COLORS.line + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>';
+            seriesSvg = '<path d="' + linePath + '" fill="none" stroke="' + C.line + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>';
             prices.forEach(function (p, i) {
-                var dotColor = CHART_COLORS.line, dotR = 1.5;
-                if (i === crashIdx) { dotColor = CHART_COLORS.crashDot; dotR = 4; }
-                else if (i === bottomIdx) { dotColor = CHART_COLORS.bottom; dotR = 4; }
-                else if (i === recoveryIdx) { dotColor = CHART_COLORS.recovery; dotR = 4; }
+                var dotColor = C.line, dotR = 1.5;
+                if (i === crashIdx) { dotColor = C.crashDot; dotR = 4; }
+                else if (i === bottomIdx) { dotColor = C.bottom; dotR = 4; }
+                else if (i === recoveryIdx) { dotColor = C.recovery; dotR = 4; }
                 seriesSvg += '<circle cx="' + xPos(i) + '" cy="' + yPos(p.close) + '" r="' + dotR + '" fill="' + dotColor + '" stroke="var(--apple-bg)" stroke-width="0.8"/>';
             });
         }
@@ -334,9 +338,9 @@
         // assign each label to the first row where it doesn't overlap the one
         // before it, and draw the guide line down to its own label row.
         var markerDefs = [];
-        if (crashIdx >= 0) markerDefs.push({ idx: crashIdx, color: CHART_COLORS.crashDot, label: "暴跌日 " + prices[crashIdx].date });
-        if (bottomIdx >= 0 && bottomIdx !== crashIdx) markerDefs.push({ idx: bottomIdx, color: CHART_COLORS.bottom, label: "触底 " + prices[bottomIdx].date });
-        if (recoveryIdx >= 0 && recoveryIdx !== crashIdx && recoveryIdx !== bottomIdx) markerDefs.push({ idx: recoveryIdx, color: CHART_COLORS.recovery, label: "恢复 " + prices[recoveryIdx].date });
+        if (crashIdx >= 0) markerDefs.push({ idx: crashIdx, color: C.crashDot, label: "暴跌日 " + prices[crashIdx].date });
+        if (bottomIdx >= 0 && bottomIdx !== crashIdx) markerDefs.push({ idx: bottomIdx, color: C.bottom, label: "触底 " + prices[bottomIdx].date });
+        if (recoveryIdx >= 0 && recoveryIdx !== crashIdx && recoveryIdx !== bottomIdx) markerDefs.push({ idx: recoveryIdx, color: C.recovery, label: "恢复 " + prices[recoveryIdx].date });
         markerDefs.sort(function (a, b) { return a.idx - b.idx; });
 
         // Rough label-width estimate (CJK glyphs are ~10px, ASCII ~5.5px at 10px font).
