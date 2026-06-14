@@ -111,8 +111,18 @@
             });
         });
 
-        loadEtfGroupsFromConfig().then(fetchQuotes);
+        loadEtfGroupsFromConfig().then(function () {
+            renderTable();        // show skeleton (names + "--") as soon as groups are known
+            return fetchQuotes(); // fills in live numbers, re-renders on completion
+        });
     }
+
+    // Idempotent (re)entry used when the ETF tab is activated in the host page.
+    // Loading is kicked off eagerly in init(); this just re-renders the current
+    // state immediately so switching to the tab never shows a stale "加载中...".
+    window._etfActivate = function () {
+        renderTable();
+    };
 
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", init);
@@ -264,9 +274,9 @@
             pctCell(has ? q.premium_cost_per_10k : null, 0, "元") +
             pctCell(has ? q.tracking_error_30d_pct : null, 2, "%") +
             pctCell(has ? q.profit_diff_30d_per_10k : null, 0, "元") +
-            // 30日追踪误差 (NAV-level MAE): no color, pure metric
-            (has && q.nav_tracking_mae_30d != null
-                ? '<td' + R + '>' + q.nav_tracking_mae_30d.toFixed(2) + '%' + C + 'td>'
+            // 估值误差 (haoetf-style, single-day)
+            (has && q.valuation_error_latest != null
+                ? '<td' + R + '>' + (q.valuation_error_latest > 0 ? '+' : '') + q.valuation_error_latest.toFixed(2) + '%' + C + 'td>'
                 : '<td' + R + '><span style="color:var(--apple-text-tertiary);">--' + C + 'span>' + C + 'td>') +
             C + "tr>";
 
@@ -349,10 +359,10 @@
         addTipLbl("30日万元收益差", diff30Tip);
         if (q && q.profit_diff_30d_per_10k != null) addVal((q.profit_diff_30d_per_10k>0?"+":"") + q.profit_diff_30d_per_10k.toFixed(0)+"元", q.profit_diff_30d_per_10k>0?"etf-pos":q.profit_diff_30d_per_10k<0?"etf-neg":"");
         else addVal("--");
-        var navTrackTip = "30日追踪误差：最近30个交易日，基金净值日收益率与基准指数(QQQ/SPY)日收益率偏差的绝对值均值。纯净值层面衡量跟踪紧度，不含溢价噪声。越低=跟踪越紧：<0.05%极紧，<0.15%正常，>0.30%偏松。";
-        addTipLbl("30日追踪误差", navTrackTip);
-        if (q && q.nav_tracking_mae_30d != null) {
-            addVal(q.nav_tracking_mae_30d.toFixed(3) + "%");
+        var valErrTip = "估值误差：T-2日净值×(1+T-1指数涨跌×仓位%) 估算的T-1净值 与 T-1实际净值的偏差。与haoetf口径一致，衡量基金单日跟踪精度。";
+        addTipLbl("估值误差", valErrTip);
+        if (q && q.valuation_error_latest != null) {
+            addVal((q.valuation_error_latest > 0 ? '+' : '') + q.valuation_error_latest.toFixed(2) + "%");
         } else addVal("--");
 
         tbody.appendChild(tr1);
@@ -424,11 +434,10 @@
         if (st.tracking_error_30d_pct != null) v3((st.tracking_error_30d_pct>0?"+":"") + st.tracking_error_30d_pct.toFixed(2) + "%", st.tracking_error_30d_pct>0?"etf-pos":"etf-neg");
         else v3("--");
 
-        // 30日追踪误差 (NAV-level MAE, NEW)
-        l3("30日追踪误差", "基于净值的30日追踪紧度：基金净值日收益率 vs " + bm + "指数日收益率偏差的绝对值均值。纯净值层面衡量基金跟踪能力，不含溢价噪声。越低越好：<0.05%极紧，<0.15%正常，>0.30%偏松。");
-        if (st.nav_tracking_mae_30d != null) {
-            var mae = st.nav_tracking_mae_30d;
-            v3(mae.toFixed(3) + "%", mae <= 0.10 ? "etf-pos" : mae <= 0.25 ? "" : "etf-neg");
+        // 估值误差 (haoetf-style, single-day latest)
+        l3("估值误差", "与haoetf口径一致：T-2日净值×(1+T-1指数涨跌×仓位%) 估算T-1净值，与实际T-1净值的偏差。单日跟踪精度。");
+        if (st.valuation_error_latest != null) {
+            v3((st.valuation_error_latest > 0 ? '+' : '') + st.valuation_error_latest.toFixed(2) + "%");
         } else v3("--");
 
         // 30日万元收益差 (compound profit diff)
@@ -545,7 +554,7 @@
                         fmt("涨跌幅", b.change_pct, "pct"),
                         fmt("溢价率", b.premium_pct, "pct"),
                         fmt("真实误差(价格级)", b.price_tracking_deviation_pct, "pct"),
-                        fmt("追踪误差(净值级)", b.nav_tracking_deviation_pct, "pct"),
+                        fmt("估值误差(净值级)", b.valuation_error_pct, "pct"),
                     ];
                 } else {
                     lines = [
@@ -649,7 +658,7 @@
             var series = [
                 { key: "premium_pct", label: "溢价率", color: "#ff9f0a", unit: "%" },
                 { key: "price_tracking_deviation_pct", label: "真实误差", color: "#5ac8fa", unit: "%" },
-                { key: "nav_tracking_deviation_pct", label: "追踪误差", color: "#30d158", unit: "%" },
+                { key: "valuation_error_pct", label: "估值误差", color: "#30d158", unit: "%" },
             ];
             var allVals = [], seriesData = [];
             for (var s = 0; s < series.length; s++) {

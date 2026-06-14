@@ -37,7 +37,8 @@
         { "symbol": "QQQM", "type": "stock", "name": "纳斯达克100低费" },
         { "symbol": "VGT", "type": "stock", "name": "信息技术ETF" },
         { "symbol": "XLK", "type": "stock", "name": "科技板块ETF" },
-        { "symbol": "SMH", "type": "stock", "name": "半导体ETF" }
+        { "symbol": "SMH", "type": "stock", "name": "半导体ETF" },
+        { "symbol": "SOXX", "type": "stock", "name": "半导体产业链" }
       ]
     },
     "aggressive_us_etf": {

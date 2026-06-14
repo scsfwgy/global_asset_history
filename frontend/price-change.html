@@ -1490,7 +1490,7 @@
                             <th class="etf-th-sort etf-th-num" data-etf-col="premium_cost_per_10k">溢价万元盈亏 <span class="etf-sort-arrow">⇅</span></th>
                             <th class="etf-th-sort etf-th-num" data-etf-col="tracking_error_30d_pct"><span class="has-tip" title="30日真实误差：A股ETF价格涨跌 vs 美股基准ETF(QQQ/SPY)涨跌的30日累计差值。反映实际持有体验，含溢价波动。">30日真实误差</span> <span class="etf-sort-arrow">⇅</span></th>
                             <th class="etf-th-sort etf-th-num" data-etf-col="profit_diff_30d_per_10k"><span class="has-tip" title="30日万元收益差：分别投入1万元到此A股ETF vs 对应美股ETF，最近30日的累计收益差额。">30日万元收益差</span> <span class="etf-sort-arrow">⇅</span></th>
-                            <th class="etf-th-sort etf-th-num" data-etf-col="nav_tracking_mae_30d"><span class="has-tip" title="30日追踪误差：基金净值日收益率与基准指数日收益率偏差的绝对值均值。纯净值层面，不含溢价噪声。越低=跟踪越紧：<0.05%极紧，<0.15%正常，>0.30%偏松。">30日追踪误差</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="valuation_error_latest"><span class="has-tip" title="估值误差：T-2日净值×(1+T-1指数涨跌×仓位%) 估算的T-1净值 与 T-1实际净值的偏差。与haoetf口径一致，衡量基金单日跟踪精度。">估值误差</span> <span class="etf-sort-arrow">⇅</span></th>
                         </tr>
                     </thead>
                     <tbody id="etfBody">
@@ -1819,6 +1819,12 @@
 
                 var panel = document.getElementById('tab-' + tabName);
                 if (panel) panel.classList.add('active');
+
+                // ETF tab: re-render current state on activation so the table
+                // never shows a stale "加载中..." while quotes load in the background.
+                if (tabName === 'etf' && typeof window._etfActivate === 'function') {
+                    window._etfActivate();
+                }
 
                 if (updateUrl && !isSameTab) {
                     var path = TAB_TO_PATH[tabName] || '/yearly';

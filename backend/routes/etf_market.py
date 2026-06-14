@@ -78,6 +78,33 @@ def _benchmark_for_etf(symbol: str) -> tuple[Optional[str], Optional[str]]:
     """Return Yahoo benchmark symbol and display label for supported ETFs."""
     return _load_benchmark_map().get(symbol.strip(), (None, None))
 
+
+# Pure index symbols for NAV-level tracking (not ETFs, no premium/fee noise)
+_INDEX_BENCHMARK_MAP: dict[str, str] = {}
+_INDEX_BENCHMARK_MAP_BUILT = False
+
+
+def _index_benchmark_for_etf(symbol: str) -> Optional[str]:
+    """Return the underlying pure index for NAV tracking accuracy.
+    cn_etf_nasdaq100 → ^NDX (Nasdaq-100 index), cn_etf_sp500 → ^GSPC (S&P 500)."""
+    global _INDEX_BENCHMARK_MAP_BUILT
+    if not _INDEX_BENCHMARK_MAP_BUILT:
+        try:
+            with open(_CONFIG_PATH, "r", encoding="utf-8") as f:
+                presets = json.load(f).get("presets", {})
+        except Exception:
+            presets = {}
+        for entry in presets.get("cn_etf_nasdaq100", {}).get("symbols", []):
+            sym = str(entry.get("symbol", "")).strip()
+            if sym:
+                _INDEX_BENCHMARK_MAP[sym] = "^NDX"
+        for entry in presets.get("cn_etf_sp500", {}).get("symbols", []):
+            sym = str(entry.get("symbol", "")).strip()
+            if sym:
+                _INDEX_BENCHMARK_MAP[sym] = "^GSPC"
+        _INDEX_BENCHMARK_MAP_BUILT = True
+    return _INDEX_BENCHMARK_MAP.get(symbol.strip())
+
 # ---------------------------------------------------------------------------
 # Field indices for Tencent real-time quote (split by "~")
 # ETF-specific fields marked with *
@@ -411,6 +438,68 @@ def _compute_tracking_error_history(
                 sum(abs(d["deviation_pct"]) for d in recent) / len(recent), 4
             )
 
+    # ── haoetf-style valuation error (position-calibrated, pure index) ──
+    # 估值 = 上一净值日 × (1 + 区间累计指数涨跌% × 仓位%)
+    # 估值误差 = (估值 - 实际净值) / 实际净值 × 100%
+    # Uses the PURE index (^NDX/^GSPC), not the ETF (QQQ/SPY).
+    #
+    # Critical: the index move must be the CUMULATIVE return over every US
+    # session between two consecutive NAV dates, not a single day. When the
+    # A-share market is closed (e.g. Labour Day) while US keeps trading, the
+    # reopening NAV absorbs several US sessions at once — single-day pairing
+    # is off by multiple percent on those days.
+    #
+    # Position = 96%: calibrated against haoetf's published valuation error.
+    # On large-move days (|idx|>=1%, where rounding noise is small) haoetf's
+    # own implied position clusters tightly at 95.9~96.4% (regression: 96.27%).
+    # It models a conservative ~4% cash drag rather than the fund's true beta
+    # (~100%). To stay aligned with haoetf's "估值误差", we replicate its 96%.
+    _DEFAULT_POSITION_PCT = 96.0
+    valuation_error_daily: list[dict] = []
+    if nav_map:
+        # Fetch pure index returns for valuation error (separate from QQQ/SPY)
+        idx_symbol = _index_benchmark_for_etf(symbol)
+        idx_returns: dict[str, float] = {}
+        if idx_symbol:
+            idx_series = _fetch_daily_series_cached(idx_symbol, "stock")
+            if not idx_series.error:
+                idx_returns = _daily_return_map_from_series(idx_series)
+        idx_dates_sorted = sorted(idx_returns.keys())
+
+        def _cumulative_index_return(prev_date: str, cur_date: str) -> Optional[float]:
+            """Compound ^NDX return over all US sessions in (prev_date, cur_date]."""
+            factor = 1.0
+            found = False
+            for ud in idx_dates_sorted:
+                if prev_date < ud <= cur_date:
+                    factor *= (1 + idx_returns[ud])
+                    found = True
+                elif ud > cur_date:
+                    break
+            return (factor - 1) if found else None
+
+        nav_dates_sorted = sorted(nav_map.keys())
+        # QDII funds typically run ~95% exposure (5% in cash/liquidity).
+        est_position = _DEFAULT_POSITION_PCT
+
+        for i in range(1, len(nav_dates_sorted)):
+            t1 = nav_dates_sorted[i]      # target NAV date
+            t2 = nav_dates_sorted[i - 1]  # previous NAV date
+            nav_t1 = nav_map[t1]
+            nav_t2 = nav_map[t2]
+            idx_ret = _cumulative_index_return(t2, t1)
+            if idx_ret is None or nav_t2 <= 0:
+                continue
+            estimated_nav = nav_t2 * (1 + idx_ret * est_position / 100)
+            error_pct = round((estimated_nav - nav_t1) / nav_t1 * 100, 4)
+            valuation_error_daily.append({
+                "date": t1,
+                "estimated_nav": round(estimated_nav, 4),
+                "actual_nav": nav_t1,
+                "valuation_error_pct": error_pct,
+                "position_pct": round(est_position, 2),
+            })
+
     data = {
         "available": bool(history),
         "benchmark": benchmark_label,
@@ -425,6 +514,8 @@ def _compute_tracking_error_history(
         "price_tracking_daily": price_tracking_daily,
         "nav_tracking_mae_30d": nav_tracking_mae_30d,
         "nav_tracking_daily": nav_tracking_daily,
+        "valuation_error_daily": valuation_error_daily,
+        "valuation_error_latest": valuation_error_daily[-1]["valuation_error_pct"] if valuation_error_daily else None,
     }
     _tracking_error_cache[cache_key] = (time.time(), data)
     return data
@@ -505,6 +596,7 @@ def quote():
         q["tracking_error_30d_pct"] = tracking.get("tracking_error_30d_pct") if tracking else None
         q["profit_diff_30d_per_10k"] = tracking.get("profit_diff_30d_per_10k") if tracking else None
         q["nav_tracking_mae_30d"] = tracking.get("nav_tracking_mae_30d") if tracking else None
+        q["valuation_error_latest"] = tracking.get("valuation_error_latest") if tracking else None
 
     return jsonify({
         "quotes": results,
@@ -739,6 +831,22 @@ def history():
         item["date"]: item["deviation_pct"]
         for item in tracking_error.get("price_tracking_daily", [])
     }
+    # valuation_error dates are NAV dates (T-1).  Map to bar dates (T)
+    # by finding the most recent NAV date strictly before the bar date.
+    _ve_items = tracking_error.get("valuation_error_daily", [])
+    _ve_dates = sorted([it["date"] for it in _ve_items])
+    _ve_by_nav_date = {it["date"]: it["valuation_error_pct"] for it in _ve_items}
+    valuation_err_by_bar: dict[str, Optional[float]] = {}
+    for i, p in enumerate(parsed):
+        bar_dt = p["date"]
+        # Find the most recent NAV date < bar_dt
+        best = None
+        for nd in reversed(_ve_dates):
+            if nd < bar_dt:
+                best = nd
+                break
+        valuation_err_by_bar[bar_dt] = _ve_by_nav_date.get(best) if best else None
+
     for p in parsed:
         p["tracking_error_pct"] = tracking_by_date.get(p["date"])
         # Daily price-level deviation (ETF price return - benchmark return)
@@ -756,6 +864,8 @@ def history():
         p["nav_tracking_deviation_pct"] = nd
         p["nav_return_pct"] = nav_ret_by_date.get(p["date"])
         p["benchmark_daily_return_pct"] = bench_ret_by_date.get(p["date"])
+        # haoetf-style valuation error: T-1 NAV estimate vs actual
+        p["valuation_error_pct"] = valuation_err_by_bar.get(p["date"])
 
     return jsonify({
         "symbol": symbol,
@@ -781,6 +891,7 @@ def history():
             "tracking_error_window_days": tracking_error.get("window_days"),
             "tracking_error_30d_pct": tracking_error.get("tracking_error_30d_pct"),
             "nav_tracking_mae_30d": tracking_error.get("nav_tracking_mae_30d"),
+            "valuation_error_latest": tracking_error.get("valuation_error_latest"),
             "nav_tracking_benchmark": tracking_error.get("benchmark"),
             "profit_diff_30d_per_10k": tracking_error.get("profit_diff_30d_per_10k"),
         },
