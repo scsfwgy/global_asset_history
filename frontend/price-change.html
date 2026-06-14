@@ -2070,21 +2070,22 @@
     <script>
       // Compact count formatting: 1234 -> 1.2K, 1500000 -> 1.5M, etc.
       // Truncate (floor) the decimal so we never overstate the real count.
-      function formatVisitCount(n) {
-        if (!Number.isFinite(n)) return '0';
-        var units = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
-        for (var i = 0; i < units.length; i++) {
-          if (n >= units[i][0]) {
-            var num = Math.floor((n / units[i][0]) * 10) / 10;
-            return num.toFixed(1).replace(/\.0$/, '') + units[i][1];
-          }
-        }
-        return String(n);
-      }
+      // TODO: re-enable when user count grows large enough to warrant formatting
+      // function formatVisitCount(n) {
+      //   if (!Number.isFinite(n)) return '0';
+      //   var units = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
+      //   for (var i = 0; i < units.length; i++) {
+      //     if (n >= units[i][0]) {
+      //       var num = Math.floor((n / units[i][0]) * 10) / 10;
+      //       return num.toFixed(1).replace(/\.0$/, '') + units[i][1];
+      //     }
+      //   }
+      //   return String(n);
+      // }
       fetch('/api/visits')
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          document.getElementById('settingsVisitCount').textContent = '访问次数：' + formatVisitCount(d.count);
+          document.getElementById('settingsVisitCount').textContent = '访问次数：' + String(d.count);
         })
         .catch(function () {});
     </script>
