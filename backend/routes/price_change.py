@@ -16,8 +16,6 @@ from service.price_change.price_change_service import (
     run_dca_backtest,
     run_crash_stats,
     get_crash_chart_data,
-    run_leader_breakout,
-    export_leader_breakout,
 )
 
 logger = logging.getLogger(__name__)
@@ -201,103 +199,6 @@ def crash_chart():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.exception("Failed to get crash chart data: %s", e)
-        return jsonify({"error": str(e)}), 500
-
-
-@price_change_bp.route("/leader-breakout", methods=["GET", "POST"])
-def leader_breakout():
-    """Leader breakout scan — POST triggers background scan, GET returns results.
-
-    POST: triggers scan if not cached, starts background thread.
-    GET:  returns cached results or scan status.
-    Results cached 4 hours.
-    """
-    # ── GET: return cached results or status ──
-    if request.method == "GET":
-        start_date = request.args.get("start_date", "2024-09-30")
-        threshold = float(request.args.get("threshold", 9.5))
-        min_days = int(request.args.get("min_days", 6))
-
-        from service.price_change.leader_breakout import (
-            _get_cache, get_scan_status,
-        )
-
-        cached = _get_cache(start_date, threshold, min_days)
-        if cached:
-            return jsonify(cached)
-
-        status = get_scan_status(start_date, threshold, min_days)
-        status_map = {
-            "scanning": "扫描进行中，请稍后刷新",
-            "error": status.get("error", "扫描出错，请重试"),
-            "idle": "暂无扫描结果，请点击开始扫描",
-            "done": "扫描完成",
-        }
-        return jsonify({
-            "status": status.get("status", "idle"),
-            "message": status_map.get(status.get("status", "idle"), "暂无扫描结果"),
-        })
-
-    # ── POST: trigger scan ──
-    body = request.get_json(silent=True) or {}
-    try:
-        start_date = str(body.get("start_date", "2024-09-30"))
-        threshold = float(body.get("threshold", 9.5))
-        min_days = int(body.get("min_consecutive_days", 6))
-        workers = int(body.get("workers", 10))
-        max_stocks = int(body.get("max_stocks", 0))
-        force_refresh = bool(body.get("force_refresh", False))
-
-        if threshold <= 0 or threshold > 10:
-            return jsonify({"error": "threshold must be between 0 and 10"}), 400
-        if min_days < 2:
-            return jsonify({"error": "min_consecutive_days must be at least 2"}), 400
-
-        from service.price_change.leader_breakout import (
-            _get_cache, start_background_scan, get_scan_status,
-        )
-
-        # If cached and not forcing refresh, return immediately
-        if not force_refresh:
-            cached = _get_cache(start_date, threshold, min_days)
-            if cached:
-                return jsonify(cached)
-
-        # Check if a scan is already running for these params
-        status = get_scan_status(start_date, threshold, min_days)
-        if status.get("status") == "scanning":
-            return jsonify({
-                "status": "scanning",
-                "message": "扫描进行中，请稍后刷新页面查看结果",
-            })
-
-        # Start background scan
-        start_background_scan(start_date, threshold, min_days, workers, max_stocks)
-        return jsonify({
-            "status": "scanning",
-            "message": "扫描已启动，约2分钟后刷新页面即可查看结果",
-        })
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        logger.exception("Failed to run leader breakout scan: %s", e)
-        return jsonify({"error": str(e)}), 500
-
-
-@price_change_bp.route("/leader-breakout/export", methods=["POST"])
-def leader_breakout_export():
-    """Export leader breakout results as Excel file."""
-    body = request.get_json(silent=True) or {}
-    try:
-        excel_bytes = export_leader_breakout(body)
-        return excel_bytes, 200, {
-            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Content-Disposition": "attachment; filename=a_stock_leaders.xlsx",
-        }
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        logger.exception("Failed to export leader breakout: %s", e)
         return jsonify({"error": str(e)}), 500
 
 

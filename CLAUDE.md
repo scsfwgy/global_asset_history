@@ -76,7 +76,6 @@ GlobalAssetHistory/
 │       ├── charts.js              # 年度/月度 SVG 图表
 │       ├── crash-stats.js         # 暴跌统计面板
 │       ├── drilldown.js           # 年→月→日钻取卡片
-│       ├── leader-breakout.js     # A股龙头股涨停分析
 │       ├── price-change.js        # 主状态、表格、预设、初始化
 │       └── wishes.js              # 心愿墙：提交、验证码、管理员删除
 ├── doc/screenshot/

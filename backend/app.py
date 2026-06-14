@@ -62,7 +62,6 @@ def etf_market():
 @app.route("/etf/global_others")
 @app.route("/vix")
 @app.route("/wishes")
-@app.route("/leader")
 @app.route("/settings")
 def serve_tab():
     return send_from_directory(str(FRONTEND_DIR), "price-change.html")
