@@ -561,9 +561,14 @@ def quote():
             logger.warning("Failed to parse Tencent quote line: %s", e)
 
     # Augment with fund fee data from locally scraped JSON.
-    # Each quote's enrichment (fees + tracking-error / NAV / benchmark fetches)
-    # is independent and network-bound, so we fan out across a thread pool.
+    # Each quote's enrichment (fees + tracking-error vs benchmark) is
+    # independent and network-bound, so we fan out across a thread pool.
     # Wall-clock drops from sum(per-symbol) to max(per-symbol).
+    #
+    # NOTE: East Money NAV fetch (api.fund.eastmoney.com, slow/unreachable
+    # from US servers) is intentionally NOT done here — it would block the
+    # entire response.  The /valuation endpoint handles NAV-dependent fields
+    # (valuation_error_latest, nav_tracking_*) as a lazy second pass.
     _load_fee_data()  # warm the module cache once before threads start
 
     def _enrich_quote(q: dict) -> None:
@@ -588,13 +593,12 @@ def quote():
             q["premium_cost_per_10k"] = None
 
         tracking_rows = _fetch_etf_history_rows(q["code"], 180)
-        nav_map = None
-        if tracking_rows:
-            end_nav = tracking_rows[-1]["date"]
-            start_nav = tracking_rows[0]["date"]
-            if start_nav < end_nav:  # sanity check
-                nav_map = _fetch_etf_nav_cached(q["code"], start_nav, end_nav)
-        tracking = _compute_tracking_error_history(q["code"], tracking_rows, nav_map) if tracking_rows else None
+        # East Money NAV fetch is deferred to /valuation endpoint to keep
+        # this response fast (api.fund.eastmoney.com is slow from US servers).
+        # Tracking error + profit diff (cols 12-13) work fine without NAV data;
+        # only valuation_error_latest / nav_tracking_* (col 14, chart overlays)
+        # come back null here and get lazily filled by the frontend.
+        tracking = _compute_tracking_error_history(q["code"], tracking_rows, nav_map=None) if tracking_rows else None
         q["tracking_error_avg"] = tracking.get("avg") if tracking else None
         q["tracking_error_current"] = tracking.get("current") if tracking else None
         q["tracking_error_benchmark"] = tracking.get("benchmark") if tracking else None
@@ -620,6 +624,74 @@ def quote():
         "quotes": results,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     })
+
+
+@etf_market_bp.route("/valuation", methods=["GET"])
+def valuation():
+    """Return NAV-dependent tracking fields (valuation error, NAV tracking)
+    for one or more ETF symbols.
+
+    This endpoint calls East Money's fund NAV API (api.fund.eastmoney.com)
+    which may be slow or unreachable from US servers.  It is intentionally
+    a separate lazy-load from the fast /quote endpoint — the frontend calls
+    /quote first to render the table immediately, then calls /valuation to
+    backfill the valuation-error column and chart overlays.
+
+    Query params:
+        symbols: comma-separated ETF codes, e.g. "513300,159501"
+    """
+    raw = request.args.get("symbols", "")
+    if not raw:
+        return jsonify({"error": "symbols parameter is required"}), 400
+
+    codes = [c.strip() for c in raw.split(",") if c.strip()]
+    if not codes:
+        return jsonify({"error": "no valid symbols"}), 400
+
+    def _enrich_valuation(code: str):
+        """Fetch NAV + compute valuation error for one ETF.  Returns (code, data) or None."""
+        try:
+            rows = _fetch_etf_history_rows(code, 180)
+            if not rows:
+                return None
+            end_nav = rows[-1]["date"]
+            start_nav = rows[0]["date"]
+            if start_nav >= end_nav:
+                return None
+            nav_map = _fetch_etf_nav_cached(code, start_nav, end_nav)
+            tracking = _compute_tracking_error_history(code, rows, nav_map)
+            return (code, {
+                "valuation_error_latest": tracking.get("valuation_error_latest"),
+                "valuation_error_daily": tracking.get("valuation_error_daily"),
+                "nav_tracking_daily": tracking.get("nav_tracking_daily"),
+                "nav_tracking_mae_30d": tracking.get("nav_tracking_mae_30d"),
+            })
+        except Exception as e:
+            logger.warning("Valuation enrich failed for %s: %s", code, e)
+            return None
+
+    enriched: dict[str, dict] = {}
+    max_workers = min(len(codes), 8)
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {pool.submit(_enrich_valuation, code): code for code in codes}
+        # 20 s global timeout: 2 batches × 10 s East Money timeout ≈ 20 s worst case.
+        # If East Money is unreachable, requests fail immediately (connection refused)
+        # and the batch returns well within the budget.
+        try:
+            for fut in as_completed(futures, timeout=20):
+                try:
+                    result = fut.result()
+                    if result:
+                        enriched[result[0]] = result[1]
+                except Exception as e:
+                    logger.warning("Valuation future failed for %s: %s", futures[fut], e)
+        except TimeoutError:
+            logger.warning(
+                "Valuation batch timed out after 20 s — %d/%d symbols enriched",
+                len(enriched), len(codes),
+            )
+
+    return jsonify(enriched)
 
 
 @etf_market_bp.route("/history", methods=["GET"])

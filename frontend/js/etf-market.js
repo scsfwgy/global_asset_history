@@ -140,12 +140,17 @@
         if (typeof window._refreshEtfChart === "function") window._refreshEtfChart();
     };
 
+    var _valuationLoading = false;
+    var _valuationLoaded = false;
+
     /* ── Fetch real-time quotes ── */
     function fetchQuotes() {
         var symbols = [];
         for (var k in ETF_GROUPS) {
             ETF_GROUPS[k].symbols.forEach(function (s) { symbols.push(s.code); });
         }
+        _valuationLoaded = false;
+        _valuationLoading = false;
         fetch("/api/etf-market/quote?symbols=" + symbols.join(","))
             .then(function (r) { return r.json(); })
             .then(function (data) {
@@ -155,9 +160,39 @@
                 var el = document.getElementById("etfRefreshInfo");
                 if (el) el.textContent = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
                 renderTable();
+                // Phase 2: lazy-load East-Money-dependent valuation data
+                fetchValuation(symbols);
             })
             .catch(function () {
-                document.getElementById("etfBody").innerHTML = '<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--data-negative)">获取行情失败' + C + 'td>' + C + 'tr>';
+                document.getElementById("etfBody").innerHTML = '<tr><td colspan="14" style="text-align:center;padding:24px;color:var(--data-negative)">获取行情失败' + C + 'td>' + C + 'tr>';
+            });
+    }
+
+    /* ── Lazy-load valuation error (East Money NAV, slow from US servers) ── */
+    function fetchValuation(symbols) {
+        if (_valuationLoading) return;
+        _valuationLoading = true;
+        fetch("/api/etf-market/valuation?symbols=" + symbols.join(","))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var updated = 0;
+                for (var code in data) {
+                    if (_quotes[code]) {
+                        var d = data[code];
+                        for (var k in d) {
+                            if (d[k] != null) _quotes[code][k] = d[k];
+                        }
+                        updated++;
+                    }
+                }
+                _valuationLoaded = true;
+                if (updated > 0) renderTable();
+            })
+            .catch(function () {
+                // Silent fail — valuation column stays "--", core data unaffected
+            })
+            .finally(function () {
+                _valuationLoading = false;
             });
     }
 
