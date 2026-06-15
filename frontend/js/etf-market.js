@@ -143,6 +143,21 @@
     var _valuationLoading = false;
     var _valuationLoaded = false;
 
+    /* ── Progress indicator (shared by embedded tab + standalone page) ── */
+    function _setProgress(msg, dotColor) {
+        var el = document.getElementById("etfRefreshInfo");
+        if (el) el.textContent = msg;
+        var rt = document.getElementById("refreshTime");
+        if (rt) rt.textContent = msg;
+        if (dotColor) {
+            var dot = document.getElementById("refreshDot");
+            if (dot) dot.style.backgroundColor = dotColor;
+        }
+    }
+    function _timeStr() {
+        return new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    }
+
     /* ── Fetch real-time quotes ── */
     function fetchQuotes() {
         var symbols = [];
@@ -151,19 +166,20 @@
         }
         _valuationLoaded = false;
         _valuationLoading = false;
+        _setProgress("⏳ 加载行情…", "#ff9f0a");
         fetch("/api/etf-market/quote?symbols=" + symbols.join(","))
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 var map = {};
                 (data.quotes || []).forEach(function (q) { map[q.code] = q; });
                 _quotes = map;
-                var el = document.getElementById("etfRefreshInfo");
-                if (el) el.textContent = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
                 renderTable();
                 // Phase 2: lazy-load East-Money-dependent valuation data
+                _setProgress("✓ 行情已更新 " + _timeStr() + "  ⏳ 估值误差加载中…", "#ff9f0a");
                 fetchValuation(symbols);
             })
             .catch(function () {
+                _setProgress("✗ 行情加载失败", "#ff453a");
                 document.getElementById("etfBody").innerHTML = '<tr><td colspan="14" style="text-align:center;padding:24px;color:var(--data-negative)">获取行情失败' + C + 'td>' + C + 'tr>';
             });
     }
@@ -187,9 +203,10 @@
                 }
                 _valuationLoaded = true;
                 if (updated > 0) renderTable();
+                _setProgress("✓ 行情已更新 " + _timeStr() + "  ✓ 估值误差已加载", "#30d158");
             })
             .catch(function () {
-                // Silent fail — valuation column stays "--", core data unaffected
+                _setProgress("✓ 行情已更新 " + _timeStr() + "  ⚠ 估值误差加载失败", "#ff9f0a");
             })
             .finally(function () {
                 _valuationLoading = false;
