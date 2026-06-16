@@ -101,6 +101,21 @@ status() {
     fi
 }
 
+run_tests() {
+    setup
+    echo "[test] 运行测试套件..."
+    echo ""
+    PYTHONPATH=backend "$VENV_PYTHON" -m pytest backend/tests/ -v --tb=short --color=yes
+    local exit_code=$?
+    echo ""
+    if [ $exit_code -eq 0 ]; then
+        echo "[test] ✓ 全部测试通过"
+    else
+        echo "[test] ✗ 测试失败 (exit code: $exit_code)" >&2
+    fi
+    return $exit_code
+}
+
 kill_port_if_needed() {
     local port="${PORT:-8730}"
     local pids
@@ -147,7 +162,8 @@ interactive_menu() {
     echo "  2. 停止服务"
     echo "  3. 重启服务"
     echo "  4. 查看状态"
-    echo "  5. 退出"
+    echo "  5. 运行测试"
+    echo "  6. 退出"
     printf "请输入选项编号: "
     local choice
     read -r choice
@@ -157,7 +173,8 @@ interactive_menu() {
         2) stop ;;
         3) stop; sleep 1; start_production ;;
         4) status ;;
-        5) echo "已退出" ; exit 0 ;;
+        5) run_tests ;;
+        6) echo "已退出" ; exit 0 ;;
         *) echo "无效选项" ; exit 1 ;;
     esac
 }
@@ -166,10 +183,19 @@ interactive_menu() {
 
 case "${1:-}" in
     start|production)
+        if [ "${2:-}" = "--test" ]; then
+            run_tests || exit 1
+        fi
         start_production
         ;;
     debug)
+        if [ "${2:-}" = "--test" ]; then
+            run_tests || exit 1
+        fi
         start_debug
+        ;;
+    test)
+        run_tests
         ;;
     stop)
         stop
@@ -186,14 +212,17 @@ case "${1:-}" in
         interactive_menu
         ;;
     *)
-        echo "用法: ./start.sh [命令]"
+        echo "用法: ./start.sh [命令] [--test]"
         echo ""
-        echo "  无参数      交互式菜单"
-        echo "  start       生产模式 (后台)"
-        echo "  debug       调试模式 (前台)"
-        echo "  stop        停止服务"
-        echo "  restart     重启"
-        echo "  status      查看状态"
+        echo "  无参数             交互式菜单"
+        echo "  start               生产模式 (后台)"
+        echo "  debug               调试模式 (前台)"
+        echo "  start --test        先跑测试，通过后再启动 (生产)"
+        echo "  debug --test        先跑测试，通过后再启动 (调试)"
+        echo "  test                仅运行测试套件"
+        echo "  stop                停止服务"
+        echo "  restart             重启"
+        echo "  status              查看状态"
         exit 1
         ;;
 esac
