@@ -22,6 +22,11 @@
     var _sortDir = "desc";
     var _expandedCode = null;
     var _lastChartData = null;
+    var _activeView = "rank";
+    var _aggregateMetric = "premium";
+    var _aggregateHistory = {};
+    var _aggregateLoading = false;
+    var _aggregateHidden = {};
 
     /* ── Chart type selection (single-select) ── */
     function activeChartType() {
@@ -78,7 +83,43 @@
                 _expandedCode = null;
                 hideDetail();
                 renderTable();
+                if (_activeView === "aggregate") {
+                    renderAggregateSymbols();
+                    ensureAggregateHistory(false);
+                }
             });
+        });
+
+        // ETF inner view switch: rank table vs group aggregate chart
+        document.querySelectorAll("#etfViewTabs .transfer-tab").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                document.querySelectorAll("#etfViewTabs .transfer-tab").forEach(function (b) { b.classList.remove("active"); });
+                btn.classList.add("active");
+                _activeView = btn.dataset.etfView || "rank";
+                var rank = document.getElementById("etfRankView");
+                var agg = document.getElementById("etfAggregateView");
+                if (rank) rank.style.display = _activeView === "rank" ? "" : "none";
+                if (agg) agg.classList.toggle("active", _activeView === "aggregate");
+                if (_activeView === "aggregate") {
+                    hideDetail();
+                    renderAggregateSymbols();
+                    ensureAggregateHistory(false);
+                }
+            });
+        });
+
+        document.querySelectorAll("#etfAggregateMetrics .etf-chart-tab").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                document.querySelectorAll("#etfAggregateMetrics .etf-chart-tab").forEach(function (b) { b.classList.remove("active"); });
+                btn.classList.add("active");
+                _aggregateMetric = btn.dataset.etfMetric || "premium";
+                renderAggregateChart();
+            });
+        });
+
+        var aggReloadBtn = document.getElementById("etfAggregateReload");
+        if (aggReloadBtn) aggReloadBtn.addEventListener("click", function () {
+            ensureAggregateHistory(true);
         });
 
         // Column sort clicks
@@ -125,6 +166,10 @@
     // state immediately so switching to the tab never shows a stale "加载中...".
     window._etfActivate = function () {
         renderTable();
+        if (_activeView === "aggregate") {
+            renderAggregateSymbols();
+            ensureAggregateHistory(false);
+        }
     };
 
     if (document.readyState === "loading") {
@@ -492,9 +537,280 @@
         return null;
     }
 
+    function getAggregateColors() {
+        return ["#2997ff", "#ff9f0a", "#30d158", "#ff453a", "#bf5af2", "#5ac8fa", "#ffd60a", "#ff375f", "#64d2ff", "#32d74b", "#ff9f0a", "#ac8e68"];
+    }
+
+    function currentAggregateSymbols() {
+        var group = ETF_GROUPS[_activeTab] || { symbols: [] };
+        return group.symbols || [];
+    }
+
+    function metricConfig(metric) {
+        var map = {
+            premium: { label: "历史溢价率", key: "premium_pct", unit: "%", decimals: 2, symmetric: false },
+            valuation: { label: "历史估值误差", key: "valuation_error_pct", unit: "%", decimals: 2, symmetric: true },
+            real_error: { label: "历史真实误差", key: "price_tracking_deviation_pct", unit: "%", decimals: 2, symmetric: true },
+            change: { label: "历史价格涨跌幅", key: "change_pct", unit: "%", decimals: 2, symmetric: true },
+            price_return: { label: "累计涨跌幅", key: "__cum_return_pct", unit: "%", decimals: 2, symmetric: false },
+            profit_diff: { label: "万元收益差", key: "profit_diff_per_10k", unit: "元", decimals: 0, symmetric: true },
+        };
+        return map[metric] || map.premium;
+    }
+
+    function aggregateCacheKey() {
+        return _activeTab + ":120";
+    }
+
+    function setAggregateStatus(msg) {
+        var el = document.getElementById("etfAggregateStatus");
+        if (el) el.textContent = msg || "";
+    }
+
+    function ensureAggregateHistory(force) {
+        var key = aggregateCacheKey();
+        if (_aggregateLoading) return;
+        if (!force && _aggregateHistory[key]) {
+            renderAggregateChart();
+            return;
+        }
+
+        var symbols = currentAggregateSymbols();
+        if (!symbols.length) {
+            setAggregateStatus("当前分组暂无标的");
+            document.getElementById("etfAggregateChart").innerHTML = "";
+            return;
+        }
+
+        _aggregateLoading = true;
+        setAggregateStatus("加载聚合历史数据中…");
+        document.getElementById("etfAggregateChart").innerHTML =
+            '<div style="padding:30px;text-align:center;color:var(--apple-text-secondary);">加载中…' + C + 'div>';
+
+        Promise.all(symbols.map(function (item) {
+            return fetch("/api/etf-market/history?symbol=" + encodeURIComponent(item.code) + "&days=120")
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) {
+                    if (!data || !data.bars) return { code: item.code, name: item.name, error: true, bars: [] };
+                    enrichAggregateBars(data.bars);
+                    return {
+                        code: item.code,
+                        name: (_quotes[item.code] && _quotes[item.code].name) || item.name,
+                        bars: data.bars,
+                        stats: data.stats || {},
+                    };
+                })
+                .catch(function () {
+                    return { code: item.code, name: item.name, error: true, bars: [] };
+                });
+        })).then(function (series) {
+            _aggregateHistory[key] = series;
+            var ok = series.filter(function (s) { return s.bars && s.bars.length; }).length;
+            setAggregateStatus("已加载 " + ok + "/" + series.length + " 只标的");
+            renderAggregateSymbols();
+            renderAggregateChart();
+        }).finally(function () {
+            _aggregateLoading = false;
+        });
+    }
+
+    function enrichAggregateBars(bars) {
+        var firstClose = null;
+        for (var i = 0; i < bars.length; i++) {
+            var c = bars[i].close;
+            if (firstClose == null && c != null && isFinite(c) && c > 0) firstClose = c;
+            bars[i].__cum_return_pct = firstClose && c != null && isFinite(c)
+                ? (c / firstClose - 1) * 100
+                : null;
+        }
+    }
+
+    function renderAggregateSymbols() {
+        var el = document.getElementById("etfAggregateSymbols");
+        if (!el) return;
+        var colors = getAggregateColors();
+        var hidden = _aggregateHidden[_activeTab] || {};
+        var symbols = currentAggregateSymbols();
+        var html = "";
+        symbols.forEach(function (item, idx) {
+            var q = _quotes[item.code];
+            var name = (q && q.name) || item.name || item.code;
+            var cls = hidden[item.code] ? " hidden" : "";
+            html += '<button class="etf-symbol-chip' + cls + '" data-code="' + item.code + '">' +
+                '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + colors[idx % colors.length] + ';margin-right:6px;"></span>' +
+                item.code + " " + name + C + "button>";
+        });
+        el.innerHTML = html;
+        el.querySelectorAll(".etf-symbol-chip").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                if (!_aggregateHidden[_activeTab]) _aggregateHidden[_activeTab] = {};
+                var code = btn.dataset.code;
+                _aggregateHidden[_activeTab][code] = !_aggregateHidden[_activeTab][code];
+                renderAggregateSymbols();
+                renderAggregateChart();
+            });
+        });
+    }
+
+    function renderAggregateChart() {
+        var wrap = document.getElementById("etfAggregateChart");
+        if (!wrap) return;
+        var data = _aggregateHistory[aggregateCacheKey()];
+        if (!data) {
+            ensureAggregateHistory(false);
+            return;
+        }
+
+        var cfg = metricConfig(_aggregateMetric);
+        var hidden = _aggregateHidden[_activeTab] || {};
+        var colors = getAggregateColors();
+        var visible = data.filter(function (s) { return !hidden[s.code] && s.bars && s.bars.length; });
+        if (!visible.length) {
+            wrap.innerHTML = '<div style="padding:30px;text-align:center;color:var(--apple-text-secondary);">已隐藏全部标的' + C + 'div>';
+            return;
+        }
+
+        var dateSet = {};
+        var allVals = [];
+        visible.forEach(function (s) {
+            s.bars.forEach(function (b) {
+                var v = b[cfg.key];
+                if (v != null && isFinite(v)) {
+                    dateSet[b.date] = true;
+                    allVals.push(v);
+                }
+            });
+        });
+        var dates = Object.keys(dateSet).sort();
+        if (!dates.length || !allVals.length) {
+            wrap.innerHTML = '<div style="padding:30px;text-align:center;color:var(--apple-text-secondary);">当前指标暂无可对比数据' + C + 'div>';
+            return;
+        }
+
+        var CLR = getEtfChartColors();
+        var W = 940, H = 390;
+        var PAD = { top: 34, right: 20, bottom: 42, left: cfg.unit === "元" ? 64 : 56 };
+        var plotW = W - PAD.left - PAD.right;
+        var plotH = H - PAD.top - PAD.bottom;
+        var minV = Math.min.apply(null, allVals), maxV = Math.max.apply(null, allVals);
+        if (minV === maxV) { minV -= 1; maxV += 1; }
+        var pad = (maxV - minV) * 0.15 || 1;
+        if (cfg.symmetric) {
+            var absMax = Math.max(Math.abs(minV), Math.abs(maxV)) + pad;
+            minV = -absMax; maxV = absMax;
+        } else {
+            minV -= pad; maxV += pad;
+        }
+        var range = maxV - minV;
+        var xScale = function (i) { return PAD.left + (i / Math.max(dates.length - 1, 1)) * plotW; };
+        var yScale = function (v) { return PAD.top + plotH - ((v - minV) / range) * plotH; };
+        var dateIndex = {};
+        dates.forEach(function (d, i) { dateIndex[d] = i; });
+
+        var svg = '<rect width="' + W + '" height="' + H + '" fill="transparent"' + "/>";
+        svg += '<text x="' + PAD.left + '" y="18" fill="' + CLR.text + '" font-size="13" font-weight="600">' + cfg.label + C + "text>";
+
+        for (var g = 0; g <= 5; g++) {
+            var val = minV + (range / 5) * g;
+            var y = yScale(val);
+            svg += '<line x1="' + PAD.left + '" y1="' + y + '" x2="' + (W - PAD.right) + '" y2="' + y + '" stroke="' + CLR.grid + '" stroke-width="0.5"' + "/>";
+            svg += '<text x="' + (PAD.left - 7) + '" y="' + (y + 4) + '" fill="' + CLR.textDim + '" font-size="10" text-anchor="end">' + fmtAggregateValue(val, cfg, true) + C + "text>";
+        }
+        if (minV < 0 && maxV > 0) {
+            var zy = yScale(0);
+            svg += '<line x1="' + PAD.left + '" y1="' + zy + '" x2="' + (W - PAD.right) + '" y2="' + zy + '" stroke="' + CLR.textDim + '" stroke-width="0.5" stroke-dasharray="3,3"' + "/>";
+        }
+
+        visible.forEach(function (s) {
+            var groupItems = currentAggregateSymbols();
+            var idx = groupItems.findIndex(function (it) { return it.code === s.code; });
+            var color = colors[(idx < 0 ? 0 : idx) % colors.length];
+            var p = "";
+            s.bars.forEach(function (b) {
+                var v = b[cfg.key];
+                if (v == null || !isFinite(v) || dateIndex[b.date] == null) return;
+                p += (p ? "L" : "M") + xScale(dateIndex[b.date]).toFixed(1) + "," + yScale(v).toFixed(1) + " ";
+            });
+            if (p) svg += '<path d="' + p + '" fill="none" stroke="' + color + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"' + "/>";
+        });
+
+        var labelEvery = Math.max(1, Math.floor(dates.length / 6));
+        dates.forEach(function (d, i) {
+            if (i % labelEvery !== 0 && i !== dates.length - 1) return;
+            var x = xScale(i);
+            svg += '<text x="' + x + '" y="' + (H - PAD.bottom + 18) + '" fill="' + CLR.textDim + '" font-size="10" text-anchor="middle">' + d.slice(5) + C + "text>";
+            svg += '<line x1="' + x + '" y1="' + (H - PAD.bottom) + '" x2="' + x + '" y2="' + (H - PAD.bottom + 5) + '" stroke="' + CLR.textDim + '" stroke-width="0.5"' + "/>";
+        });
+
+        var hoverId = "etfAggregateHover";
+        svg += '<line id="' + hoverId + '_line" x1="0" y1="' + PAD.top + '" x2="0" y2="' + (H - PAD.bottom) + '" stroke="' + CLR.crosshair + '" stroke-width="1" stroke-dasharray="4,2" style="display:none;pointer-events:none"' + "/>";
+        svg += '<rect id="' + hoverId + '_tip" x="0" y="0" width="210" height="1" rx="6" fill="' + CLR.tooltipBg + '" style="display:none;pointer-events:none"' + "/>";
+        svg += '<text id="' + hoverId + '_text" x="0" y="0" fill="' + CLR.tooltipText + '" font-size="11" style="display:none;pointer-events:none"' + ">" + C + "text>";
+        for (var i = 0; i < dates.length; i++) {
+            var slotW = plotW / Math.max(dates.length - 1, 1);
+            svg += '<rect x="' + (xScale(i) - slotW / 2) + '" y="' + PAD.top + '" width="' + slotW + '" height="' + plotH + '" fill="transparent" class="etf-agg-hover-zone" data-idx="' + i + '"' + "/>";
+        }
+
+        wrap.innerHTML = '<svg id="etfAggregateSvg" viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;font-family:-apple-system,SF Pro Text,Helvetica,Arial,sans-serif;">' + svg + C + "svg>";
+        attachAggregateHover(dates, visible, cfg, xScale, W, H, PAD);
+    }
+
+    function fmtAggregateValue(v, cfg, compact) {
+        if (v == null || !isFinite(v)) return "--";
+        if (cfg.unit === "元") return (v > 0 ? "+" : "") + v.toFixed(0) + (compact ? "" : "元");
+        return (v > 0 ? "+" : "") + v.toFixed(cfg.decimals) + (compact ? cfg.unit : cfg.unit);
+    }
+
+    function attachAggregateHover(dates, series, cfg, xScale, W, H, PAD) {
+        var svgEl = document.getElementById("etfAggregateSvg");
+        if (!svgEl) return;
+        var line = document.getElementById("etfAggregateHover_line");
+        var rectTip = document.getElementById("etfAggregateHover_tip");
+        var text = document.getElementById("etfAggregateHover_text");
+        var byCodeDate = {};
+        series.forEach(function (s) {
+            byCodeDate[s.code] = {};
+            s.bars.forEach(function (b) { byCodeDate[s.code][b.date] = b[cfg.key]; });
+        });
+        svgEl.addEventListener("mousemove", function (e) {
+            var rect = svgEl.getBoundingClientRect();
+            var mx = (e.clientX - rect.left) / rect.width * W;
+            var closest = 0, dist = Infinity;
+            for (var i = 0; i < dates.length; i++) {
+                var d = Math.abs(xScale(i) - mx);
+                if (d < dist) { dist = d; closest = i; }
+            }
+            var cx = xScale(closest);
+            var date = dates[closest];
+            var lines = ["日期：" + date];
+            series.slice(0, 12).forEach(function (s) {
+                lines.push(s.code + "：" + fmtAggregateValue(byCodeDate[s.code][date], cfg, false));
+            });
+            var lineH = 14, tipW = 220, tipH = lineH * lines.length + 14;
+            var tipX = cx + 10, tipY = PAD.top + 4;
+            if (tipX + tipW > W - PAD.right) tipX = cx - tipW - 10;
+            line.setAttribute("x1", cx); line.setAttribute("x2", cx); line.style.display = "";
+            rectTip.setAttribute("x", tipX); rectTip.setAttribute("y", tipY);
+            rectTip.setAttribute("width", tipW); rectTip.setAttribute("height", tipH);
+            rectTip.style.display = "";
+            var tspans = "";
+            lines.forEach(function (l, li) {
+                tspans += '<tspan x="' + (tipX + 8) + '" y="' + (tipY + lineH + li * lineH + 2) + '">' + l + C + "tspan>";
+            });
+            text.innerHTML = tspans;
+            text.style.display = "";
+        });
+        svgEl.addEventListener("mouseleave", function () {
+            line.style.display = "none";
+            rectTip.style.display = "none";
+            text.style.display = "none";
+        });
+    }
+
     // Expose for theme-toggle re-render
     window._refreshEtfChart = function () {
         if (_expandedCode && _lastChartData && _lastChartData.bars) renderChart();
+        if (_activeView === "aggregate") renderAggregateChart();
     };
 
     /* ── SVG Chart — single selected type ── */

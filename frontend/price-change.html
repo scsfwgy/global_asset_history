@@ -1076,6 +1076,66 @@
     }
     .etf-chart-tab:hover { color: var(--apple-text-primary); }
     .etf-chart-tab.active { background: var(--apple-blue); color: #fff; }
+    .etf-view-tabs {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 10px;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+    .etf-view-tabs::-webkit-scrollbar { display: none; }
+    .etf-aggregate-panel {
+        display: none;
+        background: var(--apple-surface-1);
+        border: 1px solid var(--apple-divider);
+        border-radius: var(--radius-md);
+        padding: 14px;
+    }
+    .etf-aggregate-panel.active { display: block; }
+    .etf-aggregate-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+    }
+    .etf-aggregate-metrics,
+    .etf-aggregate-symbols {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .etf-symbol-chip {
+        border: 1px solid var(--apple-divider);
+        background: var(--apple-surface-2);
+        color: var(--apple-text-primary);
+        border-radius: 7px;
+        padding: 5px 9px;
+        font-size: 12px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all var(--transition-fast);
+    }
+    .etf-symbol-chip.hidden {
+        color: var(--apple-text-tertiary);
+        opacity: 0.55;
+        text-decoration: line-through;
+    }
+    .etf-aggregate-status {
+        color: var(--apple-text-secondary);
+        font-size: 12px;
+        min-height: 16px;
+        margin: 6px 0 2px;
+    }
+    #etfAggregateChart { overflow-x: auto; scrollbar-width: none; }
+    #etfAggregateChart::-webkit-scrollbar { display: none; }
+    @media (max-width: 720px) {
+        .etf-aggregate-toolbar { align-items: flex-start; }
+        .etf-aggregate-panel { padding: 12px 10px; }
+    }
 
     /* ─── Knowledge Base (数据科普) ─── */
     .kb-section { margin-bottom: 28px; }
@@ -1516,6 +1576,11 @@
                 <button class="transfer-tab" data-etf-tab="sp500">标普500</button>
                 <button class="transfer-tab" data-etf-tab="global_others">其它</button>
             </div>
+            <div class="etf-view-tabs" id="etfViewTabs">
+                <button class="transfer-tab active" data-etf-view="rank">实时排行</button>
+                <button class="transfer-tab" data-etf-view="aggregate">聚合分析</button>
+            </div>
+            <div id="etfRankView">
             <div class="transfer-table-wrap" style="padding:0;">
                 <table class="transfer-table" id="etfTable">
                     <thead>
@@ -1559,6 +1624,24 @@
                     <button class="etf-chart-tab" data-etf-chart="amount">成交额</button>
                 </div>
                 <div id="etfChartContainer"></div>
+            </div>
+            </div>
+            <div id="etfAggregateView" class="etf-aggregate-panel">
+                <div class="etf-aggregate-toolbar">
+                    <div class="etf-aggregate-metrics" id="etfAggregateMetrics">
+                        <span style="font-size:var(--text-xs);color:var(--apple-text-tertiary);">指标:</span>
+                        <button class="etf-chart-tab active" data-etf-metric="premium">溢价率</button>
+                        <button class="etf-chart-tab" data-etf-metric="valuation">估值误差</button>
+                        <button class="etf-chart-tab" data-etf-metric="real_error">真实误差</button>
+                        <button class="etf-chart-tab" data-etf-metric="change">涨跌幅</button>
+                        <button class="etf-chart-tab" data-etf-metric="price_return">累计涨跌</button>
+                        <button class="etf-chart-tab" data-etf-metric="profit_diff">万元收益差</button>
+                    </div>
+                    <button id="etfAggregateReload" class="pc-btn pc-btn-sm">重新加载</button>
+                </div>
+                <div class="etf-aggregate-symbols" id="etfAggregateSymbols"></div>
+                <div class="etf-aggregate-status" id="etfAggregateStatus"></div>
+                <div id="etfAggregateChart"></div>
             </div>
         </div>
         </div><!-- /tab-etf -->
