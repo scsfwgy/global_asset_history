@@ -3,8 +3,9 @@
   "regions": ["hkg1"],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/(yearly|backtest|crash|etf|vix|wishes|settings)", "destination": "/price-change.html" },
+    { "source": "/(yearly|backtest|crash|etf|vix|wishes|settings|knowledge)", "destination": "/price-change.html" },
     { "source": "/etf/:sub(nasdaq100|sp500|global_others)", "destination": "/price-change.html" },
+    { "source": "/knowledge/:sub(how-to-buy|etf-intro|event-myth)", "destination": "/price-change.html" },
     { "source": "/", "destination": "/price-change.html" }
   ],
   "functions": {
