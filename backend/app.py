@@ -62,6 +62,7 @@ def etf_market():
 @app.route("/etf/global_others")
 @app.route("/vix")
 @app.route("/knowledge")
+@app.route("/knowledge/how-to-buy")
 @app.route("/knowledge/etf-intro")
 @app.route("/knowledge/event-myth")
 @app.route("/wishes")
