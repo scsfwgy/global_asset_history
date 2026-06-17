@@ -60,6 +60,7 @@ def etf_market():
 @app.route("/etf/nasdaq100")
 @app.route("/etf/sp500")
 @app.route("/etf/global_others")
+@app.route("/qdii-funds")
 @app.route("/vix")
 @app.route("/knowledge")
 @app.route("/knowledge/how-to-buy")
@@ -174,4 +175,5 @@ def frontend_files(filename):
 if __name__ == "__main__":
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8730"))
-    app.run(host=host, port=port, debug=True)
+    debug = os.getenv("FLASK_DEBUG", "").lower() in ("1", "true", "yes", "on")
+    app.run(host=host, port=port, debug=debug)

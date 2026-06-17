@@ -44,10 +44,51 @@ _TENCENT_QUOTE_URL = "https://qt.gtimg.cn/q="
 _REQUEST_TIMEOUT = 10
 _TRACKING_ERROR_TTL_SECONDS = 6 * 60 * 60
 _NAV_CACHE_TTL_SECONDS = 6 * 60 * 60
+_QDII_FUND_TTL_SECONDS = 60 * 60
 _CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "price_change_config.json"
+_QDII_FUND_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "qdii_funds.json"
 _tracking_error_cache: dict[str, tuple[float, dict]] = {}
 _nav_cache: dict[str, tuple[float, dict]] = {}
+_qdii_fund_cache: dict[str, tuple[float, dict]] = {}
 _benchmark_map: dict[str, tuple[str, str]] = {}
+
+
+_QDII_FUND_GROUPS: dict[str, dict] = {
+    "nasdaq100": {
+        "label": "纳指100",
+        "codes": [
+            "160213",
+            "040046", "014978",
+            "539001", "012752", "023422",
+            "016452", "016453",
+            "018043", "018044",
+            "161130", "012870",
+            "270042", "006479",
+            "000834", "008971",
+            "015299", "015300",
+            "016055", "016057",
+            "016532", "016533",
+            "018966", "018967",
+            "019172", "019173",
+            "019441", "019442",
+            "019524", "019525",
+            "019547", "019548",
+            "019736", "019737",
+        ],
+    },
+    "sp500": {
+        "label": "标普500",
+        "codes": [
+            "050025", "006075", "018738",
+            "161125", "012860",
+            "017641", "019305",
+            "017028", "017030",
+            "018064", "018065",
+            "007721", "007722",
+            "096001", "008401",
+        ],
+    },
+}
 
 
 def _load_benchmark_map() -> dict[str, tuple[str, str]]:
@@ -220,6 +261,216 @@ def _parse_fee_pct(raw: str | None) -> float | None:
         return float(raw.replace("%", ""))
     except (ValueError, TypeError):
         return None
+
+
+def _parse_qdii_limit(status: str | None) -> float | None:
+    """Parse "单日投资上限100元" from East Money purchase status text."""
+    if not status:
+        return None
+    m = re.search(r"单日投资上限\s*([0-9.]+)\s*元", status)
+    if not m:
+        return None
+    try:
+        return float(m.group(1))
+    except (ValueError, TypeError):
+        return None
+
+
+def _share_class_from_name(name: str | None) -> str:
+    """Best-effort share class extraction for Chinese fund names."""
+    if not name:
+        return ""
+    patterns = [
+        r"人民币([ACDEI])",
+        r"([ACDEI])\(人民币\)",
+        r"([ACDEI])（人民币）",
+        r"([ACDEI])人民币",
+        r"\(([ACDEI])\)",
+        r"联接([ACDEI])",
+        r"发起\([^)]+\)([ACDEI])",
+        r"([ACDEI])$",
+    ]
+    for pat in patterns:
+        m = re.search(pat, name)
+        if m:
+            return m.group(1)
+    return ""
+
+
+def _fetch_qdii_fund_info(code: str, index_key: str) -> dict:
+    """Fetch one public QDII fund row from East Money mobile fund API."""
+    resp = requests.get(
+        "https://fundmobapi.eastmoney.com/FundMApi/FundBaseTypeInformation.ashx",
+        params={
+            "FCODE": code,
+            "deviceid": "global-asset-history",
+            "plat": "Android",
+            "product": "EFund",
+            "version": "6.5.5",
+        },
+        headers={
+            "User-Agent": "EastmoneyFund/6.5.5",
+            "Referer": f"https://fund.eastmoney.com/{code}.html",
+        },
+        timeout=_REQUEST_TIMEOUT,
+    )
+    resp.raise_for_status()
+    body = resp.json()
+    data = body.get("Datas") or {}
+
+    status = data.get("SGZT") or ""
+    source_rate = data.get("SOURCERATE") or ""
+    discounted_rate = data.get("RATE") or ""
+    name = data.get("SHORTNAME") or code
+    limit_amount = _parse_qdii_limit(status)
+    buyable = bool(data.get("BUY")) and "暂停" not in status
+
+    rate_num = _parse_fee_pct(discounted_rate)
+    source_rate_num = _parse_fee_pct(source_rate)
+    min_purchase = None
+    try:
+        min_purchase = float(data["MINSG"]) if data.get("MINSG") not in (None, "") else None
+    except (ValueError, TypeError):
+        min_purchase = None
+
+    return {
+        "index": index_key,
+        "code": code,
+        "name": name,
+        "company": data.get("JJGS") or "",
+        "fund_type": data.get("FTYPE") or "",
+        "share_class": _share_class_from_name(name),
+        "purchase_status": status,
+        "redeem_status": data.get("SHZT") or "",
+        "buyable": buyable,
+        "min_purchase": min_purchase,
+        "daily_limit": limit_amount,
+        "source_rate": source_rate,
+        "discounted_rate": discounted_rate,
+        "source_rate_num": source_rate_num,
+        "discounted_rate_num": rate_num,
+        "nav": data.get("DWJZ"),
+        "nav_date": data.get("FSRQ") or "",
+        "company_id": data.get("JJGSID") or "",
+        "risk_level": data.get("RISKLEVEL") or "",
+        "is_c_class": "C" in _share_class_from_name(name),
+        "source_url": f"https://fund.eastmoney.com/{code}.html",
+    }
+
+
+def _sort_qdii_funds(rows: list[dict]) -> list[dict]:
+    """Put buyable/larger-limit/cheaper rows first for the guide table."""
+    def key(row: dict):
+        buy_rank = 0 if row.get("buyable") else 1
+        limit = row.get("daily_limit")
+        limit_rank = -(limit if limit is not None else -1)
+        fee = row.get("discounted_rate_num")
+        fee_rank = fee if fee is not None else 99
+        return (buy_rank, limit_rank, fee_rank, row.get("company", ""), row.get("code", ""))
+
+    return sorted(rows, key=key)
+
+
+def _build_qdii_summary(groups: dict[str, list[dict]]) -> dict:
+    summary = {}
+    for key, rows in groups.items():
+        buyable_rows = [r for r in rows if r.get("buyable")]
+        limit_source = buyable_rows if buyable_rows else rows
+        limited_rows = [r for r in limit_source if r.get("daily_limit") is not None]
+        limits = [r["daily_limit"] for r in limited_rows if r.get("daily_limit") is not None]
+        summary[key] = {
+            "total": len(rows),
+            "buyable": len(buyable_rows),
+            "paused": len(rows) - len(buyable_rows),
+            "min_limit": min(limits) if limits else None,
+            "max_limit": max(limits) if limits else None,
+            "nav_date": max((r.get("nav_date") or "" for r in rows), default=""),
+        }
+    return summary
+
+
+def _filter_qdii_response(response: dict, index_key: str) -> dict:
+    """Return either the full QDII snapshot or a single-index view."""
+    if index_key == "all":
+        return response
+    filtered = dict(response)
+    filtered["groups"] = {index_key: response.get("groups", {}).get(index_key, [])}
+    filtered["summary"] = {index_key: response.get("summary", {}).get(index_key, {})}
+    filtered["labels"] = {index_key: response.get("labels", {}).get(index_key, _QDII_FUND_GROUPS[index_key]["label"])}
+    filtered["errors"] = [
+        err for err in response.get("errors", [])
+        if err.get("index") == index_key
+    ]
+    return filtered
+
+
+def _read_qdii_snapshot() -> Optional[dict]:
+    """Read the locally persisted QDII snapshot, if present and valid."""
+    try:
+        if not _QDII_FUND_DATA_PATH.exists():
+            return None
+        with open(_QDII_FUND_DATA_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict) or "groups" not in data:
+            return None
+        return data
+    except Exception as exc:
+        logger.warning("Failed to read QDII fund snapshot from %s: %s", _QDII_FUND_DATA_PATH, exc)
+        return None
+
+
+def _write_qdii_snapshot(data: dict) -> None:
+    """Persist the latest successful QDII snapshot for offline/overseas fallback."""
+    try:
+        _QDII_FUND_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = _QDII_FUND_DATA_PATH.with_suffix(".json.tmp")
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        tmp_path.replace(_QDII_FUND_DATA_PATH)
+    except Exception as exc:
+        logger.warning("Failed to write QDII fund snapshot to %s: %s", _QDII_FUND_DATA_PATH, exc)
+
+
+def _qdii_snapshot_age_seconds(data: dict) -> Optional[float]:
+    stored_at = data.get("stored_at_epoch")
+    try:
+        return time.time() - float(stored_at)
+    except (ValueError, TypeError):
+        return None
+
+
+def _fetch_all_qdii_fund_groups() -> dict:
+    """Fetch all configured QDII fund groups from East Money."""
+    groups: dict[str, list[dict]] = {key: [] for key in _QDII_FUND_GROUPS}
+    errors = []
+
+    jobs = []
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        for group_key, spec in _QDII_FUND_GROUPS.items():
+            for code in spec["codes"]:
+                jobs.append((group_key, code, pool.submit(_fetch_qdii_fund_info, code, group_key)))
+
+        for group_key, code, fut in jobs:
+            try:
+                groups[group_key].append(fut.result())
+            except Exception as exc:
+                logger.warning("QDII fund fetch failed for %s: %s", code, exc)
+                errors.append({"code": code, "index": group_key, "error": str(exc)})
+
+    groups = {key: _sort_qdii_funds(rows) for key, rows in groups.items()}
+    now = time.time()
+    return {
+        "groups": groups,
+        "summary": _build_qdii_summary(groups),
+        "labels": {key: spec["label"] for key, spec in _QDII_FUND_GROUPS.items()},
+        "errors": errors,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "stored_at_epoch": now,
+        "cache_ttl_seconds": _QDII_FUND_TTL_SECONDS,
+        "cache_status": "fresh",
+        "source": "East Money public fund mobile API",
+        "disclaimer": "支付宝最终可买状态、优惠费率和账号限额以支付宝 App 基金详情页为准。",
+    }
 
 
 def _daily_return_map_from_rows(rows: list[dict]) -> dict[str, float]:
@@ -692,6 +943,72 @@ def valuation():
             )
 
     return jsonify(enriched)
+
+
+@etf_market_bp.route("/qdii-funds", methods=["GET"])
+def qdii_funds():
+    """Return public East Money data for Nasdaq-100 / S&P 500 QDII funds.
+
+    Query params:
+        index: all | nasdaq100 | sp500
+        fresh: 1 to bypass the hourly local cache and refetch upstream
+    """
+    index_key = request.args.get("index", "all").strip().lower() or "all"
+    fresh = request.args.get("fresh") in ("1", "true", "yes")
+    if index_key != "all" and index_key not in _QDII_FUND_GROUPS:
+        return jsonify({"error": "index must be one of: all, nasdaq100, sp500"}), 400
+
+    cached = _qdii_fund_cache.get("all")
+    if cached and not fresh and time.time() - cached[0] < _QDII_FUND_TTL_SECONDS:
+        response = dict(cached[1])
+        response["cache_status"] = "memory"
+        return jsonify(_filter_qdii_response(response, index_key))
+
+    snapshot = _read_qdii_snapshot()
+    snapshot_age = _qdii_snapshot_age_seconds(snapshot) if snapshot else None
+    if snapshot and not fresh and snapshot_age is not None and snapshot_age < _QDII_FUND_TTL_SECONDS:
+        response = dict(snapshot)
+        response["cache_status"] = "local"
+        response["cache_age_seconds"] = round(snapshot_age)
+        _qdii_fund_cache["all"] = (time.time(), response)
+        return jsonify(_filter_qdii_response(response, index_key))
+
+    try:
+        response = _fetch_all_qdii_fund_groups()
+        expected_count = sum(len(spec["codes"]) for spec in _QDII_FUND_GROUPS.values())
+        fetched_count = sum(len(rows) for rows in response["groups"].values())
+
+        # If most upstream calls fail but we have a snapshot, keep serving the
+        # snapshot instead of overwriting it with a near-empty overseas result.
+        if snapshot and fetched_count < max(1, int(expected_count * 0.5)):
+            response = dict(snapshot)
+            response["cache_status"] = "local_stale_upstream_partial"
+            response["cache_age_seconds"] = round(snapshot_age) if snapshot_age is not None else None
+            response["errors"] = response.get("errors", []) + [{
+                "index": "all",
+                "code": "",
+                "error": "Upstream returned too few rows; served local snapshot.",
+            }]
+        else:
+            _write_qdii_snapshot(response)
+            response["cache_status"] = "fresh"
+
+        _qdii_fund_cache["all"] = (time.time(), response)
+        return jsonify(_filter_qdii_response(response, index_key))
+    except Exception as exc:
+        logger.warning("QDII fund refresh failed: %s", exc)
+        if snapshot:
+            response = dict(snapshot)
+            response["cache_status"] = "local_stale_upstream_failed"
+            response["cache_age_seconds"] = round(snapshot_age) if snapshot_age is not None else None
+            response["errors"] = response.get("errors", []) + [{
+                "index": "all",
+                "code": "",
+                "error": f"Upstream refresh failed; served local snapshot: {exc}",
+            }]
+            _qdii_fund_cache["all"] = (time.time(), response)
+            return jsonify(_filter_qdii_response(response, index_key))
+        return jsonify({"error": f"upstream fetch failed and no local snapshot exists: {exc}"}), 502
 
 
 @etf_market_bp.route("/history", methods=["GET"])
