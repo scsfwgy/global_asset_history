@@ -88,6 +88,10 @@ _QDII_FUND_GROUPS: dict[str, dict] = {
             "096001", "008401",
         ],
     },
+    "active_qdii": {
+        "label": "QDII主动",
+        "codes": [],
+    },
 }
 
 
@@ -263,6 +267,16 @@ def _parse_fee_pct(raw: str | None) -> float | None:
         return None
 
 
+def _parse_float(raw) -> float | None:
+    """Parse East Money numeric fields, preserving None for blanks."""
+    if raw in (None, ""):
+        return None
+    try:
+        return float(str(raw).replace(",", "").replace("%", ""))
+    except (ValueError, TypeError):
+        return None
+
+
 def _parse_qdii_limit(status: str | None) -> float | None:
     """Parse "单日投资上限100元" from East Money purchase status text."""
     if not status:
@@ -297,6 +311,81 @@ def _share_class_from_name(name: str | None) -> str:
     return ""
 
 
+def _is_active_qdii_candidate(code: str, name: str, fund_type: str) -> bool:
+    """Best-effort filter for RMB QDII active funds from East Money code list."""
+    text = f"{name}{fund_type}"
+    if "QDII" not in text:
+        return False
+    if re.search(
+        r"指数|ETF|联接|LOF|FOF|等权|标普|纳斯达克|纳指|恒生|日经|德国|法国|"
+        r"印度|越南|中证|MSCI|道琼斯|富时|SGI|REIT|REITs|商品|黄金|原油",
+        text,
+        re.IGNORECASE,
+    ):
+        return False
+    if re.search(r"美元|美汇|美钞|现汇|现钞|港币|后端", name):
+        return False
+    return bool(re.fullmatch(r"\d{6}", code))
+
+
+def _fetch_qdii_period_increase(code: str) -> dict[str, float | None]:
+    """Fetch period-return fields from East Money mobile API."""
+    try:
+        resp = requests.get(
+            "https://fundmobapi.eastmoney.com/FundMApi/FundPeriodIncrease.ashx",
+            params={
+                "FCODE": code,
+                "deviceid": "global-asset-history",
+                "plat": "Android",
+                "product": "EFund",
+                "version": "6.5.5",
+            },
+            headers={
+                "User-Agent": "EastmoneyFund/6.5.5",
+                "Referer": f"https://fund.eastmoney.com/{code}.html",
+            },
+            timeout=_REQUEST_TIMEOUT,
+        )
+        resp.raise_for_status()
+        body = resp.json()
+    except Exception as exc:
+        logger.warning("QDII period increase fetch failed for %s: %s", code, exc)
+        return {}
+
+    result = {}
+    for item in body.get("Datas") or []:
+        title = str(item.get("title") or "")
+        if title:
+            result[title] = _parse_float(item.get("syl"))
+    return result
+
+
+def _discover_active_qdii_codes() -> list[str]:
+    """Discover RMB active QDII fund codes from East Money's public code list."""
+    resp = requests.get(
+        "https://fund.eastmoney.com/js/fundcode_search.js",
+        headers={"User-Agent": "Mozilla/5.0"},
+        timeout=_REQUEST_TIMEOUT,
+    )
+    resp.raise_for_status()
+    text = resp.text.lstrip("\ufeff").strip()
+    text = re.sub(r"^var\s+r\s*=\s*", "", text)
+    text = re.sub(r";\s*$", "", text)
+    rows = json.loads(text)
+    codes = []
+    seen = set()
+    for row in rows:
+        if not isinstance(row, list) or len(row) < 4:
+            continue
+        code, name, fund_type = str(row[0]), str(row[2]), str(row[3])
+        if code in seen:
+            continue
+        if _is_active_qdii_candidate(code, name, fund_type):
+            seen.add(code)
+            codes.append(code)
+    return codes
+
+
 def _fetch_qdii_fund_info(code: str, index_key: str) -> dict:
     """Fetch one public QDII fund row from East Money mobile fund API."""
     resp = requests.get(
@@ -317,6 +406,7 @@ def _fetch_qdii_fund_info(code: str, index_key: str) -> dict:
     resp.raise_for_status()
     body = resp.json()
     data = body.get("Datas") or {}
+    period = _fetch_qdii_period_increase(code)
 
     status = data.get("SGZT") or ""
     source_rate = data.get("SOURCERATE") or ""
@@ -349,6 +439,15 @@ def _fetch_qdii_fund_info(code: str, index_key: str) -> dict:
         "discounted_rate": discounted_rate,
         "source_rate_num": source_rate_num,
         "discounted_rate_num": rate_num,
+        "fund_scale": _parse_float(data.get("FEGM")),
+        "fund_manager": data.get("JJJL") or "",
+        "daily_return_pct": _parse_float(data.get("RZDF")),
+        "return_1m_pct": period.get("Y", _parse_float(data.get("SYL_Y"))),
+        "return_3m_pct": period.get("3Y", _parse_float(data.get("SYL_3Y"))),
+        "return_6m_pct": period.get("6Y", _parse_float(data.get("SYL_6Y"))),
+        "return_1y_pct": period.get("1N", _parse_float(data.get("SYL_1N"))),
+        "return_3y_pct": period.get("3N"),
+        "return_since_inception_pct": period.get("LN"),
         "nav": data.get("DWJZ"),
         "nav_date": data.get("FSRQ") or "",
         "company_id": data.get("JJGSID") or "",
@@ -441,12 +540,18 @@ def _qdii_snapshot_age_seconds(data: dict) -> Optional[float]:
 
 def _fetch_all_qdii_fund_groups() -> dict:
     """Fetch all configured QDII fund groups from East Money."""
-    groups: dict[str, list[dict]] = {key: [] for key in _QDII_FUND_GROUPS}
+    group_specs = {
+        key: {"label": spec["label"], "codes": list(spec.get("codes", []))}
+        for key, spec in _QDII_FUND_GROUPS.items()
+    }
+    group_specs["active_qdii"]["codes"] = _discover_active_qdii_codes()
+
+    groups: dict[str, list[dict]] = {key: [] for key in group_specs}
     errors = []
 
     jobs = []
     with ThreadPoolExecutor(max_workers=10) as pool:
-        for group_key, spec in _QDII_FUND_GROUPS.items():
+        for group_key, spec in group_specs.items():
             for code in spec["codes"]:
                 jobs.append((group_key, code, pool.submit(_fetch_qdii_fund_info, code, group_key)))
 
@@ -462,14 +567,15 @@ def _fetch_all_qdii_fund_groups() -> dict:
     return {
         "groups": groups,
         "summary": _build_qdii_summary(groups),
-        "labels": {key: spec["label"] for key, spec in _QDII_FUND_GROUPS.items()},
+        "labels": {key: spec["label"] for key, spec in group_specs.items()},
+        "discovered_counts": {key: len(spec["codes"]) for key, spec in group_specs.items()},
         "errors": errors,
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "stored_at_epoch": now,
         "cache_ttl_seconds": _QDII_FUND_TTL_SECONDS,
         "cache_status": "fresh",
         "source": "East Money public fund mobile API",
-        "disclaimer": "支付宝最终可买状态、优惠费率和账号限额以支付宝 App 基金详情页为准。",
+        "disclaimer": "Qualified Domestic Institutional Investor，中文通常译为：合格境内机构投资者。通过有资格的境内基金公司把资金投向海外市场；这类基金常受外汇额度、海外交易日和汇率影响。",
     }
 
 
@@ -950,13 +1056,13 @@ def qdii_funds():
     """Return public East Money data for Nasdaq-100 / S&P 500 QDII funds.
 
     Query params:
-        index: all | nasdaq100 | sp500
+        index: all | nasdaq100 | sp500 | active_qdii
         fresh: 1 to bypass the hourly local cache and refetch upstream
     """
     index_key = request.args.get("index", "all").strip().lower() or "all"
     fresh = request.args.get("fresh") in ("1", "true", "yes")
     if index_key != "all" and index_key not in _QDII_FUND_GROUPS:
-        return jsonify({"error": "index must be one of: all, nasdaq100, sp500"}), 400
+        return jsonify({"error": "index must be one of: all, nasdaq100, sp500, active_qdii"}), 400
 
     cached = _qdii_fund_cache.get("all")
     if cached and not fresh and time.time() - cached[0] < _QDII_FUND_TTL_SECONDS:
@@ -975,7 +1081,7 @@ def qdii_funds():
 
     try:
         response = _fetch_all_qdii_fund_groups()
-        expected_count = sum(len(spec["codes"]) for spec in _QDII_FUND_GROUPS.values())
+        expected_count = sum(response.get("discovered_counts", {}).values())
         fetched_count = sum(len(rows) for rows in response["groups"].values())
 
         # If most upstream calls fail but we have a snapshot, keep serving the

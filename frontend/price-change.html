@@ -1157,6 +1157,21 @@
         gap: 8px;
         flex-wrap: wrap;
     }
+    .qdii-filter-select {
+        padding: 6px 10px;
+        background: var(--apple-surface-1);
+        border: 1px solid var(--apple-divider);
+        border-radius: var(--radius-md);
+        color: var(--apple-text-primary);
+        font-size: 12px;
+        outline: none;
+        max-width: 180px;
+    }
+    .qdii-filter-select:focus {
+        border-color: var(--apple-blue);
+        outline: 2px solid var(--apple-blue);
+        outline-offset: 1px;
+    }
     .qdii-note {
         font-size: 12px;
         color: var(--apple-text-secondary);
@@ -1191,7 +1206,7 @@
         font-size: var(--text-xs);
         margin-top: 4px;
     }
-    #qdiiFundsTable { min-width: 1160px; }
+    #qdiiFundsTable { min-width: 1980px; }
     #qdiiFundsTable th,
     #qdiiFundsTable td {
         padding: 8px 10px;
@@ -1207,9 +1222,27 @@
     #qdiiFundsTable td:nth-child(4) {
         text-align: center;
     }
-    #qdiiFundsTable th:nth-child(n+6),
-    #qdiiFundsTable td:nth-child(n+6) {
+    #qdiiFundsTable th.qdii-num,
+    #qdiiFundsTable td.qdii-num {
         text-align: right;
+    }
+    #qdiiFundsTable td.etf-pos { color: var(--data-positive); }
+    #qdiiFundsTable td.etf-neg { color: var(--data-negative); }
+    #qdiiFundsTable th.qdii-sortable {
+        cursor: pointer;
+        user-select: none;
+    }
+    #qdiiFundsTable th.qdii-sortable:hover {
+        color: var(--apple-text-primary);
+    }
+    .qdii-sort-arrow {
+        font-size: var(--text-xs);
+        margin-left: 3px;
+        opacity: 0.45;
+    }
+    #qdiiFundsTable th.qdii-sortable.active .qdii-sort-arrow {
+        opacity: 1;
+        color: var(--apple-blue);
     }
     .qdii-status-badge {
         display: inline-block;
@@ -1783,22 +1816,28 @@
                 <div class="transfer-tabs" id="qdiiFundsTabs">
                     <button class="transfer-tab active" data-qdii-index="nasdaq100">纳指100</button>
                     <button class="transfer-tab" data-qdii-index="sp500">标普500</button>
+                    <button class="transfer-tab" data-qdii-index="active_qdii">QDII主动</button>
                 </div>
                 <div class="qdii-controls">
-                    <label class="pc-bt-adv-toggle" title="只显示公开接口当前可买的基金">
-                        <input type="checkbox" id="qdiiOnlyBuyable">
-                        <span class="pc-bt-adv-slider"></span>
-                        <span class="pc-bt-adv-label">只看可买</span>
-                    </label>
-                    <label class="pc-bt-adv-toggle" title="把 C 类份额排在前面，便于比较短期持有成本">
-                        <input type="checkbox" id="qdiiPreferC">
-                        <span class="pc-bt-adv-slider"></span>
-                        <span class="pc-bt-adv-label">C 类优先</span>
-                    </label>
+                    <select class="qdii-filter-select" id="qdiiFilterShare" title="按份额类别筛选">
+                        <option value="">份额：全部</option>
+                    </select>
+                    <select class="qdii-filter-select" id="qdiiFilterType" title="按基金类型筛选">
+                        <option value="">类型：全部</option>
+                    </select>
+                    <select class="qdii-filter-select" id="qdiiFilterCompany" title="按基金公司筛选">
+                        <option value="">公司：全部</option>
+                    </select>
+                    <select class="qdii-filter-select" id="qdiiFilterStatus" title="按申购状态筛选">
+                        <option value="">状态：全部</option>
+                        <option value="buyable">状态：可买</option>
+                        <option value="paused">状态：暂停</option>
+                    </select>
+                    <button id="qdiiClearFilters" class="pc-btn pc-btn-sm" title="清空当前分类的筛选和排序">清空筛选</button>
                 </div>
             </div>
             <div class="qdii-note" id="qdiiFundsNote">
-                数据来自东方财富公开基金接口；支付宝最终可买状态、优惠费率和账号限额仍以支付宝 App 基金详情页为准。
+                Qualified Domestic Institutional Investor，中文通常译为：合格境内机构投资者。通过有资格的境内基金公司把资金投向海外市场；这类基金常受外汇额度、海外交易日和汇率影响。
             </div>
             <div class="qdii-summary-grid" id="qdiiFundsSummary"></div>
             <div class="pc-error" id="qdiiFundsError"></div>
@@ -1810,22 +1849,32 @@
                 <table class="transfer-table" id="qdiiFundsTable">
                     <thead>
                         <tr>
-                            <th>指数</th>
-                            <th>代码</th>
-                            <th>基金名称</th>
-                            <th>份额</th>
-                            <th>基金公司</th>
-                            <th>状态</th>
-                            <th>单日限额</th>
-                            <th>起购</th>
-                            <th>申购费</th>
-                            <th>原费率</th>
-                            <th>净值日</th>
-                            <th>赎回</th>
+                            <th class="qdii-sortable" data-qdii-sort="index">分类 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="code">代码 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="name">基金名称 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="share_class">份额 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="fund_type">类型 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="company">基金公司 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="fund_scale">基金规模 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="fund_manager">基金经理 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="status">状态 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="daily_limit">单日限额 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="min_purchase">起购 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="discounted_rate_num">申购费 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="source_rate_num">原费率 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="daily_return_pct">今日涨跌幅 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_1m_pct">近一月涨跌幅 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_3m_pct">近三月涨跌幅 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_6m_pct">近半年涨跌幅 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_1y_pct">近一年涨跌幅 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_3y_pct">近三年涨跌幅 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_since_inception_pct">成立以来涨跌幅 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="nav_date">净值日 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="redeem_status">赎回 <span class="qdii-sort-arrow">⇅</span></th>
                         </tr>
                     </thead>
                     <tbody id="qdiiFundsBody">
-                        <tr><td colspan="12" style="text-align:center;padding:24px;color:var(--apple-text-secondary);">加载中...</td></tr>
+                        <tr><td colspan="22" style="text-align:center;padding:24px;color:var(--apple-text-secondary);">加载中...</td></tr>
                     </tbody>
                 </table>
             </div>
