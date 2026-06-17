@@ -1237,6 +1237,11 @@
 
     .kb-table .kb-val-pos { color: var(--data-positive); font-weight: 600; }
     .kb-table .kb-val-neg { color: var(--data-negative); font-weight: 600; }
+    .kb-table .kb-text-left {
+        text-align: left;
+        white-space: normal;
+        line-height: 1.55;
+    }
 
     /* Two-column grid */
     .kb-grid {
@@ -1713,6 +1718,7 @@
                     <button class="transfer-tab active" data-kb-tab="how-to-buy">如何购买美股</button>
                     <button class="transfer-tab" data-kb-tab="etf-intro">核心ETF介绍</button>
                     <button class="transfer-tab" data-kb-tab="event-myth">数据魔咒</button>
+                    <button class="transfer-tab" data-kb-tab="terms">专业术语</button>
                 </div>
             </div>
 
@@ -1802,6 +1808,7 @@
                 </tbody>
             </table>
             </div>
+
             </div>
 
             <div class="kb-section">
@@ -2466,6 +2473,344 @@
             
             </div><!-- /kb-event-myth -->
 
+            <!-- ====== 专业术语速查表 ====== -->
+            <div class="kb-sub-panel" id="kb-terms" style="display:none;">
+            <div class="kb-section">
+            <div class="kb-callout kb-callout-blue">
+                <strong>页面用途：</strong>这是一份面向财经新闻、宏观数据和美股复盘的专业术语速查表，帮助读者快速看懂数据是什么、谁发布、市场为什么在意，以及这些数据通常如何影响纳斯达克、科技股、利率和风险偏好。
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">核心数据与金融术语速查</h3>
+            <div class="kb-callout kb-callout-green">
+                <strong>阅读方法：</strong>先看中文含义和解释，再看官网来源；遇到 CPI、非农、FOMC、美债收益率、ETF 持仓、财报指引等新闻时，可以用本页快速判断它属于哪类数据、主要影响什么资产。
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">一、通胀与价格数据</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>数据</th><th>英文全称</th><th>中文</th><th>解释与作用</th><th>官网/来源</th></tr></thead>
+                <tbody>
+                <tr><td>CPI</td><td>Consumer Price Index</td><td>消费者物价指数</td><td class="kb-text-left">衡量居民消费端价格变化。高于预期通常推高利率预期，压制纳指、科技股和长久期资产。</td><td><a href="https://www.bls.gov/cpi/" target="_blank" rel="noopener">BLS CPI</a></td></tr>
+                <tr><td>Core CPI</td><td>Core Consumer Price Index</td><td>核心消费者物价指数</td><td class="kb-text-left">剔除食品和能源，更能观察通胀粘性。市场通常比 headline CPI 更重视它。</td><td><a href="https://www.bls.gov/cpi/" target="_blank" rel="noopener">BLS CPI</a></td></tr>
+                <tr><td>PCE</td><td>Personal Consumption Expenditures Price Index</td><td>个人消费支出价格指数</td><td class="kb-text-left">美联储偏好的通胀指标之一，反映美国消费者购买商品和服务的价格变化。</td><td><a href="https://www.bea.gov/data/personal-consumption-expenditures-price-index" target="_blank" rel="noopener">BEA PCE</a></td></tr>
+                <tr><td>Core PCE</td><td>Core Personal Consumption Expenditures Price Index</td><td>核心 PCE 物价指数</td><td class="kb-text-left">剔除食品和能源，是判断通胀是否真正回落的核心数据。</td><td><a href="https://www.bea.gov/data/personal-consumption-expenditures-price-index" target="_blank" rel="noopener">BEA PCE</a></td></tr>
+                <tr><td>PPI</td><td>Producer Price Index</td><td>生产者价格指数</td><td class="kb-text-left">衡量生产者收到的销售价格变化，可提示上游成本压力是否会传导到 CPI。</td><td><a href="https://www.bls.gov/ppi/" target="_blank" rel="noopener">BLS PPI</a></td></tr>
+                <tr><td>Import Price Index</td><td>Import Price Index</td><td>进口价格指数</td><td class="kb-text-left">观察进口商品价格变化，受美元、能源、关税和全球供应链影响。</td><td><a href="https://www.bls.gov/mxp/" target="_blank" rel="noopener">BLS MXP</a></td></tr>
+                <tr><td>Export Price Index</td><td>Export Price Index</td><td>出口价格指数</td><td class="kb-text-left">观察美国出口商品和服务价格变化，可辅助判断外需和贸易价格压力。</td><td><a href="https://www.bls.gov/mxp/" target="_blank" rel="noopener">BLS MXP</a></td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">二、就业与工资数据</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>数据</th><th>英文全称</th><th>中文</th><th>解释与作用</th><th>官网/来源</th></tr></thead>
+                <tbody>
+                <tr><td>NFP</td><td>Nonfarm Payrolls</td><td>非农就业人数</td><td class="kb-text-left">衡量美国非农部门新增就业，是每月最重要的就业数据之一。</td><td><a href="https://www.bls.gov/news.release/empsit.toc.htm" target="_blank" rel="noopener">BLS Employment Situation</a></td></tr>
+                <tr><td>Unemployment Rate</td><td>Unemployment Rate</td><td>失业率</td><td class="kb-text-left">反映劳动力市场松紧。上升过快会触发衰退担忧，过低则可能强化工资通胀。</td><td><a href="https://www.bls.gov/news.release/empsit.toc.htm" target="_blank" rel="noopener">BLS Employment Situation</a></td></tr>
+                <tr><td>AHE</td><td>Average Hourly Earnings</td><td>平均时薪</td><td class="kb-text-left">工资通胀指标。过热可能意味着服务通胀粘性强，美联储更难快速降息。</td><td><a href="https://www.bls.gov/news.release/empsit.toc.htm" target="_blank" rel="noopener">BLS Employment Situation</a></td></tr>
+                <tr><td>Initial Claims</td><td>Initial Unemployment Insurance Claims</td><td>初请失业金人数</td><td class="kb-text-left">周度就业压力指标。连续走高通常意味着裁员或失业压力上升。</td><td><a href="https://oui.doleta.gov/unemploy/claims.asp" target="_blank" rel="noopener">DOL UI Claims</a></td></tr>
+                <tr><td>Continuing Claims</td><td>Continuing Unemployment Insurance Claims</td><td>续请失业金人数</td><td class="kb-text-left">衡量失业者重新就业难度，持续上升说明劳动力市场转弱。</td><td><a href="https://oui.doleta.gov/unemploy/claims.asp" target="_blank" rel="noopener">DOL UI Claims</a></td></tr>
+                <tr><td>JOLTS</td><td>Job Openings and Labor Turnover Survey</td><td>职位空缺与劳动力流动调查</td><td class="kb-text-left">观察职位空缺、离职率和招聘情况，常用于判断劳动力需求是否降温。</td><td><a href="https://www.bls.gov/jlt/" target="_blank" rel="noopener">BLS JOLTS</a></td></tr>
+                <tr><td>ECI</td><td>Employment Cost Index</td><td>雇佣成本指数</td><td class="kb-text-left">衡量工资和福利成本，是观察工资通胀压力的重要季度指标。</td><td><a href="https://www.bls.gov/eci/" target="_blank" rel="noopener">BLS ECI</a></td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">三、增长、消费与景气数据</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>数据</th><th>英文全称</th><th>中文</th><th>解释与作用</th><th>官网/来源</th></tr></thead>
+                <tbody>
+                <tr><td>GDP</td><td>Gross Domestic Product</td><td>国内生产总值</td><td class="kb-text-left">衡量经济总产出。影响盈利预期和衰退判断，但公布滞后。</td><td><a href="https://www.bea.gov/data/gdp/gross-domestic-product" target="_blank" rel="noopener">BEA GDP</a></td></tr>
+                <tr><td>Retail Sales</td><td>Retail Sales</td><td>零售销售</td><td class="kb-text-left">衡量美国消费强弱。美国经济消费占比高，因此会影响增长和通胀判断。</td><td><a href="https://www.census.gov/retail/sales.html" target="_blank" rel="noopener">Census Retail Sales</a></td></tr>
+                <tr><td>Personal Income</td><td>Personal Income</td><td>个人收入</td><td class="kb-text-left">观察居民收入来源和消费能力，通常与 PCE 同时公布。</td><td><a href="https://www.bea.gov/news/current-releases" target="_blank" rel="noopener">BEA Releases</a></td></tr>
+                <tr><td>Personal Spending</td><td>Personal Outlays / Personal Consumption Expenditures</td><td>个人支出 / 个人消费支出</td><td class="kb-text-left">衡量消费者实际花钱力度，影响增长预期和企业收入判断。</td><td><a href="https://www.bea.gov/news/current-releases" target="_blank" rel="noopener">BEA Releases</a></td></tr>
+                <tr><td>Durable Goods</td><td>Durable Goods Orders</td><td>耐用品订单</td><td class="kb-text-left">观察企业和消费者对大件商品的需求，是制造业和资本开支的前瞻指标。</td><td><a href="https://www.census.gov/manufacturing/m3/" target="_blank" rel="noopener">Census M3</a></td></tr>
+                <tr><td>Factory Orders</td><td>Manufacturers' Shipments, Inventories, and Orders</td><td>工厂订单</td><td class="kb-text-left">衡量制造业订单、发货和库存，帮助判断生产周期。</td><td><a href="https://www.census.gov/manufacturing/m3/" target="_blank" rel="noopener">Census M3</a></td></tr>
+                <tr><td>Industrial Production</td><td>Industrial Production and Capacity Utilization</td><td>工业产出与产能利用率</td><td class="kb-text-left">反映制造业、采矿和公用事业产出，产能利用率过高可能带来价格压力。</td><td><a href="https://www.federalreserve.gov/releases/g17/" target="_blank" rel="noopener">Fed G.17</a></td></tr>
+                <tr><td>ISM PMI</td><td>Institute for Supply Management Purchasing Managers' Index</td><td>ISM 采购经理人指数</td><td class="kb-text-left">50 通常是扩张/收缩分界线。制造业和服务业 PMI 是早期景气信号。</td><td><a href="https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/" target="_blank" rel="noopener">ISM PMI</a></td></tr>
+                <tr><td>Consumer Sentiment</td><td>University of Michigan Consumer Sentiment</td><td>密歇根大学消费者信心</td><td class="kb-text-left">反映居民对经济、收入和通胀的看法，其中通胀预期分项尤其重要。</td><td><a href="https://www.sca.isr.umich.edu/" target="_blank" rel="noopener">Michigan Surveys</a></td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">四、货币、流动性与央行数据</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>数据</th><th>英文全称</th><th>中文</th><th>解释与作用</th><th>官网/来源</th></tr></thead>
+                <tbody>
+                <tr><td>M0</td><td>Monetary Base / Currency in Circulation</td><td>基础货币 / 流通现金</td><td class="kb-text-left">最底层的现金与央行货币概念；不同国家口径不同，美国新闻更常看 M1/M2 和准备金。</td><td><a href="https://www.federalreserve.gov/releases/h41/" target="_blank" rel="noopener">Fed H.4.1</a></td></tr>
+                <tr><td>M1</td><td>Money Stock M1</td><td>狭义货币供应量</td><td class="kb-text-left">最具流动性的货币，如现金和可交易存款。反映即时支付能力。</td><td><a href="https://www.federalreserve.gov/releases/h6/" target="_blank" rel="noopener">Fed H.6</a></td></tr>
+                <tr><td>M2</td><td>Money Stock M2</td><td>广义货币供应量</td><td class="kb-text-left">包含 M1 加部分存款和零售货币市场基金，反映更宽口径流动性。</td><td><a href="https://www.federalreserve.gov/releases/h6/" target="_blank" rel="noopener">Fed H.6</a></td></tr>
+                <tr><td>Fed Balance Sheet</td><td>Federal Reserve Balance Sheet</td><td>美联储资产负债表</td><td class="kb-text-left">观察 QE/QT、准备金和资产持有变化。扩表偏宽松，缩表偏紧缩。</td><td><a href="https://www.federalreserve.gov/releases/h41/" target="_blank" rel="noopener">Fed H.4.1</a></td></tr>
+                <tr><td>Fed Funds Rate</td><td>Federal Funds Rate</td><td>联邦基金利率</td><td class="kb-text-left">美国短端政策利率核心锚，直接影响美元、债券和股票估值。</td><td><a href="https://www.federalreserve.gov/monetarypolicy/openmarket.htm" target="_blank" rel="noopener">Federal Reserve</a></td></tr>
+                <tr><td>FOMC</td><td>Federal Open Market Committee</td><td>联邦公开市场委员会</td><td class="kb-text-left">决定美国货币政策，声明、点阵图和发布会都会改变资产定价。</td><td><a href="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" target="_blank" rel="noopener">FOMC Calendar</a></td></tr>
+                <tr><td>SEP / Dot Plot</td><td>Summary of Economic Projections / Dot Plot</td><td>经济预测摘要 / 点阵图</td><td class="kb-text-left">展示 FOMC 成员对增长、通胀、失业率和利率的预测，市场常据此重定价降息路径。</td><td><a href="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" target="_blank" rel="noopener">FOMC Materials</a></td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">五、债券、利率与财政融资数据</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>数据</th><th>英文全称</th><th>中文</th><th>解释与作用</th><th>官网/来源</th></tr></thead>
+                <tbody>
+                <tr><td>UST Yield</td><td>U.S. Treasury Yield</td><td>美国国债收益率</td><td class="kb-text-left">10 年期收益率是科技股估值折现率的重要参考，收益率上行通常压制成长股。</td><td><a href="https://home.treasury.gov/resource-center/data-chart-center/interest-rates" target="_blank" rel="noopener">U.S. Treasury Rates</a></td></tr>
+                <tr><td>Yield Curve</td><td>Treasury Yield Curve</td><td>收益率曲线</td><td class="kb-text-left">观察短端和长端利率关系。倒挂常被视为衰退风险信号。</td><td><a href="https://home.treasury.gov/resource-center/data-chart-center/interest-rates" target="_blank" rel="noopener">U.S. Treasury Rates</a></td></tr>
+                <tr><td>Treasury Auction</td><td>U.S. Treasury Auction</td><td>美国国债拍卖</td><td class="kb-text-left">拍卖需求强弱影响长端收益率。需求差时，收益率上行会压制科技股估值。</td><td><a href="https://www.treasurydirect.gov/auctions/announcements-data-results/" target="_blank" rel="noopener">TreasuryDirect</a></td></tr>
+                <tr><td>Bid-to-Cover</td><td>Bid-to-Cover Ratio</td><td>投标覆盖倍数</td><td class="kb-text-left">衡量国债拍卖需求强弱。越高通常代表需求越好。</td><td><a href="https://www.treasurydirect.gov/auctions/announcements-data-results/" target="_blank" rel="noopener">TreasuryDirect</a></td></tr>
+                <tr><td>Credit Spread</td><td>Credit Spread</td><td>信用利差</td><td class="kb-text-left">企业债相对国债的额外收益率。扩大通常代表信用风险和避险情绪上升。</td><td><a href="https://fred.stlouisfed.org/categories/32297" target="_blank" rel="noopener">FRED Credit Spreads</a></td></tr>
+                <tr><td>Mortgage Rate</td><td>Mortgage Rate</td><td>按揭贷款利率</td><td class="kb-text-left">影响房地产需求和居民消费能力，也是利率传导的重要环节。</td><td><a href="https://www.freddiemac.com/pmms" target="_blank" rel="noopener">Freddie Mac PMMS</a></td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">六、房地产与信贷数据</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>数据</th><th>英文全称</th><th>中文</th><th>解释与作用</th><th>官网/来源</th></tr></thead>
+                <tbody>
+                <tr><td>Housing Starts</td><td>New Residential Construction: Housing Starts</td><td>新屋开工</td><td class="kb-text-left">观察房地产建设活动，对建材、金融和消费链有领先意义。</td><td><a href="https://www.census.gov/construction/nrc/" target="_blank" rel="noopener">Census NRC</a></td></tr>
+                <tr><td>Building Permits</td><td>New Residential Construction: Building Permits</td><td>营建许可</td><td class="kb-text-left">领先于新屋开工，反映未来住宅建设意愿。</td><td><a href="https://www.census.gov/construction/nrc/" target="_blank" rel="noopener">Census NRC</a></td></tr>
+                <tr><td>New Home Sales</td><td>New Residential Sales</td><td>新屋销售</td><td class="kb-text-left">衡量新建住宅销售情况，受按揭利率和居民收入影响明显。</td><td><a href="https://www.census.gov/construction/nrs/" target="_blank" rel="noopener">Census NRS</a></td></tr>
+                <tr><td>Consumer Credit</td><td>Consumer Credit - G.19</td><td>消费者信贷</td><td class="kb-text-left">观察信用卡、汽车贷款、学生贷款等消费借贷变化，反映居民杠杆和消费韧性。</td><td><a href="https://www.federalreserve.gov/releases/g19/" target="_blank" rel="noopener">Fed G.19</a></td></tr>
+                <tr><td>Bank Lending</td><td>Assets and Liabilities of Commercial Banks - H.8</td><td>商业银行信贷</td><td class="kb-text-left">观察银行贷款和存款变化，信贷收缩常与经济放缓相关。</td><td><a href="https://www.federalreserve.gov/releases/h8/" target="_blank" rel="noopener">Fed H.8</a></td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">七、市场、能源与仓位数据</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>数据</th><th>英文全称</th><th>中文</th><th>解释与作用</th><th>官网/来源</th></tr></thead>
+                <tbody>
+                <tr><td>VIX</td><td>Cboe Volatility Index</td><td>波动率指数 / 恐慌指数</td><td class="kb-text-left">衡量标普500期权隐含波动率。上升通常代表避险和不确定性增加。</td><td><a href="https://www.cboe.com/tradable_products/vix/" target="_blank" rel="noopener">Cboe VIX</a></td></tr>
+                <tr><td>EIA Crude Inventories</td><td>EIA Weekly Petroleum Status Report</td><td>EIA 原油库存</td><td class="kb-text-left">每周观察美国原油、汽油、馏分油库存和产量，影响油价和通胀预期。</td><td><a href="https://www.eia.gov/petroleum/supply/weekly/" target="_blank" rel="noopener">EIA WPSR</a></td></tr>
+                <tr><td>SPR</td><td>Strategic Petroleum Reserve</td><td>战略石油储备</td><td class="kb-text-left">美国战略油储变化会影响能源供给预期和油价叙事。</td><td><a href="https://www.eia.gov/dnav/pet/hist/LeafHandler.ashx?f=W&amp;n=PET&amp;s=WCSSTUS1" target="_blank" rel="noopener">EIA SPR</a></td></tr>
+                <tr><td>COT</td><td>Commitments of Traders</td><td>交易商持仓报告</td><td class="kb-text-left">CFTC 发布期货和期权市场持仓结构，帮助观察投机资金和套保资金方向。</td><td><a href="https://www.cftc.gov/MarketReports/CommitmentsofTraders/index.htm" target="_blank" rel="noopener">CFTC COT</a></td></tr>
+                <tr><td>Dollar Index</td><td>U.S. Dollar Index</td><td>美元指数</td><td class="kb-text-left">衡量美元相对一篮子货币表现。美元走强通常压制大宗商品和海外收入占比高的公司。</td><td><a href="https://www.ice.com/products/194/US-Dollar-Index" target="_blank" rel="noopener">ICE DXY</a></td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">八、期权、Gamma 与仓位墙数据</h3>
+            <div class="kb-callout kb-callout-yellow">
+                期权墙、Gamma 和 Max Pain 更偏短线市场结构数据，常影响指数和热门科技股在到期日前后的支撑、阻力、钉住和突破速度。它们不是基本面信号，遇到 CPI、FOMC、财报等大事件时可能被快速打穿。
+            </div>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>术语</th><th>英文全称</th><th>中文</th><th>解释与作用</th><th>常见来源</th></tr></thead>
+                <tbody>
+                <tr><td>Call Wall</td><td>Call Wall</td><td>看涨期权墙 / 上方压力墙</td><td class="kb-text-left">某一行权价附近看涨期权持仓或 Gamma 暴露集中。价格靠近时，做市商对冲可能形成上方压力；若强势突破，空头对冲可能反而加速上涨。</td><td>OptionCharts / SpotGamma / Perfiliev</td></tr>
+                <tr><td>Put Wall</td><td>Put Wall</td><td>看跌期权墙 / 下方支撑墙</td><td class="kb-text-left">某一行权价附近看跌期权持仓或 Gamma 暴露集中。常被视作短线支撑或风险缓冲区；若跌破，可能触发进一步对冲卖压。</td><td>OptionCharts / SpotGamma / Perfiliev</td></tr>
+                <tr><td>Gamma Exposure / GEX</td><td>Gamma Exposure</td><td>Gamma 暴露</td><td class="kb-text-left">衡量期权仓位对标的价格变化的敏感度。正 Gamma 环境下，对冲行为常抑制波动；负 Gamma 环境下，追涨杀跌式对冲可能放大波动。</td><td>SpotGamma / Perfiliev / Cboe 数据衍生</td></tr>
+                <tr><td>Zero Gamma</td><td>Zero Gamma Level</td><td>零 Gamma 分界位</td><td class="kb-text-left">市场整体 Gamma 暴露从正转负或从负转正的关键价格附近。价格在其上方通常更容易震荡回归，在其下方波动可能放大。</td><td>SpotGamma / Perfiliev</td></tr>
+                <tr><td>Max Pain</td><td>Maximum Pain</td><td>最大痛点</td><td class="kb-text-left">使最多期权买方到期损失、期权卖方相对受益的理论价格。临近到期时可能产生钉住效应，但不能单独作为交易依据。</td><td>OptionCharts / OptionStrat / MarketChameleon</td></tr>
+                <tr><td>Pinning</td><td>Option Pinning</td><td>期权钉住效应</td><td class="kb-text-left">到期日前，价格围绕大持仓行权价反复震荡。通常出现在流动性高、持仓集中、缺少外部大事件的环境中。</td><td>期权链 / 成交量 / 未平仓量</td></tr>
+                <tr><td>OI</td><td>Open Interest</td><td>未平仓合约量</td><td class="kb-text-left">尚未平仓或到期的期权合约数量。OI 高的行权价常是市场关注的支撑、压力或到期钉住位置。</td><td><a href="https://www.cboe.com/" target="_blank" rel="noopener">Cboe</a> / <a href="https://www.nasdaq.com/market-activity/options" target="_blank" rel="noopener">Nasdaq Options</a></td></tr>
+                <tr><td>IV</td><td>Implied Volatility</td><td>隐含波动率</td><td class="kb-text-left">期权价格隐含的未来波动预期。IV 上升代表市场愿意为保护或投机支付更高权利金，财报和宏观数据前常明显抬升。</td><td><a href="https://www.cboe.com/" target="_blank" rel="noopener">Cboe</a> / 券商期权链</td></tr>
+                </tbody>
+            </table>
+            </div>
+
+            <h3 class="kb-section-subtitle">常用期权数据网站</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>网站</th><th>收费状态</th><th>主要能看什么</th><th>适合用途</th><th>官网</th></tr></thead>
+                <tbody>
+                <tr><td>Nasdaq Options Chain</td><td>免费</td><td class="kb-text-left">期权链、行权价、到期日、成交量、未平仓量等基础数据。</td><td class="kb-text-left">快速查看单只股票或 ETF 的基础期权链。</td><td><a href="https://www.nasdaq.com/market-activity/quotes/option-chain" target="_blank" rel="noopener">Nasdaq</a></td></tr>
+                <tr><td>Cboe Delayed Quotes</td><td>免费</td><td class="kb-text-left">Cboe 官方延迟报价、指数期权和部分波动率产品数据。</td><td class="kb-text-left">查看 SPX、VIX 等官方期权报价和延迟行情。</td><td><a href="https://www.cboe.com/delayed_quotes/spx/" target="_blank" rel="noopener">Cboe</a></td></tr>
+                <tr><td>Yahoo Finance Options</td><td>免费</td><td class="kb-text-left">基础期权链、成交量、未平仓量、隐含波动率等。</td><td class="kb-text-left">入门查看股票期权链，适合作为免费备用入口。</td><td><a href="https://finance.yahoo.com/quote/SPY/options/" target="_blank" rel="noopener">Yahoo Finance</a></td></tr>
+                <tr><td>Barchart Options</td><td>免费 + 高级收费</td><td class="kb-text-left">期权链、IV、Greeks、筛选器、下载、异常期权等；高级筛选和下载通常在付费层。</td><td class="kb-text-left">看基础链免费够用，做批量筛选、历史下载和高级分析更适合付费。</td><td><a href="https://www.barchart.com/options" target="_blank" rel="noopener">Barchart</a></td></tr>
+                <tr><td>OptionCharts</td><td>免费 + 高级收费</td><td class="kb-text-left">Max Pain、OI、成交量、Gamma Exposure 等图表；部分高级图表需要升级。</td><td class="kb-text-left">快速看 Max Pain、行权价分布和期权墙雏形。</td><td><a href="https://optioncharts.io/" target="_blank" rel="noopener">OptionCharts</a></td></tr>
+                <tr><td>SpotGamma</td><td>付费为主，少量免费工具</td><td class="kb-text-left">Call Wall、Put Wall、Gamma Flip、Volatility Trigger、GEX 等专业市场结构指标。</td><td class="kb-text-left">重点观察 SPX、QQQ、热门个股的 Gamma 支撑压力和波动环境。</td><td><a href="https://spotgamma.com/" target="_blank" rel="noopener">SpotGamma</a></td></tr>
+                <tr><td>Unusual Whales</td><td>付费为主</td><td class="kb-text-left">实时期权流、异常成交、暗池、Greek Exposure、API 等。</td><td class="kb-text-left">观察大单流、机构方向、短线异动和期权流交易线索。</td><td><a href="https://unusualwhales.com/" target="_blank" rel="noopener">Unusual Whales</a></td></tr>
+                <tr><td>Market Chameleon</td><td>免费 + 高级收费</td><td class="kb-text-left">期权链、OI 变化、异常成交、IV、财报期权统计等。</td><td class="kb-text-left">做期权筛选、财报波动、OI/成交量变化分析。</td><td><a href="https://marketchameleon.com/" target="_blank" rel="noopener">Market Chameleon</a></td></tr>
+                <tr><td>OptionStrat</td><td>免费 + 高级收费</td><td class="kb-text-left">期权策略盈亏图、Greeks、IV 调整、策略优化、期权流等。</td><td class="kb-text-left">更适合搭建期权策略和看不同价格、波动率、时间下的盈亏变化。</td><td><a href="https://optionstrat.com/" target="_blank" rel="noopener">OptionStrat</a></td></tr>
+                <tr><td>Options Profit Calculator</td><td>免费 + 去广告/会员</td><td class="kb-text-left">期权策略盈亏计算、到期收益曲线、简单组合模拟。</td><td class="kb-text-left">新手理解期权策略盈亏结构，适合做交易前的基础测算。</td><td><a href="https://www.optionsprofitcalculator.com/" target="_blank" rel="noopener">Options Profit Calculator</a></td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">九、公司财报与上市公司披露</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>数据/文件</th><th>英文全称</th><th>中文</th><th>解释与作用</th><th>官网/来源</th></tr></thead>
+                <tbody>
+                <tr><td>10-K</td><td>Form 10-K</td><td>年度报告</td><td class="kb-text-left">美国上市公司年度披露文件，包含业务、风险、财务报表和管理层讨论。</td><td><a href="https://www.sec.gov/search-filings" target="_blank" rel="noopener">SEC EDGAR</a></td></tr>
+                <tr><td>10-Q</td><td>Form 10-Q</td><td>季度报告</td><td class="kb-text-left">美国上市公司季度披露文件，适合跟踪收入、利润率、现金流和业务变化。</td><td><a href="https://www.sec.gov/search-filings" target="_blank" rel="noopener">SEC EDGAR</a></td></tr>
+                <tr><td>8-K</td><td>Form 8-K</td><td>重大事项报告</td><td class="kb-text-left">披露并购、管理层变动、重大协议、业绩预告等重要事件。</td><td><a href="https://www.sec.gov/search-filings" target="_blank" rel="noopener">SEC EDGAR</a></td></tr>
+                <tr><td>EPS</td><td>Earnings Per Share</td><td>每股收益</td><td class="kb-text-left">衡量每股盈利能力。市场常比较实际 EPS 与一致预期。</td><td>公司财报 / SEC EDGAR</td></tr>
+                <tr><td>Revenue</td><td>Revenue</td><td>营业收入</td><td class="kb-text-left">衡量公司销售规模。成长股常对收入增速和指引高度敏感。</td><td>公司财报 / SEC EDGAR</td></tr>
+                <tr><td>Gross Margin</td><td>Gross Margin</td><td>毛利率</td><td class="kb-text-left">衡量产品或服务盈利质量。科技、软件和半导体公司尤其重要。</td><td>公司财报 / SEC EDGAR</td></tr>
+                <tr><td>FCF</td><td>Free Cash Flow</td><td>自由现金流</td><td class="kb-text-left">经营现金流扣除资本开支后的现金创造能力，是估值质量指标。</td><td>公司财报 / SEC EDGAR</td></tr>
+                <tr><td>Guidance</td><td>Corporate Guidance</td><td>公司前瞻指引</td><td class="kb-text-left">公司对未来收入、利润、需求或资本开支的预期，常比当期财报更影响股价。</td><td>公司财报 / 业绩会</td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">十、常见 ETF 全称、用途与官网持仓入口</h3>
+            <div class="kb-callout kb-callout-yellow">
+                ETF 官网一般都有 Holdings、Portfolio 或 Data Download 区域，可以直接查看成分股、持仓比例、行业分布和费用。杠杆 / 反向 ETF 的持仓通常包含互换、期货、现金等衍生品工具，不应把它们简单理解成长期持有的普通指数 ETF。
+            </div>
+
+            <h3 class="kb-section-subtitle">宽基指数 ETF</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>代码</th><th>英文全称</th><th>中文说明</th><th>主要用途</th><th>官网持仓入口</th></tr></thead>
+                <tbody>
+                <tr><td>SPY</td><td>SPDR S&amp;P 500 ETF Trust</td><td>标普500 ETF</td><td class="kb-text-left">最常用的美股大盘交易工具，流动性极高。</td><td><a href="https://www.ssga.com/us/en/intermediary/etfs/state-street-spdr-sp-500-etf-trust-spy" target="_blank" rel="noopener">State Street / SPDR</a></td></tr>
+                <tr><td>VOO</td><td>Vanguard S&amp;P 500 ETF</td><td>先锋标普500 ETF</td><td class="kb-text-left">低费率长期配置 S&amp;P 500 的核心工具。</td><td><a href="https://investor.vanguard.com/investment-products/etfs/profile/voo" target="_blank" rel="noopener">Vanguard</a></td></tr>
+                <tr><td>IVV</td><td>iShares Core S&amp;P 500 ETF</td><td>iShares 标普500 ETF</td><td class="kb-text-left">低费率跟踪 S&amp;P 500，适合作为核心权益仓位。</td><td><a href="https://www.ishares.com/us/products/239726/ishares-core-sp-500-etf" target="_blank" rel="noopener">iShares / BlackRock</a></td></tr>
+                <tr><td>QQQ</td><td>Invesco QQQ Trust</td><td>纳斯达克100 ETF</td><td class="kb-text-left">代表大型科技和成长股，是观察纳指风险偏好的核心工具。</td><td><a href="https://www.invesco.com/qqq-etf/en/about.html" target="_blank" rel="noopener">Invesco QQQ</a></td></tr>
+                <tr><td>QQQM</td><td>Invesco NASDAQ 100 ETF</td><td>纳斯达克100低费率 ETF</td><td class="kb-text-left">更偏长期持有的纳斯达克100工具，费用通常低于 QQQ。</td><td><a href="https://www.invesco.com/us/financial-products/etfs/product-detail?audienceType=Investor&amp;ticker=QQQM" target="_blank" rel="noopener">Invesco</a></td></tr>
+                <tr><td>VTI</td><td>Vanguard Total Stock Market ETF</td><td>美国全市场 ETF</td><td class="kb-text-left">覆盖美国大中小盘股票，比 S&amp;P 500 更宽。</td><td><a href="https://investor.vanguard.com/investment-products/etfs/profile/vti" target="_blank" rel="noopener">Vanguard</a></td></tr>
+                <tr><td>IWM</td><td>iShares Russell 2000 ETF</td><td>罗素2000小盘股 ETF</td><td class="kb-text-left">观察美国小盘股、内需和利率敏感资产。</td><td><a href="https://www.ishares.com/us/products/239710/ishares-russell-2000-etf" target="_blank" rel="noopener">iShares / BlackRock</a></td></tr>
+                <tr><td>DIA</td><td>SPDR Dow Jones Industrial Average ETF Trust</td><td>道琼斯工业平均指数 ETF</td><td class="kb-text-left">观察蓝筹、价值和传统经济权重股。</td><td><a href="https://www.ssga.com/us/en/intermediary/etfs/state-street-spdr-dow-jones-industrial-average-etf-trust-dia" target="_blank" rel="noopener">State Street / SPDR</a></td></tr>
+                </tbody>
+            </table>
+            </div>
+
+            <h3 class="kb-section-subtitle">科技、半导体与成长 ETF</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>代码</th><th>英文全称</th><th>中文说明</th><th>主要用途</th><th>官网持仓入口</th></tr></thead>
+                <tbody>
+                <tr><td>XLK</td><td>Technology Select Sector SPDR Fund</td><td>科技精选行业 ETF</td><td class="kb-text-left">观察 S&amp;P 500 科技板块，权重通常集中在大型科技公司。</td><td><a href="https://www.ssga.com/us/en/intermediary/etfs/state-street-technology-select-sector-spdr-etf-xlk" target="_blank" rel="noopener">State Street / SPDR</a></td></tr>
+                <tr><td>VGT</td><td>Vanguard Information Technology ETF</td><td>先锋信息技术 ETF</td><td class="kb-text-left">覆盖美国信息技术板块，适合观察科技行业长期配置。</td><td><a href="https://investor.vanguard.com/investment-products/etfs/profile/vgt" target="_blank" rel="noopener">Vanguard</a></td></tr>
+                <tr><td>SMH</td><td>VanEck Semiconductor ETF</td><td>VanEck 半导体 ETF</td><td class="kb-text-left">半导体龙头权重较高，对 AI、芯片周期和设备链敏感。</td><td><a href="https://www.vaneck.com/us/en/investments/semiconductor-etf-smh/" target="_blank" rel="noopener">VanEck</a></td></tr>
+                <tr><td>SOXX</td><td>iShares Semiconductor ETF</td><td>iShares 半导体 ETF</td><td class="kb-text-left">覆盖美国上市半导体产业链，可与 SMH 对照看集中度差异。</td><td><a href="https://www.ishares.com/us/products/239705/ishares-semiconductor-etf" target="_blank" rel="noopener">iShares / BlackRock</a></td></tr>
+                <tr><td>VUG</td><td>Vanguard Growth ETF</td><td>先锋成长股 ETF</td><td class="kb-text-left">观察美国大盘成长股，对利率变化比较敏感。</td><td><a href="https://investor.vanguard.com/investment-products/etfs/profile/vug" target="_blank" rel="noopener">Vanguard</a></td></tr>
+                <tr><td>ARKK</td><td>ARK Innovation ETF</td><td>ARK 创新 ETF</td><td class="kb-text-left">主动管理创新成长主题，波动较高，适合观察高 beta 成长股情绪。</td><td><a href="https://www.ark-funds.com/funds/arkk/" target="_blank" rel="noopener">ARK Invest</a></td></tr>
+                </tbody>
+            </table>
+            </div>
+
+            <h3 class="kb-section-subtitle">行业板块 ETF</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>代码</th><th>英文全称</th><th>中文说明</th><th>主要用途</th><th>官网持仓入口</th></tr></thead>
+                <tbody>
+                <tr><td>XLF</td><td>Financial Select Sector SPDR Fund</td><td>金融板块 ETF</td><td class="kb-text-left">观察银行、保险、支付和金融服务公司。</td><td><a href="https://www.ssga.com/us/en/intermediary/etfs/state-street-financial-select-sector-spdr-etf-xlf" target="_blank" rel="noopener">State Street / SPDR</a></td></tr>
+                <tr><td>XLV</td><td>Health Care Select Sector SPDR Fund</td><td>医疗保健板块 ETF</td><td class="kb-text-left">观察医药、医保、医疗设备和生物科技大盘股。</td><td><a href="https://www.ssga.com/us/en/intermediary/etfs/state-street-health-care-select-sector-spdr-etf-xlv" target="_blank" rel="noopener">State Street / SPDR</a></td></tr>
+                <tr><td>XLE</td><td>Energy Select Sector SPDR Fund</td><td>能源板块 ETF</td><td class="kb-text-left">观察油气公司，对油价和能源周期敏感。</td><td><a href="https://www.ssga.com/us/en/intermediary/etfs/state-street-energy-select-sector-spdr-etf-xle" target="_blank" rel="noopener">State Street / SPDR</a></td></tr>
+                <tr><td>XLY</td><td>Consumer Discretionary Select Sector SPDR Fund</td><td>可选消费板块 ETF</td><td class="kb-text-left">观察电商、汽车、家装、旅游等非必需消费公司。</td><td><a href="https://www.ssga.com/us/en/intermediary/etfs/state-street-consumer-discretionary-select-sector-spdr-etf-xly" target="_blank" rel="noopener">State Street / SPDR</a></td></tr>
+                <tr><td>XLC</td><td>Communication Services Select Sector SPDR Fund</td><td>通信服务板块 ETF</td><td class="kb-text-left">观察互联网平台、媒体、娱乐和电信公司。</td><td><a href="https://www.ssga.com/us/en/intermediary/etfs/state-street-communication-services-select-sector-spdr-etf-xlc" target="_blank" rel="noopener">State Street / SPDR</a></td></tr>
+                <tr><td>XLI</td><td>Industrial Select Sector SPDR Fund</td><td>工业板块 ETF</td><td class="kb-text-left">观察航空航天、机械、运输、工业服务等周期行业。</td><td><a href="https://www.ssga.com/us/en/intermediary/etfs/state-street-industrial-select-sector-spdr-etf-xli" target="_blank" rel="noopener">State Street / SPDR</a></td></tr>
+                <tr><td>XLP</td><td>Consumer Staples Select Sector SPDR Fund</td><td>必需消费板块 ETF</td><td class="kb-text-left">观察食品、饮料、日用品等防御型消费。</td><td><a href="https://www.ssga.com/us/en/intermediary/etfs/state-street-consumer-staples-select-sector-spdr-etf-xlp" target="_blank" rel="noopener">State Street / SPDR</a></td></tr>
+                <tr><td>XLU</td><td>Utilities Select Sector SPDR Fund</td><td>公用事业板块 ETF</td><td class="kb-text-left">观察电力、燃气、水务等防御型高股息行业。</td><td><a href="https://www.ssga.com/us/en/intermediary/etfs/state-street-utilities-select-sector-spdr-etf-xlu" target="_blank" rel="noopener">State Street / SPDR</a></td></tr>
+                <tr><td>XLB</td><td>Materials Select Sector SPDR Fund</td><td>原材料板块 ETF</td><td class="kb-text-left">观察化工、金属、包装、建材等上游周期行业。</td><td><a href="https://www.ssga.com/us/en/intermediary/etfs/state-street-materials-select-sector-spdr-etf-xlb" target="_blank" rel="noopener">State Street / SPDR</a></td></tr>
+                <tr><td>VNQ</td><td>Vanguard Real Estate ETF</td><td>先锋房地产 ETF</td><td class="kb-text-left">观察 REITs 和房地产资产，对利率和地产周期敏感。</td><td><a href="https://investor.vanguard.com/investment-products/etfs/profile/vnq" target="_blank" rel="noopener">Vanguard</a></td></tr>
+                </tbody>
+            </table>
+            </div>
+
+            <h3 class="kb-section-subtitle">债券、商品与另类 ETF</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>代码</th><th>英文全称</th><th>中文说明</th><th>主要用途</th><th>官网持仓入口</th></tr></thead>
+                <tbody>
+                <tr><td>TLT</td><td>iShares 20+ Year Treasury Bond ETF</td><td>20 年以上美国国债 ETF</td><td class="kb-text-left">长久期利率工具，对长端收益率变化非常敏感。</td><td><a href="https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf" target="_blank" rel="noopener">iShares / BlackRock</a></td></tr>
+                <tr><td>IEF</td><td>iShares 7-10 Year Treasury Bond ETF</td><td>7 至 10 年美国国债 ETF</td><td class="kb-text-left">中长久期美债工具，用于观察利率变化。</td><td><a href="https://www.ishares.com/us/products/239456/ishares-710-year-treasury-bond-etf" target="_blank" rel="noopener">iShares / BlackRock</a></td></tr>
+                <tr><td>HYG</td><td>iShares iBoxx $ High Yield Corporate Bond ETF</td><td>高收益公司债 ETF</td><td class="kb-text-left">观察信用风险和高收益债市场情绪。</td><td><a href="https://www.ishares.com/us/products/239565/ishares-iboxx-high-yield-corporate-bond-etf" target="_blank" rel="noopener">iShares / BlackRock</a></td></tr>
+                <tr><td>LQD</td><td>iShares iBoxx $ Investment Grade Corporate Bond ETF</td><td>投资级公司债 ETF</td><td class="kb-text-left">观察投资级信用债和信用利差变化。</td><td><a href="https://www.ishares.com/us/products/239566/ishares-iboxx-investment-grade-corporate-bond-etf" target="_blank" rel="noopener">iShares / BlackRock</a></td></tr>
+                <tr><td>GLD</td><td>SPDR Gold Shares</td><td>黄金 ETF</td><td class="kb-text-left">跟踪黄金价格，常用于避险、抗通胀或美元对冲。</td><td><a href="https://www.spdrgoldshares.com/" target="_blank" rel="noopener">SPDR Gold Shares</a></td></tr>
+                <tr><td>SLV</td><td>iShares Silver Trust</td><td>白银 ETF</td><td class="kb-text-left">跟踪白银价格，同时受贵金属和工业需求影响。</td><td><a href="https://www.ishares.com/us/products/239855/ishares-silver-trust-fund" target="_blank" rel="noopener">iShares / BlackRock</a></td></tr>
+                <tr><td>IBIT</td><td>iShares Bitcoin Trust ETF</td><td>比特币现货 ETF</td><td class="kb-text-left">通过交易所产品获得比特币价格敞口，避免自行托管复杂度。</td><td><a href="https://www.ishares.com/us/products/333011/ishares-bitcoin-trust-etf" target="_blank" rel="noopener">iShares / BlackRock</a></td></tr>
+                </tbody>
+            </table>
+            </div>
+
+            <h3 class="kb-section-subtitle">杠杆与反向 ETF</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>代码</th><th>英文全称</th><th>中文说明</th><th>主要用途</th><th>官网持仓入口</th></tr></thead>
+                <tbody>
+                <tr><td>TQQQ</td><td>ProShares UltraPro QQQ</td><td>纳斯达克100 三倍做多 ETF</td><td class="kb-text-left">追求 Nasdaq-100 单日 3 倍表现，适合短线战术，不适合简单长期替代 QQQ。</td><td><a href="https://www.proshares.com/our-etfs/leveraged-and-inverse/tqqq" target="_blank" rel="noopener">ProShares</a></td></tr>
+                <tr><td>SQQQ</td><td>ProShares UltraPro Short QQQ</td><td>纳斯达克100 三倍做空 ETF</td><td class="kb-text-left">追求 Nasdaq-100 单日 -3 倍表现，常用于短线对冲或做空纳指。</td><td><a href="https://www.proshares.com/our-etfs/leveraged-and-inverse/sqqq" target="_blank" rel="noopener">ProShares</a></td></tr>
+                <tr><td>SOXL</td><td>Direxion Daily Semiconductor Bull 3X Shares</td><td>半导体三倍做多 ETF</td><td class="kb-text-left">追求半导体指数单日 3 倍表现，波动极高。</td><td><a href="https://www.direxion.com/product/daily-semiconductor-bull-bear-3x-etfs" target="_blank" rel="noopener">Direxion</a></td></tr>
+                <tr><td>SOXS</td><td>Direxion Daily Semiconductor Bear 3X Shares</td><td>半导体三倍做空 ETF</td><td class="kb-text-left">追求半导体指数单日 -3 倍表现，适合短线战术和风险对冲。</td><td><a href="https://www.direxion.com/product/daily-semiconductor-bull-bear-3x-etfs" target="_blank" rel="noopener">Direxion</a></td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">十一、常用金融与数据网站</h3>
+            <div class="kb-callout kb-callout-blue">
+                下面按用途整理常用官网和数据网站。官方来源更适合核对原始数据，综合金融网站更适合快速看行情、图表、新闻和市场预期；涉及投资决策时，优先回到官方来源或基金发行方页面复核。
+            </div>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>类别</th><th>网站</th><th>收费状态</th><th>主要能看什么</th><th>官网</th></tr></thead>
+                <tbody>
+                <tr><td>宏观日历</td><td>Trading Economics</td><td>免费 + 高级收费</td><td class="kb-text-left">全球经济日历、历史数据、市场预期、国家宏观指标。</td><td><a href="https://tradingeconomics.com/calendar" target="_blank" rel="noopener">Trading Economics</a></td></tr>
+                <tr><td>宏观日历</td><td>Investing.com Economic Calendar</td><td>免费 + 广告/高级服务</td><td class="kb-text-left">经济数据公布时间、预期值、前值、实际值，适合快速看当天事件。</td><td><a href="https://www.investing.com/economic-calendar/" target="_blank" rel="noopener">Investing.com</a></td></tr>
+                <tr><td>官方宏观</td><td>BLS</td><td>免费</td><td class="kb-text-left">CPI、PPI、非农、失业率、JOLTS、ECI 等美国劳工和通胀数据。</td><td><a href="https://www.bls.gov/" target="_blank" rel="noopener">BLS</a></td></tr>
+                <tr><td>官方宏观</td><td>BEA</td><td>免费</td><td class="kb-text-left">GDP、PCE、Core PCE、个人收入、个人支出等美国经济数据。</td><td><a href="https://www.bea.gov/" target="_blank" rel="noopener">BEA</a></td></tr>
+                <tr><td>官方宏观</td><td>Federal Reserve</td><td>免费</td><td class="kb-text-left">FOMC、利率决议、点阵图、资产负债表、H.6 货币供应量等。</td><td><a href="https://www.federalreserve.gov/" target="_blank" rel="noopener">Federal Reserve</a></td></tr>
+                <tr><td>数据图表</td><td>FRED</td><td>免费</td><td class="kb-text-left">美联储圣路易斯数据库，适合查长周期宏观、利率、信用利差和金融条件数据。</td><td><a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener">FRED</a></td></tr>
+                <tr><td>利率债券</td><td>U.S. Treasury</td><td>免费</td><td class="kb-text-left">美国国债收益率曲线、财政数据、官方利率数据。</td><td><a href="https://home.treasury.gov/resource-center/data-chart-center/interest-rates" target="_blank" rel="noopener">U.S. Treasury</a></td></tr>
+                <tr><td>利率债券</td><td>TreasuryDirect</td><td>免费</td><td class="kb-text-left">美国国债拍卖公告、拍卖结果、Bid-to-Cover、尾部利差等。</td><td><a href="https://www.treasurydirect.gov/auctions/announcements-data-results/" target="_blank" rel="noopener">TreasuryDirect</a></td></tr>
+                <tr><td>能源数据</td><td>EIA</td><td>免费</td><td class="kb-text-left">原油库存、汽油库存、产量、战略石油储备和能源供需数据。</td><td><a href="https://www.eia.gov/" target="_blank" rel="noopener">EIA</a></td></tr>
+                <tr><td>持仓仓位</td><td>CFTC COT</td><td>免费</td><td class="kb-text-left">期货市场交易商持仓报告，观察投机资金、商业套保和仓位结构。</td><td><a href="https://www.cftc.gov/MarketReports/CommitmentsofTraders/index.htm" target="_blank" rel="noopener">CFTC COT</a></td></tr>
+                <tr><td>行情新闻</td><td>Yahoo Finance</td><td>免费 + 高级收费</td><td class="kb-text-left">股票、ETF、指数、期权链、财务摘要、新闻和图表。</td><td><a href="https://finance.yahoo.com/" target="_blank" rel="noopener">Yahoo Finance</a></td></tr>
+                <tr><td>行情新闻</td><td>MarketWatch</td><td>免费 + 订阅</td><td class="kb-text-left">市场新闻、行情、经济日历、公司和指数跟踪。</td><td><a href="https://www.marketwatch.com/" target="_blank" rel="noopener">MarketWatch</a></td></tr>
+                <tr><td>行情图表</td><td>TradingView</td><td>免费 + 高级收费</td><td class="kb-text-left">股票、指数、期货、外汇、加密图表和技术分析工具。</td><td><a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a></td></tr>
+                <tr><td>ETF 持仓</td><td>iShares / BlackRock</td><td>免费</td><td class="kb-text-left">iShares ETF 的持仓、权重、行业分布、费用和历史数据。</td><td><a href="https://www.ishares.com/us" target="_blank" rel="noopener">iShares</a></td></tr>
+                <tr><td>ETF 持仓</td><td>Vanguard</td><td>免费</td><td class="kb-text-left">Vanguard ETF 的持仓、费用、收益、分布和基金资料。</td><td><a href="https://investor.vanguard.com/investment-products/etfs" target="_blank" rel="noopener">Vanguard ETFs</a></td></tr>
+                <tr><td>ETF 持仓</td><td>State Street / SPDR</td><td>免费</td><td class="kb-text-left">SPY、DIA、行业 Select Sector SPDR 等 ETF 持仓和资料。</td><td><a href="https://www.ssga.com/us/en/intermediary/etfs" target="_blank" rel="noopener">SPDR ETFs</a></td></tr>
+                <tr><td>ETF 持仓</td><td>Invesco QQQ</td><td>免费</td><td class="kb-text-left">QQQ、QQQM 等 Invesco ETF 的持仓、权重和基金信息。</td><td><a href="https://www.invesco.com/qqq-etf/en/home.html" target="_blank" rel="noopener">Invesco QQQ</a></td></tr>
+                <tr><td>公司披露</td><td>SEC EDGAR</td><td>免费</td><td class="kb-text-left">10-K、10-Q、8-K、S-1、13F 等上市公司和机构披露文件。</td><td><a href="https://www.sec.gov/search-filings" target="_blank" rel="noopener">SEC EDGAR</a></td></tr>
+                <tr><td>财报日历</td><td>Nasdaq Earnings Calendar</td><td>免费</td><td class="kb-text-left">公司财报日期、EPS 预期、历史财报安排。</td><td><a href="https://www.nasdaq.com/market-activity/earnings" target="_blank" rel="noopener">Nasdaq Earnings</a></td></tr>
+                <tr><td>期权数据</td><td>Cboe / Nasdaq / OptionCharts / SpotGamma</td><td>免费到付费不等</td><td class="kb-text-left">期权链、OI、IV、Call Wall、Put Wall、Gamma、Max Pain 等。</td><td><a href="https://www.cboe.com/" target="_blank" rel="noopener">Cboe</a></td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">十二、快速使用方法</h3>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead><tr><th>看到新闻时</th><th>先问什么</th><th>市场含义</th></tr></thead>
+                <tbody>
+                <tr><td>通胀数据公布</td><td class="kb-text-left">是否高于预期？核心项是否更粘？</td><td class="kb-text-left">高于预期通常推升利率，压制长久期科技股。</td></tr>
+                <tr><td>就业数据公布</td><td class="kb-text-left">是软着陆，还是过热/衰退？</td><td class="kb-text-left">过热推迟降息，过弱触发盈利和衰退担忧。</td></tr>
+                <tr><td>美联储会议</td><td class="kb-text-left">声明、点阵图、发布会是否改变利率路径？</td><td class="kb-text-left">政策路径重定价会直接影响股债汇。</td></tr>
+                <tr><td>美债收益率异动</td><td class="kb-text-left">是通胀驱动、增长驱动，还是拍卖供需驱动？</td><td class="kb-text-left">10 年期上行通常压制纳指和高估值资产。</td></tr>
+                <tr><td>期权墙或 Gamma 数据变化</td><td class="kb-text-left">价格在 Call Wall、Put Wall、Zero Gamma 上方还是下方？到期日还有多久？</td><td class="kb-text-left">正 Gamma 容易压波动，负 Gamma 容易放大波动；临近到期时大行权价可能形成钉住效应。</td></tr>
+                <tr><td>财报公布</td><td class="kb-text-left">营收、利润、毛利率、指引哪一项变了？</td><td class="kb-text-left">成长股更看收入增速、利润率和未来指引。</td></tr>
+                </tbody>
+            </table>
+            </div>
+            </div>
+
+            </div><!-- /kb-terms -->
+
 
         </div>
         </div><!-- /tab-knowledge -->
@@ -2727,6 +3072,7 @@
                 '/knowledge/how-to-buy': 'knowledge',
                 '/knowledge/etf-intro': 'knowledge',
                 '/knowledge/event-myth': 'knowledge',
+                '/knowledge/terms': 'knowledge',
                 '/wishes': 'wishes',
                 '/settings': 'yearly'
             };
@@ -2751,7 +3097,8 @@
             var KB_SUB_PATH = {
                 'how-to-buy': '/knowledge/how-to-buy',
                 'etf-intro': '/knowledge/etf-intro',
-                'event-myth': '/knowledge/event-myth'
+                'event-myth': '/knowledge/event-myth',
+                'terms': '/knowledge/terms'
             };
 
             function tabFromPath(path) {

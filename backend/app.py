@@ -65,6 +65,7 @@ def etf_market():
 @app.route("/knowledge/how-to-buy")
 @app.route("/knowledge/etf-intro")
 @app.route("/knowledge/event-myth")
+@app.route("/knowledge/terms")
 @app.route("/wishes")
 @app.route("/settings")
 def serve_tab():
