@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from service.price_change import cache_store
 from service.price_change.price_change_service import _fetch_daily_series_cached
 
 import requests
@@ -44,9 +45,10 @@ _TENCENT_QUOTE_URL = "https://qt.gtimg.cn/q="
 _REQUEST_TIMEOUT = 10
 _TRACKING_ERROR_TTL_SECONDS = 6 * 60 * 60
 _NAV_CACHE_TTL_SECONDS = 6 * 60 * 60
-_QDII_FUND_TTL_SECONDS = 60 * 60
+_QDII_FUND_TTL_SECONDS = 4 * 60 * 60
 _CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "price_change_config.json"
 _QDII_FUND_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "qdii_funds.json"
+_QDII_FUND_SHARED_CACHE_KEY = "v3:qdii_funds:all"
 _tracking_error_cache: dict[str, tuple[float, dict]] = {}
 _nav_cache: dict[str, tuple[float, dict]] = {}
 _qdii_fund_cache: dict[str, tuple[float, dict]] = {}
@@ -530,12 +532,56 @@ def _write_qdii_snapshot(data: dict) -> None:
         logger.warning("Failed to write QDII fund snapshot to %s: %s", _QDII_FUND_DATA_PATH, exc)
 
 
+def _read_qdii_shared_cache() -> Optional[dict]:
+    """Read the cross-instance QDII snapshot from Upstash/Vercel KV."""
+    raw = cache_store.cache_get(_QDII_FUND_SHARED_CACHE_KEY)
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+        if not isinstance(data, dict) or "groups" not in data:
+            return None
+        return data
+    except (ValueError, TypeError) as exc:
+        logger.warning("Failed to deserialize shared QDII fund cache: %s", exc)
+        return None
+
+
+def _write_qdii_shared_cache(data: dict) -> None:
+    """Persist the QDII snapshot to shared cache for all serverless instances."""
+    try:
+        cache_store.cache_set(
+            _QDII_FUND_SHARED_CACHE_KEY,
+            json.dumps(data, ensure_ascii=False, separators=(",", ":")),
+            _QDII_FUND_TTL_SECONDS,
+        )
+    except Exception as exc:
+        logger.warning("Failed to write shared QDII fund cache: %s", exc)
+
+
 def _qdii_snapshot_age_seconds(data: dict) -> Optional[float]:
     stored_at = data.get("stored_at_epoch")
     try:
         return time.time() - float(stored_at)
     except (ValueError, TypeError):
         return None
+
+
+def _qdii_json_response(payload: dict, *, fresh: bool = False):
+    """Return QDII JSON with shared CDN caching for normal reads."""
+    resp = jsonify(payload)
+    if fresh:
+        resp.headers["Cache-Control"] = "no-store"
+        resp.headers["CDN-Cache-Control"] = "no-store"
+        resp.headers["Vercel-CDN-Cache-Control"] = "no-store"
+    else:
+        # Do not let browser/CDN hold a separate stale copy. The 4-hour rule is
+        # enforced by the shared server-side cache so a manual fresh=1 refresh
+        # becomes visible to all users on their next normal request.
+        resp.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
+        resp.headers["CDN-Cache-Control"] = "no-store"
+        resp.headers["Vercel-CDN-Cache-Control"] = "no-store"
+    return resp
 
 
 def _fetch_all_qdii_fund_groups() -> dict:
@@ -1057,7 +1103,7 @@ def qdii_funds():
 
     Query params:
         index: all | nasdaq100 | sp500 | active_qdii
-        fresh: 1 to bypass the hourly local cache and refetch upstream
+        fresh: 1 to bypass the 4-hour shared cache and refetch upstream
     """
     index_key = request.args.get("index", "all").strip().lower() or "all"
     fresh = request.args.get("fresh") in ("1", "true", "yes")
@@ -1068,7 +1114,16 @@ def qdii_funds():
     if cached and not fresh and time.time() - cached[0] < _QDII_FUND_TTL_SECONDS:
         response = dict(cached[1])
         response["cache_status"] = "memory"
-        return jsonify(_filter_qdii_response(response, index_key))
+        return _qdii_json_response(_filter_qdii_response(response, index_key))
+
+    shared = _read_qdii_shared_cache() if not fresh else None
+    shared_age = _qdii_snapshot_age_seconds(shared) if shared else None
+    if shared and shared_age is not None and shared_age < _QDII_FUND_TTL_SECONDS:
+        response = dict(shared)
+        response["cache_status"] = "shared"
+        response["cache_age_seconds"] = round(shared_age)
+        _qdii_fund_cache["all"] = (time.time(), response)
+        return _qdii_json_response(_filter_qdii_response(response, index_key))
 
     snapshot = _read_qdii_snapshot()
     snapshot_age = _qdii_snapshot_age_seconds(snapshot) if snapshot else None
@@ -1077,7 +1132,8 @@ def qdii_funds():
         response["cache_status"] = "local"
         response["cache_age_seconds"] = round(snapshot_age)
         _qdii_fund_cache["all"] = (time.time(), response)
-        return jsonify(_filter_qdii_response(response, index_key))
+        _write_qdii_shared_cache(response)
+        return _qdii_json_response(_filter_qdii_response(response, index_key))
 
     try:
         response = _fetch_all_qdii_fund_groups()
@@ -1097,10 +1153,11 @@ def qdii_funds():
             }]
         else:
             _write_qdii_snapshot(response)
+            _write_qdii_shared_cache(response)
             response["cache_status"] = "fresh"
 
         _qdii_fund_cache["all"] = (time.time(), response)
-        return jsonify(_filter_qdii_response(response, index_key))
+        return _qdii_json_response(_filter_qdii_response(response, index_key), fresh=fresh)
     except Exception as exc:
         logger.warning("QDII fund refresh failed: %s", exc)
         if snapshot:
@@ -1113,7 +1170,7 @@ def qdii_funds():
                 "error": f"Upstream refresh failed; served local snapshot: {exc}",
             }]
             _qdii_fund_cache["all"] = (time.time(), response)
-            return jsonify(_filter_qdii_response(response, index_key))
+            return _qdii_json_response(_filter_qdii_response(response, index_key))
         return jsonify({"error": f"upstream fetch failed and no local snapshot exists: {exc}"}), 502
 
 

@@ -87,6 +87,7 @@
     function cacheStatusLabel(status) {
         if (status === "fresh") return "刚更新";
         if (status === "memory") return "内存缓存";
+        if (status === "shared") return "共享缓存";
         if (status === "local") return "本地快照";
         if (status === "local_stale_upstream_failed") return "本地快照 · 上游失败";
         if (status === "local_stale_upstream_partial") return "本地快照 · 上游不完整";
