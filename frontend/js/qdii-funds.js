@@ -317,7 +317,6 @@
         var bestLimit = buyable.slice().sort(function (a, b) {
             return (b.daily_limit || -1) - (a.daily_limit || -1);
         })[0];
-        var zeroFee = buyable.filter(function (r) { return r.discounted_rate_num === 0; }).slice(0, 3);
         var lowFeeA = buyable.filter(function (r) { return r.share_class === "A" && r.discounted_rate_num != null; })
             .sort(function (a, b) { return a.discounted_rate_num - b.discounted_rate_num; }).slice(0, 3);
 
@@ -327,15 +326,15 @@
                 bestLimit ? "当前限额较高的候选：" + bestLimit.code + " " + bestLimit.company + "，" + fmtMoney(bestLimit.daily_limit) + "。" : "限额字段缺失时，以支付宝下单页为准。",
                 "用代码搜索基金，避免搜名称时混进场内 ETF 或行业指数。"
             ]),
-            guideBlock("A/C 类取舍", [
-                zeroFee.length ? "C 类零申购费候选：" + zeroFee.map(function (r) { return r.code; }).join("、") + "。" : "C 类通常零申购费，但要查销售服务费。",
-                lowFeeA.length ? "A 类折扣费率较低候选：" + lowFeeA.map(function (r) { return r.code + "(" + r.discounted_rate + ")"; }).join("、") + "。" : "长期持有再比较 A 类申购费和持有成本。",
-                "短期偏 C，长期偏 A 只是经验，最终看销售服务费、赎回费和持有时间。"
+            guideBlock("份额字母速查", [
+                "A 类常见为申购时收申购费，不从该份额资产中计提销售服务费；总结：A 类更适合长期持有。",
+                "C 类常见为不收申购费，但按日计提销售服务费，持有越久越要比较总成本；总结：C 类更适合短期持有。",
+                "B/D/E/I 等字母没有全市场统一含义，可能对应后端收费、特定渠道、币种、门槛或机构份额。"
             ]),
             guideBlock("攻略提醒", [
                 "QDII 限额经常变，表格适合做每日快照。",
                 "支付宝最终可买状态、优惠券、账号限额以 App 为准。",
-                "场内 ETF 另看溢价率，不要把场外基金限额问题直接用高溢价场内 ETF 硬替代。"
+                lowFeeA.length ? "A 类低费率候选：" + lowFeeA.map(function (r) { return r.code + "(" + r.discounted_rate + ")"; }).join("、") + "；最终看销售服务费、赎回费和持有时间。" : "短期偏 C、长期偏 A 只是经验，最终看销售服务费、赎回费和持有时间。"
             ]),
         ].join("");
     }
@@ -363,6 +362,11 @@
                 "不要只看短期涨幅，重点看基金经理、主题范围、地区暴露、规模和回撤。",
                 lowFeeA.length ? "A 类折扣费率较低候选：" + lowFeeA.map(function (r) { return r.code + "(" + r.discounted_rate + ")"; }).join("、") + "。" : "长期持有再比较 A 类申购费和持有成本。",
                 "C 类零申购费不等于低成本，还要看销售服务费和赎回费。"
+            ]),
+            guideBlock("份额字母速查", [
+                "A 类常见为申购时收申购费，不从该份额资产中计提销售服务费；总结：A 类更适合长期持有。",
+                "C 类常见为不收申购费，但按日计提销售服务费，持有越久越要比较总成本；总结：C 类更适合短期持有。",
+                "B/D/E/I 等字母没有全市场统一含义，可能对应后端收费、特定渠道、币种、门槛或机构份额。"
             ]),
             guideBlock("数据口径", [
                 "这里自动排除了指数、ETF、联接、LOF、FOF、商品、美元/港币份额。",
