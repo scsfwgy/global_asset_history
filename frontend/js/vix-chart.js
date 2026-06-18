@@ -157,7 +157,7 @@
         updateHeaderBackground(null);
         line.style.display = "";
         badge.textContent = text;
-        badge.className = "vix-header-badge " + (cls || "zone-loading");
+        badge.className = "vix-header-badge has-tip " + (cls || "zone-loading");
         badge.title = vixRuleTip();
     }
 
@@ -189,7 +189,7 @@
              vixVal >= 15 ? __("vix.badgeNormal") :
              vixVal >= 12 ? __("vix.badgeLowVol") :
              __("vix.badgeExtremeCalm"));
-        badge.className = "vix-header-badge " + zone.cls;
+        badge.className = "vix-header-badge has-tip " + zone.cls;
         badge.title = vixRuleTip();
     }
 

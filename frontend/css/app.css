@@ -475,6 +475,12 @@ body {
             cursor: help;
             text-decoration: none;
         }
+.vix-header-badge.has-tip {
+            text-decoration-line: underline;
+            text-decoration-style: dashed;
+            text-decoration-thickness: 1px;
+            text-underline-offset: 3px;
+        }
 .vix-header-badge.zone-loading {
             background: var(--apple-overlay);
             color: var(--apple-text-secondary);
@@ -545,6 +551,21 @@ body {
             text-underline-offset: 3px;
         }
 /* ── Custom instant tooltip (replaces slow native title tooltip) ── */
+.custom-tip {
+    position: fixed;
+    z-index: 9999;
+    max-width: 360px;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    background: var(--apple-tooltip-bg);
+    border: 1px solid var(--apple-tooltip-border);
+    color: var(--apple-tooltip-text);
+    font-size: var(--text-xs);
+    line-height: 1.5;
+    box-shadow: var(--apple-shadow-tooltip);
+    pointer-events: none;
+    word-break: break-word;
+}
 .vix-advice-value {
             font-size: 24px;
             font-weight: 700;

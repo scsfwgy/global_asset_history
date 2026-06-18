@@ -74,6 +74,7 @@
     "metaFailed": "失败:"
   },
   "backtest": {
+    "chartTitle": "📈 回测",
     "symbol": "定投标的",
     "initialAmount": "初始投入",
     "amountPerTime": "每次投入",
@@ -121,6 +122,7 @@
     "colTotalReturn": "当前总收益"
   },
   "crash": {
+    "chartTitle": "📉 暴跌统计 — 单日暴跌检测与恢复分析",
     "symbol": "股票代码",
     "dropPct": "暴跌幅度",
     "chartDays": "图表天数",
@@ -215,7 +217,11 @@
     "tabSp500": "标普500",
     "tabOther": "其它",
     "refresh": "刷新",
+    "refreshQuotes": "刷新行情",
     "title": "A股ETF 实时行情",
+    "chartTitle": "📊 标普纳指ETF追踪（场内） — A股账户买交易所上市ETF",
+    "viewRank": "实时排行",
+    "viewAggregate": "聚合分析",
     "quoteLoadFailed": "✗ 行情加载失败",
     "estLoadFailed": "⚠ 估值误差加载失败",
     "noHistoryData": "暂无历史数据",
@@ -246,9 +252,21 @@
     "chartEtfReturn": "A股ETF万元收益",
     "chartBenchmarkReturn": "{{name}}万元收益",
     "chartCandlestick": "蜡烛图 (OHLC)",
-    "daysValue": "{{n}}天"
+    "daysValue": "{{n}}天",
+    "chartCompare": "涨跌幅对比",
+    "chartCandle": "蜡烛图",
+    "chartChange": "涨跌幅",
+    "chartAmplitudeLabel": "振幅",
+    "chartAmountLabel": "成交额",
+    "metricChange": "涨跌幅",
+    "metricCumChg": "累计涨跌",
+    "metricProfitDiff": "万元收益差",
+    "labelMetrics": "指标:",
+    "reload": "重新加载"
   },
   "qdii": {
+    "chartTitle": "📋 标普纳指基金追踪（场外） — 支付宝场外 QDII 候选清单",
+    "tabActiveQdii": "QDII主动",
     "candidateFunds": "候选基金",
     "publicAvailable": "公开可买",
     "dailyLimit": "单日限额",
@@ -312,9 +330,44 @@
     "guideDataScope": "数据口径",
     "guideDataScope1": "这里自动排除了指数、ETF、联接、LOF、FOF、商品、美元/港币份额。",
     "guideDataScope2": "这是公开接口筛选结果，不等同于支付宝当前全部可售清单。",
-    "guideDataScope3": "客户若要严格“主动权益基金”，可以再排除债券类 QDII。"
+    "guideDataScope3": "客户若要严格“主动权益基金”，可以再排除债券类 QDII。",
+    "colIndex": "分类",
+    "colCode": "代码",
+    "colName": "基金名称",
+    "colShareClass": "份额",
+    "colFundType": "类型",
+    "colCompany": "基金公司",
+    "colScale": "基金规模",
+    "colManager": "基金经理",
+    "colStatus": "状态",
+    "colDailyLimit": "单日限额",
+    "colMinPurchase": "起购",
+    "colSubFee": "申购费",
+    "colOrigFee": "原费率",
+    "colDailyReturn": "今日涨跌幅",
+    "colReturn1M": "近一月涨跌幅",
+    "colReturn3M": "近三月涨跌幅",
+    "colReturn6M": "近半年涨跌幅",
+    "colReturn1Y": "近一年涨跌幅",
+    "colReturn3Y": "近三年涨跌幅",
+    "colReturnInception": "成立以来涨跌幅",
+    "colNavDate": "净值日",
+    "colRedeem": "赎回",
+    "filterTypeAll": "类型：全部",
+    "filterCompanyAll": "公司：全部",
+    "filterStatusAll": "状态：全部",
+    "filterStatusBuyable": "状态：可买",
+    "filterStatusPaused": "状态：暂停",
+    "clearFilters": "清空筛选",
+    "refresh": "刷新",
+    "colFundName": "基金名称"
   },
   "vix": {
+    "chartTitle": "📊 SPY · QQQ · VIX 对比走势",
+    "period1h": "1小时",
+    "periodDay": "日",
+    "periodWeek": "周",
+    "periodMonth": "月",
     "zoneExtremeCalm": "极度安逸",
     "zoneLowVol": "低波动",
     "zoneNormal": "正常区间",
@@ -346,7 +399,19 @@
     "percentileSuffix": "% 分位",
     "corrWeakening": "SPY/VIX负相关减弱，留意异常风险",
     "corrNormal": "SPY/VIX仍保持典型负相关",
-    "ruleTip": "VIX区间及建议规则：\n<12  极度安逸  ❌不建议追高（利润让飞/分批获利）\n12-15  低波动    ❌不宜追高（右侧轻仓/左侧观望）\n15-20  正常区间  ✅坚持定投（均值回归/按计划执行）\n20-25  恐惧上升  ✅分批买入（市场回调/动用预备）\n25-35  高度恐惧  ✅加大定投（阶段底部/逢低扫货）\n>=35  极端恐慌  ✅激进买入（历史级买点/保留子弹）"
+    "ruleTip": "VIX区间及建议规则：\n<12  极度安逸  ❌不建议追高（利润让飞/分批获利）\n12-15  低波动    ❌不宜追高（右侧轻仓/左侧观望）\n15-20  正常区间  ✅坚持定投（均值回归/按计划执行）\n20-25  恐惧上升  ✅分批买入（市场回调/动用预备）\n25-35  高度恐惧  ✅加大定投（阶段底部/逢低扫货）\n>=35  极端恐慌  ✅激进买入（历史级买点/保留子弹）",
+    "countLabel": "条数",
+    "loadBtn": "加载",
+    "adviceVixLatest": "最新 VIX",
+    "adviceVixTooltip": "VIX 是 CBOE 波动率指数，常被称为恐慌指数。它反映市场对标普500未来约30天波动率的预期，数值越高通常代表市场越恐慌。",
+    "adviceZone": "情绪区间",
+    "adviceZoneTooltip": "根据当前 VIX 绝对值判断：<12 极度安逸，12-15 低波动，15-20 正常区间，20-25 恐惧上升，25-30 高度恐惧，>30 极度恐慌。",
+    "advicePercentile": "1年分位",
+    "advicePercentileTooltip": "当前 VIX 在过去约 1 年交易日中的历史位置。例如 79% 表示过去 1 年约 79% 的交易日 VIX 低于或等于当前值，数值越高代表当前恐慌程度越接近近一年高位。",
+    "adviceCorrelation": "SPY/VIX 30日相关",
+    "adviceCorrelationTooltip": "统计最近30个交易日 SPY 日涨跌幅与 VIX 日涨跌幅的相关系数。通常应为负数：SPY跌时VIX涨。越接近 -1 代表负相关越强；接近 0 代表关系变弱；转正可能代表市场结构异常或风险信号。",
+    "adviceTip": "操作建议",
+    "adviceTipTooltip": "综合当前 VIX 绝对值、近1年历史分位，以及 SPY/VIX 30日相关性给出的定性提示，仅供风险观察，不构成投资建议。"
   },
   "wishes": {
     "title": "🌟 心愿墙 — 想看什么标的、想要什么功能，留个言",
@@ -378,7 +443,8 @@
     "errorReplyEmpty": "回复内容不能为空",
     "errorSubmit": "提交失败",
     "errorReply": "回复失败",
-    "errorDelete": "删除失败"
+    "errorDelete": "删除失败",
+    "captchaHint": "点击刷新验证码"
   },
   "chart": {
     "monthlyTrend": "年月度涨跌幅走势",
@@ -409,6 +475,13 @@
     "checkTime": "检测时间：",
     "cachedNote": "（缓存，约20秒内）",
     "loadFailed": "加载失败："
+  },
+  "knowledge": {
+    "title": "📚 数据科普",
+    "howToBuy": "如何购买美股",
+    "etfIntro": "核心ETF介绍",
+    "eventMyth": "数据魔咒",
+    "terms": "专业术语"
   },
   "seo": {
     "indexTitle": "GlobalAssetHistory - 历史涨跌幅与定投回测工具",

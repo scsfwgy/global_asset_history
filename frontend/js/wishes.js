@@ -264,7 +264,7 @@ function _initWishAdmin() {
             .catch(() => {
                 sessionStorage.removeItem(WISH_ADMIN_KEY);
                 input.value = "";
-                hint.textContent = "Token 无效";
+                hint.textContent = __("wishes.invalidToken");
                 loadWishes();
             })
             .finally(() => { saveBtn.disabled = false; });

@@ -74,6 +74,7 @@
     "metaFailed": "Failed:"
   },
   "backtest": {
+    "chartTitle": "📈 Backtest",
     "symbol": "Symbol",
     "initialAmount": "Initial Amount",
     "amountPerTime": "Per Investment",
@@ -121,6 +122,7 @@
     "colTotalReturn": "Total Return"
   },
   "crash": {
+    "chartTitle": "📉 Crash Stats — Single-Day Crash Detection & Recovery Analysis",
     "symbol": "Symbol",
     "dropPct": "Drop Threshold",
     "chartDays": "Chart Days",
@@ -215,7 +217,11 @@
     "tabSp500": "S&P 500",
     "tabOther": "Other",
     "refresh": "Refresh",
+    "refreshQuotes": "Refresh Quotes",
     "title": "A-Share ETF Live Quotes",
+    "chartTitle": "📊 S&P & Nasdaq ETF Tracker (Listed) — A-Share Account for Exchange-Traded ETFs",
+    "viewRank": "Live Ranking",
+    "viewAggregate": "Aggregate Analysis",
     "quoteLoadFailed": "✗ Failed to load quotes",
     "estLoadFailed": "⚠ Est. error load failed",
     "noHistoryData": "No history data available",
@@ -246,9 +252,21 @@
     "chartEtfReturn": "A-Share ETF Return/10K",
     "chartBenchmarkReturn": "{{name}} Return/10K",
     "chartCandlestick": "Candlestick (OHLC)",
-    "daysValue": "{{n}} days"
+    "daysValue": "{{n}} days",
+    "chartCompare": "Return Comparison",
+    "chartCandle": "Candlestick",
+    "chartChange": "Change %",
+    "chartAmplitudeLabel": "Amplitude",
+    "chartAmountLabel": "Turnover",
+    "metricChange": "Change %",
+    "metricCumChg": "Cumul. Return",
+    "metricProfitDiff": "Return Diff/10K",
+    "labelMetrics": "Metric:",
+    "reload": "Reload"
   },
   "qdii": {
+    "chartTitle": "📋 S&P & Nasdaq Fund Tracker (OTC) — Alipay OTC QDII Candidate List",
+    "tabActiveQdii": "Active QDII",
     "candidateFunds": "Candidate Funds",
     "publicAvailable": "Publicly Available",
     "dailyLimit": "Daily Limit",
@@ -312,9 +330,44 @@
     "guideDataScope": "Data Scope",
     "guideDataScope1": "This list automatically excludes index funds, ETFs, feeder funds, LOFs, FOFs, commodities, and USD/HKD share classes.",
     "guideDataScope2": "This is a public API screening result and may differ from the full list currently available on Alipay.",
-    "guideDataScope3": "For a strict \"active equity fund\" filter, you can further exclude bond-type QDII funds."
+    "guideDataScope3": "For a strict \"active equity fund\" filter, you can further exclude bond-type QDII funds.",
+    "colIndex": "Group",
+    "colCode": "Code",
+    "colName": "Fund Name",
+    "colShareClass": "Share Class",
+    "colFundType": "Type",
+    "colCompany": "Company",
+    "colScale": "Fund Size",
+    "colManager": "Manager",
+    "colStatus": "Status",
+    "colDailyLimit": "Daily Limit",
+    "colMinPurchase": "Min Purchase",
+    "colSubFee": "Sub. Fee",
+    "colOrigFee": "Orig. Fee",
+    "colDailyReturn": "Today %",
+    "colReturn1M": "1-Month %",
+    "colReturn3M": "3-Month %",
+    "colReturn6M": "6-Month %",
+    "colReturn1Y": "1-Year %",
+    "colReturn3Y": "3-Year %",
+    "colReturnInception": "Since Inception %",
+    "colNavDate": "NAV Date",
+    "colRedeem": "Redeem",
+    "filterTypeAll": "Type: All",
+    "filterCompanyAll": "Company: All",
+    "filterStatusAll": "Status: All",
+    "filterStatusBuyable": "Status: Buyable",
+    "filterStatusPaused": "Status: Paused",
+    "clearFilters": "Clear Filters",
+    "refresh": "Refresh",
+    "colFundName": "Fund Name"
   },
   "vix": {
+    "chartTitle": "📊 SPY · QQQ · VIX Comparison",
+    "period1h": "1 Hour",
+    "periodDay": "Daily",
+    "periodWeek": "Weekly",
+    "periodMonth": "Monthly",
     "zoneExtremeCalm": "Extreme Calm",
     "zoneLowVol": "Low Volatility",
     "zoneNormal": "Normal Range",
@@ -346,7 +399,19 @@
     "percentileSuffix": "% percentile",
     "corrWeakening": "SPY/VIX negative correlation weakening — watch for anomaly risk",
     "corrNormal": "SPY/VIX still maintaining typical negative correlation",
-    "ruleTip": "VIX Zones & Guidelines:\n<12  Extreme Calm  ❌ Avoid chasing (let profits run / take partial profits)\n12-15 Low Vol       ❌ Avoid chasing (light positions / wait on left)\n15-20 Normal Range  ✅ Stay the course (mean reversion / stick to plan)\n20-25 Fear Rising   ✅ Buy in tranches (market pullback / deploy reserves)\n25-35 High Fear     ✅ Increase DCA (stage bottom / accumulate aggressively)\n>=35 Extreme Panic  ✅ Aggressive buy (historic opportunity / keep powder dry)"
+    "ruleTip": "VIX Zones & Guidelines:\n<12  Extreme Calm  ❌ Avoid chasing (let profits run / take partial profits)\n12-15 Low Vol       ❌ Avoid chasing (light positions / wait on left)\n15-20 Normal Range  ✅ Stay the course (mean reversion / stick to plan)\n20-25 Fear Rising   ✅ Buy in tranches (market pullback / deploy reserves)\n25-35 High Fear     ✅ Increase DCA (stage bottom / accumulate aggressively)\n>=35 Extreme Panic  ✅ Aggressive buy (historic opportunity / keep powder dry)",
+    "countLabel": "Bars",
+    "loadBtn": "Load",
+    "adviceVixLatest": "Latest VIX",
+    "adviceVixTooltip": "VIX is the CBOE Volatility Index, often called the Fear Index. It reflects the market's expectation of ~30-day volatility for the S&P 500. Higher values generally indicate greater market fear.",
+    "adviceZone": "Sentiment Zone",
+    "adviceZoneTooltip": "Based on the absolute VIX level: <12 Extreme Calm, 12-15 Low Volatility, 15-20 Normal Range, 20-25 Fear Rising, 25-30 High Fear, >30 Extreme Panic.",
+    "advicePercentile": "1-Year %ile",
+    "advicePercentileTooltip": "The historical position of the current VIX value among the past ~1 year of trading days. E.g., 79% means VIX was at or below the current level on ~79% of days — higher values = closer to 1-year highs.",
+    "adviceCorrelation": "SPY/VIX 30-Day Corr.",
+    "adviceCorrelationTooltip": "The correlation coefficient between SPY daily returns and VIX daily returns over the last 30 trading days. Typically negative (SPY down → VIX up). Closer to -1 = stronger negative correlation; near 0 = weakening; positive = structural anomaly or risk signal.",
+    "adviceTip": "Suggestion",
+    "adviceTipTooltip": "A qualitative note based on current VIX absolute level, 1-year percentile, and SPY/VIX 30-day correlation. For risk observation only — not investment advice."
   },
   "wishes": {
     "title": "🌟 Wishes Wall — Suggest assets or features you'd like to see",
@@ -378,7 +443,8 @@
     "errorReplyEmpty": "Reply cannot be empty.",
     "errorSubmit": "Submit failed",
     "errorReply": "Reply failed",
-    "errorDelete": "Delete failed"
+    "errorDelete": "Delete failed",
+    "captchaHint": "Click to refresh CAPTCHA"
   },
   "chart": {
     "monthlyTrend": "Monthly Return Trend",
@@ -409,6 +475,13 @@
     "checkTime": "Checked at: ",
     "cachedNote": " (cached, ~20s)",
     "loadFailed": "Load failed: "
+  },
+  "knowledge": {
+    "title": "📚 Knowledge Base",
+    "howToBuy": "How to Buy US Stocks",
+    "etfIntro": "Core ETF Guide",
+    "eventMyth": "Data Myths",
+    "terms": "Terminology"
   },
   "seo": {
     "indexTitle": "GlobalAssetHistory — Historical Returns & DCA Backtest Tool",

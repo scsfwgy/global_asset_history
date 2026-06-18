@@ -1579,11 +1579,11 @@
                         <!-- External links -->
                         <a href="https://kcn9via7j7oq.feishu.cn/docx/Qi92drlQFor9s7xc0uIcH44ennh" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="header-settings-link-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>美股投资新途径</a>
                         <a href="https://github.com/scsfwgy/global_asset_history" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 16 16" fill="currentColor" class="header-settings-link-icon"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Github</a>
-                        <a href="https://xhslink.com/m/7GJMAttokzI" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" class="header-settings-link-icon"><rect width="24" height="24" rx="6" fill="#FF2442"/><text x="12" y="16.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle" font-family="-apple-system,Helvetica,Arial,sans-serif">书</text></svg>小红书</a>
+                        <a href="https://xhslink.com/m/7GJMAttokzI" target="_blank" rel="noopener noreferrer" data-i18n="settings.linkXiaohongshu"><svg viewBox="0 0 24 24" class="header-settings-link-icon"><rect width="24" height="24" rx="6" fill="#FF2442"/><text x="12" y="16.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle" font-family="-apple-system,Helvetica,Arial,sans-serif">书</text></svg>小红书</a>
                     </div>
                 </div>
             </div>
-            <p id="vixHeaderLine" class="vix-header-line" style="display:none;"><span id="vixHeaderBadge" class="vix-header-badge"></span></p>
+            <p id="vixHeaderLine" class="vix-header-line" style="display:none;"><span id="vixHeaderBadge" class="vix-header-badge has-tip"></span></p>
             <a class="site-url" id="siteUrlLink" href="__SITE_BASE_URL__" target="_blank" rel="noopener noreferrer">__SITE_BASE_URL__</a>
         </div>
     </header>
@@ -1672,7 +1672,7 @@
         <div class="tab-panel" id="tab-backtest">
         <div id="pcBacktest" class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title">📈 回测</span>
+                <span class="pc-chart-title" data-i18n="backtest.chartTitle">📈 回测</span>
             </div>
             <div class="pc-bt-row">
                 <span class="pc-bt-label" data-i18n="backtest.symbol">定投标的</span>
@@ -1703,9 +1703,9 @@
                 </select>
                 <span class="pc-bt-advanced"><span class="pc-bt-label" data-i18n="backtest.interval">间隔</span>
                 <input type="number" id="pcBtInterval" class="pc-bt-input" value="1" min="1" step="1"></span>
-                <span class="pc-bt-advanced"><span class="pc-bt-label" id="pcBtDayOfMonthLabel">月内日期</span>
+                <span class="pc-bt-advanced"><span class="pc-bt-label" id="pcBtDayOfMonthLabel" data-i18n="backtest.labelMonthDay">月内日期</span>
                 <input type="number" id="pcBtDayOfMonth" class="pc-bt-input" value="1" min="1" max="31" step="1"></span>
-                <span class="pc-bt-advanced"><span class="pc-bt-label" id="pcBtWeekdayLabel">周几</span>
+                <span class="pc-bt-advanced"><span class="pc-bt-label" id="pcBtWeekdayLabel" data-i18n="backtest.labelWeekDay">周几</span>
                 <select id="pcBtWeekday" class="pc-bt-input" style="width:100px;">
                     <option value="0" data-i18n="backtest.mon">周一</option>
                     <option value="1" data-i18n="backtest.tue">周二</option>
@@ -1744,7 +1744,7 @@
         <div class="tab-panel" id="tab-crash">
         <div id="pcCrashStats" class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title">📉 暴跌统计 — 单日暴跌检测与恢复分析</span>
+                <span class="pc-chart-title" data-i18n="crash.chartTitle">📉 暴跌统计 — 单日暴跌检测与恢复分析</span>
             </div>
             <div class="pc-bt-row">
                 <span class="pc-bt-label" data-i18n="crash.symbol">股票代码</span>
@@ -1788,42 +1788,42 @@
         <div class="tab-panel" id="tab-etf">
         <div class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title">📊 标普纳指ETF追踪（场内） — A股账户买交易所上市ETF</span>
+                <span class="pc-chart-title" data-i18n="etf.chartTitle">📊 标普纳指ETF追踪（场内） — A股账户买交易所上市ETF</span>
                 <span id="etfRefreshInfo" style="font-size:12px;color:var(--apple-text-secondary);margin-left:auto;"></span>
-                <button id="etfRefreshBtn" class="pc-btn pc-btn-sm" style="margin-left:10px;">刷新行情</button>
+                <button id="etfRefreshBtn" class="pc-btn pc-btn-sm" style="margin-left:10px;" data-i18n="etf.refreshQuotes">刷新行情</button>
             </div>
             <div class="transfer-tabs" id="etfTabBar" style="margin-bottom:8px;">
-                <button class="transfer-tab active" data-etf-tab="nasdaq100">纳指100</button>
-                <button class="transfer-tab" data-etf-tab="sp500">标普500</button>
-                <button class="transfer-tab" data-etf-tab="global_others">其它</button>
+                <button class="transfer-tab active" data-etf-tab="nasdaq100" data-i18n="etf.tabNasdaq">纳指100</button>
+                <button class="transfer-tab" data-etf-tab="sp500" data-i18n="etf.tabSp500">标普500</button>
+                <button class="transfer-tab" data-etf-tab="global_others" data-i18n="etf.tabOther">其它</button>
             </div>
             <div class="etf-view-tabs" id="etfViewTabs">
-                <button class="transfer-tab active" data-etf-view="rank">实时排行</button>
-                <button class="transfer-tab" data-etf-view="aggregate">聚合分析</button>
+                <button class="transfer-tab active" data-etf-view="rank" data-i18n="etf.viewRank">实时排行</button>
+                <button class="transfer-tab" data-etf-view="aggregate" data-i18n="etf.viewAggregate">聚合分析</button>
             </div>
             <div id="etfRankView">
             <div class="transfer-table-wrap" style="padding:0;">
                 <table class="transfer-table" id="etfTable">
                     <thead>
                         <tr>
-                            <th class="etf-th-sort" data-etf-col="code">代码 <span class="etf-sort-arrow">⇅</span></th>
-                            <th class="etf-th-sort" data-etf-col="name">名称 <span class="etf-sort-arrow">⇅</span></th>
-                            <th class="etf-th-sort etf-th-num" data-etf-col="price">最新价 <span class="etf-sort-arrow">⇅</span></th>
-                            <th class="etf-th-sort etf-th-num" data-etf-col="change_pct">涨跌幅 <span class="etf-sort-arrow">⇅</span></th>
-                            <th class="etf-th-sort etf-th-num active" data-etf-col="mc_total">总市值(亿) <span class="etf-sort-arrow">▼</span></th>
-                            <th class="etf-th-sort etf-th-num" data-etf-col="mgmt_fee">管理费 <span class="etf-sort-arrow">⇅</span></th>
-                            <th class="etf-th-sort etf-th-num" data-etf-col="custody_fee">托管费 <span class="etf-sort-arrow">⇅</span></th>
-                            <th class="etf-th-sort etf-th-num" data-etf-col="total_fee">费率合计 <span class="etf-sort-arrow">⇅</span></th>
-                            <th class="etf-th-sort etf-th-num" data-etf-col="fee_per_10k">万元年费 <span class="etf-sort-arrow">⇅</span></th>
-                            <th class="etf-th-sort etf-th-num" data-etf-col="premium">溢价率 <span class="etf-sort-arrow">⇅</span></th>
-                            <th class="etf-th-sort etf-th-num" data-etf-col="premium_cost_per_10k">溢价万元盈亏 <span class="etf-sort-arrow">⇅</span></th>
-                            <th class="etf-th-sort etf-th-num" data-etf-col="tracking_error_30d_pct"><span class="has-tip" title="30日真实误差：A股ETF价格涨跌 vs 美股基准ETF(QQQ/SPY)涨跌的30日累计差值。反映实际持有体验，含溢价波动。">30日真实误差</span> <span class="etf-sort-arrow">⇅</span></th>
-                            <th class="etf-th-sort etf-th-num" data-etf-col="profit_diff_30d_per_10k"><span class="has-tip" title="30日万元收益差：分别投入1万元到此A股ETF vs 对应美股ETF，最近30日的累计收益差额。">30日万元收益差</span> <span class="etf-sort-arrow">⇅</span></th>
-                            <th class="etf-th-sort etf-th-num" data-etf-col="valuation_error_latest"><span class="has-tip" title="估值误差：T-2日净值×(1+T-1指数涨跌×仓位%) 估算的T-1净值 与 T-1实际净值的偏差。与haoetf口径一致，衡量基金单日跟踪精度。">估值误差</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort" data-etf-col="code"><span data-i18n="etf.colCode">代码</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort" data-etf-col="name"><span data-i18n="etf.colName">名称</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="price"><span data-i18n="etf.colPrice">最新价</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="change_pct"><span data-i18n="etf.colChangePct">涨跌幅</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num active" data-etf-col="mc_total"><span data-i18n="etf.colMarketCap">总市值(亿)</span> <span class="etf-sort-arrow">▼</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="mgmt_fee"><span data-i18n="etf.colMgmtFee">管理费</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="custody_fee"><span data-i18n="etf.colCustodyFee">托管费</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="total_fee"><span data-i18n="etf.colFeeTotal">费率合计</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="fee_per_10k"><span data-i18n="etf.colAnnualFee">万元年费</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="premium"><span data-i18n="etf.colPremium">溢价率</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="premium_cost_per_10k"><span data-i18n="etf.colPremiumProfit">溢价万元盈亏</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="tracking_error_30d_pct"><span class="has-tip" data-i18n="etf.colTrackingError" data-i18n-attr="title|etf.tooltipTrueError">30日真实误差</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="profit_diff_30d_per_10k"><span class="has-tip" data-i18n="etf.colReturnDiff" data-i18n-attr="title|etf.tooltipReturnDiff">30日万元收益差</span> <span class="etf-sort-arrow">⇅</span></th>
+                            <th class="etf-th-sort etf-th-num" data-etf-col="valuation_error_latest"><span class="has-tip" data-i18n="etf.colEstError" data-i18n-attr="title|etf.tooltipEstError">估值误差</span> <span class="etf-sort-arrow">⇅</span></th>
                         </tr>
                     </thead>
                     <tbody id="etfBody">
-                        <tr><td colspan="14" style="text-align:center;padding:24px;color:var(--apple-text-secondary);">加载中...</td></tr>
+                        <tr><td colspan="14" style="text-align:center;padding:24px;color:var(--apple-text-secondary);" data-i18n="etf.loading">加载中...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1836,13 +1836,13 @@
                 <table id="etfDetailStats" style="border-collapse:collapse;"><tbody></tbody></table>
                 <div id="etfPremiumNote" style="display:none;font-size:var(--text-xs);color:#ff9f0a;margin:10px 0 4px;">⚠ 溢价率历史数据暂不可用，当前显示为实时溢价率参考值</div>
                 <div style="display:flex;gap:8px;align-items:center;margin:12px 0 8px;" id="etfChartToggles">
-                    <span style="font-size:var(--text-xs);color:var(--apple-text-tertiary);">指标:</span>
-                    <button class="etf-chart-tab active" data-etf-chart="compare">涨跌幅对比</button>
-                    <button class="etf-chart-tab" data-etf-chart="candle">蜡烛图</button>
-                    <button class="etf-chart-tab" data-etf-chart="change">涨跌幅</button>
-                    <button class="etf-chart-tab" data-etf-chart="tracking3">误差追踪</button>
-                    <button class="etf-chart-tab" data-etf-chart="amplitude">振幅</button>
-                    <button class="etf-chart-tab" data-etf-chart="amount">成交额</button>
+                    <span style="font-size:var(--text-xs);color:var(--apple-text-tertiary);" data-i18n="etf.labelMetrics">指标:</span>
+                    <button class="etf-chart-tab active" data-etf-chart="compare" data-i18n="etf.chartCompare">涨跌幅对比</button>
+                    <button class="etf-chart-tab" data-etf-chart="candle" data-i18n="etf.chartCandle">蜡烛图</button>
+                    <button class="etf-chart-tab" data-etf-chart="change" data-i18n="etf.chartChange">涨跌幅</button>
+                    <button class="etf-chart-tab" data-etf-chart="tracking3" data-i18n="etf.chartTrackingError">误差追踪</button>
+                    <button class="etf-chart-tab" data-etf-chart="amplitude" data-i18n="etf.chartAmplitude">振幅</button>
+                    <button class="etf-chart-tab" data-etf-chart="amount" data-i18n="etf.chartAmount">成交额</button>
                 </div>
                 <div id="etfChartContainer"></div>
             </div>
@@ -1850,15 +1850,15 @@
             <div id="etfAggregateView" class="etf-aggregate-panel">
                 <div class="etf-aggregate-toolbar">
                     <div class="etf-aggregate-metrics" id="etfAggregateMetrics">
-                        <span style="font-size:var(--text-xs);color:var(--apple-text-tertiary);">指标:</span>
-                        <button class="etf-chart-tab active" data-etf-metric="premium">溢价率</button>
-                        <button class="etf-chart-tab" data-etf-metric="valuation">估值误差</button>
-                        <button class="etf-chart-tab" data-etf-metric="real_error">真实误差</button>
-                        <button class="etf-chart-tab" data-etf-metric="change">涨跌幅</button>
-                        <button class="etf-chart-tab" data-etf-metric="price_return">累计涨跌</button>
-                        <button class="etf-chart-tab" data-etf-metric="profit_diff">万元收益差</button>
+                        <span style="font-size:var(--text-xs);color:var(--apple-text-tertiary);" data-i18n="etf.labelMetrics">指标:</span>
+                        <button class="etf-chart-tab active" data-etf-metric="premium" data-i18n="etf.colPremium">溢价率</button>
+                        <button class="etf-chart-tab" data-etf-metric="valuation" data-i18n="etf.colEstError">估值误差</button>
+                        <button class="etf-chart-tab" data-etf-metric="real_error" data-i18n="etf.chartTrueError">真实误差</button>
+                        <button class="etf-chart-tab" data-etf-metric="change" data-i18n="etf.metricChange">涨跌幅</button>
+                        <button class="etf-chart-tab" data-etf-metric="price_return" data-i18n="etf.metricCumChg">累计涨跌</button>
+                        <button class="etf-chart-tab" data-etf-metric="profit_diff" data-i18n="etf.metricProfitDiff">万元收益差</button>
                     </div>
-                    <button id="etfAggregateReload" class="pc-btn pc-btn-sm">重新加载</button>
+                    <button id="etfAggregateReload" class="pc-btn pc-btn-sm" data-i18n="etf.reload">重新加载</button>
                 </div>
                 <div class="etf-aggregate-symbols" id="etfAggregateSymbols"></div>
                 <div class="etf-aggregate-status" id="etfAggregateStatus"></div>
@@ -1871,15 +1871,15 @@
         <div class="tab-panel" id="tab-qdii-funds">
         <div class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title">📋 标普纳指基金追踪（场外） — 支付宝场外 QDII 候选清单</span>
+                <span class="pc-chart-title" data-i18n="qdii.chartTitle">📋 标普纳指基金追踪（场外） — 支付宝场外 QDII 候选清单</span>
                 <span id="qdiiFundsUpdated" style="font-size:12px;color:var(--apple-text-secondary);margin-left:auto;"></span>
-                <button id="qdiiFundsRefresh" class="pc-btn pc-btn-sm" style="margin-left:10px;">刷新</button>
+                <button id="qdiiFundsRefresh" class="pc-btn pc-btn-sm" style="margin-left:10px;" data-i18n="qdii.refresh">刷新</button>
             </div>
             <div class="qdii-toolbar">
                 <div class="transfer-tabs" id="qdiiFundsTabs">
-                    <button class="transfer-tab active" data-qdii-index="nasdaq100">纳指100</button>
-                    <button class="transfer-tab" data-qdii-index="sp500">标普500</button>
-                    <button class="transfer-tab" data-qdii-index="active_qdii">QDII主动</button>
+                    <button class="transfer-tab active" data-qdii-index="nasdaq100" data-i18n="etf.tabNasdaq">纳指100</button>
+                    <button class="transfer-tab" data-qdii-index="sp500" data-i18n="etf.tabSp500">标普500</button>
+                    <button class="transfer-tab" data-qdii-index="active_qdii" data-i18n="qdii.tabActiveQdii">QDII主动</button>
                 </div>
                 <div class="qdii-controls">
                     <select class="qdii-filter-select" id="qdiiFilterShare" title="按份额类别筛选">
@@ -1889,14 +1889,14 @@
                         <option value="">类型：全部</option>
                     </select>
                     <select class="qdii-filter-select" id="qdiiFilterCompany" title="按基金公司筛选">
-                        <option value="">公司：全部</option>
+                        <option value="" data-i18n="qdii.filterCompanyAll">公司：全部</option>
                     </select>
                     <select class="qdii-filter-select" id="qdiiFilterStatus" title="按申购状态筛选">
                         <option value="">状态：全部</option>
                         <option value="buyable">状态：可买</option>
                         <option value="paused">状态：暂停</option>
                     </select>
-                    <button id="qdiiClearFilters" class="pc-btn pc-btn-sm" title="清空当前分类的筛选和排序">清空筛选</button>
+                    <button id="qdiiClearFilters" class="pc-btn pc-btn-sm" data-i18n="qdii.clearFilters" data-i18n-attr="title|qdii.clearFilters">清空筛选</button>
                 </div>
             </div>
             <div class="qdii-note" id="qdiiFundsNote">
@@ -1912,32 +1912,32 @@
                 <table class="transfer-table" id="qdiiFundsTable">
                     <thead>
                         <tr>
-                            <th class="qdii-sortable" data-qdii-sort="index">分类 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable" data-qdii-sort="code">代码 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable" data-qdii-sort="name">基金名称 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable" data-qdii-sort="share_class">份额 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable" data-qdii-sort="fund_type">类型 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable" data-qdii-sort="company">基金公司 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable qdii-num" data-qdii-sort="fund_scale">基金规模 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable" data-qdii-sort="fund_manager">基金经理 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable" data-qdii-sort="status">状态 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable qdii-num" data-qdii-sort="daily_limit">单日限额 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable qdii-num" data-qdii-sort="min_purchase">起购 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable qdii-num" data-qdii-sort="discounted_rate_num">申购费 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable qdii-num" data-qdii-sort="source_rate_num">原费率 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable qdii-num" data-qdii-sort="daily_return_pct">今日涨跌幅 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_1m_pct">近一月涨跌幅 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_3m_pct">近三月涨跌幅 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_6m_pct">近半年涨跌幅 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_1y_pct">近一年涨跌幅 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_3y_pct">近三年涨跌幅 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_since_inception_pct">成立以来涨跌幅 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable" data-qdii-sort="nav_date">净值日 <span class="qdii-sort-arrow">⇅</span></th>
-                            <th class="qdii-sortable" data-qdii-sort="redeem_status">赎回 <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="index"><span data-i18n="qdii.colIndex">分类</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="code"><span data-i18n="qdii.colCode">代码</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="name"><span data-i18n="qdii.colName">基金名称</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="share_class"><span data-i18n="qdii.colShareClass">份额</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="fund_type"><span data-i18n="qdii.colFundType">类型</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="company"><span data-i18n="qdii.colCompany">基金公司</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="fund_scale"><span data-i18n="qdii.colScale">基金规模</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="fund_manager"><span data-i18n="qdii.colManager">基金经理</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="status"><span data-i18n="qdii.colStatus">状态</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="daily_limit"><span data-i18n="qdii.colDailyLimit">单日限额</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="min_purchase"><span data-i18n="qdii.colMinPurchase">起购</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="discounted_rate_num"><span data-i18n="qdii.colSubFee">申购费</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="source_rate_num"><span data-i18n="qdii.colOrigFee">原费率</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="daily_return_pct"><span data-i18n="qdii.colDailyReturn">今日涨跌幅</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_1m_pct"><span data-i18n="qdii.colReturn1M">近一月涨跌幅</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_3m_pct"><span data-i18n="qdii.colReturn3M">近三月涨跌幅</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_6m_pct"><span data-i18n="qdii.colReturn6M">近半年涨跌幅</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_1y_pct"><span data-i18n="qdii.colReturn1Y">近一年涨跌幅</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_3y_pct"><span data-i18n="qdii.colReturn3Y">近三年涨跌幅</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable qdii-num" data-qdii-sort="return_since_inception_pct"><span data-i18n="qdii.colReturnInception">成立以来涨跌幅</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="nav_date"><span data-i18n="qdii.colNavDate">净值日</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th class="qdii-sortable" data-qdii-sort="redeem_status"><span data-i18n="qdii.colRedeem">赎回</span> <span class="qdii-sort-arrow">⇅</span></th>
                         </tr>
                     </thead>
                     <tbody id="qdiiFundsBody">
-                        <tr><td colspan="22" style="text-align:center;padding:24px;color:var(--apple-text-secondary);">加载中...</td></tr>
+                        <tr><td colspan="22" style="text-align:center;padding:24px;color:var(--apple-text-secondary);" data-i18n="vix.loading">加载中...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1949,17 +1949,17 @@
         <div class="tab-panel" id="tab-vix">
         <div class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title">📊 SPY · QQQ · VIX 对比走势</span>
+                <span class="pc-chart-title" data-i18n="vix.chartTitle">📊 SPY · QQQ · VIX 对比走势</span>
                 <div class="transfer-tabs" id="vixPeriodTabs" style="margin-left:auto;">
-                    <button class="transfer-tab" data-vix-period="1hour">1小时</button>
-                    <button class="transfer-tab active" data-vix-period="daily">日</button>
-                    <button class="transfer-tab" data-vix-period="weekly">周</button>
-                    <button class="transfer-tab" data-vix-period="monthly">月</button>
+                    <button class="transfer-tab" data-vix-period="1hour" data-i18n="vix.period1h">1小时</button>
+                    <button class="transfer-tab active" data-vix-period="daily" data-i18n="vix.periodDay">日</button>
+                    <button class="transfer-tab" data-vix-period="weekly" data-i18n="vix.periodWeek">周</button>
+                    <button class="transfer-tab" data-vix-period="monthly" data-i18n="vix.periodMonth">月</button>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;margin-left:10px;">
-                    <span class="pc-bt-label">条数</span>
+                    <span class="pc-bt-label" data-i18n="vix.countLabel">条数</span>
                     <input type="number" id="vixCountInput" class="pc-bt-input" value="30" min="5" max="2000" step="5" style="width:82px;">
-                    <button id="vixReloadBtn" class="pc-btn pc-btn-sm">加载</button>
+                    <button id="vixReloadBtn" class="pc-btn pc-btn-sm" data-i18n="vix.loadBtn">加载</button>
                 </div>
                 <div class="transfer-tabs" id="vixDemoTabs" style="display:none;margin-left:10px;">
                     <button class="transfer-tab" data-vix-demo="10">红10</button>
@@ -1973,30 +1973,30 @@
             <div class="vix-advice-card" id="vixAdviceCard" style="display:none;">
                 <div class="vix-advice-grid">
                     <div class="vix-advice-item">
-                        <span class="vix-advice-label has-tip" title="VIX 是 CBOE 波动率指数，常被称为恐慌指数。它反映市场对标普500未来约30天波动率的预期，数值越高通常代表市场越恐慌。">最新 VIX</span>
-                        <span class="vix-advice-value" id="vixAdviceValue" title="VIX 是 CBOE 波动率指数，常被称为恐慌指数。它反映市场对标普500未来约30天波动率的预期，数值越高通常代表市场越恐慌。">--</span>
+                        <span class="vix-advice-label has-tip" data-i18n="vix.adviceVixLatest" data-i18n-attr="title|vix.adviceVixTooltip">最新 VIX</span>
+                        <span class="vix-advice-value" id="vixAdviceValue">--</span>
                     </div>
                     <div class="vix-advice-item">
-                        <span class="vix-advice-label has-tip" title="根据当前 VIX 绝对值判断：<12 极度安逸，12-15 低波动，15-20 正常区间，20-25 恐惧上升，25-30 高度恐惧，>30 极度恐慌。">情绪区间</span>
-                        <span class="vix-advice-zone" id="vixAdviceZone" title="根据当前 VIX 绝对值判断：<12 极度安逸，12-15 低波动，15-20 正常区间，20-25 恐惧上升，25-30 高度恐惧，>30 极度恐慌。">--</span>
+                        <span class="vix-advice-label has-tip" data-i18n="vix.adviceZone" data-i18n-attr="title|vix.adviceZoneTooltip">情绪区间</span>
+                        <span class="vix-advice-zone" id="vixAdviceZone">--</span>
                     </div>
                     <div class="vix-advice-item">
-                        <span class="vix-advice-label has-tip" title="当前 VIX 在过去约 1 年交易日中的历史位置。例如 79% 表示过去 1 年约 79% 的交易日 VIX 低于或等于当前值，数值越高代表当前恐慌程度越接近近一年高位。">1年分位</span>
-                        <span class="vix-advice-stat" id="vixPercentile" title="当前 VIX 在过去约 1 年交易日中的历史位置。例如 79% 表示过去 1 年约 79% 的交易日 VIX 低于或等于当前值，数值越高代表当前恐慌程度越接近近一年高位。">--</span>
+                        <span class="vix-advice-label has-tip" data-i18n="vix.advicePercentile" data-i18n-attr="title|vix.advicePercentileTooltip">1年分位</span>
+                        <span class="vix-advice-stat" id="vixPercentile">--</span>
                     </div>
                     <div class="vix-advice-item">
-                        <span class="vix-advice-label has-tip" title="统计最近30个交易日 SPY 日涨跌幅与 VIX 日涨跌幅的相关系数。通常应为负数：SPY跌时VIX涨。越接近 -1 代表负相关越强；接近 0 代表关系变弱；转正可能代表市场结构异常或风险信号。">SPY/VIX 30日相关</span>
-                        <span class="vix-advice-stat" id="vixCorrelation" title="统计最近30个交易日 SPY 日涨跌幅与 VIX 日涨跌幅的相关系数。通常应为负数：SPY跌时VIX涨。越接近 -1 代表负相关越强；接近 0 代表关系变弱；转正可能代表市场结构异常或风险信号。">--</span>
+                        <span class="vix-advice-label has-tip" data-i18n="vix.adviceCorrelation" data-i18n-attr="title|vix.adviceCorrelationTooltip">SPY/VIX 30日相关</span>
+                        <span class="vix-advice-stat" id="vixCorrelation">--</span>
                     </div>
                     <div class="vix-advice-item vix-advice-full">
-                        <span class="vix-advice-label has-tip" title="综合当前 VIX 绝对值、近1年历史分位，以及 SPY/VIX 30日相关性给出的定性提示，仅供风险观察，不构成投资建议。">操作建议</span>
-                        <span class="vix-advice-tip" id="vixAdviceTip" title="综合当前 VIX 绝对值、近1年历史分位，以及 SPY/VIX 30日相关性给出的定性提示，仅供风险观察，不构成投资建议。">--</span>
+                        <span class="vix-advice-label has-tip" data-i18n="vix.adviceTip" data-i18n-attr="title|vix.adviceTipTooltip">操作建议</span>
+                        <span class="vix-advice-tip" id="vixAdviceTip">--</span>
                     </div>
                 </div>
             </div>
             <div class="pc-loading" id="vixLoading" style="display:none;">
                 <div class="spinner"></div>
-                <span>加载中...</span>
+                <span data-i18n="vix.loading">加载中...</span>
             </div>
             <div class="pc-error" id="vixError" style="display:none;"></div>
             <div id="vixChartContainer"></div>
@@ -2007,12 +2007,12 @@
         <div class="tab-panel" id="tab-knowledge">
         <div class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title">📚 数据科普</span>
+                <span class="pc-chart-title" data-i18n="knowledge.title">📚 数据科普</span>
                 <div class="transfer-tabs" id="kbSubTabs" style="margin-left:auto;">
-                    <button class="transfer-tab active" data-kb-tab="how-to-buy">如何购买美股</button>
-                    <button class="transfer-tab" data-kb-tab="etf-intro">核心ETF介绍</button>
-                    <button class="transfer-tab" data-kb-tab="event-myth">数据魔咒</button>
-                    <button class="transfer-tab" data-kb-tab="terms">专业术语</button>
+                    <button class="transfer-tab active" data-kb-tab="how-to-buy" data-i18n="knowledge.howToBuy">如何购买美股</button>
+                    <button class="transfer-tab" data-kb-tab="etf-intro" data-i18n="knowledge.etfIntro">核心ETF介绍</button>
+                    <button class="transfer-tab" data-kb-tab="event-myth" data-i18n="knowledge.eventMyth">数据魔咒</button>
+                    <button class="transfer-tab" data-kb-tab="terms" data-i18n="knowledge.terms">专业术语</button>
                 </div>
             </div>
 
@@ -3213,14 +3213,14 @@
                 <textarea id="wishText" class="wish-textarea" maxlength="200" data-i18n-attr="placeholder|wishes.placeholder" placeholder="写下你的心愿（最多 200 字）..."></textarea>
                 <div class="wish-form-row">
                     <input type="text" id="wishNick" class="pc-bt-input" maxlength="24" style="width:150px;" data-i18n-attr="placeholder|wishes.nickname" placeholder="昵称（可选）">
-                    <span class="wish-captcha-box" id="wishCaptchaBox" title="点击刷新验证码"></span>
+                    <span class="wish-captcha-box" id="wishCaptchaBox" data-i18n-attr="title|wishes.captchaHint" title="点击刷新验证码"></span>
                     <input type="text" id="wishCaptchaInput" class="pc-bt-input" style="width:110px;text-transform:uppercase;" maxlength="8" data-i18n-attr="placeholder|wishes.captcha" placeholder="验证码">
                     <button id="wishSubmitBtn" class="pc-btn primary" style="padding:7px 18px;" data-i18n="wishes.submit">提交心愿</button>
                 </div>
                 <div class="wish-msg" id="wishMsg" style="display:none;"></div>
             </div>
             <div id="wishLoading" class="pc-loading" style="display:none;">
-                <div class="spinner"></div><span>加载中...</span>
+                <div class="spinner"></div><span data-i18n="vix.loading">加载中...</span>
             </div>
             <div id="wishEmpty" style="display:none;text-align:center;padding:32px;color:var(--apple-text-tertiary);font-size:13px;" data-i18n="wishes.empty">
                 还没有心愿，来许下第一个吧 ✨
@@ -3251,7 +3251,7 @@
       fetch('/api/visits')
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          document.getElementById('settingsVisitCount').textContent = '访问次数：' + String(d.count);
+          document.getElementById('settingsVisitCount').textContent = __("settings.visitCountPrefix") + String(d.count);
         })
         .catch(function () {});
     </script>
@@ -3337,7 +3337,7 @@
 
             function updateThemeUI(theme) {
                 if (icon) icon.textContent = theme === 'light' ? '☀️' : '🌙';
-                if (label) label.textContent = theme === 'light' ? '浅色模式' : '深色模式';
+                if (label) label.textContent = theme === 'light' ? __("settings.themeLight") : __("settings.theme");
             }
 
             function applyTheme(theme) {
@@ -3391,7 +3391,7 @@
 
             function updateColorSchemeUI(scheme) {
                 if (icon) icon.textContent = scheme === 'red_up' ? '📉' : '📈';
-                if (label) label.textContent = scheme === 'red_up' ? '红涨绿跌' : '绿涨红跌';
+                if (label) label.textContent = scheme === 'red_up' ? __("settings.colorSchemeRedUp") : __("settings.colorScheme");
             }
 
             function applyColorScheme(scheme) {
@@ -3827,11 +3827,31 @@
                 document.body.appendChild(tipEl);
             }
 
+            function _getTooltipText(el) {
+                // 1) native title attribute (may have been set by i18n.js data-i18n-attr)
+                var t = el.getAttribute('title');
+                if (t) return t;
+                // 2) fallback: look up via data-i18n-attr if not yet applied
+                var spec = el.getAttribute('data-i18n-attr');
+                if (spec) {
+                    var pipe = spec.indexOf('|');
+                    if (pipe !== -1) {
+                        var attrName = spec.slice(0, pipe);
+                        var attrKey = spec.slice(pipe + 1);
+                        if (attrName === 'title' && typeof __ === 'function') {
+                            var translated = __(attrKey);
+                            if (translated && translated[0] !== '[') return translated;
+                        }
+                    }
+                }
+                return '';
+            }
+
             function show(e, el) {
                 ensureTip();
                 if (activeEl === el) return;
                 hide();
-                var text = el.getAttribute('title');
+                var text = _getTooltipText(el);
                 if (!text) return;
                 activeEl = el;
                 savedTitle = text;
@@ -3868,7 +3888,7 @@
 
             document.addEventListener('mouseover', function(e) {
                 var el = e.target.closest('.has-tip');
-                if (el && el.getAttribute('title')) {
+                if (el && _getTooltipText(el)) {
                     show(e, el);
                 } else if (!e.target.closest('.has-tip')) {
                     hide();
