@@ -147,10 +147,10 @@ function renderMetaInfo(meta) {
     .map((s) => meta[s.symbol])
     .filter(Boolean)
     .map((m) => {
-      const source = m.source ? escapeHtml(m.source) : "未知源";
-      const points = Number.isFinite(m.points) ? `${m.points} 条日线` : "";
+      const source = m.source ? escapeHtml(m.source) : __("yearly.metaUnknownSource");
+      const points = Number.isFinite(m.points) ? __("yearly.metaDailyPoints", {n: m.points}) : "";
       const suffix = m.error
-        ? ` <span class="pc-meta-error">失败: ${escapeHtml(m.error)}</span>`
+        ? ` <span class="pc-meta-error">${__("yearly.metaFailed")} ${escapeHtml(m.error)}</span>`
         : ` ${points}`;
       return `<span><strong>${escapeHtml(m.symbol)}</strong>: ${source}${suffix}</span>`;
     });

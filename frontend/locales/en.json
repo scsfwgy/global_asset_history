@@ -158,7 +158,17 @@
     "labelPreCrash": "Pre-Crash ",
     "labelCrashDay": "Crash Day ",
     "labelBottom": "Bottom ",
-    "labelRecovery": "Recovery "
+    "labelRecovery": "Recovery ",
+    "requestFailed": "Request failed",
+    "networkError": "Network error",
+    "unknownError": "Unknown error",
+    "noCrashFound": "No crashes exceeding {{pct}}% found in the selected period",
+    "tooltipOpen": "O:",
+    "tooltipHigh": "H:",
+    "tooltipLow": "L:",
+    "tooltipClose": "C:",
+    "tooltipClosePrice": "Close:",
+    "tooltipChange": "Change:"
   },
   "etf": {
     "colCode": "Code",
@@ -365,7 +375,10 @@
     "reply": "Reply",
     "delete": "Delete",
     "replyPlaceholder": "Admin reply...",
-    "errorReplyEmpty": "Reply cannot be empty."
+    "errorReplyEmpty": "Reply cannot be empty.",
+    "errorSubmit": "Submit failed",
+    "errorReply": "Reply failed",
+    "errorDelete": "Delete failed"
   },
   "chart": {
     "monthlyTrend": "Monthly Return Trend",
@@ -375,6 +388,27 @@
     "dailyReturnsTitle": "Daily Returns",
     "yearMonthConnector": "-",
     "dayLabel": "{{d}}"
+  },
+  "health": {
+    "title": "System Health",
+    "back": "← Back Home",
+    "redetect": "Re-check",
+    "probing": "Probing data sources...",
+    "eastmoney": "East Money",
+    "notConfigured": "Not Configured",
+    "connected": "Connected",
+    "unreachable": "Unreachable",
+    "available": "Available",
+    "unavailable": "Unavailable",
+    "normal": "OK",
+    "failed": "Failed",
+    "redisCache": "Shared Cache (Redis)",
+    "redisHint": "When unreachable, wishes / visits / data cache will fall back to single-instance temp storage and may lose data in production.",
+    "assetAvailability": "Asset Availability (any source reachable = available)",
+    "sourceDetails": "Source Probe Details",
+    "checkTime": "Checked at: ",
+    "cachedNote": " (cached, ~20s)",
+    "loadFailed": "Load failed: "
   },
   "seo": {
     "indexTitle": "GlobalAssetHistory — Historical Returns & DCA Backtest Tool",

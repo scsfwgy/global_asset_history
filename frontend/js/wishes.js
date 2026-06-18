@@ -167,7 +167,7 @@ function submitWish() {
     })
         .then(async r => {
             const data = await r.json().catch(() => ({}));
-            if (!r.ok) throw new Error(data.error || "提交失败");
+            if (!r.ok) throw new Error(data.error || __("wishes.errorSubmit"));
             return data;
         })
         .then(() => {
@@ -178,7 +178,7 @@ function submitWish() {
             loadWishes();
         })
         .catch(err => {
-            _showWishMsg(err.message || "提交失败", true);
+            _showWishMsg(err.message || __("wishes.errorSubmit"), true);
             loadCaptcha();  // captcha is one-time; always refresh after a try
         })
         .finally(() => { btn.disabled = false; });
@@ -198,14 +198,14 @@ function replyWish(wishId, text, btn) {
     })
         .then(async r => {
             const data = await r.json().catch(() => ({}));
-            if (!r.ok) throw new Error(data.error || "回复失败");
+            if (!r.ok) throw new Error(data.error || __("wishes.errorReply"));
             return data;
         })
         .then(() => {
             _showWishMsg(__("wishes.replySuccess"), false);
             loadWishes();
         })
-        .catch(err => _showWishMsg(err.message || "回复失败", true))
+        .catch(err => _showWishMsg(err.message || __("wishes.errorReply"), true))
         .finally(() => { if (btn) btn.disabled = false; });
 }
 
@@ -216,11 +216,11 @@ function deleteWish(wishId) {
     })
         .then(async r => {
             const data = await r.json().catch(() => ({}));
-            if (!r.ok) throw new Error(data.error || "删除失败");
+            if (!r.ok) throw new Error(data.error || __("wishes.errorDelete"));
             return data;
         })
         .then(() => loadWishes())
-        .catch(err => _showWishMsg(err.message || "删除失败", true));
+        .catch(err => _showWishMsg(err.message || __("wishes.errorDelete"), true));
 }
 
 function _initWishAdmin() {
@@ -230,7 +230,7 @@ function _initWishAdmin() {
     const hint = _wishEl("wishAdminHint");
 
     const refreshHint = () => {
-        hint.textContent = _getAdminToken() ? "已启用删除/回复" : "";
+        hint.textContent = _getAdminToken() ? __("wishes.adminEnabled") : "";
     };
     input.value = _getAdminToken();
     refreshHint();
@@ -250,15 +250,15 @@ function _initWishAdmin() {
         // gives immediate feedback instead of silently "saving".
         const saveBtn = _wishEl("wishAdminSave");
         saveBtn.disabled = true;
-        hint.textContent = "校验中...";
+        hint.textContent = __("wishes.verifying");
         fetch(WISH_VERIFY_ADMIN_ENDPOINT, {
             method: "POST",
             headers: { "X-Admin-Token": val },
         })
             .then(r => {
-                if (!r.ok) throw new Error("Token 无效");
+                if (!r.ok) throw new Error(__("wishes.invalidToken"));
                 sessionStorage.setItem(WISH_ADMIN_KEY, val);
-                hint.textContent = "已启用删除/回复";
+                hint.textContent = __("wishes.adminEnabled");
                 loadWishes();  // re-render to show admin actions
             })
             .catch(() => {

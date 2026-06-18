@@ -8,8 +8,9 @@
     <meta name="author" content="GlobalAssetHistory">
     <meta name="robots" content="index,follow">
     <link rel="canonical" href="__SITE_BASE_URL__/etf-market">
-    <link rel="alternate" hreflang="zh-CN" href="__SITE_BASE_URL__/etf-market">
-    <link rel="alternate" hreflang="x-default" href="__SITE_BASE_URL__/etf-market">
+    <link rel="alternate" hreflang="zh-CN" href="__SITE_BASE_URL__/zh/etf-market">
+    <link rel="alternate" hreflang="en" href="__SITE_BASE_URL__/en/etf-market">
+    <link rel="alternate" hreflang="x-default" href="__SITE_BASE_URL__/zh/etf-market">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="GlobalAssetHistory">
     <meta property="og:locale" content="zh_CN">
@@ -100,41 +101,41 @@
     <div class="etf-refresh-bar">
         <span class="dot" id="refreshDot"></span>
         <span id="refreshTime">--</span>
-        <button onclick="fetchQuotes()" style="background:var(--apple-surface-1);border:none;color:var(--apple-text-primary);padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer">刷新</button>
+        <button onclick="fetchQuotes()" style="background:var(--apple-surface-1);border:none;color:var(--apple-text-primary);padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer" data-i18n="etf.refresh">刷新</button>
     </div>
 </div>
 
 <div class="etf-market-container">
-    <h2>A股ETF 实时行情</h2>
+    <h2 data-i18n="etf.title">A股ETF 实时行情</h2>
 
     <div class="transfer-tabs" id="tabBar">
-        <button class="transfer-tab active" data-tab="nasdaq100">纳指100</button>
-        <button class="transfer-tab" data-tab="sp500">标普500</button>
-        <button class="transfer-tab" data-tab="global_others">其它</button>
+        <button class="transfer-tab active" data-tab="nasdaq100" data-i18n="etf.tabNasdaq">纳指100</button>
+        <button class="transfer-tab" data-tab="sp500" data-i18n="etf.tabSp500">标普500</button>
+        <button class="transfer-tab" data-tab="global_others" data-i18n="etf.tabOther">其它</button>
     </div>
 
     <div class="transfer-table-wrap" style="margin-top:12px">
         <table class="transfer-table" id="etfTable">
             <thead>
                 <tr>
-                    <th class="etf-sortable" data-col="code">代码 <span class="sort-arrow">⇅</span></th>
-                    <th class="etf-sortable" data-col="name">名称 <span class="sort-arrow">⇅</span></th>
-                    <th class="etf-sortable etf-num active" data-col="price" data-dir="desc">最新价 <span class="sort-arrow">▼</span></th>
-                    <th class="etf-sortable etf-num" data-col="change_pct">涨跌幅 <span class="sort-arrow">⇅</span></th>
-                    <th class="etf-sortable etf-num" data-col="mc_total">总市值(亿) <span class="sort-arrow">⇅</span></th>
-                    <th class="etf-sortable etf-num" data-col="mgmt_fee">管理费 <span class="sort-arrow">⇅</span></th>
-                    <th class="etf-sortable etf-num" data-col="custody_fee">托管费 <span class="sort-arrow">⇅</span></th>
-                    <th class="etf-sortable etf-num" data-col="total_fee">费率合计 <span class="sort-arrow">⇅</span></th>
-                    <th class="etf-sortable etf-num" data-col="fee_per_10k">万元年费 <span class="sort-arrow">⇅</span></th>
-                    <th class="etf-sortable etf-num" data-col="premium">溢价率 <span class="sort-arrow">⇅</span></th>
-                    <th class="etf-sortable etf-num" data-col="premium">溢价万元盈亏 <span class="sort-arrow">⇅</span></th>
-                    <th class="etf-sortable etf-num" data-col="tracking_error_30d_pct" title="最近30个共同交易日，A股ETF价格涨跌幅与美股基准ETF(QQQ/SPY)涨跌幅的累计差值。">30日真实误差 <span class="sort-arrow">⇅</span></th>
-                    <th class="etf-sortable etf-num" data-col="profit_diff_30d_per_10k" title="最近30日，分别投入1万元到此A股ETF vs 对应美股ETF的收益差额。">30日万元收益差 <span class="sort-arrow">⇅</span></th>
-                    <th class="etf-sortable etf-num" data-col="valuation_error_latest" title="估值误差：T-2日净值×(1+T-1指数涨跌×仓位%) 估算的T-1净值 与 T-1实际净值的偏差。与haoetf口径一致，衡量基金单日跟踪精度。">估值误差 <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable" data-col="code"><span data-i18n="etf.colCode">代码</span> <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable" data-col="name"><span data-i18n="etf.colName">名称</span> <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num active" data-col="price" data-dir="desc"><span data-i18n="etf.colPrice">最新价</span> <span class="sort-arrow">▼</span></th>
+                    <th class="etf-sortable etf-num" data-col="change_pct"><span data-i18n="etf.colChangePct">涨跌幅</span> <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="mc_total"><span data-i18n="etf.colMarketCap">总市值(亿)</span> <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="mgmt_fee"><span data-i18n="etf.colMgmtFee">管理费</span> <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="custody_fee"><span data-i18n="etf.colCustodyFee">托管费</span> <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="total_fee"><span data-i18n="etf.colFeeTotal">费率合计</span> <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="fee_per_10k"><span data-i18n="etf.colAnnualFee">万元年费</span> <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="premium"><span data-i18n="etf.colPremium">溢价率</span> <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="premium"><span data-i18n="etf.colPremiumProfit">溢价万元盈亏</span> <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="tracking_error_30d_pct" data-i18n-attr="title|etf.tooltipTrueError"><span data-i18n="etf.colTrackingError">30日真实误差</span> <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="profit_diff_30d_per_10k" data-i18n-attr="title|etf.tooltipReturnDiff"><span data-i18n="etf.colReturnDiff">30日万元收益差</span> <span class="sort-arrow">⇅</span></th>
+                    <th class="etf-sortable etf-num" data-col="valuation_error_latest" data-i18n-attr="title|etf.tooltipEstError"><span data-i18n="etf.colEstError">估值误差</span> <span class="sort-arrow">⇅</span></th>
                 </tr>
             </thead>
             <tbody id="etfBody">
-                <tr><td colspan="14" class="transfer-loading">加载中...</td></tr>
+                <tr><td colspan="14" class="transfer-loading" data-i18n="etf.loading">加载中...</td></tr>
             </tbody>
         </table>
     </div>

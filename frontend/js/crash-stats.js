@@ -63,12 +63,12 @@
             .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
             .then(function (res) {
                 setLoading(false);
-                if (!res.ok || res.data.error) { showError(res.data.error || "请求失败", run); return; }
+                if (!res.ok || res.data.error) { showError(res.data.error || __("crash.requestFailed"), run); return; }
                 render(res.data);
             })
             .catch(function (e) {
                 setLoading(false);
-                showError(e.message || "网络错误", run);
+                showError(e.message || __("crash.networkError"), run);
             });
     }
 
@@ -98,7 +98,7 @@
         if (crashes.length === 0) {
             tableWrap.style.display = "none";
             emptyEl.style.display = "block";
-            emptyEl.innerHTML = '<div style="font-size:24px;margin-bottom:8px;">&#9989;</div><div>在选定时间段内没有发现暴跌超过 ' + data.threshold_pct + '% 的交易日</div>';
+            emptyEl.innerHTML = '<div style="font-size:24px;margin-bottom:8px;">&#9989;</div><div>' + __("crash.noCrashFound", {pct: data.threshold_pct}) + '</div>';
         } else {
             tableWrap.style.display = "block";
             emptyEl.style.display = "none";
@@ -163,7 +163,7 @@
         chartTd.colSpan = 12;
         chartTd.innerHTML = '<div class="crash-chart-container" id="crashChartContainer">' +
             '<div style="display:flex;align-items:center;justify-content:center;padding:40px;color:var(--apple-text-tertiary);">' +
-                '<div class="spinner" style="margin-right:10px;"></div>加载走势图...' +
+                '<div class="spinner" style="margin-right:10px;"></div>' + __("crash.loadingChart") +
             '</div></div>';
         chartRow.appendChild(chartTd);
         row.parentNode.insertBefore(chartRow, row.nextSibling);
@@ -184,14 +184,14 @@
             .then(function (res) {
                 if (!res.ok || res.data.error) {
                     document.getElementById("crashChartContainer").innerHTML =
-                        '<div style="padding:20px;color:var(--data-negative);">加载失败: ' + (res.data.error || "未知错误") + '</div>';
+                        '<div style="padding:20px;color:var(--data-negative);">' + __("crash.loadFailed") + (res.data.error || __("crash.unknownError")) + '</div>';
                     return;
                 }
                 renderCrashChart(res.data, crash);
             })
             .catch(function (e) {
                 document.getElementById("crashChartContainer").innerHTML =
-                    '<div style="padding:20px;color:var(--data-negative);">加载失败: ' + e.message + '</div>';
+                    '<div style="padding:20px;color:var(--data-negative);">' + __("crash.loadFailed") + e.message + '</div>';
             });
     }
 
@@ -225,7 +225,7 @@
         var prices = chartData.prices || [];
         if (prices.length < 2) {
             document.getElementById("crashChartContainer").innerHTML =
-                '<div style="padding:20px;color:var(--apple-text-tertiary);">数据不足，无法绘制图表</div>';
+                '<div style="padding:20px;color:var(--apple-text-tertiary);">' + __("crash.insufficientData") + '</div>';
             return;
         }
 
@@ -295,7 +295,7 @@
         if (preCrashClose != null) {
             var refY = yPos(preCrashClose);
             refLine = '<line x1="' + PAD.left + '" y1="' + refY + '" x2="' + plotRight + '" y2="' + refY + '" stroke="var(--apple-text-tertiary)" stroke-width="1" stroke-dasharray="6,4" opacity="0.5"/>';
-            refLine += '<text x="' + (plotRight + 6) + '" y="' + (refY + 4) + '" fill="var(--apple-text-tertiary)" font-size="10">暴跌前 ' + preCrashClose.toFixed(2) + '</text>';
+            refLine += '<text x="' + (plotRight + 6) + '" y="' + (refY + 4) + '" fill="var(--apple-text-tertiary)" font-size="10">' + __("crash.labelPreCrash") + preCrashClose.toFixed(2) + '</text>';
         }
 
         // ── Price geometry: candlesticks (with OHLC) or a close line ──
@@ -338,9 +338,9 @@
         // assign each label to the first row where it doesn't overlap the one
         // before it, and draw the guide line down to its own label row.
         var markerDefs = [];
-        if (crashIdx >= 0) markerDefs.push({ idx: crashIdx, color: C.crashDot, label: "暴跌日 " + prices[crashIdx].date });
-        if (bottomIdx >= 0 && bottomIdx !== crashIdx) markerDefs.push({ idx: bottomIdx, color: C.bottom, label: "触底 " + prices[bottomIdx].date });
-        if (recoveryIdx >= 0 && recoveryIdx !== crashIdx && recoveryIdx !== bottomIdx) markerDefs.push({ idx: recoveryIdx, color: C.recovery, label: "恢复 " + prices[recoveryIdx].date });
+        if (crashIdx >= 0) markerDefs.push({ idx: crashIdx, color: C.crashDot, label: __("crash.labelCrashDay") + prices[crashIdx].date });
+        if (bottomIdx >= 0 && bottomIdx !== crashIdx) markerDefs.push({ idx: bottomIdx, color: C.bottom, label: __("crash.labelBottom") + prices[bottomIdx].date });
+        if (recoveryIdx >= 0 && recoveryIdx !== crashIdx && recoveryIdx !== bottomIdx) markerDefs.push({ idx: recoveryIdx, color: C.recovery, label: __("crash.labelRecovery") + prices[recoveryIdx].date });
         markerDefs.sort(function (a, b) { return a.idx - b.idx; });
 
         // Rough label-width estimate (CJK glyphs are ~10px, ASCII ~5.5px at 10px font).
@@ -372,7 +372,7 @@
         prices.forEach(function (p, i) {
             if (i % labelInterval === 0 || i === prices.length - 1 || i === crashIdx || i === bottomIdx || i === recoveryIdx) {
                 var label = "D" + (i - 1);  // Day 0 = crash day (index 1), Day -1 = pre-crash (index 0)
-                if (i === 0) label = "暴跌前";
+                if (i === 0) label = __("crash.labelPreCrash");
                 var cx = xPos(i);
                 xLabels += '<text x="' + cx + '" y="' + (plotBottom + 14) + '" text-anchor="middle" fill="var(--apple-text-tertiary)" font-size="10">' + label + '</text>';
             }
@@ -430,17 +430,17 @@
                 var chg = rect.getAttribute("data-chg");
                 var html = '<div style="font-weight:600;">' + d + '</div>';
                 if (o != null && h != null && l != null) {
-                    html += '<div>开: <span style="color:var(--apple-text-secondary);">' + o + '</span>' +
-                        '　高: <span style="color:var(--data-positive);">' + h + '</span></div>' +
-                        '<div>低: <span style="color:var(--data-negative);">' + l + '</span>' +
-                        '　收: <span style="color:var(--apple-blue);">' + c + '</span></div>';
+                    html += '<div>' + __("crash.tooltipOpen") + ' <span style="color:var(--apple-text-secondary);">' + o + '</span>' +
+                        '　' + __("crash.tooltipHigh") + ' <span style="color:var(--data-positive);">' + h + '</span></div>' +
+                        '<div>' + __("crash.tooltipLow") + ' <span style="color:var(--data-negative);">' + l + '</span>' +
+                        '　' + __("crash.tooltipClose") + ' <span style="color:var(--apple-blue);">' + c + '</span></div>';
                 } else {
-                    html += '<div>收盘价: <span style="color:var(--apple-blue);">' + c + '</span></div>';
+                    html += '<div>' + __("crash.tooltipClosePrice") + ' <span style="color:var(--apple-blue);">' + c + '</span></div>';
                 }
                 if (chg != null) {
                     var chgNum = parseFloat(chg);
                     var chgColor = chgNum >= 0 ? "var(--data-positive)" : "var(--data-negative)";
-                    html += '<div>涨跌: <span style="color:' + chgColor + ';">' + (chgNum >= 0 ? "+" : "") + chg + '%</span></div>';
+                    html += '<div>' + __("crash.tooltipChange") + ' <span style="color:' + chgColor + ';">' + (chgNum >= 0 ? "+" : "") + chg + '%</span></div>';
                 }
                 tooltipEl.innerHTML = html;
                 tooltipEl.style.display = "block";
@@ -473,7 +473,7 @@
         errorEl.style.display = "block";
         var html = msg;
         if (retryFn) {
-            html += ' <button class="pc-error-retry">重试</button>';
+            html += ' <button class="pc-error-retry">' + __("status.retry") + '</button>';
         }
         errorEl.innerHTML = html;
         if (retryFn) {

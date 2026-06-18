@@ -158,7 +158,17 @@
     "labelPreCrash": "暴跌前 ",
     "labelCrashDay": "暴跌日 ",
     "labelBottom": "触底 ",
-    "labelRecovery": "恢复 "
+    "labelRecovery": "恢复 ",
+    "requestFailed": "请求失败",
+    "networkError": "网络错误",
+    "unknownError": "未知错误",
+    "noCrashFound": "在选定时间段内没有发现暴跌超过 {{pct}}% 的交易日",
+    "tooltipOpen": "开:",
+    "tooltipHigh": "高:",
+    "tooltipLow": "低:",
+    "tooltipClose": "收:",
+    "tooltipClosePrice": "收盘价:",
+    "tooltipChange": "涨跌:"
   },
   "etf": {
     "colCode": "代码",
@@ -365,7 +375,10 @@
     "reply": "回复",
     "delete": "删除",
     "replyPlaceholder": "管理员回复...",
-    "errorReplyEmpty": "回复内容不能为空"
+    "errorReplyEmpty": "回复内容不能为空",
+    "errorSubmit": "提交失败",
+    "errorReply": "回复失败",
+    "errorDelete": "删除失败"
   },
   "chart": {
     "monthlyTrend": "年月度涨跌幅走势",
@@ -375,6 +388,27 @@
     "dailyReturnsTitle": "日涨跌幅",
     "yearMonthConnector": "年",
     "dayLabel": "{{d}}日"
+  },
+  "health": {
+    "title": "系统健康度",
+    "back": "← 返回首页",
+    "redetect": "重新检测",
+    "probing": "正在探测各数据源...",
+    "eastmoney": "东方财富",
+    "notConfigured": "未配置",
+    "connected": "已连接",
+    "unreachable": "不可达",
+    "available": "可用",
+    "unavailable": "不可用",
+    "normal": "正常",
+    "failed": "失败",
+    "redisCache": "共享缓存 (Redis)",
+    "redisHint": "未连通时，心愿墙 / 访问计数 / 数据缓存会退化为单实例临时存储，线上可能丢数据。",
+    "assetAvailability": "各资产可用性（任一数据源通即为可用）",
+    "sourceDetails": "数据源探测明细",
+    "checkTime": "检测时间：",
+    "cachedNote": "（缓存，约20秒内）",
+    "loadFailed": "加载失败："
   },
   "seo": {
     "indexTitle": "GlobalAssetHistory - 历史涨跌幅与定投回测工具",
