@@ -1,4 +1,7 @@
 {
+  "site": {
+    "base_url": "https://qqq.jztzus.uk"
+  },
   "presets": {
     "core_us_etf": {
       "label": "核心ETF（美股）",

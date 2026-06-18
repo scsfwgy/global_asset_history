@@ -3,6 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GlobalAssetHistory 是跨资产历史收益查询与定投回测工具，支持美股、ETF、数字货币、A股指数的历年涨跌幅、月度走势、日线钻取、暴跌统计和投资回测。">
+    <meta name="keywords" content="历史涨跌幅,历年涨跌幅,定投回测,投资回测,美股历史收益,ETF历史收益,数字货币历史收益,A股指数,收益率热力图,多资产收益分析">
+    <meta name="author" content="GlobalAssetHistory">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="__SITE_BASE_URL__/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="GlobalAssetHistory">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:title" content="GlobalAssetHistory - 历史涨跌幅与定投回测工具">
+    <meta property="og:description" content="查询美股、ETF、数字货币与A股指数的历年涨跌幅，按年/月/日钻取历史收益，并用日线数据做定投回测。">
+    <meta property="og:url" content="__SITE_BASE_URL__/">
+    <meta property="og:image" content="__SITE_BASE_URL__/doc/screenshot/yearly-heatmap.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="GlobalAssetHistory - 历史涨跌幅与定投回测工具">
+    <meta name="twitter:description" content="跨资产历史收益查询、收益率热力图、月度走势、暴跌统计和定投回测。">
+    <meta name="twitter:image" content="__SITE_BASE_URL__/doc/screenshot/yearly-heatmap.png">
+    <script>
+      window.__GAH_SITE_BASE_URL__ = "__SITE_BASE_URL__";
+    </script>
     <!-- Microsoft Clarity -->
     <script type="text/javascript">
         (function(c,l,a,r,i,t,y){
@@ -11,8 +30,32 @@
             y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
         })(window, document, "clarity", "script", "x55ewjghix");
     </script>
-    <title>历年涨跌幅</title>
+    <title>GlobalAssetHistory - 历史涨跌幅与定投回测工具</title>
     <link rel="stylesheet" href="/css/app.css">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "GlobalAssetHistory",
+      "url": "__SITE_BASE_URL__/",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web",
+      "inLanguage": "zh-CN",
+      "description": "跨资产历史收益查询与定投回测工具，支持美股、ETF、数字货币和A股指数的历年涨跌幅、月度走势、日线钻取和投资回测。",
+      "featureList": [
+        "历年涨跌幅热力图",
+        "美股、ETF、数字货币和A股指数收益查询",
+        "年、月、日历史收益钻取",
+        "定投回测与资产曲线",
+        "暴跌统计与VIX恐慌指数观察"
+      ],
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "CNY"
+      }
+    }
+    </script>
     <style>
         /* ─── Layout ─── */
         .pc-controls {
@@ -1521,7 +1564,7 @@
                 </div>
             </div>
             <p id="vixHeaderLine" class="vix-header-line" style="display:none;"><span id="vixHeaderBadge" class="vix-header-badge"></span></p>
-            <a class="site-url" href="https://qqq.jztzus.uk" target="_blank" rel="noopener noreferrer">https://qqq.jztzus.uk</a>
+            <a class="site-url" id="siteUrlLink" href="__SITE_BASE_URL__" target="_blank" rel="noopener noreferrer">__SITE_BASE_URL__</a>
         </div>
     </header>
 
@@ -3334,6 +3377,101 @@
                 'event-myth': '/knowledge/event-myth',
                 'terms': '/knowledge/terms'
             };
+            var TAB_SEO = {
+                'yearly': {
+                    title: 'GlobalAssetHistory - 历史涨跌幅与定投回测工具',
+                    description: '查询美股、ETF、数字货币与A股指数的历年涨跌幅，按年/月/日钻取历史收益，并用日线数据做定投回测。',
+                    canonical: '/'
+                },
+                'backtest': {
+                    title: '定投回测工具 - GlobalAssetHistory',
+                    description: '基于历史日线数据回测一次性、每日、每周和每月定投策略，查看累计投入、总资产、收益率和资产曲线。',
+                    canonical: '/backtest',
+                    noindex: true
+                },
+                'crash': {
+                    title: '资产暴跌统计 - GlobalAssetHistory',
+                    description: '统计美股、ETF、数字货币和A股指数历史暴跌区间，观察回撤、修复时间和关键风险窗口。',
+                    canonical: '/crash',
+                    noindex: true
+                },
+                'etf': {
+                    title: '标普纳指ETF追踪 - GlobalAssetHistory',
+                    description: '对比标普500、纳指100等场内ETF的行情、费率、溢价率、跟踪误差和估值偏离。',
+                    canonical: '/etf',
+                    noindex: true
+                },
+                'qdii-funds': {
+                    title: '标普纳指场外基金追踪 - GlobalAssetHistory',
+                    description: '整理标普500、纳指100和主动QDII基金的申购状态、限额、费率、规模和阶段涨跌幅。',
+                    canonical: '/qdii-funds',
+                    noindex: true
+                },
+                'vix': {
+                    title: 'VIX恐慌指数观察 - GlobalAssetHistory',
+                    description: '查看VIX恐慌指数历史区间与市场风险状态，辅助理解美股风险偏好变化。',
+                    canonical: '/vix',
+                    noindex: true
+                },
+                'knowledge': {
+                    title: '投资数据科普 - GlobalAssetHistory',
+                    description: '了解ETF、QDII、买入渠道、费用、溢价率、跟踪误差和常见投资术语。',
+                    canonical: '/knowledge',
+                    noindex: true
+                },
+                'wishes': {
+                    title: '心愿墙 - GlobalAssetHistory',
+                    description: '提交和查看 GlobalAssetHistory 的功能建议与使用反馈。',
+                    canonical: '/wishes',
+                    noindex: true
+                }
+            };
+
+            function setMeta(name, value) {
+                var el = document.querySelector('meta[name="' + name + '"]');
+                if (!el) {
+                    el = document.createElement('meta');
+                    el.setAttribute('name', name);
+                    document.head.appendChild(el);
+                }
+                el.setAttribute('content', value);
+            }
+
+            function setPropertyMeta(property, value) {
+                var el = document.querySelector('meta[property="' + property + '"]');
+                if (!el) {
+                    el = document.createElement('meta');
+                    el.setAttribute('property', property);
+                    document.head.appendChild(el);
+                }
+                el.setAttribute('content', value);
+            }
+
+            function updateSeo(tabName) {
+                var seo = TAB_SEO[tabName] || TAB_SEO.yearly;
+                var path = seo.canonical || TAB_TO_PATH[tabName] || '/';
+                var baseUrl = (window.__GAH_SITE_BASE_URL__ || '').replace(/\/$/, '');
+                var url = baseUrl + path;
+                document.title = seo.title;
+                setMeta('description', seo.description);
+                setMeta('robots', seo.noindex ? 'noindex,follow' : 'index,follow');
+                setPropertyMeta('og:title', seo.title);
+                setPropertyMeta('og:description', seo.description);
+                setPropertyMeta('og:url', url);
+                setPropertyMeta('og:image', baseUrl + '/doc/screenshot/yearly-heatmap.png');
+                setMeta('twitter:title', seo.title);
+                setMeta('twitter:description', seo.description);
+                setMeta('twitter:image', baseUrl + '/doc/screenshot/yearly-heatmap.png');
+                var canonical = document.querySelector('link[rel="canonical"]');
+                if (!canonical) {
+                    canonical = document.createElement('link');
+                    canonical.rel = 'canonical';
+                    document.head.appendChild(canonical);
+                }
+                canonical.href = url;
+            }
+
+            window.__GAH_UPDATE_SEO__ = updateSeo;
 
             function tabFromPath(path) {
                 return PATH_TO_TAB[path] || null;
@@ -3368,6 +3506,7 @@
 
                 var panel = document.getElementById('tab-' + tabName);
                 if (panel) panel.classList.add('active');
+                updateSeo(tabName);
 
                 // ETF tab: re-render current state on activation so the table
                 // never shows a stale "加载中..." while quotes load in the background.

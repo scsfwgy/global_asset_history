@@ -3,14 +3,16 @@ import json
 import logging
 import os
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 from routes.price_change import price_change_bp
 from routes.wishes import wishes_bp
 from routes.etf_market import etf_market_bp
+from service.price_change.config import get_site_base_url
 from service.price_change import cache_store, diagnostics
 
 app = Flask(__name__, static_folder=None)
@@ -22,6 +24,18 @@ app.register_blueprint(wishes_bp)
 app.register_blueprint(etf_market_bp)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+INDEXABLE_PATHS = {"/", "/etf-market"}
+ROBOT_BLOCKED_PREFIXES = ("/api/", "/settings")
+
+
+def site_url() -> str:
+    return os.getenv("SITE_URL", get_site_base_url()).rstrip("/")
+
+
+def serve_frontend_html(filename: str):
+    html = (FRONTEND_DIR / filename).read_text(encoding="utf-8")
+    html = html.replace("__SITE_BASE_URL__", site_url())
+    return Response(html, mimetype="text/html")
 
 # Visit counter.
 # Preferred: shared Redis INCR (atomic, cross-instance, survives cold starts).
@@ -48,9 +62,59 @@ def _write_counter(count: int) -> None:
     _COUNTER_PATH.write_text(json.dumps({"count": count}))
 
 
+@app.after_request
+def add_seo_headers(response):
+    path = request.path.rstrip("/") or "/"
+    if path in INDEXABLE_PATHS:
+        response.headers.setdefault("X-Robots-Tag", "index,follow")
+    elif path.startswith(ROBOT_BLOCKED_PREFIXES) or path in {"/yearly", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", "/knowledge/how-to-buy", "/knowledge/etf-intro", "/knowledge/event-myth", "/knowledge/terms", "/wishes"}:
+        response.headers.setdefault("X-Robots-Tag", "noindex,follow")
+    return response
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    body = "\n".join([
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /api/",
+        "Disallow: /settings",
+        f"Sitemap: {site_url()}/sitemap.xml",
+        "",
+    ])
+    return Response(body, mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    urls = [
+        ("/", "daily", "1.0"),
+        ("/etf-market", "daily", "0.8"),
+    ]
+    items = []
+    now = datetime.now(timezone.utc).date().isoformat()
+    base_url = site_url()
+    for path, changefreq, priority in urls:
+        items.append(
+            "  <url>"
+            f"<loc>{base_url}{path}</loc>"
+            f"<lastmod>{now}</lastmod>"
+            f"<changefreq>{changefreq}</changefreq>"
+            f"<priority>{priority}</priority>"
+            "</url>"
+        )
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        + "".join(items)
+        + "</urlset>"
+    )
+    return Response(body, mimetype="application/xml")
+
+
 @app.route("/etf-market")
 def etf_market():
-    return send_from_directory(str(FRONTEND_DIR), "etf-market.html")
+    return serve_frontend_html("etf-market.html")
 
 
 @app.route("/yearly")
@@ -70,7 +134,7 @@ def etf_market():
 @app.route("/wishes")
 @app.route("/settings")
 def serve_tab():
-    return send_from_directory(str(FRONTEND_DIR), "price-change.html")
+    return serve_frontend_html("price-change.html")
 
 
 @app.route("/api/health")
@@ -164,11 +228,13 @@ def link_clicks():
 
 @app.route("/")
 def index():
-    return send_from_directory(str(FRONTEND_DIR), "price-change.html")
+    return serve_frontend_html("price-change.html")
 
 
 @app.route("/<path:filename>")
 def frontend_files(filename):
+    if filename in {"price-change.html", "etf-market.html"}:
+        return serve_frontend_html(filename)
     return send_from_directory(str(FRONTEND_DIR), filename)
 
 

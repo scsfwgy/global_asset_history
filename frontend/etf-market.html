@@ -3,8 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A股ETF 实时行情 — GlobalAssetHistory</title>
+    <meta name="description" content="A股ETF实时行情与费率对比工具，追踪纳指100、标普500等场内ETF的价格、涨跌幅、市值、管理费、托管费、溢价率和跟踪误差。">
+    <meta name="keywords" content="A股ETF实时行情,纳指ETF,标普500ETF,ETF费率,ETF溢价率,ETF跟踪误差,场内ETF,纳斯达克100ETF">
+    <meta name="author" content="GlobalAssetHistory">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="__SITE_BASE_URL__/etf-market">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="GlobalAssetHistory">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:title" content="A股ETF实时行情与费率对比 - GlobalAssetHistory">
+    <meta property="og:description" content="查看纳指100、标普500等A股场内ETF的实时行情、总市值、费率合计、溢价率和30日跟踪误差。">
+    <meta property="og:url" content="__SITE_BASE_URL__/etf-market">
+    <meta property="og:image" content="__SITE_BASE_URL__/doc/screenshot/yearly-chart.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="A股ETF实时行情与费率对比 - GlobalAssetHistory">
+    <meta name="twitter:description" content="纳指100、标普500等场内ETF实时行情、费率、溢价率和跟踪误差对比。">
+    <meta name="twitter:image" content="__SITE_BASE_URL__/doc/screenshot/yearly-chart.png">
+    <script>
+      window.__GAH_SITE_BASE_URL__ = "__SITE_BASE_URL__";
+    </script>
+    <title>A股ETF实时行情与费率对比 — GlobalAssetHistory</title>
     <link rel="stylesheet" href="/css/app.css">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "A股ETF实时行情与费率对比",
+      "url": "__SITE_BASE_URL__/etf-market",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web",
+      "inLanguage": "zh-CN",
+      "description": "追踪纳指100、标普500等A股场内ETF的实时价格、涨跌幅、费率、溢价率和跟踪误差。",
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": "GlobalAssetHistory",
+        "url": "__SITE_BASE_URL__/"
+      }
+    }
+    </script>
     <style>
         .etf-market-container {
             max-width: 1400px;
@@ -97,6 +133,44 @@
 </div>
 
 <script src="/js/etf-market.js"></script>
+<script>
+(function() {
+    function setMeta(name, value) {
+        var el = document.querySelector('meta[name="' + name + '"]');
+        if (el) el.setAttribute('content', value);
+    }
+    function setPropertyMeta(property, value) {
+        var el = document.querySelector('meta[property="' + property + '"]');
+        if (el) el.setAttribute('content', value);
+    }
+    function applySiteBaseUrl(rawUrl) {
+        var baseUrl = rawUrl ? String(rawUrl).replace(/\/$/, '') : '';
+        if (!baseUrl) return;
+        window.__GAH_SITE_BASE_URL__ = baseUrl;
+        var pageUrl = baseUrl + '/etf-market';
+        var imageUrl = baseUrl + '/doc/screenshot/yearly-chart.png';
+        var canonical = document.querySelector('link[rel="canonical"]');
+        if (canonical) canonical.href = pageUrl;
+        setPropertyMeta('og:url', pageUrl);
+        setPropertyMeta('og:image', imageUrl);
+        setMeta('twitter:image', imageUrl);
+        document.querySelectorAll('script[type="application/ld+json"]').forEach(function(script) {
+            try {
+                var data = JSON.parse(script.textContent);
+                data.url = pageUrl;
+                if (data.isPartOf) data.isPartOf.url = baseUrl + '/';
+                script.textContent = JSON.stringify(data);
+            } catch (_) {}
+        });
+    }
+    fetch('/api/price-change/config')
+        .then(function(resp) { return resp.ok ? resp.json() : null; })
+        .then(function(cfg) {
+            applySiteBaseUrl(cfg && cfg.site && cfg.site.base_url);
+        })
+        .catch(function() {});
+})();
+</script>
 
 <!-- Custom instant tooltip (replaces slow native title tooltip) -->
 <script>

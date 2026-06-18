@@ -437,15 +437,31 @@ function renderTable(result) {
 async function loadConfigFromServer() {
   try {
     const resp = await fetch(CONFIG_ENDPOINT);
-    if (!resp.ok) return { presets: [], colorRange: { min: -100, max: 100 }, colorScheme: "green_up" };
+    if (!resp.ok) return { presets: [], colorRange: { min: -100, max: 100 }, colorScheme: "green_up", site: {} };
     const cfg = await resp.json();
     return {
       presets: cfg.presets || [],
       colorRange: cfg.color_range || { min: -100, max: 100 },
       colorScheme: cfg.color_scheme || "green_up",
+      site: cfg.site || {},
     };
   } catch {
-    return { presets: [], colorRange: { min: -100, max: 100 }, colorScheme: "green_up" };
+    return { presets: [], colorRange: { min: -100, max: 100 }, colorScheme: "green_up", site: {} };
+  }
+}
+
+function applySiteConfig(site) {
+  const baseUrl = site && site.base_url ? String(site.base_url).replace(/\/$/, "") : "";
+  if (!baseUrl) return;
+  window.__GAH_SITE_BASE_URL__ = baseUrl;
+  const siteLink = document.getElementById("siteUrlLink");
+  if (siteLink) {
+    siteLink.href = baseUrl;
+    siteLink.textContent = baseUrl;
+  }
+  const activeBtn = document.querySelector(".tab-btn.active");
+  if (typeof window.__GAH_UPDATE_SEO__ === "function" && activeBtn) {
+    window.__GAH_UPDATE_SEO__(activeBtn.dataset.tab || "yearly");
   }
 }
 
@@ -707,6 +723,7 @@ async function init() {
   // Load config (presets + color range + color scheme)
   const cfg = await loadConfigFromServer();
   PRESETS = cfg.presets;
+  applySiteConfig(cfg.site);
 
   // Apply color scheme from backend if no localStorage override
   if (typeof window.applyColorScheme === 'function') {

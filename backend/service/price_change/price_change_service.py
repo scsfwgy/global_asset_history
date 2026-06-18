@@ -30,7 +30,7 @@ from .common import (
     PriceSeries,
     empty_series,
 )
-from .config import get_color_range, get_color_scheme, get_presets
+from .config import get_color_range, get_color_scheme, get_presets, get_site_config
 from .fetchers import DAILY_SERIES_FETCHERS, FETCHERS
 from . import cache_store
 
@@ -582,4 +582,3 @@ def get_crash_chart_data(payload: Dict) -> Dict:
         "has_ohlc": window_has_ohlc,
         "prices": prices,
     }
-
