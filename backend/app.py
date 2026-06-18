@@ -84,15 +84,15 @@ KNOWLEDGE_ARTICLES = {
         "subtab": "terms",
         "en_indexable": True,
         "title": {
-            "zh-CN": "美股和ETF专业术语表 - GlobalAssetHistory",
+            "zh-CN": "美股、A股ETF和基金专业术语表 - GlobalAssetHistory",
             "en": "US Stock and ETF Glossary — GlobalAssetHistory",
         },
         "description": {
-            "zh-CN": "整理美股、ETF、指数、费率、持仓、溢价、回撤、波动率和数据源相关术语，方便快速查阅。",
+            "zh-CN": "整理 LOF、ETF、A类/C类、场内场外、折溢价、溢价率、跟踪误差、指数、费率、持仓、回撤和波动率等术语，方便快速查阅。",
             "en": "A glossary for US stocks, ETFs, indexes, fees, holdings, premiums, drawdowns, volatility, and market data terms.",
         },
         "keywords": {
-            "zh-CN": "美股术语,ETF术语,指数基金,管理费,持仓,溢价率,最大回撤,波动率,金融术语",
+            "zh-CN": "美股术语,A股ETF术语,LOF,ETF,A类基金,C类基金,场内基金,场外基金,溢价率,跟踪误差,指数基金,管理费,持仓,最大回撤,波动率,金融术语",
             "en": "US stock glossary,ETF glossary,index funds,expense ratio,holdings,premium,drawdown,volatility,financial terms",
         },
     },

@@ -60,12 +60,13 @@ class TestEtfHistoryCache:
         assert data["bars"][0]["premium_pct"] == 2.0
         mock_get.assert_not_called()
 
-    def test_history_serves_stale_cache_when_upstream_fails(self, client):
+    def test_history_serves_stale_cache_when_upstream_fails(self, client, tmp_path, monkeypatch):
+        monkeypatch.setattr(etf_market, "_ETF_HISTORY_DATA_DIR", tmp_path)
         stored_at = time.time() - etf_market._ETF_HISTORY_TTL_SECONDS - 60
         key = etf_market._history_cache_key("513300", 120)
         etf_market._etf_history_cache[key] = (stored_at, _sample_history_payload(stored_at))
 
-        with patch(
+        with patch.object(etf_market.cache_store, "cache_get", return_value=None), patch(
             "routes.etf_market.requests.get",
             side_effect=etf_market.requests.RequestException("boom"),
         ):
