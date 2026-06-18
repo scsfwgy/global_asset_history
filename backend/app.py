@@ -25,8 +25,80 @@ app.register_blueprint(wishes_bp)
 app.register_blueprint(etf_market_bp)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
-INDEXABLE_PATHS = {"/", "/etf-market"}
 ROBOT_BLOCKED_PREFIXES = ("/api/", "/settings")
+
+KNOWLEDGE_ARTICLES = {
+    "/knowledge/how-to-buy-us-stocks": {
+        "legacy_paths": ["/knowledge/how-to-buy"],
+        "subtab": "how-to-buy",
+        "title": {
+            "zh-CN": "如何用稳定币购买美股和ETF - GlobalAssetHistory",
+            "en": "How to Buy US Stocks and ETFs with Stablecoins — GlobalAssetHistory",
+        },
+        "description": {
+            "zh-CN": "了解通过 BIT、币安和 Bitget 等平台用 USDT、USDC 参与美股和 ETF 的方式、产品结构、适合人群与风险提示。",
+            "en": "A practical guide to buying US stocks and ETFs with USDT or USDC through crypto platforms, including product structure, suitability, and risks.",
+        },
+        "keywords": {
+            "zh-CN": "稳定币买美股,USDT买美股,USDC买美股,币安美股,Bitget Stocks,BIT美股,代币化股票,rToken,美股ETF",
+            "en": "buy US stocks with stablecoins,USDT US stocks,USDC ETFs,Binance stocks,Bitget Stocks,BIT stocks,tokenized stocks,rToken,US ETFs",
+        },
+    },
+    "/knowledge/core-etf-guide": {
+        "legacy_paths": ["/knowledge/etf-intro"],
+        "subtab": "etf-intro",
+        "title": {
+            "zh-CN": "核心美股ETF指南：SPY、VOO、QQQ、SMH、DRAM、EWY - GlobalAssetHistory",
+            "en": "Core US ETF Guide: SPY, VOO, QQQ, SMH, DRAM, EWY — GlobalAssetHistory",
+        },
+        "description": {
+            "zh-CN": "对比核心美股 ETF、科技与半导体 ETF、DRAM 与 EWY 的历史表现、持仓特征、热门原因和主要风险。",
+            "en": "Compare core US ETFs, technology and semiconductor ETFs, plus DRAM and EWY by performance, holdings, investment use case, and key risks.",
+        },
+        "keywords": {
+            "zh-CN": "核心ETF,美股ETF,SPY,VOO,QQQ,QQQM,VGT,XLK,SMH,SOXX,DRAM,EWY,ETF持仓,ETF配置",
+            "en": "core ETFs,US ETFs,SPY,VOO,QQQ,QQQM,VGT,XLK,SMH,SOXX,DRAM,EWY,ETF holdings,ETF allocation",
+        },
+    },
+    "/knowledge/market-data-myths": {
+        "legacy_paths": ["/knowledge/event-myth"],
+        "subtab": "event-myth",
+        "title": {
+            "zh-CN": "美股数据魔咒统计：世界杯、选举、总统周期和奥运会 - GlobalAssetHistory",
+            "en": "Market Data Myths: World Cup, Elections, Presidential Cycle, Olympics — GlobalAssetHistory",
+        },
+        "description": {
+            "zh-CN": "用历史数据检验世界杯、美国中期选举、总统四年周期、奥运会等市场魔咒，区分统计现象与交易信号。",
+            "en": "Use historical market data to test popular market myths around the World Cup, US elections, presidential cycles, and the Olympics.",
+        },
+        "keywords": {
+            "zh-CN": "美股数据魔咒,世界杯魔咒,中期选举行情,总统周期,奥运会行情,历史统计,S&P 500",
+            "en": "market data myths,World Cup stock market,midterm elections market,presidential cycle,Olympics market,S&P 500 history",
+        },
+    },
+    "/knowledge/financial-terms": {
+        "legacy_paths": ["/knowledge/terms"],
+        "subtab": "terms",
+        "title": {
+            "zh-CN": "美股和ETF专业术语表 - GlobalAssetHistory",
+            "en": "US Stock and ETF Glossary — GlobalAssetHistory",
+        },
+        "description": {
+            "zh-CN": "整理美股、ETF、指数、费率、持仓、溢价、回撤、波动率和数据源相关术语，方便快速查阅。",
+            "en": "A glossary for US stocks, ETFs, indexes, fees, holdings, premiums, drawdowns, volatility, and market data terms.",
+        },
+        "keywords": {
+            "zh-CN": "美股术语,ETF术语,指数基金,管理费,持仓,溢价率,最大回撤,波动率,金融术语",
+            "en": "US stock glossary,ETF glossary,index funds,expense ratio,holdings,premium,drawdown,volatility,financial terms",
+        },
+    },
+}
+KNOWLEDGE_LEGACY_PATHS = {
+    legacy: path
+    for path, meta in KNOWLEDGE_ARTICLES.items()
+    for legacy in meta.get("legacy_paths", [])
+}
+INDEXABLE_PATHS = {"/", "/etf-market", "/knowledge", *KNOWLEDGE_ARTICLES.keys()}
 
 
 def site_url() -> str:
@@ -64,6 +136,39 @@ def _replace_meta_content(html: str, selector: str, value: str) -> str:
     return re.sub(pattern, rf'\g<1>{value}\2', html, count=1)
 
 
+def _base_request_path() -> str:
+    path = request.path.rstrip("/") or "/"
+    m = re.match(r"^/(en|zh)(/.*)?$", path)
+    return (m.group(2) or "/") if m else path
+
+
+def _canonical_content_path(base_path: str, filename: str) -> str:
+    if filename == "etf-market.html":
+        return "/etf-market"
+    if base_path == "/knowledge":
+        return "/knowledge/how-to-buy-us-stocks"
+    if base_path in KNOWLEDGE_LEGACY_PATHS:
+        return KNOWLEDGE_LEGACY_PATHS[base_path]
+    if base_path in KNOWLEDGE_ARTICLES:
+        return base_path
+    return "/"
+
+
+def _replace_json_ld(html: str, data: dict) -> str:
+    script = (
+        '<script type="application/ld+json">\n'
+        + json.dumps(data, ensure_ascii=False, indent=2)
+        + "\n    </script>"
+    )
+    return re.sub(
+        r'<script type="application/ld\+json">.*?</script>',
+        script,
+        html,
+        count=1,
+        flags=re.S,
+    )
+
+
 def serve_frontend_html(filename: str):
     lang = request_lang()
     locale = _load_locale(lang)
@@ -71,7 +176,8 @@ def serve_frontend_html(filename: str):
     html_lang = "en" if lang == "en" else "zh-CN"
     og_locale = "en_US" if lang == "en" else "zh_CN"
     prefix = "/en" if lang == "en" else "/zh"
-    page_path = "/etf-market" if filename == "etf-market.html" else "/"
+    base_request_path = _base_request_path()
+    page_path = _canonical_content_path(base_request_path, filename)
     page_url = f"{base_url}{prefix}{page_path}"
 
     html = (FRONTEND_DIR / filename).read_text(encoding="utf-8")
@@ -84,14 +190,32 @@ def serve_frontend_html(filename: str):
     if filename == "etf-market.html":
         title = _locale_value(locale, "seo.etfMarketTitle", _locale_value(locale, "seo.etfTitle", "GlobalAssetHistory"))
         desc = _locale_value(locale, "seo.etfMarketDescription", _locale_value(locale, "seo.etfDescription", ""))
+        keywords = _locale_value(locale, "seo.etfMarketKeywords", "")
         image_url = f"{base_url}/doc/screenshot/yearly-chart.png"
+        og_type = "website"
+    elif page_path in KNOWLEDGE_ARTICLES:
+        article = KNOWLEDGE_ARTICLES[page_path]
+        title = article["title"][lang]
+        desc = article["description"][lang]
+        keywords = article["keywords"][lang]
+        image_url = f"{base_url}/doc/screenshot/yearly-heatmap.png"
+        og_type = "article"
     else:
         title = _locale_value(locale, "seo.indexTitle", "GlobalAssetHistory")
         desc = _locale_value(locale, "seo.indexDescription", "")
+        keywords = _locale_value(locale, "seo.indexKeywords", "")
         image_url = f"{base_url}/doc/screenshot/yearly-heatmap.png"
+        og_type = "website"
 
     html = re.sub(r"<title>.*?</title>", f"<title>{title}</title>", html, count=1, flags=re.S)
     html = _replace_meta_content(html, r'name="description"', desc)
+    if keywords:
+        html = _replace_meta_content(html, r'name="keywords"', keywords)
+    robots_content = "index,follow" if page_path in INDEXABLE_PATHS and base_request_path not in KNOWLEDGE_LEGACY_PATHS else "noindex,follow"
+    if page_path in KNOWLEDGE_ARTICLES and lang == "en":
+        robots_content = "noindex,follow"
+    html = _replace_meta_content(html, r'name="robots"', robots_content)
+    html = _replace_meta_content(html, r'property="og:type"', og_type)
     html = _replace_meta_content(html, r'property="og:title"', title)
     html = _replace_meta_content(html, r'property="og:description"', desc)
     html = _replace_meta_content(html, r'property="og:url"', page_url)
@@ -105,7 +229,30 @@ def serve_frontend_html(filename: str):
     html = re.sub(r'(<link rel="alternate" hreflang="en" href=")[^"]*(")', rf'\g<1>{base_url}/en{page_path}\2', html, count=1)
     html = re.sub(r'(<link rel="alternate" hreflang="x-default" href=")[^"]*(")', rf'\g<1>{base_url}/zh{page_path}\2', html, count=1)
 
-    if filename == "etf-market.html":
+    if page_path in KNOWLEDGE_ARTICLES:
+        article = KNOWLEDGE_ARTICLES[page_path]
+        html = _replace_json_ld(html, {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": title,
+            "description": desc,
+            "url": page_url,
+            "image": image_url,
+            "author": {
+                "@type": "Organization",
+                "name": "GlobalAssetHistory",
+            },
+            "publisher": {
+                "@type": "Organization",
+                "name": "GlobalAssetHistory",
+            },
+            "mainEntityOfPage": page_url,
+            "inLanguage": html_lang,
+            "dateModified": datetime.now(timezone.utc).date().isoformat(),
+            "articleSection": "Knowledge Base",
+            "keywords": article["keywords"][lang],
+        })
+    elif filename == "etf-market.html":
         html = re.sub(r'("name":\s*)"[^"]*"', rf'\1{_json_script_value(title)}', html, count=1)
         html = re.sub(r'("url":\s*)"[^"]*/etf-market"', rf'\1{_json_script_value(page_url)}', html, count=1)
         html = re.sub(r'("description":\s*)"[^"]*"', rf'\1{_json_script_value(desc)}', html, count=1)
@@ -142,14 +289,13 @@ def _write_counter(count: int) -> None:
 
 @app.after_request
 def add_seo_headers(response):
-    path = request.path.rstrip("/") or "/"
-    # Strip language prefix to check indexability
-    m = re.match(r'^/(en|zh)(/.*)?$', path)
-    base_path = (m.group(2) or "/") if m else path
+    base_path = _base_request_path()
 
-    if base_path in INDEXABLE_PATHS:
+    if base_path in KNOWLEDGE_ARTICLES and request_lang() == "en":
+        response.headers.setdefault("X-Robots-Tag", "noindex,follow")
+    elif base_path in INDEXABLE_PATHS:
         response.headers.setdefault("X-Robots-Tag", "index,follow")
-    elif base_path.startswith(ROBOT_BLOCKED_PREFIXES) or base_path in {"/yearly", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", "/knowledge/how-to-buy", "/knowledge/etf-intro", "/knowledge/event-myth", "/knowledge/terms", "/wishes"}:
+    elif base_path.startswith(ROBOT_BLOCKED_PREFIXES) or base_path in {"/yearly", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", *KNOWLEDGE_LEGACY_PATHS.keys(), "/wishes"}:
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
     return response
 
@@ -171,13 +317,15 @@ def robots_txt():
 def sitemap_xml():
     langs = [("zh", "zh-CN"), ("en", "en")]
     urls = [
-        ("/", "daily", "1.0"),
-        ("/etf-market", "daily", "0.8"),
+        ("/", "daily", "1.0", True),
+        ("/etf-market", "daily", "0.8", True),
+        *[(path, "weekly", "0.7", False) for path in KNOWLEDGE_ARTICLES.keys()],
     ]
     items = []
     now = datetime.now(timezone.utc).date().isoformat()
     base_url = site_url()
-    for path, changefreq, priority in urls:
+    for path, changefreq, priority, include_en in urls:
+        page_langs = langs if include_en else [("zh", "zh-CN")]
         # Default (x-default) URL — use zh as the canonical for the root
         items.append(
             "  <url>"
@@ -187,13 +335,13 @@ def sitemap_xml():
             f"<priority>{priority}</priority>"
             + "".join(
                 f'<xhtml:link rel="alternate" hreflang="{hreflang}" href="{base_url}/{short}{path}"/>'
-                for short, hreflang in langs
+                for short, hreflang in page_langs
             )
             + f'<xhtml:link rel="alternate" hreflang="x-default" href="{base_url}/zh{path}"/>'
             "</url>"
         )
         # Language-specific URLs
-        for short, hreflang in langs:
+        for short, hreflang in page_langs:
             items.append(
                 "  <url>"
                 f"<loc>{base_url}/{short}{path}</loc>"
@@ -202,7 +350,7 @@ def sitemap_xml():
                 f"<priority>{priority}</priority>"
                 + "".join(
                     f'<xhtml:link rel="alternate" hreflang="{h}" href="{base_url}/{s}{path}"/>'
-                    for s, h in langs
+                    for s, h in page_langs
                 )
                 + f'<xhtml:link rel="alternate" hreflang="x-default" href="{base_url}/zh{path}"/>'
                 "</url>"
@@ -233,9 +381,13 @@ def etf_market():
 @app.route("/vix")
 @app.route("/knowledge")
 @app.route("/knowledge/how-to-buy")
+@app.route("/knowledge/how-to-buy-us-stocks")
 @app.route("/knowledge/etf-intro")
+@app.route("/knowledge/core-etf-guide")
 @app.route("/knowledge/event-myth")
+@app.route("/knowledge/market-data-myths")
 @app.route("/knowledge/terms")
+@app.route("/knowledge/financial-terms")
 @app.route("/wishes")
 @app.route("/settings")
 def serve_tab():

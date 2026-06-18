@@ -3488,9 +3488,13 @@
                 '/vix': 'vix',
                 '/knowledge': 'knowledge',
                 '/knowledge/how-to-buy': 'knowledge',
+                '/knowledge/how-to-buy-us-stocks': 'knowledge',
                 '/knowledge/etf-intro': 'knowledge',
+                '/knowledge/core-etf-guide': 'knowledge',
                 '/knowledge/event-myth': 'knowledge',
+                '/knowledge/market-data-myths': 'knowledge',
                 '/knowledge/terms': 'knowledge',
+                '/knowledge/financial-terms': 'knowledge',
                 '/wishes': 'wishes',
                 '/settings': 'yearly'
             };
@@ -3501,7 +3505,7 @@
                 'etf': '/etf',
                 'qdii-funds': '/qdii-funds',
                 'vix': '/vix',
-                'knowledge': '/knowledge',
+                'knowledge': '/knowledge/how-to-buy-us-stocks',
                 'wishes': '/wishes'
             };
 
@@ -3514,10 +3518,42 @@
 
             // Knowledge sub-tab path mapping
             var KB_SUB_PATH = {
-                'how-to-buy': '/knowledge/how-to-buy',
-                'etf-intro': '/knowledge/etf-intro',
-                'event-myth': '/knowledge/event-myth',
-                'terms': '/knowledge/terms'
+                'how-to-buy': '/knowledge/how-to-buy-us-stocks',
+                'etf-intro': '/knowledge/core-etf-guide',
+                'event-myth': '/knowledge/market-data-myths',
+                'terms': '/knowledge/financial-terms'
+            };
+            var KB_PATH_ALIASES = {
+                '/knowledge/how-to-buy': 'how-to-buy',
+                '/knowledge/how-to-buy-us-stocks': 'how-to-buy',
+                '/knowledge/etf-intro': 'etf-intro',
+                '/knowledge/core-etf-guide': 'etf-intro',
+                '/knowledge/event-myth': 'event-myth',
+                '/knowledge/market-data-myths': 'event-myth',
+                '/knowledge/terms': 'terms',
+                '/knowledge/financial-terms': 'terms'
+            };
+            var KB_SEO = {
+                'how-to-buy': {
+                    titleKey: 'seo.knowledgeHowToBuyTitle',
+                    descKey: 'seo.knowledgeHowToBuyDescription',
+                    canonical: '/knowledge/how-to-buy-us-stocks'
+                },
+                'etf-intro': {
+                    titleKey: 'seo.knowledgeEtfIntroTitle',
+                    descKey: 'seo.knowledgeEtfIntroDescription',
+                    canonical: '/knowledge/core-etf-guide'
+                },
+                'event-myth': {
+                    titleKey: 'seo.knowledgeEventMythTitle',
+                    descKey: 'seo.knowledgeEventMythDescription',
+                    canonical: '/knowledge/market-data-myths'
+                },
+                'terms': {
+                    titleKey: 'seo.knowledgeTermsTitle',
+                    descKey: 'seo.knowledgeTermsDescription',
+                    canonical: '/knowledge/financial-terms'
+                }
             };
             var TAB_SEO = {
                 'yearly': {
@@ -3596,6 +3632,13 @@
 
             function updateSeo(tabName) {
                 var seo = TAB_SEO[tabName] || TAB_SEO.yearly;
+                if (tabName === 'knowledge') {
+                    var kbSub = kbSubFromPath(_stripLang(location.pathname));
+                    if (kbSub && KB_SEO[kbSub]) seo = KB_SEO[kbSub];
+                    if ((typeof __lang === 'function') && __lang() === 'en') {
+                        seo = Object.assign({}, seo, { noindex: true });
+                    }
+                }
                 var path = seo.canonical || TAB_TO_PATH[tabName] || '/';
                 var baseUrl = (window.__GAH_SITE_BASE_URL__ || '').replace(/\/$/, '');
                 var prefix = _langUrlPrefix();
@@ -3608,6 +3651,7 @@
                 setPropertyMeta('og:title', title);
                 setPropertyMeta('og:description', desc);
                 setPropertyMeta('og:url', url);
+                setPropertyMeta('og:type', tabName === 'knowledge' && !seo.noindex ? 'article' : 'website');
                 setPropertyMeta('og:image', baseUrl + '/doc/screenshot/yearly-heatmap.png');
                 setMeta('twitter:title', title);
                 setMeta('twitter:description', desc);
@@ -3645,11 +3689,8 @@
             }
 
             function kbSubFromPath(path) {
-                if (path.indexOf('/knowledge/') === 0) {
-                    var sub = path.split('/')[2];
-                    if (KB_SUB_PATH[sub]) return sub;
-                }
-                return null;
+                if (path === '/knowledge') return 'how-to-buy';
+                return KB_PATH_ALIASES[path] || null;
             }
 
             function activateTab(tabName, updateUrl) {
@@ -3717,6 +3758,7 @@
                     // Update URL
                     var path = KB_SUB_PATH[sub] || '/knowledge';
                     history.replaceState({ tab: 'knowledge', kbSub: sub }, '', _pathWithLang(path));
+                    updateSeo('knowledge');
                 });
             });
 
