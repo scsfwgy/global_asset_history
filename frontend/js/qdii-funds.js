@@ -46,8 +46,8 @@
         if (value == null || value === "") return "--";
         var n = Number(value);
         if (!isFinite(n)) return "--";
-        if (n >= 10000) return (n / 10000).toFixed(n % 10000 === 0 ? 0 : 1) + "万";
-        return n.toFixed(n % 1 === 0 ? 0 : 2) + "元";
+        if (n >= 10000) return (n / 10000).toFixed(n % 10000 === 0 ? 0 : 1) + __("qdii.unitWan");
+        return n.toFixed(n % 1 === 0 ? 0 : 2) + __("qdii.unitYuan");
     }
 
     function fmtRate(value) {
@@ -58,9 +58,9 @@
         if (value == null || value === "") return "--";
         var n = Number(value);
         if (!isFinite(n)) return "--";
-        if (n >= 100000000) return (n / 100000000).toFixed(2) + "亿";
-        if (n >= 10000) return (n / 10000).toFixed(0) + "万";
-        return n.toFixed(0) + "元";
+        if (n >= 100000000) return (n / 100000000).toFixed(2) + __("qdii.unitYi");
+        if (n >= 10000) return (n / 10000).toFixed(0) + __("qdii.unitWan");
+        return n.toFixed(0) + __("qdii.unitYuan");
     }
 
     function fmtPct(value) {
@@ -81,23 +81,23 @@
         var d = new Date(iso);
         if (isNaN(d.getTime())) return "";
         var pad = function (n) { return String(n).padStart(2, "0"); };
-        return "更新 " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+        return __("qdii.updatedPrefix") + pad(d.getHours()) + ":" + pad(d.getMinutes());
     }
 
     function cacheStatusLabel(status) {
-        if (status === "fresh") return "刚更新";
-        if (status === "memory") return "内存缓存";
-        if (status === "shared") return "共享缓存";
-        if (status === "local") return "本地快照";
-        if (status === "local_stale_upstream_failed") return "本地快照 · 上游失败";
-        if (status === "local_stale_upstream_partial") return "本地快照 · 上游不完整";
+        if (status === "fresh") return __("qdii.statusFresh");
+        if (status === "memory") return __("qdii.statusCached");
+        if (status === "shared") return __("qdii.statusShared");
+        if (status === "local") return __("qdii.statusSnapshot");
+        if (status === "local_stale_upstream_failed") return __("qdii.statusLocalStaleFailed");
+        if (status === "local_stale_upstream_partial") return __("qdii.statusLocalStalePartial");
         return "";
     }
 
     function indexLabel(key) {
         if (STATE.data && STATE.data.labels && STATE.data.labels[key]) return STATE.data.labels[key];
-        if (key === "active_qdii") return "QDII主动";
-        return key === "sp500" ? "标普500" : "纳指100";
+        if (key === "active_qdii") return __("qdii.labelActiveQdii");
+        return key === "sp500" ? __("qdii.labelSp500") : __("qdii.labelNasdaq100");
     }
 
     function baseRowsForActiveIndex() {
@@ -111,7 +111,7 @@
     function rowSortValue(row, col) {
         if (!row) return null;
         if (col === "index") return indexLabel(row.index);
-        if (col === "status") return row.buyable ? "可买" : "暂停";
+        if (col === "status") return row.buyable ? __("qdii.statusAvailable") : __("qdii.statusSuspended");
         if (NUMERIC_SORT_COLUMNS[col]) {
             var n = row[col];
             return n == null || n === "" || !isFinite(Number(n)) ? null : Number(n);
@@ -138,7 +138,7 @@
     }
 
     function optionLabel(prefix, value) {
-        return prefix + "：" + (value || "全部");
+        return prefix + "：" + (value || __("qdii.filterAll"));
     }
 
     function setSelectOptions(id, prefix, values, current) {
@@ -146,7 +146,7 @@
         if (!select) return;
         var normalizedValues = values.filter(function (v) { return v != null && v !== ""; });
         var hasCurrent = !current || normalizedValues.indexOf(current) >= 0;
-        var html = ['<option value="">' + escapeHtml(prefix + "：全部") + '</option>'];
+        var html = ['<option value="">' + escapeHtml(prefix + "：" + __("qdii.filterAll")) + '</option>'];
         normalizedValues.forEach(function (value) {
             html.push('<option value="' + escapeHtml(value) + '">' + escapeHtml(optionLabel(prefix, value)) + '</option>');
         });
@@ -169,9 +169,9 @@
             });
             return Object.keys(set).sort(function (a, b) { return a.localeCompare(b, "zh-Hans-CN", { numeric: true }); });
         }
-        setSelectOptions("qdiiFilterShare", "份额", unique("share_class"), STATE.filters.share_class);
-        setSelectOptions("qdiiFilterType", "类型", unique("fund_type"), STATE.filters.fund_type);
-        setSelectOptions("qdiiFilterCompany", "公司", unique("company"), STATE.filters.company);
+        setSelectOptions("qdiiFilterShare", __("qdii.filterShare"), unique("share_class"), STATE.filters.share_class);
+        setSelectOptions("qdiiFilterType", __("qdii.filterType"), unique("fund_type"), STATE.filters.fund_type);
+        setSelectOptions("qdiiFilterCompany", __("qdii.filterCompany"), unique("company"), STATE.filters.company);
         var statusSelect = $("qdiiFilterStatus");
         if (statusSelect) statusSelect.value = STATE.filters.status || "";
     }
@@ -243,13 +243,13 @@
         var maxLimit = limits.length ? Math.max.apply(null, limits) : null;
         var minLimit = limits.length ? Math.min.apply(null, limits) : null;
         var zeroFee = rows.filter(function (r) { return r.discounted_rate_num === 0; }).length;
-        var subLabel = STATE.activeIndex === "active_qdii" ? "主动 QDII 人民币份额" : indexLabel(STATE.activeIndex) + " 场外人民币份额";
+        var subLabel = STATE.activeIndex === "active_qdii" ? __("qdii.summaryActiveQdiiSub") : indexLabel(STATE.activeIndex) + __("qdii.summaryOtcSuffix");
 
         wrap.innerHTML = [
-            summaryCard("候选基金", rows.length + "只", subLabel),
-            summaryCard("公开可买", buyable.length + "只", buyable.length ? "仍需支付宝 App 复核" : "当前公开接口多为暂停"),
-            summaryCard("单日限额", maxLimit == null ? "--" : fmtMoney(minLimit) + " - " + fmtMoney(maxLimit), "QDII 额度可能日内变化"),
-            summaryCard("零申购费份额", zeroFee + "只", "多为 C 类，需看销售服务费"),
+            summaryCard(__("qdii.candidateFunds"), rows.length + __("qdii.unitCount"), subLabel),
+            summaryCard(__("qdii.publicAvailable"), buyable.length + __("qdii.unitCount"), buyable.length ? __("qdii.needAlipayVerify") : __("qdii.mostSuspended")),
+            summaryCard(__("qdii.dailyLimit"), maxLimit == null ? "--" : fmtMoney(minLimit) + " - " + fmtMoney(maxLimit), __("qdii.limitSubjectToChange")),
+            summaryCard(__("qdii.zeroFeeShare"), zeroFee + __("qdii.unitCount"), __("qdii.mostlyCClass")),
         ].join("");
     }
 
@@ -268,12 +268,12 @@
         if (!body) return;
         var rows = rowsForActiveIndex();
         if (!rows.length) {
-            body.innerHTML = '<tr><td colspan="22" style="text-align:center;padding:24px;color:var(--apple-text-secondary);">没有符合筛选条件的基金</td></tr>';
+            body.innerHTML = '<tr><td colspan="22" style="text-align:center;padding:24px;color:var(--apple-text-secondary);">' + escapeHtml(__("qdii.noMatchingFunds")) + '</td></tr>';
             return;
         }
         body.innerHTML = rows.map(function (row) {
             var statusClass = row.buyable ? "buyable" : "paused";
-            var statusText = row.buyable ? "可买" : "暂停";
+            var statusText = row.buyable ? __("qdii.statusAvailable") : __("qdii.statusSuspended");
             var statusDetail = row.purchase_status || "--";
             var feeText = fmtRate(row.discounted_rate);
             var rateClass = row.discounted_rate_num === 0 ? "etf-pos" : "";
@@ -322,20 +322,20 @@
             .sort(function (a, b) { return a.discounted_rate_num - b.discounted_rate_num; }).slice(0, 3);
 
         guide.innerHTML = [
-            guideBlock("今天怎么筛", [
-                buyable.length ? "先看“公开可买”，再按单日限额从高到低排。" : "公开接口当前没有可买项，支付宝里也大概率需要等额度。",
-                bestLimit ? "当前限额较高的候选：" + bestLimit.code + " " + bestLimit.company + "，" + fmtMoney(bestLimit.daily_limit) + "。" : "限额字段缺失时，以支付宝下单页为准。",
-                "用代码搜索基金，避免搜名称时混进场内 ETF 或行业指数。"
+            guideBlock(__("qdii.guideToday"), [
+                buyable.length ? __("qdii.guideToday1") : __("qdii.guideToday1Alt"),
+                bestLimit ? __("qdii.guideToday2", {code: bestLimit.code, company: bestLimit.company, limit: fmtMoney(bestLimit.daily_limit)}) : __("qdii.guideToday2Alt"),
+                __("qdii.guideToday3")
             ]),
-            guideBlock("份额字母速查", [
-                "A 类常见为申购时收申购费，不从该份额资产中计提销售服务费；总结：A 类更适合长期持有。",
-                "C 类常见为不收申购费，但按日计提销售服务费，持有越久越要比较总成本；总结：C 类更适合短期持有。",
-                "B/D/E/I 等字母没有全市场统一含义，可能对应后端收费、特定渠道、币种、门槛或机构份额。"
+            guideBlock(__("qdii.guideShareCode"), [
+                __("qdii.guideShareCode1"),
+                __("qdii.guideShareCode2"),
+                __("qdii.guideShareCode3")
             ]),
-            guideBlock("攻略提醒", [
-                "QDII 限额经常变，表格适合做每日快照。",
-                "支付宝最终可买状态、优惠券、账号限额以 App 为准。",
-                lowFeeA.length ? "A 类低费率候选：" + lowFeeA.map(function (r) { return r.code + "(" + r.discounted_rate + ")"; }).join("、") + "；最终看销售服务费、赎回费和持有时间。" : "短期偏 C、长期偏 A 只是经验，最终看销售服务费、赎回费和持有时间。"
+            guideBlock(__("qdii.guideReminder"), [
+                __("qdii.guideReminder1"),
+                __("qdii.guideReminder2"),
+                lowFeeA.length ? __("qdii.guideReminder3", {list: lowFeeA.map(function (r) { return r.code + "(" + r.discounted_rate + ")"; }).join("、")}) : __("qdii.guideReminder3Alt")
             ]),
         ].join("");
     }
@@ -343,7 +343,7 @@
     function renderActiveQdiiGuide(guide, rows, buyable) {
         var typeCounts = {};
         rows.forEach(function (r) {
-            var key = r.fund_type || "其他";
+            var key = r.fund_type || __("qdii.fundTypeOther");
             typeCounts[key] = (typeCounts[key] || 0) + 1;
         });
         var topTypes = Object.keys(typeCounts).sort(function (a, b) { return typeCounts[b] - typeCounts[a]; }).slice(0, 3);
@@ -354,25 +354,25 @@
             .sort(function (a, b) { return a.discounted_rate_num - b.discounted_rate_num; }).slice(0, 3);
 
         guide.innerHTML = [
-            guideBlock("主动 QDII 怎么筛", [
-                "先按类型分层看：股票/混合偏股偏权益，纯债/混合债偏美元债或海外债。",
-                topTypes.length ? "当前样本最多的类型：" + topTypes.map(function (t) { return t + " " + typeCounts[t] + "只"; }).join("、") + "。" : "类型字段缺失时，回到基金详情页看投资范围。",
-                bestLimit ? "当前公开可买且限额较高的候选：" + bestLimit.code + " " + bestLimit.company + "，" + fmtMoney(bestLimit.daily_limit) + "。" : "公开接口当前没有可买项，支付宝里也大概率需要等额度。"
+            guideBlock(__("qdii.guideActiveQdii"), [
+                __("qdii.guideActiveQdii1"),
+                topTypes.length ? __("qdii.guideActiveQdii2", {list: topTypes.map(function (t) { return t + " " + typeCounts[t] + __("qdii.unitCount"); }).join("、")}) : __("qdii.guideActiveQdii2Alt"),
+                bestLimit ? __("qdii.guideActiveQdii3", {code: bestLimit.code, company: bestLimit.company, limit: fmtMoney(bestLimit.daily_limit)}) : __("qdii.guideActiveQdii3Alt")
             ]),
-            guideBlock("主动基金重点", [
-                "不要只看短期涨幅，重点看基金经理、主题范围、地区暴露、规模和回撤。",
-                lowFeeA.length ? "A 类折扣费率较低候选：" + lowFeeA.map(function (r) { return r.code + "(" + r.discounted_rate + ")"; }).join("、") + "。" : "长期持有再比较 A 类申购费和持有成本。",
-                "C 类零申购费不等于低成本，还要看销售服务费和赎回费。"
+            guideBlock(__("qdii.guideActiveKey"), [
+                __("qdii.guideActiveKey1"),
+                lowFeeA.length ? __("qdii.guideActiveKey2", {list: lowFeeA.map(function (r) { return r.code + "(" + r.discounted_rate + ")"; }).join("、")}) : __("qdii.guideActiveKey2Alt"),
+                __("qdii.guideActiveKey3")
             ]),
-            guideBlock("份额字母速查", [
-                "A 类常见为申购时收申购费，不从该份额资产中计提销售服务费；总结：A 类更适合长期持有。",
-                "C 类常见为不收申购费，但按日计提销售服务费，持有越久越要比较总成本；总结：C 类更适合短期持有。",
-                "B/D/E/I 等字母没有全市场统一含义，可能对应后端收费、特定渠道、币种、门槛或机构份额。"
+            guideBlock(__("qdii.guideShareCode"), [
+                __("qdii.guideShareCode1"),
+                __("qdii.guideShareCode2"),
+                __("qdii.guideShareCode3")
             ]),
-            guideBlock("数据口径", [
-                "这里自动排除了指数、ETF、联接、LOF、FOF、商品、美元/港币份额。",
-                "这是公开接口筛选结果，不等同于支付宝当前全部可售清单。",
-                "客户若要严格“主动权益基金”，可以再排除债券类 QDII。"
+            guideBlock(__("qdii.guideDataScope"), [
+                __("qdii.guideDataScope1"),
+                __("qdii.guideDataScope2"),
+                __("qdii.guideDataScope3")
             ]),
         ].join("");
     }
@@ -410,7 +410,7 @@
         var url = QDII_FUNDS_ENDPOINT + "?index=all" + (force ? "&fresh=1" : "");
         return fetch(url)
             .then(function (res) {
-                if (!res.ok) throw new Error("接口返回 " + res.status);
+                if (!res.ok) throw new Error(__("qdii.interfaceError") + res.status);
                 return res.json();
             })
             .then(function (data) {
@@ -419,7 +419,7 @@
                 renderAll();
             })
             .catch(function (err) {
-                setError("获取 QDII 基金数据失败：" + (err && err.message ? err.message : err));
+                setError(__("qdii.fetchFailed") + (err && err.message ? err.message : err));
             })
             .finally(function () {
                 setLoading(false);

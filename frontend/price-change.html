@@ -1603,34 +1603,34 @@
         <div class="tab-panel active" id="tab-yearly">
         <div class="controls-bar" style="margin-bottom: 12px;">
             <div class="control-group">
-                <span class="control-label">统计代码</span>
-                <input type="text" id="pcSymbolInput" class="pc-symbol-input" placeholder="AAPL" maxlength="10">
+                <span class="control-label" data-i18n="yearly.symbolInput">统计代码</span>
+                <input type="text" id="pcSymbolInput" class="pc-symbol-input" data-i18n-attr="placeholder|yearly.placeholderSymbol" placeholder="AAPL" maxlength="10">
                 <select id="pcTypeSelect" class="pc-type-select">
-                    <option value="stock">美股</option>
-                    <option value="crypto">数字货币</option>
-                    <option value="cn_stock">A股</option>
+                    <option value="stock" data-i18n="yearly.assetTypeStock">美股</option>
+                    <option value="crypto" data-i18n="yearly.assetTypeCrypto">数字货币</option>
+                    <option value="cn_stock" data-i18n="yearly.assetTypeCnStock">A股</option>
                 </select>
-                <button id="pcAddBtn" class="pc-btn primary">添加</button>
-                <button id="pcClearBtn" class="pc-btn danger">清空</button>
+                <button id="pcAddBtn" class="pc-btn primary" data-i18n="yearly.add">添加</button>
+                <button id="pcClearBtn" class="pc-btn danger" data-i18n="yearly.clear">清空</button>
             </div>
             <div class="control-group">
-                <span class="control-label">统计周期</span>
-                <input type="text" id="pcYearSelect" class="pc-bt-input" list="pcYearList" placeholder="历年汇总" style="width:110px;text-align:left;text-transform:none;">
+                <span class="control-label" data-i18n="yearly.period">统计周期</span>
+                <input type="text" id="pcYearSelect" class="pc-bt-input" list="pcYearList" data-i18n-attr="placeholder|yearly.summary" placeholder="历年汇总" style="width:110px;text-align:left;text-transform:none;">
                 <datalist id="pcYearList"></datalist>
             </div>
             <div class="control-group">
-                <span class="control-label">着色范围</span>
+                <span class="control-label" data-i18n="yearly.colorRange">着色范围</span>
                 <input type="number" id="pcMinRange" class="pc-range-input" value="-50" placeholder="min"> %
                 <span style="color: var(--apple-text-tertiary); font-size: 12px;">~</span>
                 <input type="number" id="pcMaxRange" class="pc-range-input" value="50" placeholder="max"> %
-                <button id="pcRefreshBtn" class="pc-btn primary">查询</button>
-                <button id="pcExportCsv" class="pc-btn" title="导出当前表格为 CSV 文件">📥 导出</button>
+                <button id="pcRefreshBtn" class="pc-btn primary" data-i18n="yearly.query">查询</button>
+                <button id="pcExportCsv" class="pc-btn" data-i18n-attr="title|yearly.csvTitle" data-i18n="yearly.export">📥 导出</button>
                 <span class="pc-freshness" id="pcFreshness" style="display:none;"></span>
             </div>
         </div>
 
         <div class="pc-presets" id="pcPresets">
-            <span class="pc-preset-label">预设:</span>
+            <span class="pc-preset-label" data-i18n="yearly.presets">预设:</span>
         </div>
 
         <div class="pc-tags" id="pcTags"></div>
@@ -1639,14 +1639,14 @@
         <div class="pc-error" id="pcError"></div>
         <div class="pc-loading" id="pcLoading">
             <div class="spinner"></div>
-            <span>获取数据中...</span>
+            <span data-i18n="yearly.fetching">获取数据中...</span>
         </div>
 
         <div class="pc-table-wrap" id="pcTableWrap">
             <div class="pc-empty" id="pcEmpty">
                 <div style="font-size: 32px; margin-bottom: 8px;">📊</div>
-                <div>添加代码并点击"查询"查看历年涨跌幅</div>
-                <div class="pc-empty-hint">支持美股和数字货币，着色范围默认 -50% ~ +50%</div>
+                <div data-i18n="yearly.emptyPrompt">添加代码并点击"查询"查看历年涨跌幅</div>
+                <div class="pc-empty-hint" data-i18n="yearly.emptyHint">支持美股和数字货币，着色范围默认 -50% ~ +50%</div>
             </div>
             <table class="pc-table" id="pcTable" style="display:none;">
                 <thead><tr id="pcTableHead"></tr></thead>
@@ -1657,8 +1657,8 @@
         <!-- Multi-line chart (all symbols) -->
         <div id="pcChartWrap" class="pc-monthly" style="display:none;">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title">历年涨跌幅走势</span>
-                <button id="pcChartClose" class="pc-btn pc-btn-sm">关闭</button>
+                <span class="pc-chart-title" data-i18n="yearly.chartTitle">历年涨跌幅走势</span>
+                <button id="pcChartClose" class="pc-btn pc-btn-sm" data-i18n="chart.close">关闭</button>
             </div>
             <div id="pcChartSvg"></div>
         </div>
@@ -1675,55 +1675,55 @@
                 <span class="pc-chart-title">📈 回测</span>
             </div>
             <div class="pc-bt-row">
-                <span class="pc-bt-label">定投标的</span>
+                <span class="pc-bt-label" data-i18n="backtest.symbol">定投标的</span>
                 <input type="text" id="btSymbolInput" class="pc-bt-input" placeholder="SPY" maxlength="10" value="QQQ" style="width:120px;text-transform:uppercase;">
                 <select id="btTypeSelect" class="pc-bt-input" style="width:110px;">
-                    <option value="stock">美股</option>
-                    <option value="crypto">数字货币</option>
-                    <option value="cn_stock">A股</option>
+                    <option value="stock" data-i18n="yearly.assetTypeStock">美股</option>
+                    <option value="crypto" data-i18n="yearly.assetTypeCrypto">数字货币</option>
+                    <option value="cn_stock" data-i18n="yearly.assetTypeCnStock">A股</option>
                 </select>
-                <span class="pc-bt-label">初始投入</span>
+                <span class="pc-bt-label" data-i18n="backtest.initialAmount">初始投入</span>
                 <input type="number" id="pcBtInitialAmount" class="pc-bt-input" value="0" min="0" step="100">
-                <span class="pc-bt-label">每次投入</span>
+                <span class="pc-bt-label" data-i18n="backtest.amountPerTime">每次投入</span>
                 <input type="number" id="pcBtAmount" class="pc-bt-input" value="1000" min="0" step="100">
                 <span style="font-size:12px;color:var(--apple-text-tertiary)">USD</span>
-                <span class="pc-bt-label">开始日期</span>
+                <span class="pc-bt-label" data-i18n="backtest.startDate">开始日期</span>
                 <input type="date" id="pcBtStartDate" class="pc-bt-input" value="2020-01-01" style="width:150px;">
-                <span class="pc-bt-label">结束日期</span>
+                <span class="pc-bt-label" data-i18n="backtest.endDate">结束日期</span>
                 <input type="date" id="pcBtEndDate" class="pc-bt-input" style="width:150px;">
             </div>
             <div class="pc-bt-row">
-                <span class="pc-bt-label">策略</span>
+                <span class="pc-bt-label" data-i18n="backtest.strategy">策略</span>
                 <select id="pcBtFrequency" class="pc-bt-input" style="width:110px;">
-                    <option value="once">一次性</option>
-                    <option value="daily">按日</option>
-                    <option value="weekly">按周</option>
-                    <option value="monthly" selected>按月</option>
-                    <option value="yearly">按年</option>
+                    <option value="once" data-i18n="backtest.strategyOnce">一次性</option>
+                    <option value="daily" data-i18n="backtest.strategyDaily">按日</option>
+                    <option value="weekly" data-i18n="backtest.strategyWeekly">按周</option>
+                    <option value="monthly" selected data-i18n="backtest.strategyMonthly">按月</option>
+                    <option value="yearly" data-i18n="backtest.strategyYearly">按年</option>
                 </select>
-                <span class="pc-bt-advanced"><span class="pc-bt-label">间隔</span>
+                <span class="pc-bt-advanced"><span class="pc-bt-label" data-i18n="backtest.interval">间隔</span>
                 <input type="number" id="pcBtInterval" class="pc-bt-input" value="1" min="1" step="1"></span>
                 <span class="pc-bt-advanced"><span class="pc-bt-label" id="pcBtDayOfMonthLabel">月内日期</span>
                 <input type="number" id="pcBtDayOfMonth" class="pc-bt-input" value="1" min="1" max="31" step="1"></span>
                 <span class="pc-bt-advanced"><span class="pc-bt-label" id="pcBtWeekdayLabel">周几</span>
                 <select id="pcBtWeekday" class="pc-bt-input" style="width:100px;">
-                    <option value="0">周一</option>
-                    <option value="1">周二</option>
-                    <option value="2">周三</option>
-                    <option value="3">周四</option>
-                    <option value="4">周五</option>
-                    <option value="5">周六</option>
-                    <option value="6">周日</option>
+                    <option value="0" data-i18n="backtest.mon">周一</option>
+                    <option value="1" data-i18n="backtest.tue">周二</option>
+                    <option value="2" data-i18n="backtest.wed">周三</option>
+                    <option value="3" data-i18n="backtest.thu">周四</option>
+                    <option value="4" data-i18n="backtest.fri">周五</option>
+                    <option value="5" data-i18n="backtest.sat">周六</option>
+                    <option value="6" data-i18n="backtest.sun">周日</option>
                 </select></span>
-                <span class="pc-bt-advanced"><span class="pc-bt-label" id="pcBtSampleSizeLabel">显示点数</span>
+                <span class="pc-bt-advanced"><span class="pc-bt-label" id="pcBtSampleSizeLabel" data-i18n="backtest.sampleSize">显示点数</span>
                 <input type="number" id="pcBtSampleSize" class="pc-bt-input" value="120" min="20" max="500" step="10"></span>
-                <span class="pc-bt-advanced"><span class="pc-bt-label">动画秒数</span>
+                <span class="pc-bt-advanced"><span class="pc-bt-label" data-i18n="backtest.animSeconds">动画秒数</span>
                 <input type="number" id="pcBtAnimSeconds" class="pc-bt-input" value="5" min="0" max="30" step="0.5"></span>
-                <button id="pcBtRun" class="pc-btn primary" style="padding:7px 14px;">开始回测</button>
+                <button id="pcBtRun" class="pc-btn primary" style="padding:7px 14px;" data-i18n="backtest.startBacktest">开始回测</button>
                 <label class="pc-bt-adv-toggle">
                     <input type="checkbox" id="pcBtAdvanced">
                     <span class="pc-bt-adv-slider"></span>
-                    <span class="pc-bt-adv-label">高级</span>
+                    <span class="pc-bt-adv-label" data-i18n="backtest.advanced">高级</span>
                 </label>
             </div>
             <div id="pcBtResult" style="display:none;">
@@ -1747,29 +1747,29 @@
                 <span class="pc-chart-title">📉 暴跌统计 — 单日暴跌检测与恢复分析</span>
             </div>
             <div class="pc-bt-row">
-                <span class="pc-bt-label">股票代码</span>
+                <span class="pc-bt-label" data-i18n="crash.symbol">股票代码</span>
                 <input type="text" id="crashSymbol" class="pc-bt-input" value="QQQ" placeholder="QQQ" maxlength="10" style="text-transform:uppercase">
                 <select id="crashType" class="pc-bt-input" style="width:100px;">
-                    <option value="stock" selected>美股</option>
-                    <option value="crypto">数字货币</option>
+                    <option value="stock" selected data-i18n="yearly.assetTypeStock">美股</option>
+                    <option value="crypto" data-i18n="yearly.assetTypeCrypto">数字货币</option>
                 </select>
-                <span class="pc-bt-label">暴跌幅度</span>
+                <span class="pc-bt-label" data-i18n="crash.dropPct">暴跌幅度</span>
                 <input type="number" id="crashThreshold" class="pc-bt-input" value="4.77" min="0.01" step="0.1" style="width:80px;">
                 <span style="font-size:12px;color:var(--apple-text-tertiary)">%</span>
-                <span class="pc-bt-label">图表天数</span>
+                <span class="pc-bt-label" data-i18n="crash.chartDays">图表天数</span>
                 <input type="number" id="crashChartDays" class="pc-bt-input" value="30" min="5" max="250" step="5" style="width:70px;">
-                <span style="font-size:12px;color:var(--apple-text-tertiary)">交易日</span>
-                <span class="pc-bt-label">起止日期</span>
+                <span style="font-size:12px;color:var(--apple-text-tertiary)" data-i18n="crash.tradingDays">交易日</span>
+                <span class="pc-bt-label" data-i18n="crash.startEndDate">起止日期</span>
                 <input type="date" id="crashStartDate" class="pc-bt-input" style="width:150px;">
                 <span style="color:var(--apple-text-tertiary);font-size:12px;">~</span>
                 <input type="date" id="crashEndDate" class="pc-bt-input" style="width:150px;">
-                <button id="crashRunBtn" class="pc-btn primary" style="padding:7px 14px;">查询暴跌</button>
-                <button id="crashCloseBtn" class="pc-btn" style="padding:7px 14px;">清空</button>
+                <button id="crashRunBtn" class="pc-btn primary" style="padding:7px 14px;" data-i18n="crash.queryCrash">查询暴跌</button>
+                <button id="crashCloseBtn" class="pc-btn" style="padding:7px 14px;" data-i18n="crash.clear">清空</button>
             </div>
             <div class="crash-error" id="crashError" style="display:none;"></div>
             <div class="pc-loading" id="crashLoading" style="display:none;">
                 <div class="spinner"></div>
-                <span>分析中...</span>
+                <span data-i18n="crash.analyzing">分析中...</span>
             </div>
             <div id="crashResult" style="display:none;">
                 <div id="crashSummary"></div>
@@ -3200,29 +3200,29 @@
         <div class="tab-panel" id="tab-wishes">
         <div class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title">🌟 心愿墙 — 想看什么标的、想要什么功能，留个言</span>
-                <span class="wish-admin-toggle" id="wishAdminToggle" title="管理">⚙</span>
+                <span class="pc-chart-title" data-i18n="wishes.title">🌟 心愿墙 — 想看什么标的、想要什么功能，留个言</span>
+                <span class="wish-admin-toggle" id="wishAdminToggle" data-i18n-attr="title|wishes.manage">⚙</span>
             </div>
             <div class="wish-admin-row" id="wishAdminRow" style="display:none;">
-                <span class="pc-bt-label">管理员 Token</span>
-                <input type="password" id="wishAdminToken" class="pc-bt-input" style="width:200px;" placeholder="填入后每条心愿可删除">
-                <button id="wishAdminSave" class="pc-btn" style="padding:7px 14px;">保存</button>
+                <span class="pc-bt-label" data-i18n="wishes.adminToken">管理员 Token</span>
+                <input type="password" id="wishAdminToken" class="pc-bt-input" style="width:200px;" data-i18n-attr="placeholder|wishes.adminPlaceholder" placeholder="填入后每条心愿可删除">
+                <button id="wishAdminSave" class="pc-btn" style="padding:7px 14px;" data-i18n="wishes.save">保存</button>
                 <span id="wishAdminHint" style="font-size:12px;color:var(--apple-text-tertiary);"></span>
             </div>
             <div class="wish-form">
-                <textarea id="wishText" class="wish-textarea" maxlength="200" placeholder="写下你的心愿（最多 200 字）..."></textarea>
+                <textarea id="wishText" class="wish-textarea" maxlength="200" data-i18n-attr="placeholder|wishes.placeholder" placeholder="写下你的心愿（最多 200 字）..."></textarea>
                 <div class="wish-form-row">
-                    <input type="text" id="wishNick" class="pc-bt-input" maxlength="24" style="width:150px;" placeholder="昵称（可选）">
+                    <input type="text" id="wishNick" class="pc-bt-input" maxlength="24" style="width:150px;" data-i18n-attr="placeholder|wishes.nickname" placeholder="昵称（可选）">
                     <span class="wish-captcha-box" id="wishCaptchaBox" title="点击刷新验证码"></span>
-                    <input type="text" id="wishCaptchaInput" class="pc-bt-input" style="width:110px;text-transform:uppercase;" maxlength="8" placeholder="验证码">
-                    <button id="wishSubmitBtn" class="pc-btn primary" style="padding:7px 18px;">提交心愿</button>
+                    <input type="text" id="wishCaptchaInput" class="pc-bt-input" style="width:110px;text-transform:uppercase;" maxlength="8" data-i18n-attr="placeholder|wishes.captcha" placeholder="验证码">
+                    <button id="wishSubmitBtn" class="pc-btn primary" style="padding:7px 18px;" data-i18n="wishes.submit">提交心愿</button>
                 </div>
                 <div class="wish-msg" id="wishMsg" style="display:none;"></div>
             </div>
             <div id="wishLoading" class="pc-loading" style="display:none;">
                 <div class="spinner"></div><span>加载中...</span>
             </div>
-            <div id="wishEmpty" style="display:none;text-align:center;padding:32px;color:var(--apple-text-tertiary);font-size:13px;">
+            <div id="wishEmpty" style="display:none;text-align:center;padding:32px;color:var(--apple-text-tertiary);font-size:13px;" data-i18n="wishes.empty">
                 还没有心愿，来许下第一个吧 ✨
             </div>
             <div id="wishList" class="wish-list"></div>

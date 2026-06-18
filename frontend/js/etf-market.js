@@ -211,7 +211,7 @@
         }
         _valuationLoaded = false;
         _valuationLoading = false;
-        _setProgress("⏳ 加载行情…", "#ff9f0a");
+        _setProgress(__("etf.loading"), "#ff9f0a");
         fetch("/api/etf-market/quote?symbols=" + symbols.join(","))
             .then(function (r) { return r.json(); })
             .then(function (data) {
@@ -220,12 +220,12 @@
                 _quotes = map;
                 renderTable();
                 // Phase 2: lazy-load East-Money-dependent valuation data
-                _setProgress("✓ 行情已更新 " + _timeStr() + "  ⏳ 估值误差加载中…", "#ff9f0a");
+                _setProgress(__("etf.updated") + _timeStr() + "  " + __("etf.estLoading"), "#ff9f0a");
                 fetchValuation(symbols);
             })
             .catch(function () {
-                _setProgress("✗ 行情加载失败", "#ff453a");
-                document.getElementById("etfBody").innerHTML = '<tr><td colspan="14" style="text-align:center;padding:24px;color:var(--data-negative)">获取行情失败' + C + 'td>' + C + 'tr>';
+                _setProgress(__("etf.quoteLoadFailed"), "#ff453a");
+                document.getElementById("etfBody").innerHTML = '<tr><td colspan="14" style="text-align:center;padding:24px;color:var(--data-negative)">' + __("etf.fetchFailed") + C + 'td>' + C + 'tr>';
             });
     }
 
@@ -248,10 +248,10 @@
                 }
                 _valuationLoaded = true;
                 if (updated > 0) renderTable();
-                _setProgress("✓ 行情已更新 " + _timeStr() + "  ✓ 估值误差已加载", "#30d158");
+                _setProgress(__("etf.updated") + _timeStr() + "  " + __("etf.estLoaded"), "#30d158");
             })
             .catch(function () {
-                _setProgress("✓ 行情已更新 " + _timeStr() + "  ⚠ 估值误差加载失败", "#ff9f0a");
+                _setProgress(__("etf.updated") + _timeStr() + "  " + __("etf.estLoadFailed"), "#ff9f0a");
             })
             .finally(function () {
                 _valuationLoading = false;
@@ -432,18 +432,18 @@
             else addVal((v>0?"+":"")+v.toFixed(2)+"%", v>0?"etf-neg":v<0?"etf-pos":"");
         }
 
-        addLbl("代码"); addVal(code);
-        addLbl("名称"); addVal(name);
-        addLbl("最新价"); addVal(q && q.price != null ? q.price.toFixed(3) + " ¥" : "--", "etf-ds-price");
-        addStdPct("涨跌幅", q ? q.change_pct : null);
-        addLbl("总市值(亿)"); addVal(q && q.mc_total != null ? q.mc_total.toFixed(2) : "--");
-        addLbl("管理费"); addVal(q && q.mgmt_fee ? q.mgmt_fee : "--");
-        addLbl("托管费"); addVal(q && q.custody_fee ? q.custody_fee : "--");
-        addLbl("费率合计"); addVal(q && q.total_fee != null ? q.total_fee.toFixed(2)+"%" : "--");
-        addLbl("万元年费"); addVal(q && q.fee_per_10k != null ? q.fee_per_10k.toFixed(0)+"元" : "--");
-        addCostPct("溢价率", q ? q.premium : null);
+        addLbl(__("etf.colCode")); addVal(code);
+        addLbl(__("etf.colName")); addVal(name);
+        addLbl(__("etf.colPrice")); addVal(q && q.price != null ? q.price.toFixed(3) + " ¥" : "--", "etf-ds-price");
+        addStdPct(__("etf.colChangePct"), q ? q.change_pct : null);
+        addLbl(__("etf.colMarketCap")); addVal(q && q.mc_total != null ? q.mc_total.toFixed(2) : "--");
+        addLbl(__("etf.colMgmtFee")); addVal(q && q.mgmt_fee ? q.mgmt_fee : "--");
+        addLbl(__("etf.colCustodyFee")); addVal(q && q.custody_fee ? q.custody_fee : "--");
+        addLbl(__("etf.colFeeTotal")); addVal(q && q.total_fee != null ? q.total_fee.toFixed(2)+"%" : "--");
+        addLbl(__("etf.colAnnualFee")); addVal(q && q.fee_per_10k != null ? q.fee_per_10k.toFixed(0)+"元" : "--");
+        addCostPct(__("etf.colPremium"), q ? q.premium : null);
         // Premium cost: negative = loss (RED), positive = gain/savings (GREEN)
-        addLbl("溢价万元盈亏");
+        addLbl(__("etf.colPremiumProfit"));
         if (q && q.premium_cost_per_10k != null) {
             var pc = q.premium_cost_per_10k;
             var sign = pc > 0 ? "+" : "";
@@ -451,16 +451,16 @@
         } else {
             addVal("--");
         }
-        var tracking30Tip = "30日真实误差：最近30个共同交易日，A股ETF价格涨跌幅与美股基准ETF(QQQ/SPY)涨跌幅的累计差值。正数=A股ETF跑赢，负数=跑输。⚠️ 含溢价波动，非纯跟踪能力。";
-        var diff30Tip = "30日万元收益差：最近30个共同交易日，分别投入1万元到当前A股ETF和对应美股ETF后的收益差额。正数=多赚，负数=少赚。";
-        addTipLbl("30日真实误差", tracking30Tip);
+        var tracking30Tip = __("etf.tooltipTrueError");
+        var diff30Tip = __("etf.tooltipReturnDiff");
+        addTipLbl(__("etf.colTrackingError"), tracking30Tip);
         if (q && q.tracking_error_30d_pct != null) addVal((q.tracking_error_30d_pct>0?"+":"") + q.tracking_error_30d_pct.toFixed(2)+"%", q.tracking_error_30d_pct>0?"etf-pos":q.tracking_error_30d_pct<0?"etf-neg":"");
         else addVal("--");
-        addTipLbl("30日万元收益差", diff30Tip);
+        addTipLbl(__("etf.colReturnDiff"), diff30Tip);
         if (q && q.profit_diff_30d_per_10k != null) addVal((q.profit_diff_30d_per_10k>0?"+":"") + q.profit_diff_30d_per_10k.toFixed(0)+"元", q.profit_diff_30d_per_10k>0?"etf-pos":q.profit_diff_30d_per_10k<0?"etf-neg":"");
         else addVal("--");
-        var valErrTip = "估值误差：T-2日净值×(1+T-1指数涨跌×仓位%) 估算的T-1净值 与 T-1实际净值的偏差。与haoetf口径一致，衡量基金单日跟踪精度。";
-        addTipLbl("估值误差", valErrTip);
+        var valErrTip = __("etf.tooltipEstError");
+        addTipLbl(__("etf.colEstError"), valErrTip);
         if (q && q.valuation_error_latest != null) {
             addVal((q.valuation_error_latest > 0 ? '+' : '') + q.valuation_error_latest.toFixed(2) + "%");
         } else addVal("--");
@@ -481,12 +481,12 @@
                     renderChart();
                 } else {
                     document.getElementById("etfChartContainer").innerHTML =
-                        '<div style="text-align:center;padding:24px;color:var(--apple-text-secondary);">暂无历史数据' + C + 'div>';
+                        '<div style="text-align:center;padding:24px;color:var(--apple-text-secondary);">' + __("etf.noHistoryData") + C + 'div>';
                 }
             })
             .catch(function () {
                 document.getElementById("etfChartContainer").innerHTML =
-                    '<div style="text-align:center;padding:24px;color:var(--data-negative);">加载图表失败' + C + 'div>';
+                    '<div style="text-align:center;padding:24px;color:var(--data-negative);">' + __("etf.chartLoadFailed") + C + 'div>';
             });
     }
 
@@ -505,19 +505,19 @@
         function amtFmt(v) { return v==null?"--":v>=1e8?(v/1e8).toFixed(2)+"亿":(v/1e4).toFixed(0)+"万"; }
         function volFmt(v) { return v==null?"--":(v/10000).toFixed(1)+"万手"; }
 
-        // Row 2 — supplementary: 基金公司 | 上市 | 天数 | 近1月 | 近3月 | 开盘 | 最高 | 最低 | 振幅 | 成交量 | 成交额 | 换手率
-        addLbl("基金公司"); addVal(st.company || "--");
-        addLbl("上市"); addVal((st.first_date||"").slice(0,7));
-        addLbl("天数"); addVal((st.days_since_listed||"?")+"天");
-        addPctLbl("近1月", st.ret_1m);
-        addPctLbl("近3月", st.ret_3m);
-        addLbl("开盘"); addVal(q && q.open != null ? q.open.toFixed(3) : "--");
-        addLbl("最高"); addVal(q && q.high != null ? q.high.toFixed(3) : "--");
-        addLbl("最低"); addVal(q && q.low != null ? q.low.toFixed(3) : "--");
-        addLbl("振幅"); addVal(q && q.amplitude != null ? q.amplitude.toFixed(2)+"%" : "--");
-        addLbl("成交量"); addVal(volFmt(q ? q.volume : null));
-        addLbl("成交额"); addVal(amtFmt(q ? q.amount : null));
-        addLbl("换手率"); addVal(q && q.turnover != null ? q.turnover.toFixed(2)+"%" : "--");
+        // Row 2 — supplementary
+        addLbl(__("etf.detailFundCompany")); addVal(st.company || "--");
+        addLbl(__("etf.detailListed")); addVal((st.first_date||"").slice(0,7));
+        addLbl(__("etf.detailDays")); addVal(st.days_since_listed != null ? __("etf.daysValue", {n: st.days_since_listed}) : "?");
+        addPctLbl(__("etf.detail1M"), st.ret_1m);
+        addPctLbl(__("etf.detail3M"), st.ret_3m);
+        addLbl(__("etf.detailOpen")); addVal(q && q.open != null ? q.open.toFixed(3) : "--");
+        addLbl(__("etf.detailHigh")); addVal(q && q.high != null ? q.high.toFixed(3) : "--");
+        addLbl(__("etf.detailLow")); addVal(q && q.low != null ? q.low.toFixed(3) : "--");
+        addLbl(__("etf.detailAmplitude")); addVal(q && q.amplitude != null ? q.amplitude.toFixed(2)+"%" : "--");
+        addLbl(__("etf.detailVolume")); addVal(volFmt(q ? q.volume : null));
+        addLbl(__("etf.detailAmount")); addVal(amtFmt(q ? q.amount : null));
+        addLbl(__("etf.detailTurnover")); addVal(q && q.turnover != null ? q.turnover.toFixed(2)+"%" : "--");
 
         tbody.appendChild(tr);
     }
@@ -548,12 +548,12 @@
 
     function metricConfig(metric) {
         var map = {
-            premium: { label: "历史溢价率", key: "premium_pct", unit: "%", decimals: 2, symmetric: false },
-            valuation: { label: "历史估值误差", key: "valuation_error_pct", unit: "%", decimals: 2, symmetric: true },
-            real_error: { label: "历史真实误差", key: "price_tracking_deviation_pct", unit: "%", decimals: 2, symmetric: true },
-            change: { label: "历史价格涨跌幅", key: "change_pct", unit: "%", decimals: 2, symmetric: true },
-            price_return: { label: "累计涨跌幅", key: "__cum_return_pct", unit: "%", decimals: 2, symmetric: false },
-            profit_diff: { label: "万元收益差", key: "profit_diff_per_10k", unit: "元", decimals: 0, symmetric: true },
+            premium: { label: __("etf.configHistPremium"), key: "premium_pct", unit: "%", decimals: 2, symmetric: false },
+            valuation: { label: __("etf.configHistEstError"), key: "valuation_error_pct", unit: "%", decimals: 2, symmetric: true },
+            real_error: { label: __("etf.configHistTrueError"), key: "price_tracking_deviation_pct", unit: "%", decimals: 2, symmetric: true },
+            change: { label: __("etf.configHistPriceChg"), key: "change_pct", unit: "%", decimals: 2, symmetric: true },
+            price_return: { label: __("etf.configCumChg"), key: "__cum_return_pct", unit: "%", decimals: 2, symmetric: false },
+            profit_diff: { label: __("etf.configReturnDiff"), key: "profit_diff_per_10k", unit: "元", decimals: 0, symmetric: true },
         };
         return map[metric] || map.premium;
     }
@@ -577,15 +577,15 @@
 
         var symbols = currentAggregateSymbols();
         if (!symbols.length) {
-            setAggregateStatus("当前分组暂无标的");
+            setAggregateStatus(__("etf.noSymbolsInGroup"));
             document.getElementById("etfAggregateChart").innerHTML = "";
             return;
         }
 
         _aggregateLoading = true;
-        setAggregateStatus("加载聚合历史数据中…");
+        setAggregateStatus(__("etf.loadingAggregate"));
         document.getElementById("etfAggregateChart").innerHTML =
-            '<div style="padding:30px;text-align:center;color:var(--apple-text-secondary);">加载中…' + C + 'div>';
+            '<div style="padding:30px;text-align:center;color:var(--apple-text-secondary);">' + __("etf.loadingData") + C + 'div>';
 
         Promise.all(symbols.map(function (item) {
             return fetch("/api/etf-market/history?symbol=" + encodeURIComponent(item.code) + "&days=120")
@@ -606,7 +606,7 @@
         })).then(function (series) {
             _aggregateHistory[key] = series;
             var ok = series.filter(function (s) { return s.bars && s.bars.length; }).length;
-            setAggregateStatus("已加载 " + ok + "/" + series.length + " 只标的");
+            setAggregateStatus(__("etf.aggregateLoaded", {ok: ok, total: series.length}));
             renderAggregateSymbols();
             renderAggregateChart();
         }).finally(function () {
@@ -666,7 +666,7 @@
         var colors = getAggregateColors();
         var visible = data.filter(function (s) { return !hidden[s.code] && s.bars && s.bars.length; });
         if (!visible.length) {
-            wrap.innerHTML = '<div style="padding:30px;text-align:center;color:var(--apple-text-secondary);">已隐藏全部标的' + C + 'div>';
+            wrap.innerHTML = '<div style="padding:30px;text-align:center;color:var(--apple-text-secondary);">' + __("etf.allSymbolsHidden") + C + 'div>';
             return;
         }
 
@@ -683,7 +683,7 @@
         });
         var dates = Object.keys(dateSet).sort();
         if (!dates.length || !allVals.length) {
-            wrap.innerHTML = '<div style="padding:30px;text-align:center;color:var(--apple-text-secondary);">当前指标暂无可对比数据' + C + 'div>';
+            wrap.innerHTML = '<div style="padding:30px;text-align:center;color:var(--apple-text-secondary);">' + __("etf.noComparableData") + C + 'div>';
             return;
         }
 
@@ -782,7 +782,7 @@
             }
             var cx = xScale(closest);
             var date = dates[closest];
-            var lines = ["日期：" + date];
+            var lines = [__("etf.chartDate") + date];
             series.slice(0, 12).forEach(function (s) {
                 lines.push(s.code + "：" + fmtAggregateValue(byCodeDate[s.code][date], cfg, false));
             });
@@ -884,33 +884,33 @@
                 var lines;
                 if (chartType === "compare") {
                     lines = [
-                        "日期：" + b.date,
-                        fmt("ETF收益", b.etf_profit_per_10k, "yuan"),
-                        fmt("基准收益", b.benchmark_profit_per_10k, "yuan"),
-                        fmt("收益差", b.profit_diff_per_10k, "yuan"),
+                        __("etf.chartDate") + b.date,
+                        fmt(__("etf.chartEtfProfit"), b.etf_profit_per_10k, "yuan"),
+                        fmt(__("etf.chartBenchmarkProfit"), b.benchmark_profit_per_10k, "yuan"),
+                        fmt(__("etf.chartProfitDiff"), b.profit_diff_per_10k, "yuan"),
                     ];
                 } else if (chartType === "tracking3") {
                     lines = [
-                        "日期：" + b.date,
-                        fmt("收盘价", b.close),
-                        fmt("涨跌幅", b.change_pct, "pct"),
-                        fmt("溢价率", b.premium_pct, "pct"),
-                        fmt("真实误差(价格级)", b.price_tracking_deviation_pct, "pct"),
-                        fmt("估值误差(净值级)", b.valuation_error_pct, "pct"),
+                        __("etf.chartDate") + b.date,
+                        fmt(__("etf.chartClose"), b.close),
+                        fmt(__("etf.chartChangePct"), b.change_pct, "pct"),
+                        fmt(__("etf.chartPremiumPct"), b.premium_pct, "pct"),
+                        fmt(__("etf.chartTrueError"), b.price_tracking_deviation_pct, "pct"),
+                        fmt(__("etf.chartEstError"), b.valuation_error_pct, "pct"),
                     ];
                 } else {
                     lines = [
-                        "日期：" + b.date,
-                        fmt("最高价", b.high),
-                        fmt("开盘价", b.open),
-                        fmt("最低价", b.low),
-                        fmt("收盘价", b.close),
-                        fmt("涨跌幅", b.change_pct, "pct"),
-                        fmt("溢价率", b.premium_pct, "pct"),
-                        fmt("净值偏离", b.nav_tracking_deviation_pct, "pct"),
-                        fmt("真实误差", b.tracking_error_pct, "pct"),
-                        fmt("振幅", b.amplitude_pct, "pct"),
-                        fmt("成交额", b.amount, "amt"),
+                        __("etf.chartDate") + b.date,
+                        fmt(__("etf.chartHigh"), b.high),
+                        fmt(__("etf.chartOpen"), b.open),
+                        fmt(__("etf.chartLow"), b.low),
+                        fmt(__("etf.chartClose"), b.close),
+                        fmt(__("etf.chartChangePct"), b.change_pct, "pct"),
+                        fmt(__("etf.chartPremiumPct"), b.premium_pct, "pct"),
+                        fmt(__("etf.chartNavDeviation"), b.nav_tracking_deviation_pct, "pct"),
+                        fmt(__("etf.chartTrackingError"), b.tracking_error_pct, "pct"),
+                        fmt(__("etf.chartAmplitude"), b.amplitude_pct, "pct"),
+                        fmt(__("etf.chartAmount"), b.amount, "amt"),
                     ];
                 }
 
@@ -985,12 +985,12 @@
             var benchmarkPath = linePath(benchmarkVals);
             if (etfPath) svg += '<path d="' + etfPath + '" fill="none" stroke="#2997ff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"' + "/>";
             if (benchmarkPath) svg += '<path d="' + benchmarkPath + '" fill="none" stroke="#ff9f0a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"' + "/>";
-            var benchmarkName = _lastChartData && _lastChartData.stats && _lastChartData.stats.tracking_error_benchmark ? _lastChartData.stats.tracking_error_benchmark : "基准";
+            var benchmarkName = _lastChartData && _lastChartData.stats && _lastChartData.stats.tracking_error_benchmark ? _lastChartData.stats.tracking_error_benchmark : __("etf.benchmark");
             // Legend: larger indicators + readable spacing
             svg += '<rect x="' + (PAD.left + 4) + '" y="7" width="10" height="10" rx="3" fill="#2997ff"' + "/>";
-            svg += '<text x="' + (PAD.left + 20) + '" y="16" fill="' + CLR.text + '" font-size="11">A股ETF万元收益' + C + "text>";
+            svg += '<text x="' + (PAD.left + 20) + '" y="16" fill="' + CLR.text + '" font-size="11">' + __("etf.chartEtfReturn") + C + "text>";
             svg += '<rect x="' + (PAD.left + 140) + '" y="7" width="10" height="10" rx="3" fill="#ff9f0a"' + "/>";
-            svg += '<text x="' + (PAD.left + 156) + '" y="16" fill="' + CLR.text + '" font-size="11">' + benchmarkName + '万元收益' + C + "text>";
+            svg += '<text x="' + (PAD.left + 156) + '" y="16" fill="' + CLR.text + '" font-size="11">' + __("etf.chartBenchmarkReturn", {name: benchmarkName}) + C + "text>";
             svg = addXAxis(svg, bars, n, xScale, H, PAD, CLR);
             return svg;
         }
@@ -998,9 +998,9 @@
         // ── TRACKING3: 溢价率 + 真实误差(价格级) + 追踪误差(净值级) 三线 ──
         if (chartType === "tracking3") {
             var series = [
-                { key: "premium_pct", label: "溢价率", color: "#ff9f0a", unit: "%" },
-                { key: "price_tracking_deviation_pct", label: "真实误差", color: "#5ac8fa", unit: "%" },
-                { key: "valuation_error_pct", label: "估值误差", color: "#30d158", unit: "%" },
+                { key: "premium_pct", label: __("etf.chartPremiumPct"), color: "#ff9f0a", unit: "%" },
+                { key: "price_tracking_deviation_pct", label: __("etf.chartTrackingError"), color: "#5ac8fa", unit: "%" },
+                { key: "valuation_error_pct", label: __("etf.colEstError"), color: "#30d158", unit: "%" },
             ];
             var allVals = [], seriesData = [];
             for (var s = 0; s < series.length; s++) {
@@ -1100,7 +1100,7 @@
                 var bodyTop = isUp ? yClose : yOpen;
                 svg += '<rect x="' + (cx - bodyW / 2) + '" y="' + bodyTop + '" width="' + bodyW + '" height="' + bodyH + '" fill="' + color + '" stroke="' + color + '" stroke-width="0.5"' + "/>";
             }
-            svg += '<text x="' + (PAD.left + 4) + '" y="' + (PAD.top + 12) + '" fill="' + CLR.text + '" font-size="11">蜡烛图 (OHLC)' + C + "text>";
+            svg += '<text x="' + (PAD.left + 4) + '" y="' + (PAD.top + 12) + '" fill="' + CLR.text + '" font-size="11">' + __("etf.chartCandlestick") + C + "text>";
             svg = addXAxis(svg, bars, n, xScale, H, PAD, CLR);
             return svg;
         }
@@ -1110,19 +1110,19 @@
 
         if (chartType === "change") {
             for (var i = 0; i < n; i++) values.push(bars[i].change_pct);
-            label = "涨跌幅"; unit = "%"; color = "#5ac8fa"; symmetric = true;
+            label = __("etf.chartChangePct"); unit = "%"; color = "#5ac8fa"; symmetric = true;
         } else if (chartType === "premium") {
             for (var i = 0; i < n; i++) values.push(bars[i].premium_pct);
-            label = "溢价率"; unit = "%"; color = "#ff9f0a"; symmetric = false;
+            label = __("etf.chartPremiumPct"); unit = "%"; color = "#ff9f0a"; symmetric = false;
         } else if (chartType === "tracking") {
             for (var i = 0; i < n; i++) values.push(bars[i].tracking_error_pct);
-            label = "追踪误差"; unit = "%"; color = "#64d2ff";
+            label = __("etf.chartTrackingError"); unit = "%"; color = "#64d2ff";
         } else if (chartType === "amplitude") {
             for (var i = 0; i < n; i++) values.push(bars[i].amplitude_pct);
-            label = "振幅"; unit = "%"; color = "#bf5af2";
+            label = __("etf.chartAmplitude"); unit = "%"; color = "#bf5af2";
         } else if (chartType === "amount") {
             for (var i = 0; i < n; i++) values.push(bars[i].amount);
-            label = "成交额"; unit = "亿"; color = CLR.positive;
+            label = __("etf.chartAmount"); unit = "亿"; color = CLR.positive;
         } else {
             return null;
         }

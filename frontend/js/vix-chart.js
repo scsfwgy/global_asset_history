@@ -40,12 +40,12 @@
 
     function vixZone(vixVal) {
         if (vixVal == null || isNaN(vixVal)) return null;
-        if (vixVal < 12)  return { label: "极度安逸", tip: "利润让飞，分批获利，不建议追高", cls: "zone-extreme-low", recommend: false };
-        if (vixVal < 15)  return { label: "低波动",   tip: "右侧轻仓，左侧观望，不宜追高", cls: "zone-low", recommend: false };
-        if (vixVal < 20)  return { label: "正常区间", tip: "均值回归，按计划执行，坚持定投", cls: "zone-normal", recommend: null };
-        if (vixVal < 25)  return { label: "恐惧上升", tip: "市场回调，动用预备资金，分批买入", cls: "zone-elevated", recommend: true };
-        if (vixVal < 35)  return { label: "高度恐惧", tip: "阶段底部，逢低扫货，加大定投", cls: "zone-high", recommend: true };
-        return              { label: "极端恐慌", tip: "历史级买点，千载难逢的机会！激进买入但保留子弹", cls: "zone-extreme", recommend: true };
+        if (vixVal < 12)  return { label: __("vix.zoneExtremeCalm"), tip: __("vix.tipExtremeCalm"), cls: "zone-extreme-low", recommend: false };
+        if (vixVal < 15)  return { label: __("vix.zoneLowVol"),   tip: __("vix.tipLowVol"), cls: "zone-low", recommend: false };
+        if (vixVal < 20)  return { label: __("vix.zoneNormal"), tip: __("vix.tipNormal"), cls: "zone-normal", recommend: null };
+        if (vixVal < 25)  return { label: __("vix.zoneFear"), tip: __("vix.tipFear"), cls: "zone-elevated", recommend: true };
+        if (vixVal < 35)  return { label: __("vix.zoneHighFear"), tip: __("vix.tipHighFear"), cls: "zone-high", recommend: true };
+        return              { label: __("vix.zoneExtremePanic"), tip: __("vix.tipExtremePanic"), cls: "zone-extreme", recommend: true };
     }
 
     function readCount() {
@@ -87,7 +87,7 @@
                 _vixData = null;
                 if (loadingEl) loadingEl.style.display = "none";
                 if (errorEl) {
-                    errorEl.textContent = "加载失败: " + err.message;
+                    errorEl.textContent = __("vix.loadFailed") + err.message;
                     errorEl.style.display = "block";
                 }
                 if (callback) callback(err);
@@ -138,22 +138,16 @@
         }
         if (tipEl) {
             var extras = [];
-            if (stats.vix_percentile_1y != null) extras.push("当前处于近1年约 " + stats.vix_percentile_1y.toFixed(1) + "% 分位");
+            if (stats.vix_percentile_1y != null) extras.push(__("vix.percentilePrefix") + stats.vix_percentile_1y.toFixed(1) + __("vix.percentileSuffix"));
             if (stats.spy_vix_corr_30 != null) {
-                extras.push(stats.spy_vix_corr_30 > -0.2 ? "SPY/VIX负相关减弱，留意异常风险" : "SPY/VIX仍保持典型负相关");
+                extras.push(stats.spy_vix_corr_30 > -0.2 ? __("vix.corrWeakening") : __("vix.corrNormal"));
             }
             tipEl.textContent = zone.tip + (extras.length ? "。" + extras.join("；") : "");
         }
     }
 
     function vixRuleTip() {
-        return "VIX区间及建议规则：\n" +
-            "<12  极度安逸  ❌不建议追高（利润让飞/分批获利）\n" +
-            "12-15  低波动    ❌不宜追高（右侧轻仓/左侧观望）\n" +
-            "15-20  正常区间  ✅坚持定投（均值回归/按计划执行）\n" +
-            "20-25  恐惧上升  ✅分批买入（市场回调/动用预备）\n" +
-            "25-35  高度恐惧  ✅加大定投（阶段底部/逢低扫货）\n" +
-            ">=35  极端恐慌  ✅激进买入（历史级买点/保留子弹）";
+        return __("vix.ruleTip");
     }
 
     function setHeaderBadgeStatus(text, cls) {
@@ -181,20 +175,20 @@
         var line = $("vixHeaderLine");
         var badge = $("vixHeaderBadge");
         if (!badge || !line) return;
-        if (vixVal == null || isNaN(vixVal)) { setHeaderBadgeStatus("VIX 加载失败", "zone-error"); return; }
+        if (vixVal == null || isNaN(vixVal)) { setHeaderBadgeStatus("VIX " + __("vix.loadFailed").replace(": ",""), "zone-error"); return; }
 
         var zone = vixZone(vixVal);
-        if (!zone) { setHeaderBadgeStatus("VIX 加载失败", "zone-error"); updateHeaderBackground(null); return; }
+        if (!zone) { setHeaderBadgeStatus("VIX " + __("vix.loadFailed").replace(": ",""), "zone-error"); updateHeaderBackground(null); return; }
 
         updateHeaderBackground(zone);
         line.style.display = "";
         badge.textContent = "VIX " + vixVal.toFixed(2) + " · " +
-            (vixVal >= 35 ? "✅极端恐慌，激进买入" :
-             vixVal >= 25 ? "✅高度恐惧，加大定投" :
-             vixVal >= 20 ? "✅恐惧上升，分批买入" :
-             vixVal >= 15 ? "✅正常区间，坚持定投" :
-             vixVal >= 12 ? "❌低波动，不宜追高" :
-             "❌极度安逸，不建议追高");
+            (vixVal >= 35 ? __("vix.badgeExtremePanic") :
+             vixVal >= 25 ? __("vix.badgeHighFear") :
+             vixVal >= 20 ? __("vix.badgeFear") :
+             vixVal >= 15 ? __("vix.badgeNormal") :
+             vixVal >= 12 ? __("vix.badgeLowVol") :
+             __("vix.badgeExtremeCalm"));
         badge.className = "vix-header-badge " + zone.cls;
         badge.title = vixRuleTip();
     }
@@ -260,7 +254,7 @@
         var validSeries = allSeries.filter(function (s) { return s.points.length >= 2; });
 
         if (validSeries.length === 0) {
-            container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--apple-text-secondary);">暂无数据</div>';
+            container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--apple-text-secondary);">' + __("vix.noData") + '</div>';
             return;
         }
 
@@ -274,7 +268,7 @@
         });
         allDates.sort();
         if (allDates.length < 2) {
-            container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--apple-text-secondary);">数据点不足</div>';
+            container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--apple-text-secondary);">' + __("vix.insufficientPoints") + '</div>';
             return;
         }
 
@@ -343,7 +337,7 @@
             svg += '</g>';
         });
 
-        var leftLabel = stepWise ? "SPY/QQQ 逐期涨跌幅 %" : "SPY/QQQ 累计涨跌幅 %";
+        var leftLabel = stepWise ? __("vix.axisPeriodReturn") : __("vix.axisCumReturn");
         svg += '<text x="8" y="14" fill="' + CLR.text + '" font-size="10">' + leftLabel + '</text>';
         if (visibleRight.length) {
             svg += '<text x="' + (W - PAD.right + 2) + '" y="14" fill="' + getVixColors().vix + '" font-size="10">VIX</text>';
@@ -363,7 +357,7 @@
             svg += '<g data-vix-legend="' + series.key + '" style="cursor:pointer;">';
             svg += '<rect x="' + (lx - 4) + '" y="' + (legendY - 12) + '" width="145" height="20" rx="4" fill="rgba(0,0,0,0.001)"/>';
             svg += '<rect x="' + lx + '" y="' + (legendY - 5) + '" width="10" height="3" rx="1.5" fill="' + series.color + '" opacity="' + (hidden ? 0.25 : 1) + '"/>';
-            svg += '<text x="' + (lx + 14) + '" y="' + (legendY + 1) + '" fill="var(--apple-text-secondary)" font-size="11" opacity="' + (hidden ? 0.3 : 0.85) + '" text-decoration="' + (hidden ? "line-through" : "none") + '">' + series.name + (series.axis === "right" ? " (右轴)" : "") + '</text>';
+            svg += '<text x="' + (lx + 14) + '" y="' + (legendY + 1) + '" fill="var(--apple-text-secondary)" font-size="11" opacity="' + (hidden ? 0.3 : 0.85) + '" text-decoration="' + (hidden ? "line-through" : "none") + '">' + series.name + (series.axis === "right" ? __("vix.tooltipRightAxis") : "") + '</text>';
             svg += '</g>';
         });
 
@@ -432,7 +426,7 @@
             crosshair.setAttribute("x1", cx); crosshair.setAttribute("x2", cx);
             crosshair.style.display = "";
 
-            var lines = ["日期：" + dateStr];
+            var lines = [__("vix.tooltipDate") + dateStr];
             validSeries.forEach(function (series) {
                 if (_vixHidden[series.key]) return;
                 var pt = null;
@@ -514,7 +508,7 @@
     }
 
     function fetchLatestVix() {
-        setHeaderBadgeStatus("VIX 加载中...", "zone-loading");
+        setHeaderBadgeStatus("VIX " + __("vix.loading"), "zone-loading");
         fetch(VIX_COMPARISON_ENDPOINT, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -526,7 +520,7 @@
             })
             .then(function (data) {
                 if (data.latest_vix != null) updateHeaderBadge(data.latest_vix);
-                else setHeaderBadgeStatus("VIX 加载失败", "zone-error");
+                else setHeaderBadgeStatus("VIX " + __("vix.loadFailed").replace(": ",""), "zone-error");
             })
             .catch(function () { setHeaderBadgeStatus("VIX 加载失败", "zone-error"); });
     }
