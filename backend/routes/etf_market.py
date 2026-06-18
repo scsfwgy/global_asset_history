@@ -44,12 +44,19 @@ def _load_fee_data() -> None:
 _TENCENT_QUOTE_URL = "https://qt.gtimg.cn/q="
 _REQUEST_TIMEOUT = 10
 _TRACKING_ERROR_TTL_SECONDS = 6 * 60 * 60
-_NAV_CACHE_TTL_SECONDS = 6 * 60 * 60
+_ETF_HISTORY_TTL_SECONDS = 4 * 60 * 60
+_ETF_HISTORY_STALE_SECONDS = 7 * 24 * 60 * 60
+_NAV_CACHE_TTL_SECONDS = 4 * 60 * 60
 _QDII_FUND_TTL_SECONDS = 4 * 60 * 60
 _CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "price_change_config.json"
 _QDII_FUND_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "qdii_funds.json"
+_ETF_HISTORY_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "etf_history"
+_ETF_NAV_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "etf_nav"
 _QDII_FUND_SHARED_CACHE_KEY = "v3:qdii_funds:all"
+_ETF_HISTORY_SHARED_CACHE_PREFIX = "v2:etf_history"
+_ETF_NAV_SHARED_CACHE_PREFIX = "v2:etf_nav"
 _tracking_error_cache: dict[str, tuple[float, dict]] = {}
+_etf_history_cache: dict[str, tuple[float, dict]] = {}
 _nav_cache: dict[str, tuple[float, dict]] = {}
 _qdii_fund_cache: dict[str, tuple[float, dict]] = {}
 _benchmark_map: dict[str, tuple[str, str]] = {}
@@ -578,6 +585,154 @@ def _qdii_json_response(payload: dict, *, fresh: bool = False):
         # Do not let browser/CDN hold a separate stale copy. The 4-hour rule is
         # enforced by the shared server-side cache so a manual fresh=1 refresh
         # becomes visible to all users on their next normal request.
+        resp.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
+        resp.headers["CDN-Cache-Control"] = "no-store"
+        resp.headers["Vercel-CDN-Cache-Control"] = "no-store"
+    return resp
+
+
+def _copy_jsonable(data: dict) -> dict:
+    """Return a detached copy for cached JSON-style payloads."""
+    return json.loads(json.dumps(data, ensure_ascii=False))
+
+
+def _cache_payload_age_seconds(data: dict) -> Optional[float]:
+    stored_at = data.get("stored_at_epoch")
+    try:
+        return time.time() - float(stored_at)
+    except (ValueError, TypeError):
+        return None
+
+
+def _history_cache_key(symbol: str, days: int) -> str:
+    return f"{_ETF_HISTORY_SHARED_CACHE_PREFIX}:{symbol.strip()}:{int(days)}"
+
+
+def _safe_cache_filename(*parts: object) -> str:
+    raw = "_".join(str(part).strip() for part in parts if str(part).strip())
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", raw).strip("._")
+    return safe or "cache"
+
+
+def _history_snapshot_path(symbol: str, days: int) -> Path:
+    return _ETF_HISTORY_DATA_DIR / f"{_safe_cache_filename(symbol, int(days))}.json"
+
+
+def _nav_snapshot_path(symbol: str, start_date: str, end_date: str) -> Path:
+    return _ETF_NAV_DATA_DIR / f"{_safe_cache_filename(symbol, start_date, end_date)}.json"
+
+
+def _read_etf_history_shared_cache(key: str) -> Optional[dict]:
+    raw = cache_store.cache_get(key)
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except (ValueError, TypeError) as exc:
+        logger.warning("Failed to deserialize ETF history cache %s: %s", key, exc)
+        return None
+    if not isinstance(data, dict) or "bars" not in data:
+        return None
+    return data
+
+
+def _write_etf_history_shared_cache(key: str, data: dict) -> None:
+    try:
+        cache_store.cache_set(
+            key,
+            json.dumps(data, ensure_ascii=False, separators=(",", ":")),
+            _ETF_HISTORY_STALE_SECONDS,
+        )
+    except Exception as exc:
+        logger.warning("Failed to write ETF history cache %s: %s", key, exc)
+
+
+def _read_etf_history_snapshot(symbol: str, days: int) -> Optional[dict]:
+    path = _history_snapshot_path(symbol, days)
+    try:
+        if not path.exists():
+            return None
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict) or "bars" not in data:
+            return None
+        return data
+    except Exception as exc:
+        logger.warning("Failed to read ETF history snapshot from %s: %s", path, exc)
+        return None
+
+
+def _write_etf_history_snapshot(symbol: str, days: int, data: dict) -> None:
+    path = _history_snapshot_path(symbol, days)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = path.with_suffix(".json.tmp")
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        tmp_path.replace(path)
+    except Exception as exc:
+        logger.warning("Failed to write ETF history snapshot to %s: %s", path, exc)
+
+
+def _read_etf_history_cache(symbol: str, days: int, *, allow_stale: bool = False) -> Optional[dict]:
+    key = _history_cache_key(symbol, days)
+    now = time.time()
+    max_age = _ETF_HISTORY_STALE_SECONDS if allow_stale else _ETF_HISTORY_TTL_SECONDS
+
+    cached = _etf_history_cache.get(key)
+    if cached:
+        payload = cached[1]
+        age = _cache_payload_age_seconds(payload)
+        if age is None:
+            age = now - cached[0]
+        if age < max_age:
+            response = _copy_jsonable(payload)
+            response["cache_status"] = "memory_stale" if allow_stale and age >= _ETF_HISTORY_TTL_SECONDS else "memory"
+            response["cache_age_seconds"] = round(age)
+            response["cache_ttl_seconds"] = _ETF_HISTORY_TTL_SECONDS
+            return response
+
+    shared = _read_etf_history_shared_cache(key)
+    shared_age = _cache_payload_age_seconds(shared) if shared else None
+    if shared and shared_age is not None and shared_age < max_age:
+        _etf_history_cache[key] = (now, shared)
+        response = _copy_jsonable(shared)
+        response["cache_status"] = "shared_stale" if allow_stale and shared_age >= _ETF_HISTORY_TTL_SECONDS else "shared"
+        response["cache_age_seconds"] = round(shared_age)
+        response["cache_ttl_seconds"] = _ETF_HISTORY_TTL_SECONDS
+        return response
+
+    snapshot = _read_etf_history_snapshot(symbol, days)
+    snapshot_age = _cache_payload_age_seconds(snapshot) if snapshot else None
+    if snapshot and snapshot_age is not None and snapshot_age < max_age:
+        _etf_history_cache[key] = (now, snapshot)
+        _write_etf_history_shared_cache(key, snapshot)
+        response = _copy_jsonable(snapshot)
+        response["cache_status"] = "local_stale" if allow_stale and snapshot_age >= _ETF_HISTORY_TTL_SECONDS else "local"
+        response["cache_age_seconds"] = round(snapshot_age)
+        response["cache_ttl_seconds"] = _ETF_HISTORY_TTL_SECONDS
+        return response
+
+    return None
+
+
+def _write_etf_history_cache(symbol: str, days: int, payload: dict) -> None:
+    key = _history_cache_key(symbol, days)
+    data = _copy_jsonable(payload)
+    data["stored_at_epoch"] = time.time()
+    data["cache_ttl_seconds"] = _ETF_HISTORY_TTL_SECONDS
+    _etf_history_cache[key] = (time.time(), data)
+    _write_etf_history_shared_cache(key, data)
+    _write_etf_history_snapshot(symbol, days, data)
+
+
+def _etf_history_json_response(payload: dict, *, fresh: bool = False):
+    resp = jsonify(payload)
+    if fresh:
+        resp.headers["Cache-Control"] = "no-store"
+        resp.headers["CDN-Cache-Control"] = "no-store"
+        resp.headers["Vercel-CDN-Cache-Control"] = "no-store"
+    else:
         resp.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
         resp.headers["CDN-Cache-Control"] = "no-store"
         resp.headers["Vercel-CDN-Cache-Control"] = "no-store"
@@ -1181,16 +1336,22 @@ def history():
     Query params:
         symbol: ETF code, e.g. "513300"
         days: number of recent trading days (default 120, max 500)
+        fresh: 1 to bypass the 4-hour cache and refresh upstream data
     """
     symbol = request.args.get("symbol", "").strip()
     if not symbol:
         return jsonify({"error": "symbol parameter is required"}), 400
+    fresh = request.args.get("fresh") in ("1", "true", "yes")
 
     try:
         days = int(request.args.get("days", 120))
     except ValueError:
         days = 120
     days = max(1, min(days, 500))
+
+    cached_payload = None if fresh else _read_etf_history_cache(symbol, days)
+    if cached_payload:
+        return _etf_history_json_response(cached_payload)
 
     tsym = _tencent_symbol(symbol)
     end_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -1208,6 +1369,11 @@ def history():
             body = resp.json()
         except requests.RequestException as e:
             logger.error("Tencent kline fetch failed for %s: %s", tsym, e)
+            stale = _read_etf_history_cache(symbol, days, allow_stale=True)
+            if stale:
+                stale["cache_status"] = f"{stale.get('cache_status')}_upstream_failed"
+                stale["cache_error"] = f"upstream fetch failed: {e}"
+                return _etf_history_json_response(stale)
             return jsonify({"error": f"upstream fetch failed: {e}"}), 502
 
         if body.get("code") != 0:
@@ -1224,6 +1390,11 @@ def history():
         end_date = page_rows[0][0]
 
     if not all_rows:
+        stale = _read_etf_history_cache(symbol, days, allow_stale=True)
+        if stale:
+            stale["cache_status"] = f"{stale.get('cache_status')}_upstream_empty"
+            stale["cache_error"] = "upstream returned no data"
+            return _etf_history_json_response(stale)
         return jsonify({"error": "no data"}), 404
 
     # Parse OHLCV, dedup.  all_rows is oldest→newest per page, newest pages first
@@ -1269,7 +1440,7 @@ def history():
 
     # Fetch NAV history for premium calculation (best-effort).
     # Falls back to live quote premium if NAV API is unreachable (e.g. from US servers).
-    nav_map = _fetch_etf_nav(symbol, parsed[0]["date"], parsed[-1]["date"])
+    nav_map = _fetch_etf_nav_cached(symbol, parsed[0]["date"], parsed[-1]["date"])
     live_premium = _fetch_live_premium(symbol)
 
     if nav_map:
@@ -1437,7 +1608,7 @@ def history():
         # haoetf-style valuation error: T-1 NAV estimate vs actual
         p["valuation_error_pct"] = valuation_err_by_bar.get(p["date"])
 
-    return jsonify({
+    payload = {
         "symbol": symbol,
         "bars": parsed,
         "count": len(parsed),
@@ -1465,7 +1636,20 @@ def history():
             "nav_tracking_benchmark": tracking_error.get("benchmark"),
             "profit_diff_30d_per_10k": tracking_error.get("profit_diff_30d_per_10k"),
         },
-    })
+    }
+
+    stale = _read_etf_history_cache(symbol, days, allow_stale=True)
+    if stale and (not payload["has_premium"] or payload["premium_approx"]):
+        stale_has_real_premium = stale.get("has_premium") and not stale.get("premium_approx")
+        if stale_has_real_premium:
+            stale["cache_status"] = f"{stale.get('cache_status')}_upstream_partial"
+            stale["cache_error"] = "upstream NAV unavailable; served cached premium history"
+            return _etf_history_json_response(stale)
+
+    payload["cache_status"] = "fresh"
+    payload["cache_ttl_seconds"] = _ETF_HISTORY_TTL_SECONDS
+    _write_etf_history_cache(symbol, days, payload)
+    return _etf_history_json_response(payload, fresh=fresh)
 
 
 def _fetch_live_premium(symbol: str) -> Optional[float]:
@@ -1550,12 +1734,101 @@ def _fetch_etf_nav(symbol: str, start_date: str, end_date: str) -> dict:
     return nav_map
 
 
+def _read_etf_nav_snapshot(symbol: str, start_date: str, end_date: str) -> Optional[dict]:
+    path = _nav_snapshot_path(symbol, start_date, end_date)
+    try:
+        if not path.exists():
+            return None
+        with open(path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        if not isinstance(payload, dict):
+            return None
+        age = _cache_payload_age_seconds(payload)
+        if age is None or age >= _NAV_CACHE_TTL_SECONDS:
+            return None
+        raw_nav = payload.get("nav_map")
+        if not isinstance(raw_nav, dict):
+            return None
+        return {
+            str(dt): float(nav)
+            for dt, nav in raw_nav.items()
+            if dt and nav not in (None, "")
+        }
+    except Exception as exc:
+        logger.warning("Failed to read ETF NAV snapshot from %s: %s", path, exc)
+        return None
+
+
+def _write_etf_nav_snapshot(symbol: str, start_date: str, end_date: str, nav_map: dict) -> None:
+    path = _nav_snapshot_path(symbol, start_date, end_date)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = path.with_suffix(".json.tmp")
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "symbol": symbol,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "nav_map": nav_map,
+                    "stored_at_epoch": time.time(),
+                    "cache_ttl_seconds": _NAV_CACHE_TTL_SECONDS,
+                },
+                f,
+                ensure_ascii=False,
+                indent=2,
+            )
+        tmp_path.replace(path)
+    except Exception as exc:
+        logger.warning("Failed to write ETF NAV snapshot to %s: %s", path, exc)
+
+
 def _fetch_etf_nav_cached(symbol: str, start_date: str, end_date: str) -> dict:
-    """Cached wrapper around _fetch_etf_nav with 6-hour TTL."""
+    """Cached wrapper around _fetch_etf_nav with 4-hour L1 + shared cache."""
     cache_key = f"{symbol}:{start_date}:{end_date}"
     cached = _nav_cache.get(cache_key)
     if cached and time.time() - cached[0] < _NAV_CACHE_TTL_SECONDS:
         return cached[1]
+
+    shared_key = f"{_ETF_NAV_SHARED_CACHE_PREFIX}:{cache_key}"
+    raw = cache_store.cache_get(shared_key)
+    if raw:
+        try:
+            shared = json.loads(raw)
+            if isinstance(shared, dict):
+                nav_map = {
+                    str(dt): float(nav)
+                    for dt, nav in shared.items()
+                    if dt and nav not in (None, "")
+                }
+                _nav_cache[cache_key] = (time.time(), nav_map)
+                return nav_map
+        except (ValueError, TypeError) as exc:
+            logger.warning("Failed to deserialize ETF NAV cache %s: %s", shared_key, exc)
+
+    snapshot = _read_etf_nav_snapshot(symbol, start_date, end_date)
+    if snapshot is not None:
+        _nav_cache[cache_key] = (time.time(), snapshot)
+        try:
+            cache_store.cache_set(
+                shared_key,
+                json.dumps(snapshot, ensure_ascii=False, separators=(",", ":")),
+                _NAV_CACHE_TTL_SECONDS,
+            )
+        except Exception as exc:
+            logger.warning("Failed to write ETF NAV cache %s: %s", shared_key, exc)
+        return snapshot
+
     nav_map = _fetch_etf_nav(symbol, start_date, end_date)
     _nav_cache[cache_key] = (time.time(), nav_map)
+    if nav_map:
+        try:
+            cache_store.cache_set(
+                shared_key,
+                json.dumps(nav_map, ensure_ascii=False, separators=(",", ":")),
+                _NAV_CACHE_TTL_SECONDS,
+            )
+        except Exception as exc:
+            logger.warning("Failed to write ETF NAV cache %s: %s", shared_key, exc)
+        _write_etf_nav_snapshot(symbol, start_date, end_date, nav_map)
     return nav_map
