@@ -138,7 +138,8 @@
     }
 
     function optionLabel(prefix, value) {
-        return prefix + "：" + (value || __("qdii.filterAll"));
+        var sep = typeof __lang === "function" && __lang() === "en" ? ": " : "：";
+        return prefix + sep + (value || __("qdii.filterAll"));
     }
 
     function setSelectOptions(id, prefix, values, current) {
@@ -146,7 +147,7 @@
         if (!select) return;
         var normalizedValues = values.filter(function (v) { return v != null && v !== ""; });
         var hasCurrent = !current || normalizedValues.indexOf(current) >= 0;
-        var html = ['<option value="">' + escapeHtml(prefix + "：" + __("qdii.filterAll")) + '</option>'];
+        var html = ['<option value="">' + escapeHtml(optionLabel(prefix, "")) + '</option>'];
         normalizedValues.forEach(function (value) {
             html.push('<option value="' + escapeHtml(value) + '">' + escapeHtml(optionLabel(prefix, value)) + '</option>');
         });

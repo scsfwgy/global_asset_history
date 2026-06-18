@@ -360,7 +360,14 @@
     "filterStatusPaused": "状态：暂停",
     "clearFilters": "清空筛选",
     "refresh": "刷新",
-    "colFundName": "基金名称"
+    "colFundName": "基金名称",
+    "filterShareAll": "份额：全部",
+    "filterShareTitle": "按份额类别筛选",
+    "filterTypeTitle": "按基金类型筛选",
+    "filterCompanyTitle": "按基金公司筛选",
+    "filterStatusTitle": "按申购状态筛选",
+    "introNote": "Qualified Domestic Institutional Investor，中文通常译为：合格境内机构投资者。通过有资格的境内基金公司把资金投向海外市场；这类基金常受外汇额度、海外交易日和汇率影响。",
+    "loadingFunds": "获取 QDII 基金数据中..."
   },
   "vix": {
     "chartTitle": "📊 SPY · QQQ · VIX 对比走势",
@@ -499,6 +506,8 @@
     "knowledgeTitle": "数据科普 - GlobalAssetHistory",
     "knowledgeDescription": "美股投资科普、ETF入门、宏观数据解读与金融术语参考。",
     "wishesTitle": "心愿墙 - GlobalAssetHistory",
-    "wishesDescription": "提交和查看 GlobalAssetHistory 的功能建议与使用反馈。"
+    "wishesDescription": "提交和查看 GlobalAssetHistory 的功能建议与使用反馈。",
+    "etfMarketTitle": "A股ETF实时行情与费率对比 - GlobalAssetHistory",
+    "etfMarketDescription": "查看纳指100、标普500等A股场内ETF的实时行情、总市值、费率合计、溢价率和30日跟踪误差。"
   }
 }

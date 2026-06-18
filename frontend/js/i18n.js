@@ -6,9 +6,10 @@
  *
  * Language resolution (first match wins):
  *   1. URL path prefix  — /en/yearly  →  en
- *   2. localStorage      — "gah-lang"
- *   3. navigator.language (first two chars)
- *   4. fallback          — "zh-CN"
+ *   2. server-rendered initial language
+ *   3. localStorage      — "gah-lang"
+ *   4. navigator.language (first two chars)
+ *   5. fallback          — "zh-CN"
  *
  * Usage:
  *   __("nav.yearlyReturns")                // plain lookup
@@ -33,20 +34,23 @@
   function _detectLang() {
     // 1. URL prefix: /en/xxx or /zh/xxx
     var m = location.pathname.match(/^\/(en|zh)(?:\/|$)/);
-    if (m && SUPPORTED.indexOf(m[1]) !== -1) return m[1] === 'zh' ? 'zh-CN' : 'en';
+    if (m) return m[1] === 'zh' ? 'zh-CN' : 'en';
 
-    // 2. localStorage
+    // 2. server-rendered initial language keeps body text aligned with SEO head.
+    if (SUPPORTED.indexOf(window.__GAH_INITIAL_LANG__) !== -1) return window.__GAH_INITIAL_LANG__;
+
+    // 3. localStorage
     try {
       var stored = localStorage.getItem(STORAGE_KEY);
       if (stored && SUPPORTED.indexOf(stored) !== -1) return stored;
     } catch (_) { /* localStorage unavailable */ }
 
-    // 3. browser preference (only first two chars — "zh" → "zh-CN")
+    // 4. browser preference (only first two chars — "zh" → "zh-CN")
     var nav = navigator.language || '';
     if (nav.slice(0, 2) === 'zh') return 'zh-CN';
     if (nav.slice(0, 2) === 'en') return 'en';
 
-    // 4. fallback
+    // 5. fallback
     return DEFAULT_LANG;
   }
 
@@ -169,16 +173,19 @@
       }
 
       // data-i18n-attr="attrName|key" → set attribute
-      var attrEls = document.querySelectorAll('[data-i18n-attr]');
+      // Also supports data-i18n-attr-alt for a second attribute on the same node.
+      var attrEls = document.querySelectorAll('[data-i18n-attr], [data-i18n-attr-alt]');
       for (var j = 0; j < attrEls.length; j++) {
         var ael = attrEls[j];
-        var spec = ael.getAttribute('data-i18n-attr');
-        if (!spec) continue;
-        var pipe = spec.indexOf('|');
-        if (pipe === -1) continue;
-        var attrName = spec.slice(0, pipe);
-        var attrKey = spec.slice(pipe + 1);
-        ael.setAttribute(attrName, __(attrKey));
+        ['data-i18n-attr', 'data-i18n-attr-alt'].forEach(function (attrSpecName) {
+          var spec = ael.getAttribute(attrSpecName);
+          if (!spec) return;
+          var pipe = spec.indexOf('|');
+          if (pipe === -1) return;
+          var attrName = spec.slice(0, pipe);
+          var attrKey = spec.slice(pipe + 1);
+          ael.setAttribute(attrName, __(attrKey));
+        });
       }
 
       // data-i18n-html="key" → set innerHTML (use sparingly!)

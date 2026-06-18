@@ -360,7 +360,14 @@
     "filterStatusPaused": "Status: Paused",
     "clearFilters": "Clear Filters",
     "refresh": "Refresh",
-    "colFundName": "Fund Name"
+    "colFundName": "Fund Name",
+    "filterShareAll": "Share: All",
+    "filterShareTitle": "Filter by share class",
+    "filterTypeTitle": "Filter by fund type",
+    "filterCompanyTitle": "Filter by fund company",
+    "filterStatusTitle": "Filter by subscription status",
+    "introNote": "QDII stands for Qualified Domestic Institutional Investor. These funds let qualified domestic fund companies invest in overseas markets and are often affected by FX quota, overseas trading calendars, and exchange rates.",
+    "loadingFunds": "Loading QDII fund data..."
   },
   "vix": {
     "chartTitle": "📊 SPY · QQQ · VIX Comparison",
@@ -499,6 +506,8 @@
     "knowledgeTitle": "Knowledge Base — GlobalAssetHistory",
     "knowledgeDescription": "US stock investing guides, ETF basics, macro data interpretation, and financial terminology reference.",
     "wishesTitle": "Wishes Wall — GlobalAssetHistory",
-    "wishesDescription": "Submit and view feature suggestions and feedback for GlobalAssetHistory."
+    "wishesDescription": "Submit and view feature suggestions and feedback for GlobalAssetHistory.",
+    "etfMarketTitle": "China ETF Market Quotes & Fee Comparison — GlobalAssetHistory",
+    "etfMarketDescription": "Track China-listed Nasdaq 100 and S&P 500 ETFs with real-time quotes, market cap, fee totals, premiums, and 30-day tracking error."
   }
 }

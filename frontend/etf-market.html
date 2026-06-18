@@ -157,10 +157,18 @@
         var baseUrl = rawUrl ? String(rawUrl).replace(/\/$/, '') : '';
         if (!baseUrl) return;
         window.__GAH_SITE_BASE_URL__ = baseUrl;
-        var pageUrl = baseUrl + '/etf-market';
+        var lang = (typeof __lang === 'function') ? __lang() : 'zh-CN';
+        var prefix = lang === 'en' ? '/en' : '/zh';
+        var pageUrl = baseUrl + prefix + '/etf-market';
         var imageUrl = baseUrl + '/doc/screenshot/yearly-chart.png';
         var canonical = document.querySelector('link[rel="canonical"]');
         if (canonical) canonical.href = pageUrl;
+        document.querySelectorAll('link[rel="alternate"][hreflang]').forEach(function(link) {
+            var hl = link.getAttribute('hreflang');
+            if (hl === 'zh-CN') link.href = baseUrl + '/zh/etf-market';
+            else if (hl === 'en') link.href = baseUrl + '/en/etf-market';
+            else if (hl === 'x-default') link.href = baseUrl + '/zh/etf-market';
+        });
         setPropertyMeta('og:url', pageUrl);
         setPropertyMeta('og:image', imageUrl);
         setMeta('twitter:image', imageUrl);

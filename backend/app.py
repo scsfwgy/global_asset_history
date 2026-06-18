@@ -33,9 +33,86 @@ def site_url() -> str:
     return os.getenv("SITE_URL", get_site_base_url()).rstrip("/")
 
 
+def request_lang() -> str:
+    m = re.match(r"^/(en|zh)(?:/|$)", request.path)
+    return "en" if m and m.group(1) == "en" else "zh-CN"
+
+
+def _load_locale(lang: str) -> dict:
+    locale_file = "en.json" if lang == "en" else "zh-CN.json"
+    try:
+        return json.loads((FRONTEND_DIR / "locales" / locale_file).read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _locale_value(locale: dict, key: str, fallback: str = "") -> str:
+    val = locale
+    for part in key.split("."):
+        if not isinstance(val, dict):
+            return fallback
+        val = val.get(part)
+    return val if isinstance(val, str) else fallback
+
+
+def _json_script_value(value: str) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _replace_meta_content(html: str, selector: str, value: str) -> str:
+    pattern = rf'(<meta\s+{selector}\s+content=")[^"]*(")'
+    return re.sub(pattern, rf'\g<1>{value}\2', html, count=1)
+
+
 def serve_frontend_html(filename: str):
+    lang = request_lang()
+    locale = _load_locale(lang)
+    base_url = site_url()
+    html_lang = "en" if lang == "en" else "zh-CN"
+    og_locale = "en_US" if lang == "en" else "zh_CN"
+    prefix = "/en" if lang == "en" else "/zh"
+    page_path = "/etf-market" if filename == "etf-market.html" else "/"
+    page_url = f"{base_url}{prefix}{page_path}"
+
     html = (FRONTEND_DIR / filename).read_text(encoding="utf-8")
-    html = html.replace("__SITE_BASE_URL__", site_url())
+    html = html.replace("__SITE_BASE_URL__", base_url)
+    html = re.sub(r'<html lang="[^"]*"', f'<html lang="{html_lang}"', html, count=1)
+    html = html.replace('window.__GAH_SITE_BASE_URL__ = "' + base_url + '";',
+                        'window.__GAH_SITE_BASE_URL__ = "' + base_url + '";\n'
+                        f'      window.__GAH_INITIAL_LANG__ = "{lang}";')
+
+    if filename == "etf-market.html":
+        title = _locale_value(locale, "seo.etfMarketTitle", _locale_value(locale, "seo.etfTitle", "GlobalAssetHistory"))
+        desc = _locale_value(locale, "seo.etfMarketDescription", _locale_value(locale, "seo.etfDescription", ""))
+        image_url = f"{base_url}/doc/screenshot/yearly-chart.png"
+    else:
+        title = _locale_value(locale, "seo.indexTitle", "GlobalAssetHistory")
+        desc = _locale_value(locale, "seo.indexDescription", "")
+        image_url = f"{base_url}/doc/screenshot/yearly-heatmap.png"
+
+    html = re.sub(r"<title>.*?</title>", f"<title>{title}</title>", html, count=1, flags=re.S)
+    html = _replace_meta_content(html, r'name="description"', desc)
+    html = _replace_meta_content(html, r'property="og:title"', title)
+    html = _replace_meta_content(html, r'property="og:description"', desc)
+    html = _replace_meta_content(html, r'property="og:url"', page_url)
+    html = _replace_meta_content(html, r'property="og:image"', image_url)
+    html = _replace_meta_content(html, r'property="og:locale"', og_locale)
+    html = _replace_meta_content(html, r'name="twitter:title"', title)
+    html = _replace_meta_content(html, r'name="twitter:description"', desc)
+    html = _replace_meta_content(html, r'name="twitter:image"', image_url)
+    html = re.sub(r'(<link rel="canonical" href=")[^"]*(")', rf'\g<1>{page_url}\2', html, count=1)
+    html = re.sub(r'(<link rel="alternate" hreflang="zh-CN" href=")[^"]*(")', rf'\g<1>{base_url}/zh{page_path}\2', html, count=1)
+    html = re.sub(r'(<link rel="alternate" hreflang="en" href=")[^"]*(")', rf'\g<1>{base_url}/en{page_path}\2', html, count=1)
+    html = re.sub(r'(<link rel="alternate" hreflang="x-default" href=")[^"]*(")', rf'\g<1>{base_url}/zh{page_path}\2', html, count=1)
+
+    if filename == "etf-market.html":
+        html = re.sub(r'("name":\s*)"[^"]*"', rf'\1{_json_script_value(title)}', html, count=1)
+        html = re.sub(r'("url":\s*)"[^"]*/etf-market"', rf'\1{_json_script_value(page_url)}', html, count=1)
+        html = re.sub(r'("description":\s*)"[^"]*"', rf'\1{_json_script_value(desc)}', html, count=1)
+    else:
+        html = re.sub(r'("url":\s*)"[^"]*/"', rf'\1{_json_script_value(page_url)}', html, count=1)
+        html = re.sub(r'("description":\s*)"[^"]*"', rf'\1{_json_script_value(desc)}', html, count=1)
+
     return Response(html, mimetype="text/html")
 
 # Visit counter.
