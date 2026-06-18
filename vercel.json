@@ -3,10 +3,13 @@
   "regions": ["hkg1"],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/(yearly|backtest|crash|etf|qdii-funds|vix|wishes|settings|knowledge)", "destination": "/price-change.html" },
-    { "source": "/etf/:sub(nasdaq100|sp500|global_others)", "destination": "/price-change.html" },
-    { "source": "/knowledge/:sub(how-to-buy|etf-intro|event-myth)", "destination": "/price-change.html" },
-    { "source": "/", "destination": "/price-change.html" }
+    { "source": "/robots.txt", "destination": "/api/index" },
+    { "source": "/sitemap.xml", "destination": "/api/index" },
+    { "source": "/etf-market", "destination": "/api/index" },
+    { "source": "/(yearly|backtest|crash|etf|qdii-funds|vix|wishes|settings|knowledge)", "destination": "/api/index" },
+    { "source": "/etf/:sub(nasdaq100|sp500|global_others)", "destination": "/api/index" },
+    { "source": "/knowledge/:sub(how-to-buy|etf-intro|event-myth|terms)", "destination": "/api/index" },
+    { "source": "/", "destination": "/api/index" }
   ],
   "functions": {
     "api/index.py": {
