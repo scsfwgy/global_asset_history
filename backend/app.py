@@ -47,6 +47,7 @@ KNOWLEDGE_ARTICLES = {
     "/knowledge/core-etf-guide": {
         "legacy_paths": ["/knowledge/etf-intro"],
         "subtab": "etf-intro",
+        "en_indexable": True,
         "title": {
             "zh-CN": "核心美股ETF指南：SPY、VOO、QQQ、SMH、DRAM、EWY - GlobalAssetHistory",
             "en": "Core US ETF Guide: SPY, VOO, QQQ, SMH, DRAM, EWY — GlobalAssetHistory",
@@ -162,11 +163,19 @@ def _replace_json_ld(html: str, data: dict) -> str:
     )
     return re.sub(
         r'<script type="application/ld\+json">.*?</script>',
-        script,
+        lambda _: script,
         html,
         count=1,
         flags=re.S,
     )
+
+
+def _is_indexable_content_path(page_path: str, lang: str) -> bool:
+    if page_path not in INDEXABLE_PATHS:
+        return False
+    if page_path in KNOWLEDGE_ARTICLES and lang == "en":
+        return bool(KNOWLEDGE_ARTICLES[page_path].get("en_indexable"))
+    return True
 
 
 def serve_frontend_html(filename: str):
@@ -211,9 +220,7 @@ def serve_frontend_html(filename: str):
     html = _replace_meta_content(html, r'name="description"', desc)
     if keywords:
         html = _replace_meta_content(html, r'name="keywords"', keywords)
-    robots_content = "index,follow" if page_path in INDEXABLE_PATHS and base_request_path not in KNOWLEDGE_LEGACY_PATHS else "noindex,follow"
-    if page_path in KNOWLEDGE_ARTICLES and lang == "en":
-        robots_content = "noindex,follow"
+    robots_content = "index,follow" if _is_indexable_content_path(page_path, lang) and base_request_path not in KNOWLEDGE_LEGACY_PATHS else "noindex,follow"
     html = _replace_meta_content(html, r'name="robots"', robots_content)
     html = _replace_meta_content(html, r'property="og:type"', og_type)
     html = _replace_meta_content(html, r'property="og:title"', title)
@@ -291,10 +298,11 @@ def _write_counter(count: int) -> None:
 def add_seo_headers(response):
     base_path = _base_request_path()
 
-    if base_path in KNOWLEDGE_ARTICLES and request_lang() == "en":
-        response.headers.setdefault("X-Robots-Tag", "noindex,follow")
-    elif base_path in INDEXABLE_PATHS:
+    lang = request_lang()
+    if base_path in INDEXABLE_PATHS and _is_indexable_content_path(base_path, lang):
         response.headers.setdefault("X-Robots-Tag", "index,follow")
+    elif base_path in INDEXABLE_PATHS:
+        response.headers.setdefault("X-Robots-Tag", "noindex,follow")
     elif base_path.startswith(ROBOT_BLOCKED_PREFIXES) or base_path in {"/yearly", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", *KNOWLEDGE_LEGACY_PATHS.keys(), "/wishes"}:
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
     return response
@@ -319,7 +327,7 @@ def sitemap_xml():
     urls = [
         ("/", "daily", "1.0", True),
         ("/etf-market", "daily", "0.8", True),
-        *[(path, "weekly", "0.7", False) for path in KNOWLEDGE_ARTICLES.keys()],
+        *[(path, "weekly", "0.7", bool(meta.get("en_indexable"))) for path, meta in KNOWLEDGE_ARTICLES.items()],
     ]
     items = []
     now = datetime.now(timezone.utc).date().isoformat()
