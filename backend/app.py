@@ -31,6 +31,7 @@ KNOWLEDGE_ARTICLES = {
     "/knowledge/how-to-buy-us-stocks": {
         "legacy_paths": ["/knowledge/how-to-buy"],
         "subtab": "how-to-buy",
+        "en_indexable": True,
         "title": {
             "zh-CN": "如何用稳定币购买美股和ETF - GlobalAssetHistory",
             "en": "How to Buy US Stocks and ETFs with Stablecoins — GlobalAssetHistory",
@@ -64,6 +65,7 @@ KNOWLEDGE_ARTICLES = {
     "/knowledge/market-data-myths": {
         "legacy_paths": ["/knowledge/event-myth"],
         "subtab": "event-myth",
+        "en_indexable": True,
         "title": {
             "zh-CN": "美股数据魔咒统计：世界杯、选举、总统周期和奥运会 - GlobalAssetHistory",
             "en": "Market Data Myths: World Cup, Elections, Presidential Cycle, Olympics — GlobalAssetHistory",
@@ -80,6 +82,7 @@ KNOWLEDGE_ARTICLES = {
     "/knowledge/financial-terms": {
         "legacy_paths": ["/knowledge/terms"],
         "subtab": "terms",
+        "en_indexable": True,
         "title": {
             "zh-CN": "美股和ETF专业术语表 - GlobalAssetHistory",
             "en": "US Stock and ETF Glossary — GlobalAssetHistory",
