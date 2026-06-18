@@ -50,7 +50,7 @@ function updateBacktestFrequencyUI() {
     btWeekdayLabel.style.display = "none";
     const intervalLabel = btInterval.previousElementSibling;
     if (intervalLabel) intervalLabel.style.display = "none";
-    btAmount.previousElementSibling && (btAmount.previousElementSibling.textContent = "一次性投入");
+    btAmount.previousElementSibling && (btAmount.previousElementSibling.textContent = __("backtest.labelOnceInvest"));
     return;
   }
 
@@ -63,14 +63,14 @@ function updateBacktestFrequencyUI() {
     btDayOfMonthLabel.style.display = "none";
     btWeekday.style.display = "none";
     btWeekdayLabel.style.display = "none";
-    btAmount.previousElementSibling && (btAmount.previousElementSibling.textContent = "每次投入");
+    btAmount.previousElementSibling && (btAmount.previousElementSibling.textContent = __("backtest.labelPerTime"));
     return;
   }
 
   const intervalLabel = btInterval.previousElementSibling;
   if (intervalLabel) intervalLabel.style.display = "";
   btInterval.style.display = "";
-  btAmount.previousElementSibling && (btAmount.previousElementSibling.textContent = "每次投入");
+  btAmount.previousElementSibling && (btAmount.previousElementSibling.textContent = __("backtest.labelPerTime"));
 
   if (mode === "daily") {
     btDayOfMonth.style.display = "none";
@@ -85,7 +85,7 @@ function updateBacktestFrequencyUI() {
     btDayOfMonthLabel.style.display = "none";
     btWeekday.style.display = "";
     btWeekdayLabel.style.display = "";
-    btWeekdayLabel.textContent = "周几";
+    btWeekdayLabel.textContent = __("backtest.labelWeekDay");
     return;
   }
 
@@ -93,7 +93,7 @@ function updateBacktestFrequencyUI() {
   btDayOfMonthLabel.style.display = "";
   btWeekday.style.display = "none";
   btWeekdayLabel.style.display = "none";
-  btDayOfMonthLabel.textContent = "月内日期";
+  btDayOfMonthLabel.textContent = __("backtest.labelMonthDay");
 }
 
 function populateBacktestOptions() {
@@ -112,7 +112,7 @@ async function runBacktest() {
   const symbol = (btSymbolInput?.value || "").trim().toUpperCase();
   const assetType = btTypeSelect?.value || "stock";
   if (!symbol) {
-    showError("请输入定投标的代码");
+    showError(__("backtest.errorNoSymbol"));
     return;
   }
 
@@ -139,7 +139,7 @@ async function runBacktest() {
     if (!resp.ok) throw new Error(result.error || `HTTP ${resp.status}`);
     renderBacktestResult(symbol, result);
   } catch (e) {
-    showError(`回测失败: ${e.message}`);
+    showError(__("backtest.errorBacktest") + e.message);
   }
 }
 
@@ -274,11 +274,11 @@ function renderBtChart(equityCurve) {
 
   const legend = `
     <rect x="${PAD.left}" y="14" width="8" height="2.5" rx="1.25" fill="#2997ff"/>
-    <text x="${PAD.left + 12}" y="17" fill="var(--apple-text-secondary)" font-size="10">总资产</text>
+    <text x="${PAD.left + 12}" y="17" fill="var(--apple-text-secondary)" font-size="10">${__("backtest.totalAssets")}</text>
     <rect x="${PAD.left + 60}" y="14" width="8" height="2.5" rx="1.25" fill="${c.invested}"/>
-    <text x="${PAD.left + 72}" y="17" fill="var(--apple-text-secondary)" font-size="10">累计投入</text>
+    <text x="${PAD.left + 72}" y="17" fill="var(--apple-text-secondary)" font-size="10">${__("backtest.totalInvested")}</text>
     <rect x="${PAD.left + 136}" y="11" width="8" height="8" rx="1.5" fill="${c.positiveAlpha22}" stroke="${c.positiveAlpha88}"/>
-    <text x="${PAD.left + 148}" y="17" fill="var(--apple-text-secondary)" font-size="10">总收益</text>
+    <text x="${PAD.left + 148}" y="17" fill="var(--apple-text-secondary)" font-size="10">${__("backtest.totalReturn")}</text>
   `;
 
   const hoverZones = sampledCurve.map((row, idx) => {
@@ -356,13 +356,13 @@ function renderBtChart(equityCurve) {
         tooltipGuide.setAttribute("x2", String(guideX));
       }
       if (tooltipDate) tooltipDate.textContent = zone.dataset.date || "";
-      if (tooltipAsset) tooltipAsset.textContent = `总资产: $${value.toFixed(2)}`;
-      if (tooltipInvested) tooltipInvested.textContent = `累计投入: $${invested.toFixed(2)}`;
+      if (tooltipAsset) tooltipAsset.textContent = __("backtest.totalAssets") + ": $" + value.toFixed(2);
+      if (tooltipInvested) tooltipInvested.textContent = __("backtest.totalInvested") + ": $" + invested.toFixed(2);
       if (tooltipProfit) {
-        tooltipProfit.textContent = `总收益: ${profit >= 0 ? "+" : ""}$${profit.toFixed(2)}`;
+        tooltipProfit.textContent = __("backtest.totalReturn") + ": " + (profit >= 0 ? "+" : "") + "$" + profit.toFixed(2);
       tooltipProfit.setAttribute("fill", profit >= 0 ? c.positive : c.negative);
       }
-      if (tooltipReturn) tooltipReturn.textContent = `回报率: ${returnPct >= 0 ? "+" : ""}${returnPct.toFixed(2)}%`;
+      if (tooltipReturn) tooltipReturn.textContent = __("backtest.returnRate") + " " + (returnPct >= 0 ? "+" : "") + returnPct.toFixed(2) + "%";
       if (tooltipBg) tooltipBg.setAttribute("height", "88");
       if (tooltipEl) tooltipEl.style.display = "";
     });
@@ -401,24 +401,24 @@ function renderBacktestResult(symbol, result) {
       <div class="pc-bt-summary-val ${summary.profit >= 0 ? "bt-val-positive" : "bt-val-negative"}">$${(summary.final_value || 0).toFixed(2)}</div>
     </div>
     <div class="pc-bt-summary-item">
-      <div class="pc-bt-summary-label">累计投入</div>
+      <div class="pc-bt-summary-label">${__("backtest.totalInvested")}</div>
       <div class="pc-bt-summary-val">$${(summary.invested || 0).toFixed(2)}</div>
     </div>
     <div class="pc-bt-summary-item">
-      <div class="pc-bt-summary-label">收益</div>
+      <div class="pc-bt-summary-label">${__("backtest.totalReturn")}</div>
       <div class="pc-bt-summary-val ${summary.profit >= 0 ? "bt-val-positive" : "bt-val-negative"}">${summary.profit >= 0 ? "+" : ""}$${(summary.profit || 0).toFixed(2)} (${summary.return_pct >= 0 ? "+" : ""}${(summary.return_pct || 0).toFixed(2)}%)</div>
     </div>
     <div class="pc-bt-summary-item">
-      <div class="pc-bt-summary-label has-tip" title="IRR年化是资金加权年化收益率：按每一笔投入的实际成交日期计算现金流，期末资产作为最终回收金额。它比一次性买入CAGR更适合定投回测。">IRR年化</div>
+      <div class="pc-bt-summary-label has-tip" title="${__("backtest.irrTooltip")}">${__("backtest.irrAnnualized")}</div>
       <div class="pc-bt-summary-val">${summary.annualized_return_pct >= 0 ? "+" : ""}${(summary.annualized_return_pct || 0).toFixed(2)}%</div>
     </div>
     <div class="pc-bt-summary-item">
-      <div class="pc-bt-summary-label">显示条数</div>
+      <div class="pc-bt-summary-label">${__("backtest.sampleDisplay")}</div>
       <div class="pc-bt-summary-val">${Math.min((result.equity_curve || []).length, maxPoints)} / ${(result.equity_curve || []).length}</div>
     </div>
   `;
 
-  btHead.innerHTML = "<th>日期</th><th>投入</th><th>成交价</th><th>买入份额</th><th>累计份额</th><th>当前总收益</th>";
+  btHead.innerHTML = "<th>" + __("backtest.colDate") + "</th><th>" + __("backtest.colAmount") + "</th><th>" + __("backtest.colPrice") + "</th><th>" + __("backtest.colShares") + "</th><th>" + __("backtest.colCumShares") + "</th><th>" + __("backtest.colTotalReturn") + "</th>";
   btBody.innerHTML = sampledCashflows.map((row) => `
     <tr>
       <td>${row.date}</td>

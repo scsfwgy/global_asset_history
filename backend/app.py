@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import re
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -65,9 +66,13 @@ def _write_counter(count: int) -> None:
 @app.after_request
 def add_seo_headers(response):
     path = request.path.rstrip("/") or "/"
-    if path in INDEXABLE_PATHS:
+    # Strip language prefix to check indexability
+    m = re.match(r'^/(en|zh)(/.*)?$', path)
+    base_path = (m.group(2) or "/") if m else path
+
+    if base_path in INDEXABLE_PATHS:
         response.headers.setdefault("X-Robots-Tag", "index,follow")
-    elif path.startswith(ROBOT_BLOCKED_PREFIXES) or path in {"/yearly", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", "/knowledge/how-to-buy", "/knowledge/etf-intro", "/knowledge/event-myth", "/knowledge/terms", "/wishes"}:
+    elif base_path.startswith(ROBOT_BLOCKED_PREFIXES) or base_path in {"/yearly", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", "/knowledge/how-to-buy", "/knowledge/etf-intro", "/knowledge/event-myth", "/knowledge/terms", "/wishes"}:
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
     return response
 
@@ -87,6 +92,7 @@ def robots_txt():
 
 @app.route("/sitemap.xml")
 def sitemap_xml():
+    langs = [("zh", "zh-CN"), ("en", "en")]
     urls = [
         ("/", "daily", "1.0"),
         ("/etf-market", "daily", "0.8"),
@@ -95,17 +101,39 @@ def sitemap_xml():
     now = datetime.now(timezone.utc).date().isoformat()
     base_url = site_url()
     for path, changefreq, priority in urls:
+        # Default (x-default) URL — use zh as the canonical for the root
         items.append(
             "  <url>"
             f"<loc>{base_url}{path}</loc>"
             f"<lastmod>{now}</lastmod>"
             f"<changefreq>{changefreq}</changefreq>"
             f"<priority>{priority}</priority>"
+            + "".join(
+                f'<xhtml:link rel="alternate" hreflang="{hreflang}" href="{base_url}/{short}{path}"/>'
+                for short, hreflang in langs
+            )
+            + f'<xhtml:link rel="alternate" hreflang="x-default" href="{base_url}/zh{path}"/>'
             "</url>"
         )
+        # Language-specific URLs
+        for short, hreflang in langs:
+            items.append(
+                "  <url>"
+                f"<loc>{base_url}/{short}{path}</loc>"
+                f"<lastmod>{now}</lastmod>"
+                f"<changefreq>{changefreq}</changefreq>"
+                f"<priority>{priority}</priority>"
+                + "".join(
+                    f'<xhtml:link rel="alternate" hreflang="{h}" href="{base_url}/{s}{path}"/>'
+                    for s, h in langs
+                )
+                + f'<xhtml:link rel="alternate" hreflang="x-default" href="{base_url}/zh{path}"/>'
+                "</url>"
+            )
     body = (
         '<?xml version="1.0" encoding="UTF-8"?>'
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'
+        ' xmlns:xhtml="http://www.w3.org/1999/xhtml">'
         + "".join(items)
         + "</urlset>"
     )
@@ -134,6 +162,28 @@ def etf_market():
 @app.route("/wishes")
 @app.route("/settings")
 def serve_tab():
+    return serve_frontend_html("price-change.html")
+
+
+# Language-prefixed routes: /en/yearly, /zh/backtest, etc.
+@app.route("/<lang>")
+@app.route("/<lang>/")
+def index_lang(lang):
+    if lang in ("en", "zh"):
+        return serve_frontend_html("price-change.html")
+    return serve_frontend_html("price-change.html")
+
+
+@app.route("/<lang>/<path:subpath>")
+def lang_frontend(lang, subpath):
+    if lang not in ("en", "zh"):
+        # Not a language prefix — serve as a static file from frontend/
+        full_path = lang + "/" + subpath
+        if full_path in {"price-change.html", "etf-market.html"}:
+            return serve_frontend_html(full_path)
+        return send_from_directory(str(FRONTEND_DIR), full_path)
+    if subpath == "etf-market":
+        return serve_frontend_html("etf-market.html")
     return serve_frontend_html("price-change.html")
 
 

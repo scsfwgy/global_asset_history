@@ -48,10 +48,10 @@ function renderMonthlyCard(symbol, type, year, months) {
   header.className = "pc-monthly-header";
   const title = document.createElement("span");
   title.className = "pc-monthly-title";
-  title.textContent = `${label} — ${year} 年月度涨跌幅`;
+  title.textContent = `${label} — ${year} ` + __("chart.monthlyTitle");
   const closeBtn = document.createElement("button");
   closeBtn.className = "pc-btn pc-btn-sm";
-  closeBtn.textContent = "关闭";
+  closeBtn.textContent = __("chart.close");
   closeBtn.addEventListener("click", () => card.remove());
   header.appendChild(title);
   header.appendChild(closeBtn);
@@ -67,7 +67,7 @@ function renderMonthlyCard(symbol, type, year, months) {
       const colors = val !== null ? cellColor(val, -50, 50) : { bg: "var(--apple-surface-2)", text: "var(--apple-text-tertiary)" };
       const cls = val !== null ? "pc-month-block" : "pc-month-block is-empty";
       return `<div class="${cls}" data-month="${m.month}" style="background:${colors.bg};">
-        <div class="pc-month-num">${m.month}月</div>
+        <div class="pc-month-num">${__("yearly.monthLabel", {m: m.month})}</div>
         <div class="pc-month-val" style="color:${colors.text};">${formatted}</div>
       </div>`;
     })
@@ -96,14 +96,14 @@ function renderMonthlyCard(symbol, type, year, months) {
 function renderDailyBlock(symbol, year, month, days, mountEl) {
   if (!mountEl) return;
   if (!days || days.length === 0) {
-    mountEl.innerHTML = `<div class="pc-empty" style="padding:20px 0;">${symbol} ${year}-${String(month).padStart(2, "0")} 暂无日线数据</div>`;
+    mountEl.innerHTML = `<div class="pc-empty" style="padding:20px 0;">${symbol} ${year}-${String(month).padStart(2, "0")} ` + __("chart.noDailyData") + `</div>`;
     mountEl.style.display = "";
     return;
   }
 
   mountEl.innerHTML = `
     <div class="pc-monthly-header" style="margin-bottom:12px;">
-      <span class="pc-monthly-title">${symbol} - ${year}年${month}月日涨跌幅</span>
+      <span class="pc-monthly-title">${symbol} - ${year} ` + __("chart.yearMonthConnector") + ` ${month} ` + __("chart.dailyReturnsTitle") + `</span>
     </div>
     <div class="pc-daily-grid">
       ${days.map((d) => {
@@ -111,7 +111,7 @@ function renderDailyBlock(symbol, year, month, days, mountEl) {
         const formatted = val !== null ? formatPct(val) : "—";
         const colors = val !== null ? cellColor(val, -20, 20) : { bg: "var(--apple-surface-2)", text: "var(--apple-text-tertiary)" };
         return `<div class="pc-daily-block" style="background:${colors.bg};">
-          <div class="pc-month-num">${d.day}日</div>
+          <div class="pc-month-num">${__("chart.dayLabel", {d: d.day})}</div>
           <div class="pc-month-val" style="color:${colors.text};">${formatted}</div>
           <div style="font-size:var(--text-xs);color:var(--apple-text-tertiary);margin-top:4px;">${d.close}</div>
         </div>`;

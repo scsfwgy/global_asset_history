@@ -40,9 +40,9 @@
         var endDate = (endInput.value || "").trim();
         var threshold = parseFloat(thresholdInput.value || "4.77");
 
-        if (!symbol) { showError("请输入股票代码", run); return; }
-        if (!startDate || !endDate) { showError("请选择起止日期", run); return; }
-        if (isNaN(threshold) || threshold <= 0) { showError("暴跌幅度必须是正数", run); return; }
+        if (!symbol) { showError(__("crash.errorNoSymbol"), run); return; }
+        if (!startDate || !endDate) { showError(__("crash.errorNoDate"), run); return; }
+        if (isNaN(threshold) || threshold <= 0) { showError(__("crash.errorDropPositive"), run); return; }
 
         setLoading(true);
         hideError();
@@ -84,16 +84,16 @@
         // Summary grid
         var recoveredPct = s.total_crashes > 0 ? Math.round(s.recovered / s.total_crashes * 100) : 0;
         summaryDiv.innerHTML = '<div class="crash-summary-grid">' +
-            '<div class="crash-summary-item"><div class="crash-summary-label">暴跌次数</div><div class="crash-summary-val" style="color:' + (s.total_crashes > 0 ? 'var(--data-negative)' : 'var(--data-positive)') + '">' + s.total_crashes + '</div></div>' +
-            '<div class="crash-summary-item"><div class="crash-summary-label">已恢复</div><div class="crash-summary-val">' + s.recovered + ' / ' + s.total_crashes + ' (' + recoveredPct + '%)</div></div>' +
-            '<div class="crash-summary-item"><div class="crash-summary-label">平均恢复天数</div><div class="crash-summary-val">' + (s.avg_recovery_days != null ? s.avg_recovery_days : "—") + '</div></div>' +
-            '<div class="crash-summary-item"><div class="crash-summary-label">中位恢复天数</div><div class="crash-summary-val">' + (s.median_recovery_days != null ? s.median_recovery_days : "—") + '</div></div>' +
-            '<div class="crash-summary-item"><div class="crash-summary-label">最大跌幅</div><div class="crash-summary-val" style="color:var(--data-negative)">' + (s.max_drop_pct != null ? s.max_drop_pct.toFixed(2) + "%" : "—") + '</div></div>' +
-            '<div class="crash-summary-item"><div class="crash-summary-label">平均跌幅</div><div class="crash-summary-val" style="color:var(--data-negative)">' + (s.avg_drop_pct != null ? s.avg_drop_pct.toFixed(2) + "%" : "—") + '</div></div>' +
+            '<div class="crash-summary-item"><div class="crash-summary-label">' + __("crash.crashCount") + '</div><div class="crash-summary-val" style="color:' + (s.total_crashes > 0 ? 'var(--data-negative)' : 'var(--data-positive)') + '">' + s.total_crashes + '</div></div>' +
+            '<div class="crash-summary-item"><div class="crash-summary-label">' + __("crash.recovered") + '</div><div class="crash-summary-val">' + s.recovered + ' / ' + s.total_crashes + ' (' + recoveredPct + '%)</div></div>' +
+            '<div class="crash-summary-item"><div class="crash-summary-label">' + __("crash.avgRecoveryDays") + '</div><div class="crash-summary-val">' + (s.avg_recovery_days != null ? s.avg_recovery_days : "—") + '</div></div>' +
+            '<div class="crash-summary-item"><div class="crash-summary-label">' + __("crash.medianRecoveryDays") + '</div><div class="crash-summary-val">' + (s.median_recovery_days != null ? s.median_recovery_days : "—") + '</div></div>' +
+            '<div class="crash-summary-item"><div class="crash-summary-label">' + __("crash.maxDrop") + '</div><div class="crash-summary-val" style="color:var(--data-negative)">' + (s.max_drop_pct != null ? s.max_drop_pct.toFixed(2) + "%" : "—") + '</div></div>' +
+            '<div class="crash-summary-item"><div class="crash-summary-label">' + __("crash.avgDrop") + '</div><div class="crash-summary-val" style="color:var(--data-negative)">' + (s.avg_drop_pct != null ? s.avg_drop_pct.toFixed(2) + "%" : "—") + '</div></div>' +
             '</div>';
 
         // Table header
-        tableHead.innerHTML = '<th>暴跌日期</th><th>暴跌前收盘价</th><th>暴跌日收盘价</th><th>跌幅</th><th>触底日期</th><th>触底价格</th><th>触底跌幅</th><th>触底天数</th><th>恢复日期</th><th>恢复日收盘价</th><th>恢复天数</th><th>状态</th>';
+        tableHead.innerHTML = '<th>' + __("crash.colDate") + '</th><th>' + __("crash.colPreClose") + '</th><th>' + __("crash.colCrashClose") + '</th><th>' + __("crash.colDrop") + '</th><th>' + __("crash.colBottomDate") + '</th><th>' + __("crash.colBottomPrice") + '</th><th>' + __("crash.colBottomDrop") + '</th><th>' + __("crash.colBottomDays") + '</th><th>' + __("crash.colRecoveryDate") + '</th><th>' + __("crash.colRecoveryClose") + '</th><th>' + __("crash.colRecoveryDays") + '</th><th>' + __("crash.colStatus") + '</th>';
 
         if (crashes.length === 0) {
             tableWrap.style.display = "none";
@@ -106,8 +106,8 @@
             var bodyHtml = "";
             crashes.forEach(function (c, idx) {
                 var statusHtml = c.recovered
-                    ? '<span class="crash-status recovered">已恢复</span>'
-                    : '<span class="crash-status not-recovered">未恢复</span>';
+                    ? '<span class="crash-status recovered">' + __("crash.statusRecovered") + '</span>'
+                    : '<span class="crash-status not-recovered">' + __("crash.statusNotRecovered") + '</span>';
                 bodyHtml += '<tr class="crash-row" data-crash-idx="' + idx + '">' +
                     '<td>' + c.crash_date + '</td>' +
                     '<td>' + c.pre_crash_close.toFixed(2) + '</td>' +

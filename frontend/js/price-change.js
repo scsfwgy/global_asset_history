@@ -74,10 +74,10 @@ const BACKTEST_DEFAULT_SAMPLE = 120;
 
 function setConnected(ok) {
   statusDot.className = "status-dot" + (ok ? " connected" : "");
-  statusText.textContent = ok ? "已连接" : "未连接";
+  statusText.textContent = __(ok ? "status.connected" : "status.disconnected");
   statusText.style.cursor = ok ? "pointer" : "default";
   statusText.style.color = ok ? "var(--apple-blue)" : "";
-  statusText.title = ok ? "查看系统健康度" : "";
+  statusText.title = ok ? __("status.checkHealth") : "";
   statusText.onclick = ok ? function () { location.href = "/health.html"; } : null;
 }
 
@@ -88,7 +88,7 @@ function showError(msg, retryFn) {
   if (!msg) return;
   var html = escapeHtml(msg);
   if (retryFn) {
-    html += ' <button class="pc-error-retry" id="pcErrorRetry">重试</button>';
+    html += ' <button class="pc-error-retry" id="pcErrorRetry">' + __("status.retry") + '</button>';
   }
   error.innerHTML = html;
   if (retryFn) {
@@ -105,7 +105,7 @@ function setLoading(on) {
 
 function getSelectedYear() {
   const val = yearSelect?.value?.trim();
-  if (!val || val === "历年汇总") return null;
+  if (!val || val === __("yearly.summary")) return null;
   const num = parseInt(val, 10);
   return isNaN(num) ? null : num;
 }
@@ -169,7 +169,7 @@ function displayName(s) {
 
 function renderTags() {
   if (symbols.length === 0) {
-    tags.innerHTML = '<span style="color:var(--apple-text-tertiary);font-size:12px;">暂无代码，输入并添加</span>';
+    tags.innerHTML = '<span style="color:var(--apple-text-tertiary);font-size:12px;">' + __("yearly.noSymbols") + '</span>';
     return;
   }
   tags.innerHTML = symbols
@@ -177,7 +177,7 @@ function renderTags() {
       (s, i) =>
         `<span class="pc-tag">
           ${displayName(s)}
-          <span class="pc-tag-type">${s.type === "crypto" ? "币" : s.type === "cn_stock" ? "A" : "股"}</span>
+          <span class="pc-tag-type">${s.type === "crypto" ? __("yearly.labelCrypto") : s.type === "cn_stock" ? __("yearly.labelA") : __("yearly.labelStock")}</span>
           <span class="pc-tag-remove" data-index="${i}">✕</span>
         </span>`
     )
@@ -250,7 +250,7 @@ function formatPct(val) {
 
 async function fetchData() {
   if (symbols.length === 0) {
-    showError("请至少添加一个代码");
+    showError(__("yearly.errorNoSymbols"));
     return;
   }
 
@@ -302,11 +302,11 @@ async function fetchData() {
       renderTable(result);
     } catch (renderErr) {
       console.error("renderTable error:", renderErr);
-      showError(`渲染失败: ${renderErr.message}`, fetchData);
+      showError(__("yearly.errorRender") + " " + renderErr.message, fetchData);
     }
   } catch (e) {
     setConnected(false);
-    showError(`请求失败: ${e.message}`, fetchData);
+    showError(__("yearly.errorRequest") + " " + e.message, fetchData);
     renderMetaInfo(null);
     empty.style.display = "block";
     table.style.display = "none";
@@ -322,8 +322,8 @@ function renderTable(result) {
 
   if (!years || years.length === 0 || Object.keys(data).length === 0) {
     empty.innerHTML =
-      "<div>查询完成，但未获取到有效数据</div>" +
-      "<div class='pc-empty-hint'>请检查代码是否正确，或该代码暂无历史数据</div>";
+      "<div>" + __("yearly.errorNoData") + "</div>" +
+      "<div class='pc-empty-hint'>" + __("yearly.errorCheckSymbol") + "</div>";
     empty.style.display = "block";
     table.style.display = "none";
     return;
@@ -340,7 +340,7 @@ function renderTable(result) {
   const symKeys = activeSymbols.map((s) => s.symbol);
 
   if (symKeys.length === 0) {
-    empty.innerHTML = "<div>查询完成，但所有代码均无有效数据</div>";
+    empty.innerHTML = "<div>" + __("yearly.errorAllInvalid") + "</div>";
     empty.style.display = "block";
     table.style.display = "none";
     return;
@@ -369,7 +369,7 @@ function renderTable(result) {
 
   // Render header — clickable symbol columns for sorting
   tableHead.innerHTML =
-    `<th>年份</th>` +
+    `<th>${__("yearly.colYear")}</th>` +
     symKeys.map((s) => {
       const name = nameLookup[s];
       const arrow = sortArrow(s);
@@ -523,7 +523,7 @@ async function fetchMonthlyBatch(year) {
     renderMonthlyTable(result);
   } catch (e) {
     setConnected(false);
-    showError(`请求失败: ${e.message}`, function () { fetchMonthlyBatch(year); });
+    showError(__("yearly.errorRequest") + " " + e.message, function () { fetchMonthlyBatch(year); });
     empty.style.display = "block";
     table.style.display = "none";
   } finally {
@@ -536,7 +536,7 @@ function renderMonthlyTable(result) {
 
   const symKeys = Object.keys(data).filter(k => data[k] && data[k].some(m => m.return !== null));
   if (symKeys.length === 0) {
-    empty.innerHTML = "<div>查询完成，但未获取到有效数据</div>";
+    empty.innerHTML = "<div>" + __("yearly.errorNoData") + "</div>";
     empty.style.display = "block";
     table.style.display = "none";
     $("pcChartWrap").style.display = "none";
@@ -554,7 +554,7 @@ function renderMonthlyTable(result) {
 
   // Transposed table: rows = months, columns = symbols
   // Header: 月份 | SYM1 | SYM2 | ...
-  tableHead.innerHTML = `<th>${year}年</th>` +
+  tableHead.innerHTML = `<th>${year}</th>` +
     symKeys.map(sym => {
       const name = nameLookup[sym];
       return name ? `<th>${sym}<span class="pc-th-name">${name}</span></th>` : `<th>${sym}</th>`;
@@ -586,7 +586,7 @@ function renderMonthlyTable(result) {
   // Body rows: 12 months then annual total
   const rows = [];
   for (let m = 1; m <= 12; m++) {
-    let cells = `<td>${m}月</td>`;
+    let cells = `<td>${__("yearly.monthLabel", {m: m})}</td>`;
     for (const sym of symKeys) {
       const val = monthMap[sym][m];
       const formatted = val !== null ? formatPct(val) : "—";
@@ -597,7 +597,7 @@ function renderMonthlyTable(result) {
   }
 
   // Annual total row (with top border to distinguish)
-  let annualCells = `<td style="font-weight:600;">全年</td>`;
+  let annualCells = `<td style="font-weight:600;">${__("yearly.annualTotal")}</td>`;
   for (const sym of symKeys) {
     const val = annualReturns[sym];
     const formatted = val !== null ? formatPct(val) : "—";
@@ -616,7 +616,7 @@ function renderMonthlyTable(result) {
     table.parentElement.appendChild(note);
   }
   note.style.cssText = "margin-top:8px;font-size:12px;color:var(--apple-text-tertiary);";
-  note.textContent = "「全年」为各月涨跌幅复利累计值";
+  note.textContent = __("yearly.annualNote");
 
   // Render monthly trend chart (reset hidden state)
   _mChartHidden = [];
@@ -668,9 +668,9 @@ function updateFreshness() {
   var diffMs = Date.now() - _lastFetchTime;
   var diffMin = Math.floor(diffMs / 60000);
   var text;
-  if (diffMin < 1) text = "刚刚更新";
-  else if (diffMin < 60) text = diffMin + " 分钟前更新";
-  else { var hrs = Math.floor(diffMin / 60); text = hrs + " 小时前更新"; }
+  if (diffMin < 1) text = __("status.justNow");
+  else if (diffMin < 60) text = __("status.minutesAgo", {n: diffMin});
+  else { var hrs = Math.floor(diffMin / 60); text = __("status.hoursAgo", {n: hrs}); }
   el.textContent = "· " + text;
   el.className = "pc-freshness" + (diffMin > 30 ? " stale" : "");
   el.style.display = "";
@@ -694,7 +694,7 @@ function exportCSV() {
 
   // Build CSV: BOM for Excel Chinese compatibility
   var rows = [];
-  rows.push("年份," + symKeys.join(","));
+  rows.push(__("yearly.colYear") + "," + symKeys.join(","));
 
   years.forEach(function (year) {
     var cells = [String(year)];
@@ -710,7 +710,7 @@ function exportCSV() {
   var url = URL.createObjectURL(blob);
   var a = document.createElement("a");
   a.href = url;
-  a.download = "涨跌幅数据.csv";
+  a.download = __("yearly.csvFilename");
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

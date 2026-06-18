@@ -9,6 +9,11 @@
     { "source": "/(yearly|backtest|crash|etf|qdii-funds|vix|wishes|settings|knowledge)", "destination": "/api/index" },
     { "source": "/etf/:sub(nasdaq100|sp500|global_others)", "destination": "/api/index" },
     { "source": "/knowledge/:sub(how-to-buy|etf-intro|event-myth|terms)", "destination": "/api/index" },
+    { "source": "/:lang(en|zh)", "destination": "/api/index" },
+    { "source": "/:lang(en|zh)/etf-market", "destination": "/api/index" },
+    { "source": "/:lang(en|zh)/(yearly|backtest|crash|etf|qdii-funds|vix|wishes|settings|knowledge)", "destination": "/api/index" },
+    { "source": "/:lang(en|zh)/etf/:sub(nasdaq100|sp500|global_others)", "destination": "/api/index" },
+    { "source": "/:lang(en|zh)/knowledge/:sub(how-to-buy|etf-intro|event-myth|terms)", "destination": "/api/index" },
     { "source": "/", "destination": "/api/index" }
   ],
   "functions": {

@@ -32,7 +32,7 @@ function loadCaptcha() {
             _wishCaptchaId = d.captcha_id;
             box.innerHTML = d.svg;
         })
-        .catch(() => { box.textContent = "加载失败"; });
+        .catch(() => { box.textContent = __("wishes.loadFailed"); });
 }
 
 function _formatWishTime(ts) {
@@ -56,7 +56,7 @@ function _renderWishCard(wish) {
 
     const nickEl = document.createElement("span");
     nickEl.className = "wish-card-nick";
-    nickEl.textContent = wish.nick || "匿名";  // textContent => XSS-safe
+    nickEl.textContent = wish.nick || __("wishes.anonymous");  // textContent => XSS-safe
     meta.appendChild(nickEl);
 
     const right = document.createElement("span");
@@ -67,7 +67,7 @@ function _renderWishCard(wish) {
     if (_getAdminToken()) {
         const del = document.createElement("span");
         del.className = "wish-card-del";
-        del.textContent = "  删除";
+        del.textContent = "  " + __("wishes.delete");
         del.addEventListener("click", () => deleteWish(wish.id));
         right.appendChild(del);
     }
@@ -81,7 +81,7 @@ function _renderWishCard(wish) {
 
         const label = document.createElement("span");
         label.className = "wish-card-reply-label";
-        label.textContent = "管理员回复：";
+        label.textContent = __("wishes.adminReply");
         replyEl.appendChild(label);
 
         const text = document.createElement("span");
@@ -106,14 +106,14 @@ function _renderWishCard(wish) {
         input.type = "text";
         input.className = "wish-reply-input";
         input.maxLength = 200;
-        input.placeholder = "管理员回复...";
+        input.placeholder = __("wishes.replyPlaceholder");
         input.value = wish.reply || "";
         form.appendChild(input);
 
         const btn = document.createElement("button");
         btn.className = "pc-btn";
         btn.style.cssText = "padding:4px 12px;font-size:12px;";
-        btn.textContent = wish.reply ? "更新回复" : "回复";
+        btn.textContent = wish.reply ? __("wishes.updateReply") : __("wishes.reply");
         btn.addEventListener("click", () => replyWish(wish.id, input.value, btn));
         form.appendChild(btn);
 
@@ -141,7 +141,7 @@ function loadWishes() {
         })
         .catch(() => {
             _wishEl("wishLoading").style.display = "none";
-            _showWishMsg("加载心愿失败，请稍后重试", true);
+            _showWishMsg(__("wishes.loadFailed"), true);
         });
 }
 
@@ -150,8 +150,8 @@ function submitWish() {
     const text = _wishEl("wishText").value.trim();
     const nick = _wishEl("wishNick").value.trim();
     const answer = _wishEl("wishCaptchaInput").value.trim();
-    if (!text) { _showWishMsg("心愿内容不能为空", true); return; }
-    if (!answer) { _showWishMsg("请填写验证码", true); return; }
+    if (!text) { _showWishMsg(__("wishes.errorEmpty"), true); return; }
+    if (!answer) { _showWishMsg(__("wishes.errorCaptcha"), true); return; }
 
     const btn = _wishEl("wishSubmitBtn");
     btn.disabled = true;
@@ -173,7 +173,7 @@ function submitWish() {
         .then(() => {
             _wishEl("wishText").value = "";
             _wishEl("wishCaptchaInput").value = "";
-            _showWishMsg("提交成功，感谢你的心愿 ✨", false);
+            _showWishMsg(__("wishes.success"), false);
             loadCaptcha();
             loadWishes();
         })
@@ -186,7 +186,7 @@ function submitWish() {
 
 function replyWish(wishId, text, btn) {
     const reply = (text || "").trim();
-    if (!reply) { _showWishMsg("回复内容不能为空", true); return; }
+    if (!reply) { _showWishMsg(__("wishes.errorReplyEmpty"), true); return; }
     if (btn) btn.disabled = true;
     fetch(`${WISHES_ENDPOINT}/${encodeURIComponent(wishId)}/reply`, {
         method: "PATCH",
@@ -202,7 +202,7 @@ function replyWish(wishId, text, btn) {
             return data;
         })
         .then(() => {
-            _showWishMsg("回复成功", false);
+            _showWishMsg(__("wishes.replySuccess"), false);
             loadWishes();
         })
         .catch(err => _showWishMsg(err.message || "回复失败", true))

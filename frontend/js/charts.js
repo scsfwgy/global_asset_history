@@ -231,7 +231,7 @@ function renderMonthlyChart(year, symKeys, monthMap, annualReturns) {
   // X-axis: month labels
   let xLabels = "";
   for (let m = 1; m <= 12; m++) {
-    xLabels += `<text x="${xPos(m)}" y="${H - 8}" text-anchor="middle" fill="var(--apple-text-tertiary)" font-size="11">${m}月</text>`;
+    xLabels += `<text x="${xPos(m)}" y="${H - 8}" text-anchor="middle" fill="var(--apple-text-tertiary)" font-size="11">${__("yearly.monthLabel", {m: m})}</text>`;
   }
 
   // Legend — all series, hidden ones greyed out
@@ -275,7 +275,7 @@ function renderMonthlyChart(year, symKeys, monthMap, annualReturns) {
 
   // Update chart header & show
   const titleEl = document.querySelector("#pcChartWrap .pc-chart-title");
-  if (titleEl) titleEl.textContent = `${year} 年月度涨跌幅走势`;
+  if (titleEl) titleEl.textContent = year + " " + __("chart.monthlyTrend");
   $("pcChartWrap").style.display = "";
 
   // Attach legend interactions

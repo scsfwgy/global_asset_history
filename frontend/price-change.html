@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-default-lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,8 +9,9 @@
     <meta name="author" content="GlobalAssetHistory">
     <meta name="robots" content="index,follow">
     <link rel="canonical" href="__SITE_BASE_URL__/">
-    <link rel="alternate" hreflang="zh-CN" href="__SITE_BASE_URL__/">
-    <link rel="alternate" hreflang="x-default" href="__SITE_BASE_URL__/">
+    <link rel="alternate" hreflang="zh-CN" href="__SITE_BASE_URL__/zh/">
+    <link rel="alternate" hreflang="en" href="__SITE_BASE_URL__/en/">
+    <link rel="alternate" hreflang="x-default" href="__SITE_BASE_URL__/zh/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="GlobalAssetHistory">
     <meta property="og:locale" content="zh_CN">
@@ -1567,6 +1568,11 @@
                             <span class="header-settings-theme-icon" id="settingsColorSchemeIcon">📈</span>
                             <span id="settingsColorSchemeLabel">绿涨红跌</span>
                         </div>
+                        <!-- System: language -->
+                        <div id="settingsLangRow" class="header-settings-info header-settings-theme-row">
+                            <span class="header-settings-theme-icon">🌐</span>
+                            <span id="settingsLangLabel">Language</span>
+                        </div>
                         <!-- System: visit count -->
                         <div class="header-settings-info" id="settingsVisitCount">访问次数：⋯</div>
                         <div class="header-settings-sep"></div>
@@ -1584,14 +1590,14 @@
 
     <main class="main pc-main">
         <nav class="tab-bar">
-            <button class="tab-btn active" data-tab="yearly">历年涨跌幅</button>
-            <button class="tab-btn" data-tab="backtest">回测</button>
-            <button class="tab-btn" data-tab="crash">暴跌统计</button>
-            <button class="tab-btn" data-tab="etf">标普纳指ETF追踪（场内）</button>
-            <button class="tab-btn" data-tab="qdii-funds">标普纳指基金追踪（场外）</button>
-            <button class="tab-btn" data-tab="vix">VIX恐慌指数</button>
-            <button class="tab-btn" data-tab="knowledge">数据科普</button>
-            <button class="tab-btn" data-tab="wishes">心愿墙</button>
+            <button class="tab-btn active" data-tab="yearly" data-i18n="tab.yearlyReturns">历年涨跌幅</button>
+            <button class="tab-btn" data-tab="backtest" data-i18n="tab.backtest">回测</button>
+            <button class="tab-btn" data-tab="crash" data-i18n="tab.crashStats">暴跌统计</button>
+            <button class="tab-btn" data-tab="etf" data-i18n="tab.etfTracking">标普纳指ETF追踪（场内）</button>
+            <button class="tab-btn" data-tab="qdii-funds" data-i18n="tab.qdiiFunds">标普纳指基金追踪（场外）</button>
+            <button class="tab-btn" data-tab="vix" data-i18n="tab.vixIndex">VIX恐慌指数</button>
+            <button class="tab-btn" data-tab="knowledge" data-i18n="tab.knowledge">数据科普</button>
+            <button class="tab-btn" data-tab="wishes" data-i18n="tab.wishes">心愿墙</button>
         </nav>
 
         <div class="tab-panel active" id="tab-yearly">
@@ -3225,6 +3231,7 @@
 
     </main>
 
+    <script src="/js/i18n.js"></script>
     <script src="/js/api.js"></script>
     <script>
       // Compact count formatting: 1234 -> 1.2K, 1500000 -> 1.5M, etc.
@@ -3432,8 +3439,42 @@
             };
         })();
 
+        // ─── Language switching ───
+        (function() {
+            var toggle = document.getElementById('settingsLangRow');
+            var label = document.getElementById('settingsLangLabel');
+            var currentLang = window.__lang ? __lang() : 'zh-CN';
+
+            function updateLangUI(lang) {
+                if (label) label.textContent = lang === 'en' ? 'English' : '中文';
+            }
+            updateLangUI(currentLang);
+
+            if (toggle) {
+                toggle.addEventListener('click', function() {
+                    var next = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
+                    if (typeof window.__switchLang === 'function') {
+                        window.__switchLang(next);
+                    }
+                });
+            }
+        })();
+
         // ─── Tab Routing (URL-based) ───
         (function() {
+            // Language prefix helpers: /en for English, /zh for Chinese, '' for default (zh)
+            function _langPrefix() {
+                var lang = (typeof __lang === 'function') ? __lang() : 'zh-CN';
+                return lang === 'en' ? '/en' : '/zh';
+            }
+            function _pathWithLang(path) {
+                return _langPrefix() + path;
+            }
+            function _stripLang(path) {
+                var m = path.match(/^\/(en|zh)(\/.*)?$/);
+                return m ? (m[2] || '/') : path;
+            }
+
             var PATH_TO_TAB = {
                 '/': 'yearly',
                 '/yearly': 'yearly',
@@ -3480,49 +3521,49 @@
             };
             var TAB_SEO = {
                 'yearly': {
-                    title: 'GlobalAssetHistory - 历史涨跌幅与定投回测工具',
-                    description: '查询美股、ETF、数字货币与A股指数的历年涨跌幅，按年/月/日钻取历史收益，并用日线数据做定投回测。',
+                    titleKey: 'seo.indexTitle',
+                    descKey: 'seo.indexDescription',
                     canonical: '/'
                 },
                 'backtest': {
-                    title: '定投回测工具 - GlobalAssetHistory',
-                    description: '基于历史日线数据回测一次性、每日、每周和每月定投策略，查看累计投入、总资产、收益率和资产曲线。',
+                    titleKey: 'seo.backtestTitle',
+                    descKey: 'seo.backtestDescription',
                     canonical: '/backtest',
                     noindex: true
                 },
                 'crash': {
-                    title: '资产暴跌统计 - GlobalAssetHistory',
-                    description: '统计美股、ETF、数字货币和A股指数历史暴跌区间，观察回撤、修复时间和关键风险窗口。',
+                    titleKey: 'seo.crashTitle',
+                    descKey: 'seo.crashDescription',
                     canonical: '/crash',
                     noindex: true
                 },
                 'etf': {
-                    title: '标普纳指ETF追踪 - GlobalAssetHistory',
-                    description: '对比标普500、纳指100等场内ETF的行情、费率、溢价率、跟踪误差和估值偏离。',
+                    titleKey: 'seo.etfTitle',
+                    descKey: 'seo.etfDescription',
                     canonical: '/etf',
                     noindex: true
                 },
                 'qdii-funds': {
-                    title: '标普纳指场外基金追踪 - GlobalAssetHistory',
-                    description: '整理标普500、纳指100和主动QDII基金的申购状态、限额、费率、规模和阶段涨跌幅。',
+                    titleKey: 'seo.qdiiTitle',
+                    descKey: 'seo.qdiiDescription',
                     canonical: '/qdii-funds',
                     noindex: true
                 },
                 'vix': {
-                    title: 'VIX恐慌指数观察 - GlobalAssetHistory',
-                    description: '查看VIX恐慌指数历史区间与市场风险状态，辅助理解美股风险偏好变化。',
+                    titleKey: 'seo.vixTitle',
+                    descKey: 'seo.vixDescription',
                     canonical: '/vix',
                     noindex: true
                 },
                 'knowledge': {
-                    title: '投资数据科普 - GlobalAssetHistory',
-                    description: '了解ETF、QDII、买入渠道、费用、溢价率、跟踪误差和常见投资术语。',
+                    titleKey: 'seo.knowledgeTitle',
+                    descKey: 'seo.knowledgeDescription',
                     canonical: '/knowledge',
                     noindex: true
                 },
                 'wishes': {
-                    title: '心愿墙 - GlobalAssetHistory',
-                    description: '提交和查看 GlobalAssetHistory 的功能建议与使用反馈。',
+                    titleKey: 'seo.wishesTitle',
+                    descKey: 'seo.knowledgeDescription',
                     canonical: '/wishes',
                     noindex: true
                 }
@@ -3548,20 +3589,28 @@
                 el.setAttribute('content', value);
             }
 
+            function _langUrlPrefix() {
+                var lang = (typeof __lang === 'function') ? __lang() : 'zh-CN';
+                return lang === 'en' ? '/en' : '/zh';
+            }
+
             function updateSeo(tabName) {
                 var seo = TAB_SEO[tabName] || TAB_SEO.yearly;
                 var path = seo.canonical || TAB_TO_PATH[tabName] || '/';
                 var baseUrl = (window.__GAH_SITE_BASE_URL__ || '').replace(/\/$/, '');
-                var url = baseUrl + path;
-                document.title = seo.title;
-                setMeta('description', seo.description);
+                var prefix = _langUrlPrefix();
+                var url = baseUrl + prefix + path;
+                var title = (typeof __ === 'function') ? __(seo.titleKey) : '';
+                var desc = (typeof __ === 'function') ? __(seo.descKey) : '';
+                document.title = title || document.title;
+                setMeta('description', desc);
                 setMeta('robots', seo.noindex ? 'noindex,follow' : 'index,follow');
-                setPropertyMeta('og:title', seo.title);
-                setPropertyMeta('og:description', seo.description);
+                setPropertyMeta('og:title', title);
+                setPropertyMeta('og:description', desc);
                 setPropertyMeta('og:url', url);
                 setPropertyMeta('og:image', baseUrl + '/doc/screenshot/yearly-heatmap.png');
-                setMeta('twitter:title', seo.title);
-                setMeta('twitter:description', seo.description);
+                setMeta('twitter:title', title);
+                setMeta('twitter:description', desc);
                 setMeta('twitter:image', baseUrl + '/doc/screenshot/yearly-heatmap.png');
                 var canonical = document.querySelector('link[rel="canonical"]');
                 if (!canonical) {
@@ -3570,12 +3619,21 @@
                     document.head.appendChild(canonical);
                 }
                 canonical.href = url;
+                // Update hreflang links for the current path
+                var hreflangs = document.querySelectorAll('link[rel="alternate"][hreflang]');
+                for (var i = 0; i < hreflangs.length; i++) {
+                    var hl = hreflangs[i];
+                    var lang = hl.getAttribute('hreflang');
+                    if (lang === 'zh-CN') hl.href = baseUrl + '/zh' + path;
+                    else if (lang === 'en') hl.href = baseUrl + '/en' + path;
+                    else if (lang === 'x-default') hl.href = baseUrl + '/zh' + path;
+                }
             }
 
             window.__GAH_UPDATE_SEO__ = updateSeo;
 
             function tabFromPath(path) {
-                return PATH_TO_TAB[path] || null;
+                return PATH_TO_TAB[_stripLang(path)] || null;
             }
 
             function etfSubFromPath(path) {
@@ -3620,7 +3678,7 @@
 
                 if (updateUrl && !isSameTab) {
                     var path = TAB_TO_PATH[tabName] || '/yearly';
-                    history.pushState({ tab: tabName }, '', path);
+                    history.pushState({ tab: tabName }, '', _pathWithLang(path));
                 }
             }
 
@@ -3641,7 +3699,7 @@
                 btn.addEventListener('click', function() {
                     var sub = btn.dataset.etfTab;
                     var path = ETF_SUB_PATH[sub] || '/etf';
-                    history.replaceState({ tab: 'etf', etfSub: sub }, '', path);
+                    history.replaceState({ tab: 'etf', etfSub: sub }, '', _pathWithLang(path));
                 });
             });
 
@@ -3658,20 +3716,29 @@
                     if (panel) panel.style.display = 'block';
                     // Update URL
                     var path = KB_SUB_PATH[sub] || '/knowledge';
-                    history.replaceState({ tab: 'knowledge', kbSub: sub }, '', path);
+                    history.replaceState({ tab: 'knowledge', kbSub: sub }, '', _pathWithLang(path));
                 });
             });
 
             // On page load: read URL and restore the correct tab
             function restoreFromUrl() {
-                var tab = tabFromPath(location.pathname);
+                var cleanPath = _stripLang(location.pathname);
+                var hasLangPrefix = /^\/(en|zh)\//.test(location.pathname) || /^\/(en|zh)$/.test(location.pathname);
+
+                // If no language prefix, redirect to the language-prefixed URL
+                if (!hasLangPrefix) {
+                    var targetPath = cleanPath === '/' ? '/' : cleanPath;
+                    history.replaceState({ tab: PATH_TO_TAB[targetPath] || 'yearly' }, '', _pathWithLang(targetPath));
+                }
+
+                var tab = PATH_TO_TAB[cleanPath] || null;
                 if (!tab) {
-                    // Unknown path: silently redirect to /yearly
-                    history.replaceState({ tab: 'yearly' }, '', '/yearly');
+                    // Unknown path: silently redirect to yearly with lang prefix
+                    history.replaceState({ tab: 'yearly' }, '', _pathWithLang('/yearly'));
                     return;
                 }
-                // '/' is an alias for yearly, already the default active panel
-                if (tab === 'yearly' && location.pathname === '/') return;
+                // /zh/ or /en/ is an alias for yearly, already the default active panel
+                if (tab === 'yearly' && (cleanPath === '/' || cleanPath === '')) return;
 
                 // Set DOM state without pushing history, then fire click for lazy-loads
                 activateTab(tab, false);
@@ -3679,38 +3746,39 @@
                 if (btn) btn.click();
 
                 // If ETF tab with a sub-tab, activate the sub-tab
-                var etfSub = etfSubFromPath(location.pathname);
+                var etfSub = etfSubFromPath(cleanPath);
                 if (etfSub && tab === 'etf') {
                     var subBtn = document.querySelector('#etfTabBar .transfer-tab[data-etf-tab="' + etfSub + '"]');
                     if (subBtn) subBtn.click();
                 }
 
                 // If Knowledge tab with a sub-tab, activate the sub-tab
-                var kbSub = kbSubFromPath(location.pathname);
+                var kbSub = kbSubFromPath(cleanPath);
                 if (kbSub && tab === 'knowledge') {
                     var subBtn2 = document.querySelector('#kbSubTabs .transfer-tab[data-kb-tab="' + kbSub + '"]');
                     if (subBtn2) subBtn2.click();
                 }
 
-                // If URL is /settings, auto-open the settings menu
-                if (location.pathname === '/settings') {
+                // If URL is /settings or /lang/settings, auto-open the settings menu
+                if (cleanPath === '/settings') {
                     var menu = document.getElementById('headerSettingsMenu');
                     if (menu && menu.style.display !== 'block') {
                         menu.style.display = 'block';
                         // Set state so back button works from direct /settings visit
-                        history.replaceState({ _settingsOpen: true, _prev: '/yearly' }, '', '/settings');
+                        history.replaceState({ _settingsOpen: true, _prev: '/yearly' }, '', _pathWithLang('/settings'));
                     }
                 }
             }
 
             // Browser back/forward
             window.addEventListener('popstate', function(e) {
+                var cleanPath2 = _stripLang(location.pathname);
                 // Sync settings menu visibility with URL
                 var menu = document.getElementById('headerSettingsMenu');
-                if (menu && location.pathname !== '/settings' && menu.style.display === 'block') {
+                if (menu && cleanPath2 !== '/settings' && menu.style.display === 'block') {
                     menu.style.display = 'none';
                 }
-                if (menu && location.pathname === '/settings' && menu.style.display !== 'block') {
+                if (menu && cleanPath2 === '/settings' && menu.style.display !== 'block') {
                     menu.style.display = 'block';
                     return; // /settings is not a tab, stop here
                 }
@@ -3722,14 +3790,14 @@
                 if (btn) btn.click();
 
                 // If ETF tab with a sub-tab, activate the sub-tab
-                var etfSub2 = etfSubFromPath(location.pathname);
+                var etfSub2 = etfSubFromPath(cleanPath2);
                 if (etfSub2 && tab === 'etf') {
                     var subBtn2 = document.querySelector('#etfTabBar .transfer-tab[data-etf-tab="' + etfSub2 + '"]');
                     if (subBtn2) subBtn2.click();
                 }
 
                 // If Knowledge tab with a sub-tab, activate the sub-tab
-                var kbSub2 = kbSubFromPath(location.pathname);
+                var kbSub2 = kbSubFromPath(cleanPath2);
                 if (kbSub2 && tab === 'knowledge') {
                     var subBtn3 = document.querySelector('#kbSubTabs .transfer-tab[data-kb-tab="' + kbSub2 + '"]');
                     if (subBtn3) subBtn3.click();
