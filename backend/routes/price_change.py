@@ -1,13 +1,17 @@
 """
 Yearly price change API blueprint.
 """
+import hashlib
 import logging
+import threading as _threading
+import time
 
 from flask import Blueprint, jsonify, request
 
 from service.price_change.price_change_service import (
     _fetch_daily_series_cached,
     fetch_daily_returns,
+    fetch_heatmap_data,
     fetch_yearly_returns,
     fetch_monthly_returns,
     fetch_monthly_returns_batch,
@@ -209,6 +213,80 @@ def crash_chart():
     except Exception as e:
         logger.exception("Failed to get crash chart data: %s", e)
         return jsonify({"error": str(e)}), 500
+
+
+# Heatmap result cache: keyed by (period, auto_top_n, sorted_symbol_keys).
+# TTL = 4 hours.  Bypassed when force=true.
+_heatmap_cache: dict = {}
+_heatmap_cache_lock = _threading.Lock()
+_HEATMAP_CACHE_TTL = 4 * 60 * 60  # 4 hours
+
+
+def _heatmap_cache_key(symbols: list, period: str, auto_top_n: int, include_market_cap: bool) -> str:
+    """Stable cache key for heatmap results."""
+    sym_keys = sorted(
+        f"{s.get('symbol','').strip().upper()}|{s.get('type','stock').strip().lower()}"
+        for s in symbols
+    )
+    raw = f"hm:{period}:{auto_top_n}:{int(include_market_cap)}:{','.join(sym_keys)}"
+    return hashlib.md5(raw.encode()).hexdigest()
+
+
+@price_change_bp.route("/heatmap", methods=["POST"])
+def heatmap():
+    """Return treemap heatmap data: per-symbol return + turnover over a period.
+
+    Request body:
+        {"symbols": [{"symbol": "AAPL", "type": "stock"}, ...],
+         "period": "today|week|month|quarter|year",
+         "auto_top_n": 20,              # optional: auto-include top US stocks
+         "include_market_cap": true,    # optional: attach best-effort market cap
+         "force": true}                  # optional: bypass cache
+
+    Returns:
+        {"period": "month", "period_label": "2026-06",
+         "data": [{"symbol": "AAPL", "name": "Apple Inc", "type": "stock",
+                    "return_pct": 5.23, "turnover": 123456789,
+                    "turnover_currency": "USD", "market_cap": 3.0e12}, ...]}
+    """
+    body = request.get_json(silent=True) or {}
+    symbols = body.get("symbols", [])
+    period = str(body.get("period", "week")).strip().lower()
+    auto_top_n = int(body.get("auto_top_n", 0) or 0)
+    include_market_cap = bool(body.get("include_market_cap", False))
+    force = bool(body.get("force", False))
+
+    # auto_top_n allows calling without explicit symbols
+    if not symbols and auto_top_n <= 0:
+        return jsonify({"error": "symbols list is required (or set auto_top_n > 0)"}), 400
+
+    valid_periods = {"today", "week", "month", "quarter", "year"}
+    if period not in valid_periods:
+        return jsonify({"error": f"period must be one of: {', '.join(sorted(valid_periods))}"}), 400
+
+    # Check cache (skip when force=true)
+    cache_key = _heatmap_cache_key(symbols, period, auto_top_n, include_market_cap)
+    if not force:
+        with _heatmap_cache_lock:
+            entry = _heatmap_cache.get(cache_key)
+            if entry and time.time() - entry["ts"] < _HEATMAP_CACHE_TTL:
+                logger.info("Heatmap cache hit for %s", cache_key[:12])
+                result = dict(entry["data"])
+                result["cached"] = True
+                return jsonify(result)
+
+    try:
+        result = fetch_heatmap_data(symbols, period, auto_top_n=auto_top_n,
+                                    include_market_cap=include_market_cap)
+    except Exception as e:
+        logger.exception("Failed to fetch heatmap data: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+    # Store in cache
+    with _heatmap_cache_lock:
+        _heatmap_cache[cache_key] = {"ts": time.time(), "data": dict(result)}
+
+    return jsonify(result)
 
 
 @price_change_bp.route("/vix-comparison", methods=["POST"])

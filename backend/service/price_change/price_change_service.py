@@ -9,6 +9,12 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Callable, Dict, List, Optional, Tuple
 
+try:
+    import yfinance as _yf
+    _HAS_YFINANCE = True
+except ImportError:
+    _HAS_YFINANCE = False
+
 from .calculations import (
     _build_equity_curve,
     _compute_daily_returns_for_month,
@@ -27,6 +33,7 @@ from .common import (
     DAILY_SERIES_TTL_SECONDS,
     ERROR_CACHE_TTL_SECONDS,
     MAX_YEARLY_WORKERS,
+    REQUEST_TIMEOUT,
     PriceSeries,
     empty_series,
 )
@@ -51,8 +58,8 @@ def _cache_ttl(series: PriceSeries) -> int:
 
 
 # Bump this whenever the cached PriceSeries shape changes, so old entries (which
-# lack new fields) are abandoned instead of served stale. v2 added OHLC.
-_CACHE_SCHEMA_VERSION = "v2"
+# lack new fields) are abandoned instead of served stale. v3 added volumes.
+_CACHE_SCHEMA_VERSION = "v3"
 
 
 def _redis_key(symbol: str, asset_type: str) -> str:
@@ -581,4 +588,285 @@ def get_crash_chart_data(payload: Dict) -> Dict:
         "trading_days": trading_days,
         "has_ohlc": window_has_ohlc,
         "prices": prices,
+    }
+
+
+_TURNOVER_CURRENCY = {
+    "stock": "USD",
+    "crypto": "USDT",
+    "cn_stock": "CNY",
+}
+
+# Comprehensive watchlist of high-volume US stocks & ETFs.
+# The ranking is computed dynamically from actual turnover in the selected
+# period — the list below just ensures we have broad coverage of candidates.
+_HEATMAP_US_WATCHLIST = [
+    # Major ETFs
+    "SPY", "QQQ", "IWM", "DIA", "TLT", "HYG", "LQD", "EEM", "EFA", "GLD",
+    "VOO", "VTI", "VEA", "VWO", "BND", "ARKK", "XLE", "XLF", "XLV", "SMH",
+    # Mega-cap tech
+    "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA",
+    # Large-cap tech / semis
+    "AVGO", "ADBE", "CRM", "INTC", "AMD", "QCOM", "CSCO", "ORCL", "IBM",
+    "NFLX", "UBER", "PYPL", "NOW", "PANW", "SNOW", "PLTR", "ARM",
+    # Finance
+    "JPM", "V", "MA", "BAC", "WFC", "GS", "MS", "AXP", "C", "BLK", "SCHW",
+    # Healthcare
+    "LLY", "UNH", "JNJ", "ABBV", "MRK", "PFE", "TMO", "AMGN", "ISRG", "GILD",
+    # Consumer / retail
+    "WMT", "HD", "PG", "KO", "PEP", "COST", "NKE", "MCD", "SBUX", "LOW", "TGT",
+    # Energy / industrial
+    "XOM", "CVX", "CAT", "BA", "GE", "RTX", "LMT",
+    # Other large cap
+    "DIS", "VZ", "T", "CMCSA", "NEE", "SPGI",
+]
+
+
+def _fetch_heatmap_watchlist() -> List[str]:
+    """Return the watchlist symbols. Kept as a function for future extensibility
+    (e.g. adding a secondary live source when available)."""
+    return list(_HEATMAP_US_WATCHLIST)
+
+_PERIOD_LABELS = {
+    "today": "1d",
+    "week": "1w",
+    "month": "1m",
+    "quarter": "3m",
+    "year": "1y",
+}
+
+
+def _period_start_ts(period: str) -> int:
+    """Return the UTC timestamp for the start of the given period."""
+    now = datetime.now(timezone.utc)
+    if period == "today":
+        dt = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif period == "week":
+        # Monday of current week
+        weekday = now.weekday()  # 0=Monday
+        dt = (now - __import__("datetime").timedelta(days=weekday)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+    elif period == "month":
+        dt = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    elif period == "quarter":
+        q_month = ((now.month - 1) // 3) * 3 + 1
+        dt = now.replace(month=q_month, day=1, hour=0, minute=0, second=0, microsecond=0)
+    elif period == "year":
+        dt = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:
+        # Default to month
+        dt = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    return int(dt.timestamp())
+
+
+def _period_label(period: str) -> str:
+    """Return a human-readable label for the period."""
+    now = datetime.now(timezone.utc)
+    if period == "today":
+        return now.strftime("%Y-%m-%d")
+    elif period == "week":
+        return f"{now.strftime('%Y')}-W{now.isocalendar()[1]:02d}"
+    elif period == "month":
+        return now.strftime("%Y-%m")
+    elif period == "quarter":
+        q = (now.month - 1) // 3 + 1
+        return f"{now.year}-Q{q}"
+    elif period == "year":
+        return str(now.year)
+    return now.strftime("%Y-%m")
+
+
+# ── Market-cap fetch (best-effort, for heatmap "size by" dimension) ──
+_market_cap_cache: Dict[str, Tuple[float, float]] = {}  # symbol -> (cap, ts)
+_market_cap_lock = threading.Lock()
+_MARKET_CAP_TTL = 24 * 60 * 60  # 24 hours
+
+
+def _get_market_caps(symbols: List[str]) -> Dict[str, float]:
+    """Return {symbol: market_cap} for US stocks, using a 24h cache.
+
+    Best-effort: uses yfinance; failures return empty.  Production deploys
+    (HK region) can reach Yahoo; local dev behind the GFW may get nothing,
+    in which case the caller falls back to turnover-based sizing.
+    """
+    if not symbols:
+        return {}
+    now = time.time()
+    result: Dict[str, float] = {}
+    to_fetch: List[str] = []
+    with _market_cap_lock:
+        for s in symbols:
+            entry = _market_cap_cache.get(s)
+            if entry and now - entry[1] < _MARKET_CAP_TTL:
+                result[s] = entry[0]
+            else:
+                to_fetch.append(s)
+
+    if not to_fetch or not _HAS_YFINANCE:
+        return result
+
+    def _fetch_one(sym: str):
+        try:
+            mc = _yf.Ticker(sym).fast_info.get("market_cap")
+            return sym, float(mc) if mc else None
+        except Exception as e:
+            logger.debug("market_cap fetch failed for %s: %s", sym, e)
+            return sym, None
+
+    worker_count = min(MAX_YEARLY_WORKERS, max(1, len(to_fetch)))
+    with ThreadPoolExecutor(max_workers=worker_count) as ex:
+        for sym, mc in ex.map(_fetch_one, to_fetch):
+            if mc and mc > 0:
+                with _market_cap_lock:
+                    _market_cap_cache[sym] = (mc, now)
+                result[sym] = mc
+    return result
+
+
+def fetch_heatmap_data(
+    symbols: List[Dict[str, str]], period: str, auto_top_n: int = 0,
+    include_market_cap: bool = False,
+) -> dict:
+    """Compute per-symbol return + turnover for a treemap heatmap.
+
+    Args:
+        symbols: list of {"symbol": str, "type": str}
+        period: one of "today", "week", "month", "quarter", "year"
+        auto_top_n: if > 0, auto-include _TOP_US_STOCKS, fetch all, return
+                    top N by turnover from the auto-list, plus all user symbols.
+        include_market_cap: if True, attach market_cap (best-effort) to each item.
+
+    Returns:
+        {"period": str, "period_label": str,
+         "data": [{"symbol": str, "name": str or None, "type": str,
+                    "return_pct": float or None, "turnover": float or None,
+                    "turnover_currency": str}]}
+    """
+    start_ts = _period_start_ts(period)
+    end_ts = int(time.time())
+
+    # Build the full fetch list: user symbols + optional auto top-N watchlist
+    seen = set()
+    unique_entries = []
+    user_symbols_set = set()
+
+    for entry in symbols:
+        try:
+            sym = entry["symbol"].strip().upper()
+            atype = entry.get("type", "stock").strip().lower()
+        except (KeyError, AttributeError):
+            continue
+        key = (sym, atype)
+        if not sym or key in seen:
+            continue
+        seen.add(key)
+        user_symbols_set.add(sym)
+        unique_entries.append((sym, atype))
+
+    auto_syms = set()
+    if auto_top_n > 0:
+        top_symbols = _fetch_heatmap_watchlist()
+        for sym in top_symbols:
+            key = (sym, "stock")
+            if key not in seen:
+                seen.add(key)
+                auto_syms.add(sym)
+                unique_entries.append((sym, "stock"))
+
+    def _compute_one(sym: str, atype: str) -> dict:
+        series = _fetch_daily_series_cached(sym, atype)
+
+        result = {
+            "symbol": sym,
+            "name": None,
+            "type": atype,
+            "return_pct": None,
+            "turnover": None,
+            "turnover_currency": _TURNOVER_CURRENCY.get(atype, "USD"),
+        }
+
+        if series.error or not series.timestamps:
+            return result
+
+        # Filter points within [start_ts, end_ts]
+        n = len(series.timestamps)
+        in_range = []
+        for i in range(n):
+            ts = series.timestamps[i]
+            if ts < start_ts or ts > end_ts:
+                continue
+            close = series.closes[i] if i < len(series.closes) else None
+            if close is None:
+                continue
+            vol = None
+            if series.volumes and i < len(series.volumes):
+                vol = series.volumes[i]
+            in_range.append((ts, close, vol))
+
+        if not in_range:
+            return result
+
+        # Return: (last close / first close - 1) * 100
+        first_close = in_range[0][1]
+        last_close = in_range[-1][1]
+        if first_close and first_close != 0:
+            result["return_pct"] = round((last_close / first_close - 1) * 100, 2)
+
+        # Turnover: sum(volume_i * close_i) for all points with volume
+        total_turnover = 0.0
+        has_volume = False
+        for _, close, vol in in_range:
+            if vol is not None and vol > 0:
+                total_turnover += vol * close
+                has_volume = True
+        if has_volume:
+            result["turnover"] = round(total_turnover, 2)
+
+        return result
+
+    # Fetch concurrently
+    worker_count = min(MAX_YEARLY_WORKERS, max(1, len(unique_entries)))
+    results = []
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = {
+            executor.submit(_compute_one, sym, atype): sym
+            for sym, atype in unique_entries
+        }
+        for future in as_completed(futures):
+            try:
+                results.append(future.result())
+            except Exception as e:
+                logger.exception("Heatmap compute failed for %s: %s", futures[future], e)
+
+    # Separate auto-list results from user results
+    auto_results = [r for r in results if r["symbol"] in auto_syms]
+    user_results = [r for r in results if r["symbol"] in user_symbols_set]
+
+    # Sort auto results by turnover descending, take top N
+    auto_results.sort(
+        key=lambda r: r["turnover"] if r["turnover"] is not None else 0,
+        reverse=True,
+    )
+    top_auto = auto_results[:auto_top_n] if auto_top_n > 0 else []
+
+    # Merge: top auto first, then user symbols (preserving user order)
+    ordered = list(top_auto)
+    for sym, atype in unique_entries:
+        if sym in user_symbols_set:
+            match = next((r for r in user_results if r["symbol"] == sym), None)
+            if match and match not in ordered:
+                ordered.append(match)
+
+    # Best-effort market cap (only for displayed stocks, only when requested)
+    if include_market_cap and ordered:
+        stock_syms = [r["symbol"] for r in ordered if r["type"] == "stock"]
+        caps = _get_market_caps(stock_syms)
+        for r in ordered:
+            r["market_cap"] = caps.get(r["symbol"]) if r["type"] == "stock" else None
+
+    return {
+        "period": period,
+        "period_label": _period_label(period),
+        "data": ordered,
     }

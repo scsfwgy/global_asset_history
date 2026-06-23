@@ -12,7 +12,8 @@
     "qdiiFunds": "S&P & Nasdaq Funds (OTC)",
     "vixIndex": "VIX Fear Index",
     "knowledge": "Knowledge",
-    "wishes": "Wishes"
+    "wishes": "Wishes",
+    "heatmap": "Heatmap"
   },
   "settings": {
     "theme": "Dark Mode",
@@ -517,5 +518,39 @@
     "wishesDescription": "Submit and view feature suggestions and feedback for GlobalAssetHistory.",
     "etfMarketTitle": "China ETF Market Quotes & Fee Comparison — GlobalAssetHistory",
     "etfMarketDescription": "Track China-listed Nasdaq 100 and S&P 500 ETFs with real-time quotes, market cap, fee totals, premiums, and 30-day tracking error."
+  },
+  "heatmap": {
+    "period": "Period",
+    "periodToday": "Today",
+    "periodWeek": "This Week",
+    "periodMonth": "This Month",
+    "periodQuarter": "This Quarter",
+    "periodYear": "This Year",
+    "topN": "Top",
+    "topNUnit": "",
+    "sizeBy": "Size by",
+    "sizeByTurnover": "Turnover",
+    "sizeByMarketCap": "Market Cap",
+    "sizeByReturn": "Return",
+    "filters": "Filters",
+    "query": "Query",
+    "forceRefresh": "Force Refresh",
+    "fetching": "Fetching data...",
+    "shareSymbols": "Shares symbol list with Yearly Returns tab",
+    "emptyPrompt": "Add symbols and click \"Query\" to view heatmap",
+    "emptyHint": "Block size reflects turnover, color intensity reflects price change",
+    "errorNoSymbols": "Please add at least one symbol",
+    "errorRequest": "Request failed:",
+    "errorNoData": "Query completed but no valid data returned",
+    "noVolume": "No turnover data",
+    "tooltipSymbol": "Symbol",
+    "tooltipReturn": "Return",
+    "tooltipTurnover": "Turnover",
+    "tooltipMarketCap": "Market Cap",
+    "legendLeft": "Down",
+    "legendRight": "Up",
+    "legendSizeHint": "Block size ∝",
+    "legendNoVolume": "Some symbols have no turnover data, shown as smallest blocks",
+    "legendNoData": "No data for this dimension; shown equally"
   }
 }

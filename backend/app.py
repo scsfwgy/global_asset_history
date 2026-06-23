@@ -306,7 +306,7 @@ def add_seo_headers(response):
         response.headers.setdefault("X-Robots-Tag", "index,follow")
     elif base_path in INDEXABLE_PATHS:
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
-    elif base_path.startswith(ROBOT_BLOCKED_PREFIXES) or base_path in {"/yearly", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", *KNOWLEDGE_LEGACY_PATHS.keys(), "/wishes"}:
+    elif base_path.startswith(ROBOT_BLOCKED_PREFIXES) or base_path in {"/yearly", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", *KNOWLEDGE_LEGACY_PATHS.keys(), "/wishes", "/heatmap"}:
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
     return response
 
@@ -401,6 +401,7 @@ def etf_market():
 @app.route("/knowledge/financial-terms")
 @app.route("/wishes")
 @app.route("/settings")
+@app.route("/heatmap")
 def serve_tab():
     return serve_frontend_html("price-change.html")
 

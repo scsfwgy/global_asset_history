@@ -12,7 +12,8 @@
     "qdiiFunds": "标普纳指基金追踪（场外）",
     "vixIndex": "VIX恐慌指数",
     "knowledge": "数据科普",
-    "wishes": "心愿墙"
+    "wishes": "心愿墙",
+    "heatmap": "热力图"
   },
   "settings": {
     "theme": "深色模式",
@@ -517,5 +518,39 @@
     "wishesDescription": "提交和查看 GlobalAssetHistory 的功能建议与使用反馈。",
     "etfMarketTitle": "A股ETF实时行情与费率对比 - GlobalAssetHistory",
     "etfMarketDescription": "查看纳指100、标普500等A股场内ETF的实时行情、总市值、费率合计、溢价率和30日跟踪误差。"
+  },
+  "heatmap": {
+    "period": "统计周期",
+    "periodToday": "今日",
+    "periodWeek": "本周",
+    "periodMonth": "本月",
+    "periodQuarter": "本季",
+    "periodYear": "本年",
+    "topN": "显示前",
+    "topNUnit": "名",
+    "sizeBy": "块大小",
+    "sizeByTurnover": "成交额",
+    "sizeByMarketCap": "市值",
+    "sizeByReturn": "涨跌幅",
+    "filters": "筛选条件",
+    "query": "查询",
+    "forceRefresh": "强制刷新",
+    "fetching": "获取数据中...",
+    "shareSymbols": "与历年涨跌幅共享代码列表",
+    "emptyPrompt": "添加代码并点击「查询」查看热力图",
+    "emptyHint": "块大小反映成交额，颜色深浅反映涨跌幅",
+    "errorNoSymbols": "请至少添加一个代码",
+    "errorRequest": "请求失败:",
+    "errorNoData": "查询完成，但未获取到有效数据",
+    "noVolume": "无成交额数据",
+    "tooltipSymbol": "代码",
+    "tooltipReturn": "涨跌幅",
+    "tooltipTurnover": "成交额",
+    "tooltipMarketCap": "市值",
+    "legendLeft": "跌",
+    "legendRight": "涨",
+    "legendSizeHint": "块大小 ∝",
+    "legendNoVolume": "部分标的不含成交额数据，以最小块显示",
+    "legendNoData": "当前维度无数据，已等比显示"
   }
 }

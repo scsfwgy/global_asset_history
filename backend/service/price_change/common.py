@@ -54,6 +54,10 @@ class PriceSeries:
     opens: Optional[List[Optional[float]]] = None
     highs: Optional[List[Optional[float]]] = None
     lows: Optional[List[Optional[float]]] = None
+    # Daily trading volume (base asset units). Populated when the upstream
+    # data source provides it (Yahoo, Binance, OKX, Tencent, East Money).
+    # CoinGecko OHLC does NOT include volume.
+    volumes: Optional[List[Optional[float]]] = None
 
 
 def empty_series(source: Optional[str] = None, error: Optional[str] = None) -> PriceSeries:
@@ -67,6 +71,7 @@ def series_from_points(
     opens: Optional[List[Optional[float]]] = None,
     highs: Optional[List[Optional[float]]] = None,
     lows: Optional[List[Optional[float]]] = None,
+    volumes: Optional[List[Optional[float]]] = None,
 ) -> PriceSeries:
     return PriceSeries(timestamps, closes, source, time.time(),
-                       opens=opens, highs=highs, lows=lows)
+                       opens=opens, highs=highs, lows=lows, volumes=volumes)

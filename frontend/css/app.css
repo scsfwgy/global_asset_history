@@ -616,3 +616,143 @@ body {
             color: var(--apple-text-secondary);
             line-height: 1.4;
         }
+/* ─── Heatmap (treemap) ─── */
+.hm-filter-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            margin-bottom: 8px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            user-select: none;
+            font-size: 12px;
+            color: var(--apple-text-tertiary);
+            background: var(--apple-overlay-subtle);
+            border: 1px solid var(--apple-divider);
+            width: fit-content;
+            transition: color var(--transition-fast), background var(--transition-fast);
+        }
+.hm-filter-toggle:hover {
+            color: var(--apple-text-secondary);
+            background: var(--apple-overlay-light);
+        }
+.hm-filter-icon {
+            font-size: 13px;
+        }
+.hm-filter-arrow {
+            font-size: 10px;
+            transition: transform 0.2s ease;
+        }
+.hm-filter-panel {
+            margin-bottom: 12px;
+        }
+.hm-treemap-wrap {
+            width: 100%;
+            margin-top: 8px;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: var(--apple-card-shadow);
+        }
+.hm-treemap-svg {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 90vh;
+            background: var(--apple-surface-2);
+        }
+.hm-treemap-svg-inner {
+            width: 100%;
+            height: 100%;
+        }
+@keyframes hmCellPop {
+            0% { opacity: 0; transform: scale(0.55); }
+            70% { opacity: 1; }
+            100% { opacity: 1; transform: scale(1); }
+        }
+@keyframes hmLabelFade {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+.hm-treemap-svg rect.hm-cell {
+            cursor: pointer;
+            transform-box: fill-box;
+            transform-origin: center;
+            animation: hmCellPop 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+            transition: filter 0.18s ease, transform 0.18s ease;
+        }
+.hm-treemap-svg rect.hm-cell:hover {
+            filter: brightness(1.22) saturate(1.1);
+            transform: scale(1.015);
+        }
+.hm-treemap-svg text.hm-label {
+            pointer-events: none;
+            user-select: none;
+            font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+            animation: hmLabelFade 0.35s ease-out backwards;
+        }
+/* ── HTML tooltip overlay ── */
+.hm-tooltip {
+            position: fixed;
+            z-index: 9999;
+            pointer-events: none;
+            min-width: 168px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: var(--apple-tooltip-bg);
+            border: 1px solid var(--apple-tooltip-border);
+            color: var(--apple-tooltip-text);
+            font-size: 12px;
+            line-height: 1.5;
+            box-shadow: var(--apple-shadow-popover);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+        }
+.hm-tooltip .hm-tt-sym {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: var(--apple-text-primary);
+        }
+.hm-tooltip .hm-tt-name {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--apple-text-tertiary);
+        }
+.hm-tooltip .hm-tt-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            margin-top: 3px;
+        }
+.hm-tooltip .hm-tt-label { color: var(--apple-text-tertiary); }
+.hm-tooltip .hm-tt-val {
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+            color: var(--apple-text-primary);
+        }
+.hm-tooltip .hm-tt-up { color: var(--data-positive); }
+.hm-tooltip .hm-tt-down { color: var(--data-negative); }
+.hm-legend {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 14px;
+            font-size: 11px;
+            color: var(--apple-text-tertiary);
+            flex-wrap: wrap;
+        }
+.hm-legend-seg { white-space: nowrap; }
+.hm-legend-sep { color: var(--apple-text-tertiary); opacity: 0.5; }
+.hm-legend-gradient {
+            width: 180px;
+            height: 10px;
+            border-radius: 5px;
+            flex-shrink: 0;
+            border: 1px solid var(--apple-divider);
+        }
+@media (max-width: 768px) {
+            .hm-treemap-svg { max-height: none; }
+            .hm-legend-gradient { width: 120px; }
+        }
+

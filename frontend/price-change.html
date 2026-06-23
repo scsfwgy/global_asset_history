@@ -1590,7 +1590,8 @@
 
     <main class="main pc-main">
         <nav class="tab-bar">
-            <button class="tab-btn active" data-tab="yearly" data-i18n="tab.yearlyReturns">历年涨跌幅</button>
+            <button class="tab-btn active" data-tab="heatmap" data-i18n="tab.heatmap">热力图</button>
+            <button class="tab-btn" data-tab="yearly" data-i18n="tab.yearlyReturns">历年涨跌幅</button>
             <button class="tab-btn" data-tab="backtest" data-i18n="tab.backtest">回测</button>
             <button class="tab-btn" data-tab="crash" data-i18n="tab.crashStats">暴跌统计</button>
             <button class="tab-btn" data-tab="etf" data-i18n="tab.etfTracking">标普纳指ETF追踪（场内）</button>
@@ -1600,7 +1601,69 @@
             <button class="tab-btn" data-tab="wishes" data-i18n="tab.wishes">心愿墙</button>
         </nav>
 
-        <div class="tab-panel active" id="tab-yearly">
+        <!-- Heatmap (treemap) -->
+        <div class="tab-panel active" id="tab-heatmap">
+        <!-- Collapsible filter bar -->
+        <div class="hm-filter-toggle" id="hmFilterToggle">
+            <span class="hm-filter-icon">⚙</span>
+            <span data-i18n="heatmap.filters">筛选条件</span>
+            <span class="hm-filter-arrow">▸</span>
+        </div>
+        <div class="hm-filter-panel" id="hmFilterPanel" style="display:none;">
+            <div class="controls-bar" style="margin-bottom: 12px;">
+                <div class="control-group">
+                    <span class="control-label" data-i18n="yearly.symbolInput">统计代码</span>
+                    <input type="text" id="hmSymbolInput" class="pc-symbol-input" data-i18n-attr="placeholder|yearly.placeholderSymbol" placeholder="AAPL" maxlength="10">
+                    <select id="hmTypeSelect" class="pc-type-select">
+                        <option value="stock" data-i18n="yearly.assetTypeStock">美股</option>
+                        <option value="crypto" data-i18n="yearly.assetTypeCrypto">数字货币</option>
+                        <option value="cn_stock" data-i18n="yearly.assetTypeCnStock">A股</option>
+                    </select>
+                    <button id="hmAddBtn" class="pc-btn primary" data-i18n="yearly.add">添加</button>
+                    <button id="hmClearBtn" class="pc-btn danger" data-i18n="yearly.clear">清空</button>
+                </div>
+                <div class="control-group">
+                    <span class="control-label" data-i18n="heatmap.period">统计周期</span>
+                    <select id="hmPeriod" class="pc-type-select">
+                        <option value="today" data-i18n="heatmap.periodToday">今日</option>
+                        <option value="week" selected data-i18n="heatmap.periodWeek">本周</option>
+                        <option value="month" data-i18n="heatmap.periodMonth">本月</option>
+                        <option value="quarter" data-i18n="heatmap.periodQuarter">本季</option>
+                        <option value="year" data-i18n="heatmap.periodYear">本年</option>
+                    </select>
+                    <span class="control-label" data-i18n="heatmap.sizeBy">块大小</span>
+                    <select id="hmSizeBy" class="pc-type-select">
+                        <option value="turnover" selected data-i18n="heatmap.sizeByTurnover">成交额</option>
+                        <option value="market_cap" data-i18n="heatmap.sizeByMarketCap">市值</option>
+                        <option value="return" data-i18n="heatmap.sizeByReturn">涨跌幅</option>
+                    </select>
+                    <span class="control-label" data-i18n="heatmap.topN">显示前</span>
+                    <input type="number" id="hmTopN" class="pc-range-input" value="20" min="1" max="60" style="width:55px;">
+                    <span class="control-label" data-i18n="heatmap.topNUnit">名</span>
+                    <button id="hmRefreshBtn" class="pc-btn primary" data-i18n="heatmap.query">查询</button>
+                    <button id="hmForceBtn" class="pc-btn" data-i18n-attr="title|heatmap.forceRefresh" data-i18n="heatmap.forceRefresh">🔄 强制刷新</button>
+                    <span class="pc-freshness" id="hmFreshness" style="display:none;"></span>
+                </div>
+            </div>
+            <div class="pc-tags" id="hmTags"></div>
+            <div id="hmLegend" class="hm-legend" style="display:none;"></div>
+        </div>
+        <div class="pc-error" id="hmError"></div>
+        <div class="pc-loading" id="hmLoading">
+            <div class="spinner"></div>
+            <span data-i18n="heatmap.fetching">获取数据中...</span>
+        </div>
+        <div id="hmTreemapWrap" class="hm-treemap-wrap">
+            <svg id="hmTreemapSvg" class="hm-treemap-svg" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <div id="hmEmpty" class="pc-empty" style="display:none;">
+            <div style="font-size: 32px; margin-bottom: 8px;">📊</div>
+            <div data-i18n="heatmap.emptyPrompt">添加代码并点击「查询」查看热力图</div>
+            <div class="pc-empty-hint" data-i18n="heatmap.emptyHint">块大小反映成交额，颜色深浅反映涨跌幅</div>
+        </div>
+        </div><!-- /tab-heatmap -->
+
+        <div class="tab-panel" id="tab-yearly">
         <div class="controls-bar" style="margin-bottom: 12px;">
             <div class="control-group">
                 <span class="control-label" data-i18n="yearly.symbolInput">统计代码</span>
@@ -3826,6 +3889,7 @@
     <script src="/js/qdii-funds.js"></script>
     <script src="/js/vix-chart.js"></script>
     <script src="/js/wishes.js"></script>
+    <script src="/js/heatmap.js"></script>
     <script>
         // ─── Header settings dropdown ───
         (function () {
@@ -4038,7 +4102,7 @@
             }
 
             var PATH_TO_TAB = {
-                '/': 'yearly',
+                '/': 'heatmap',
                 '/yearly': 'yearly',
                 '/backtest': 'backtest',
                 '/crash': 'crash',
@@ -4058,9 +4122,11 @@
                 '/knowledge/terms': 'knowledge',
                 '/knowledge/financial-terms': 'knowledge',
                 '/wishes': 'wishes',
+                '/heatmap': 'heatmap',
                 '/settings': 'yearly'
             };
             var TAB_TO_PATH = {
+                'heatmap': '/heatmap',
                 'yearly': '/yearly',
                 'backtest': '/backtest',
                 'crash': '/crash',
@@ -4136,10 +4202,15 @@
                 if (panel) panel.style.display = 'block';
             }
             var TAB_SEO = {
-                'yearly': {
+                'heatmap': {
                     titleKey: 'seo.indexTitle',
                     descKey: 'seo.indexDescription',
                     canonical: '/'
+                },
+                'yearly': {
+                    titleKey: 'seo.indexTitle',
+                    descKey: 'seo.indexDescription',
+                    canonical: '/yearly'
                 },
                 'backtest': {
                     titleKey: 'seo.backtestTitle',
