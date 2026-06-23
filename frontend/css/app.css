@@ -654,6 +654,15 @@ body {
             overflow: hidden;
             box-shadow: var(--apple-card-shadow);
         }
+@keyframes hmWrapEnter {
+            0% { opacity: 0; transform: scale(0.965); }
+            60% { opacity: 1; }
+            100% { opacity: 1; transform: scale(1); }
+        }
+.hm-treemap-wrap.hm-entering {
+            animation: hmWrapEnter 0.5s cubic-bezier(0.2, 0.8, 0.3, 1);
+            transform-origin: center top;
+        }
 .hm-treemap-svg {
             display: block;
             width: 100%;

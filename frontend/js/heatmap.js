@@ -287,6 +287,13 @@ function renderTreemap(result, animate) {
   hmEmpty.style.display = "none";
   hmTreemapWrap.style.display = "";
 
+  // Container-level entrance animation on fresh data (complements cell cascade)
+  if (animate) {
+    hmTreemapWrap.classList.remove("hm-entering");
+    void hmTreemapWrap.offsetWidth; // force reflow to restart animation
+    hmTreemapWrap.classList.add("hm-entering");
+  }
+
   // Attach weight + sort by chosen dimension
   var prepared = valid.map(function (d) {
     return Object.assign({}, d, { weight: hmWeight(d) });

@@ -678,18 +678,57 @@ def _period_label(period: str) -> str:
 
 
 # ── Market-cap fetch (best-effort, for heatmap "size by" dimension) ──
+# Primary: yfinance (works in overseas/HK production). Fallback: East Money
+# f116 (China-accessible). Both cached 24h.
 _market_cap_cache: Dict[str, Tuple[float, float]] = {}  # symbol -> (cap, ts)
 _market_cap_lock = threading.Lock()
 _MARKET_CAP_TTL = 24 * 60 * 60  # 24 hours
+_EM_QUOTE_URL = "https://push2.eastmoney.com/api/qt/stock/get"
+
+# East Money is a direct domestic API — bypass any ambient proxy (trust_env),
+# which on some dev machines routes through a flaky proxy and fails.
+import requests as _requests
+_em_session = _requests.Session()
+_em_session.trust_env = False
+_em_session.headers.update({"User-Agent": "Mozilla/5.0"})
+
+
+def _em_market_cap(symbol: str) -> Optional[float]:
+    """Fetch total market cap from East Money (f116). Resolves the US exchange
+    prefix (105=NASDAQ, 106=NYSE) by trying both."""
+    for prefix in ("105", "106"):
+        try:
+            r = _em_session.get(
+                _EM_QUOTE_URL,
+                params={"secid": f"{prefix}.{symbol}", "fields": "f57,f116",
+                        "_": int(time.time())},
+                timeout=8,
+            )
+            r.raise_for_status()
+            data = r.json().get("data") or {}
+            mc = data.get("f116")
+            if mc and float(mc) > 0:
+                return float(mc)
+        except Exception as e:
+            logger.debug("East Money market_cap failed for %s (prefix %s): %s", symbol, prefix, e)
+            continue
+    return None
+
+
+def _fetch_one_market_cap(symbol: str) -> Tuple[str, Optional[float]]:
+    """yfinance first (overseas), East Money fallback (China)."""
+    if _HAS_YFINANCE:
+        try:
+            mc = _yf.Ticker(symbol).fast_info.get("market_cap")
+            if mc and float(mc) > 0:
+                return symbol, float(mc)
+        except Exception as e:
+            logger.debug("yfinance market_cap failed for %s: %s", symbol, e)
+    return symbol, _em_market_cap(symbol)
 
 
 def _get_market_caps(symbols: List[str]) -> Dict[str, float]:
-    """Return {symbol: market_cap} for US stocks, using a 24h cache.
-
-    Best-effort: uses yfinance; failures return empty.  Production deploys
-    (HK region) can reach Yahoo; local dev behind the GFW may get nothing,
-    in which case the caller falls back to turnover-based sizing.
-    """
+    """Return {symbol: market_cap} for US stocks, using a 24h cache."""
     if not symbols:
         return {}
     now = time.time()
@@ -703,20 +742,12 @@ def _get_market_caps(symbols: List[str]) -> Dict[str, float]:
             else:
                 to_fetch.append(s)
 
-    if not to_fetch or not _HAS_YFINANCE:
+    if not to_fetch:
         return result
-
-    def _fetch_one(sym: str):
-        try:
-            mc = _yf.Ticker(sym).fast_info.get("market_cap")
-            return sym, float(mc) if mc else None
-        except Exception as e:
-            logger.debug("market_cap fetch failed for %s: %s", sym, e)
-            return sym, None
 
     worker_count = min(MAX_YEARLY_WORKERS, max(1, len(to_fetch)))
     with ThreadPoolExecutor(max_workers=worker_count) as ex:
-        for sym, mc in ex.map(_fetch_one, to_fetch):
+        for sym, mc in ex.map(_fetch_one_market_cap, to_fetch):
             if mc and mc > 0:
                 with _market_cap_lock:
                     _market_cap_cache[sym] = (mc, now)
@@ -789,34 +820,38 @@ def fetch_heatmap_data(
         if series.error or not series.timestamps:
             return result
 
-        # Filter points within [start_ts, end_ts]
+        # Build all valid (ts, close, vol) points, then filter to the period.
         n = len(series.timestamps)
-        in_range = []
+        all_pts = []
         for i in range(n):
-            ts = series.timestamps[i]
-            if ts < start_ts or ts > end_ts:
-                continue
             close = series.closes[i] if i < len(series.closes) else None
             if close is None:
                 continue
-            vol = None
-            if series.volumes and i < len(series.volumes):
-                vol = series.volumes[i]
-            in_range.append((ts, close, vol))
+            ts = series.timestamps[i]
+            vol = series.volumes[i] if (series.volumes and i < len(series.volumes)) else None
+            all_pts.append((ts, close, vol))
 
-        if not in_range:
+        if not all_pts:
             return result
 
-        # Return: (last close / first close - 1) * 100
-        first_close = in_range[0][1]
-        last_close = in_range[-1][1]
-        if first_close and first_close != 0:
-            result["return_pct"] = round((last_close / first_close - 1) * 100, 2)
+        in_range = [p for p in all_pts if start_ts <= p[0] <= end_ts]
 
-        # Turnover: sum(volume_i * close_i) for all points with volume
+        # Return needs 2 points. For "today" the range usually holds only the
+        # current day's candle (1 point) → fall back to the last 2 trading days
+        # so we still show today's move vs the previous close.
+        return_pts = in_range if len(in_range) >= 2 else all_pts[-2:]
+        if len(return_pts) >= 2:
+            first_close = return_pts[0][1]
+            last_close = return_pts[-1][1]
+            if first_close and first_close != 0:
+                result["return_pct"] = round((last_close / first_close - 1) * 100, 2)
+
+        # Turnover: prefer the in-range window; if empty (no point in period),
+        # use the most recent point so the cell still has a size.
+        turnover_pts = in_range if in_range else all_pts[-1:]
         total_turnover = 0.0
         has_volume = False
-        for _, close, vol in in_range:
+        for _, close, vol in turnover_pts:
             if vol is not None and vol > 0:
                 total_turnover += vol * close
                 has_volume = True
