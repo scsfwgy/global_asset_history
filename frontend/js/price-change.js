@@ -199,7 +199,7 @@ function addSymbol(symbol, type) {
   const sym = symbol.trim().toUpperCase();
   if (!sym) return false;
   if (symbols.some((s) => s.symbol === sym && s.type === type)) return false;
-  symbols.push({ symbol: sym, type });
+  symbols.unshift({ symbol: sym, type }); // insert at first position
   renderTags();
   symInput.value = "";
   symInput.focus();

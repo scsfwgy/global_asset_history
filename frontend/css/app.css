@@ -668,7 +668,8 @@ body {
             width: 100%;
             height: auto;
             max-height: 90vh;
-            background: var(--apple-surface-2);
+            /* Dark gutter board: gaps read as deep slate, tiles pop forward */
+            background: #16171c;
         }
 .hm-treemap-svg-inner {
             width: 100%;
@@ -683,21 +684,22 @@ body {
             from { opacity: 0; }
             to { opacity: 1; }
         }
-.hm-treemap-svg rect.hm-cell {
+.hm-treemap-svg g.hm-cell {
             cursor: pointer;
             transform-box: fill-box;
             transform-origin: center;
             animation: hmCellPop 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
             transition: filter 0.18s ease, transform 0.18s ease;
         }
-.hm-treemap-svg rect.hm-cell:hover {
-            filter: brightness(1.22) saturate(1.1);
-            transform: scale(1.015);
+.hm-treemap-svg g.hm-cell:hover {
+            filter: brightness(1.16) saturate(1.06);
+            transform: scale(1.012);
         }
 .hm-treemap-svg text.hm-label {
             pointer-events: none;
             user-select: none;
             font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+            letter-spacing: 0.2px;
             animation: hmLabelFade 0.35s ease-out backwards;
         }
 /* ── HTML tooltip overlay ── */
@@ -753,15 +755,92 @@ body {
         }
 .hm-legend-seg { white-space: nowrap; }
 .hm-legend-sep { color: var(--apple-text-tertiary); opacity: 0.5; }
-.hm-legend-gradient {
-            width: 180px;
-            height: 10px;
-            border-radius: 5px;
+.hm-legend-cell {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
             flex-shrink: 0;
-            border: 1px solid var(--apple-divider);
+            border: 1px solid rgba(0,0,0,0.12);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
         }
+.hm-legend-label {
+            font-variant-numeric: tabular-nums;
+            font-size: 10px;
+            color: var(--apple-text-secondary);
+            white-space: nowrap;
+        }
+/* ── Overview Stats ── */
+.hm-stats {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+.hm-stat-card {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: var(--apple-surface-1);
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            font-size: 11px;
+            color: var(--apple-text-secondary);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            /* Entrance animation: fade + slide up */
+            animation: hmStatEnter 0.4s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+        }
+@keyframes hmStatEnter {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+.hm-stat-card:nth-child(1) { animation-delay: 0ms; }
+.hm-stat-card:nth-child(2) { animation-delay: 60ms; }
+.hm-stat-card:nth-child(3) { animation-delay: 120ms; }
+.hm-stat-card:nth-child(4) { animation-delay: 180ms; }
+.hm-stat-icon {
+            font-size: 16px;
+            font-weight: 700;
+        }
+.hm-stat-label {
+            font-size: 11px;
+            color: var(--apple-text-tertiary);
+        }
+.hm-stat-val {
+            font-variant-numeric: tabular-nums;
+            font-weight: 700;
+            font-size: 14px;
+        }
+.hm-stat-up { color: var(--data-positive); }
+.hm-stat-down { color: var(--data-negative); }
 @media (max-width: 768px) {
             .hm-treemap-svg { max-height: none; }
-            .hm-legend-gradient { width: 120px; }
+            .hm-legend { gap: 6px; font-size: 10px; }
+            .hm-legend-cell { width: 14px; height: 14px; }
+            .hm-legend-label { font-size: 9px; }
+            .hm-stats {
+                gap: 8px;
+                margin-top: 12px;
+                /* 2×2 grid on mobile for compactness */
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+            .hm-stat-card {
+                padding: 8px 10px;
+                font-size: 11px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 3px;
+            }
+            .hm-stat-icon { font-size: 14px; }
+            .hm-stat-val { font-size: 13px; }
+            .hm-stat-label { font-size: 10px; }
         }
 

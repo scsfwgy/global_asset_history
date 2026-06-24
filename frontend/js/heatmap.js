@@ -37,6 +37,7 @@ const hmTreemapSvg = document.getElementById("hmTreemapSvg");
 const hmEmpty = document.getElementById("hmEmpty");
 const hmLegend = document.getElementById("hmLegend");
 const hmFreshness = document.getElementById("hmFreshness");
+const hmStats = document.getElementById("hmStats");
 
 // ─── HTML tooltip overlay ───
 var hmTooltipEl = document.createElement("div");
@@ -111,7 +112,7 @@ function hmAddSymbol(symbol, type) {
   var sym = symbol.trim().toUpperCase();
   if (!sym) return false;
   if (_hmSymbols.some(function (s) { return s.symbol === sym && s.type === type; })) return false;
-  _hmSymbols.push({ symbol: sym, type: type });
+  _hmSymbols.unshift({ symbol: sym, type: type }); // insert at first position
   renderHmTags();
   hmSymInput.value = "";
   hmSymInput.focus();
@@ -169,7 +170,25 @@ function hmWeight(d) {
   return (d.turnover && d.turnover > 0) ? d.turnover : 0;
 }
 
-// ─── Strip Treemap Layout ───
+// ─── Squarified Treemap Layout ───
+//
+// Bruls/Huizing/van Wijk squarified algorithm: keeps tiles as close to square
+// as possible, giving the regular mosaic look of pro market heatmaps instead of
+// the top-heavy banner that a row-strip layout produces. Items must be sorted
+// by weight descending before calling.
+
+function _hmWorstRatio(row, rowSum, side) {
+  // side = the fixed length of the current strip; returns worst aspect ratio.
+  var max = -Infinity, min = Infinity;
+  for (var i = 0; i < row.length; i++) {
+    var w = row[i].weight;
+    if (w > max) max = w;
+    if (w < min) min = w;
+  }
+  var s2 = rowSum * rowSum;
+  var side2 = side * side;
+  return Math.max((side2 * max) / s2, s2 / (side2 * min));
+}
 
 function layoutStripTreemap(items, x, y, w, h) {
   if (!items.length || w <= 0 || h <= 0) return [];
@@ -180,71 +199,119 @@ function layoutStripTreemap(items, x, y, w, h) {
     totalWeight += wt;
     return { item: it, weight: wt };
   });
-
   if (totalWeight === 0) {
     normalized.forEach(function (n) { n.weight = 1; });
     totalWeight = normalized.length;
   }
 
-  var n = normalized.length;
-  var targetRows = n <= 4 ? 2 : n <= 8 ? Math.max(3, Math.round(n / 2)) : Math.min(8, Math.round(n / 2.5));
-  targetRows = Math.min(targetRows, Math.floor(n / 2));
-  targetRows = Math.max(targetRows, 1);
-
-  var targetRowWeight = totalWeight / targetRows;
-  var rows = [];
-  var currentRow = [];
-  var currentSum = 0;
-
-  for (var i = 0; i < normalized.length; i++) {
-    currentRow.push(normalized[i]);
-    currentSum += normalized[i].weight;
-    var remainingItems = normalized.length - i - 1;
-    var remainingRows = targetRows - rows.length - 1;
-    if (currentSum >= targetRowWeight && remainingItems >= remainingRows && rows.length < targetRows - 1) {
-      rows.push({ items: currentRow, sum: currentSum });
-      currentRow = [];
-      currentSum = 0;
-    }
-  }
-  if (currentRow.length > 0) rows.push({ items: currentRow, sum: currentSum });
+  // Scale weights to area (w*h) so geometry math is in pixel² units.
+  var area = w * h;
+  var scale = area / totalWeight;
+  normalized.forEach(function (n) { n.weight = n.weight * scale; });
 
   var result = [];
-  var cy = y;
-  for (var r = 0; r < rows.length; r++) {
-    var row = rows[r];
-    var rowHeight = Math.max(h * (row.sum / totalWeight), 26);
-    var cx = x;
-    for (var j = 0; j < row.items.length; j++) {
-      var itemW = Math.max(w * (row.items[j].weight / row.sum), w * 0.025);
-      result.push({ x: cx, y: cy, w: itemW, h: rowHeight, item: row.items[j].item });
-      cx += itemW;
+  // Free rectangle we keep carving strips off of.
+  var rx = x, ry = y, rw = w, rh = h;
+  var idx = 0;
+  var n = normalized.length;
+
+  while (idx < n) {
+    var shortSide = Math.min(rw, rh);
+    var row = [normalized[idx]];
+    var rowSum = normalized[idx].weight;
+    var worst = _hmWorstRatio(row, rowSum, shortSide);
+    var next = idx + 1;
+
+    // Grow the strip while it keeps tiles squarer.
+    while (next < n) {
+      var trySum = rowSum + normalized[next].weight;
+      var tryRow = row.concat([normalized[next]]);
+      var tryWorst = _hmWorstRatio(tryRow, trySum, shortSide);
+      if (tryWorst > worst) break;
+      row = tryRow; rowSum = trySum; worst = tryWorst; next++;
     }
-    cy += rowHeight;
+
+    // Lay the strip along the shorter side, stacked on the longer side.
+    var stripThick = rowSum / shortSide;
+    if (rw <= rh) {
+      // strip is a row across the top, height = stripThick
+      var cx = rx;
+      for (var i = 0; i < row.length; i++) {
+        var cw = row[i].weight / stripThick;
+        result.push({ x: cx, y: ry, w: cw, h: stripThick, item: row[i].item });
+        cx += cw;
+      }
+      ry += stripThick; rh -= stripThick;
+    } else {
+      // strip is a column down the left, width = stripThick
+      var cy = ry;
+      for (var j = 0; j < row.length; j++) {
+        var ch = row[j].weight / stripThick;
+        result.push({ x: rx, y: cy, w: stripThick, h: ch, item: row[j].item });
+        cy += ch;
+      }
+      rx += stripThick; rw -= stripThick;
+    }
+    idx = next;
   }
+
   return result;
 }
 
 // ─── Color Mapping (all-white text; hue follows color scheme) ───
+//
+// Discrete 5-stop palettes interpolated in RGB — keeps deep cells "vivid red"
+// instead of the muddy maroon a raw HSL ramp produces, and pins near-zero to a
+// clean neutral slate instead of a washed-out pink. Mirrors the look of
+// professional market heatmaps (Finviz / TradingView).
+
+var HM_NEUTRAL = [108, 112, 122];               // near-zero slate (dead zone)
+// 0% (light) → 100% (deep) intensity. Greens & reds tuned to stay luminous.
+var HM_GREEN_RAMP = [
+  [86, 196, 120], [55, 178, 96], [34, 158, 78], [22, 134, 66], [16, 110, 56],
+];
+var HM_RED_RAMP = [
+  [233, 110, 104], [222, 78, 72], [206, 52, 50], [183, 38, 40], [156, 30, 34],
+];
+var HM_DEAD_ZONE = 0.3;                          // |return%| below this = neutral
+
+function _hmLerp(a, b, t) { return a + (b - a) * t; }
+
+function _hmRampColor(ramp, intensity) {
+  // intensity 0..1 → blend from neutral (at 0) through the ramp stops.
+  if (intensity <= 0) return HM_NEUTRAL.slice();
+  var stops = [HM_NEUTRAL].concat(ramp);         // anchor low end at neutral
+  var seg = (stops.length - 1) * Math.min(intensity, 1);
+  var lo = Math.floor(seg);
+  var hi = Math.min(lo + 1, stops.length - 1);
+  var t = seg - lo;
+  return [
+    _hmLerp(stops[lo][0], stops[hi][0], t),
+    _hmLerp(stops[lo][1], stops[hi][1], t),
+    _hmLerp(stops[lo][2], stops[hi][2], t),
+  ];
+}
 
 function hmColor(returnPct, maxAbs) {
   var isRedUp = (typeof window.getColorScheme === 'function' && window.getColorScheme() === 'red_up');
-  var posHue = isRedUp ? 4 : 142;
-  var negHue = isRedUp ? 142 : 4;
 
   if (returnPct == null || isNaN(returnPct) || maxAbs === 0) {
-    return { bg: "rgba(140,140,150,0.30)", text: "#fff" };
+    return { bg: "rgb(" + HM_NEUTRAL.join(",") + ")", text: "#fff" };
   }
 
-  var raw = Math.min(Math.abs(returnPct) / maxAbs, 1);
-  var intensity = Math.pow(raw, 0.45);          // amplify small moves
-  var hue = returnPct >= 0 ? posHue : negHue;
-  var lightness = 48 - intensity * 24;           // 48% → 24% (always dark enough for white)
-  var saturation = 70 + intensity * 25;          // 70 → 95
-  var alpha = 0.62 + intensity * 0.38;           // 0.62 → 1.0
+  var abs = Math.abs(returnPct);
+  if (abs < HM_DEAD_ZONE) {
+    return { bg: "rgb(" + HM_NEUTRAL.join(",") + ")", text: "#fff" };
+  }
+
+  var raw = Math.min(abs / maxAbs, 1);
+  var intensity = Math.pow(raw, 0.55);           // gently amplify small moves
+  var isUp = returnPct >= 0;
+  var useGreen = isUp ? !isRedUp : isRedUp;
+  var rgb = _hmRampColor(useGreen ? HM_GREEN_RAMP : HM_RED_RAMP, intensity);
 
   return {
-    bg: "hsla(" + hue + ", " + Math.round(saturation) + "%, " + Math.round(lightness) + "%, " + alpha.toFixed(3) + ")",
+    bg: "rgb(" + Math.round(rgb[0]) + "," + Math.round(rgb[1]) + "," + Math.round(rgb[2]) + ")",
     text: "#fff",
   };
 }
@@ -305,13 +372,25 @@ function renderTreemap(result, animate) {
   if (maxAbs === 0) maxAbs = 5;
 
   var dims = hmGetDims();
-  var svgW = dims.w, svgH = dims.h, pad = 4, gap = 3;
+  var svgW = dims.w, svgH = dims.h, pad = 5, gap = 4;
   var rects = layoutStripTreemap(prepared, pad, pad, svgW - pad * 2, svgH - pad * 2);
 
   hmTreemapSvg.setAttribute("viewBox", "0 0 " + svgW + " " + svgH);
 
   var svgParts = [];
   svgParts.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" class="hm-treemap-svg-inner">');
+
+  // Defs: top sheen overlay (volume) + drop shadow for label legibility.
+  svgParts.push('<defs>');
+  svgParts.push('<linearGradient id="hmSheen" x1="0" y1="0" x2="0" y2="1">');
+  svgParts.push('<stop offset="0%" stop-color="#fff" stop-opacity="0.14"/>');
+  svgParts.push('<stop offset="42%" stop-color="#fff" stop-opacity="0.03"/>');
+  svgParts.push('<stop offset="100%" stop-color="#000" stop-opacity="0.12"/>');
+  svgParts.push('</linearGradient>');
+  svgParts.push('<filter id="hmLabelShadow" x="-20%" y="-20%" width="140%" height="140%">');
+  svgParts.push('<feDropShadow dx="0" dy="0.6" stdDeviation="0.7" flood-color="#000" flood-opacity="0.45"/>');
+  svgParts.push('</filter>');
+  svgParts.push('</defs>');
 
   var tooltipData = {};
 
@@ -323,16 +402,24 @@ function renderTreemap(result, animate) {
     var ry = r.y + gap / 2;
     var rw = Math.max(r.w - gap, 2);
     var rh = Math.max(r.h - gap, 2);
-    var delay = animate ? Math.min(i * 24, 600) : 0;
+    var delay = animate ? Math.min(i * 22, 600) : 0;
+    var radius = Math.min(6, rw / 2, rh / 2);
 
-    svgParts.push('<rect class="hm-cell" id="hm-cell-' + i + '"');
-    svgParts.push(' x="' + rx.toFixed(1) + '" y="' + ry.toFixed(1) + '"');
-    svgParts.push(' width="' + rw.toFixed(1) + '" height="' + rh.toFixed(1) + '"');
-    svgParts.push(' rx="6" fill="' + color.bg + '"');
-    if (animate) svgParts.push(' style="animation-delay:' + delay + 'ms"');
-    svgParts.push('/>');
+    // Group so fill, sheen and labels pop together as one tile.
+    var gStyle = animate ? (' style="animation-delay:' + delay + 'ms"') : '';
+    svgParts.push('<g class="hm-cell" id="hm-cell-' + i + '"' + gStyle);
+    svgParts.push(' data-symbol="' + escapeHtml(d.symbol) + '" data-type="' + escapeHtml(d.type) + '" data-name="' + escapeHtml(d.name || '') + '">');
 
-    // Labels (3 tiers) — always white
+    var rectAttrs = ' x="' + rx.toFixed(1) + '" y="' + ry.toFixed(1) + '"' +
+      ' width="' + rw.toFixed(1) + '" height="' + rh.toFixed(1) + '" rx="' + radius.toFixed(1) + '"';
+    // Base fill
+    svgParts.push('<rect' + rectAttrs + ' fill="' + color.bg + '"/>');
+    // Top sheen → volume
+    svgParts.push('<rect' + rectAttrs + ' fill="url(#hmSheen)"/>');
+    // Inner hairline stroke → crisp edge
+    svgParts.push('<rect' + rectAttrs + ' fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>');
+
+    // Labels (3 tiers) — always white, shadowed for legibility
     var minW = d.symbol.length * 7.4 + 16;
     if (rw >= minW && rh >= 22) {
       var isLarge = rw >= 130 && rh >= 52;
@@ -342,33 +429,69 @@ function renderTreemap(result, animate) {
       var labelStyle = animate ? (' style="animation-delay:' + labelDelay + 'ms"') : '';
 
       if (isLarge) {
-        svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh * 0.36).toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" font-size="15" font-weight="700" fill="#fff" class="hm-label"' + labelStyle + '>' + escapeHtml(d.symbol) + '</text>');
-        svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh * 0.64).toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="600" fill="#fff" class="hm-label"' + labelStyle + '>' + escapeHtml(hmFormatPct(d.return_pct)) + '</text>');
+        svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh * 0.40).toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="600" fill="#fff" filter="url(#hmLabelShadow)" class="hm-label"' + labelStyle + '>' + escapeHtml(d.symbol) + '</text>');
+        svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh * 0.66).toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" font-size="17" font-weight="700" fill="#fff" filter="url(#hmLabelShadow)" class="hm-label"' + labelStyle + '>' + escapeHtml(hmFormatPct(d.return_pct)) + '</text>');
       } else if (isMedium) {
-        svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh * 0.38).toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="700" fill="#fff" class="hm-label"' + labelStyle + '>' + escapeHtml(d.symbol) + '</text>');
-        svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh * 0.70).toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="500" fill="#fff" fill-opacity="0.92" class="hm-label"' + labelStyle + '>' + escapeHtml(hmFormatPct(d.return_pct)) + '</text>');
+        svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh * 0.38).toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="600" fill="#fff" filter="url(#hmLabelShadow)" class="hm-label"' + labelStyle + '>' + escapeHtml(d.symbol) + '</text>');
+        svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh * 0.68).toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="#fff" filter="url(#hmLabelShadow)" class="hm-label"' + labelStyle + '>' + escapeHtml(hmFormatPct(d.return_pct)) + '</text>');
       } else {
-        svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh / 2).toFixed(1) + '" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="600" fill="#fff" class="hm-label"' + labelStyle + '>' + escapeHtml(d.symbol) + '</text>');
+        svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh / 2).toFixed(1) + '" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="600" fill="#fff" filter="url(#hmLabelShadow)" class="hm-label"' + labelStyle + '>' + escapeHtml(d.symbol) + '</text>');
       }
     }
 
+    svgParts.push('</g>');
     tooltipData[i] = d;
   }
 
   svgParts.push('</svg>');
   hmTreemapSvg.innerHTML = svgParts.join("");
 
-  // Hover → HTML tooltip
+  // Hover → HTML tooltip, Click → jump to yearly tab
   for (var i = 0; i < rects.length; i++) {
     (function (idx) {
       var cell = hmTreemapSvg.querySelector("#hm-cell-" + idx);
       if (!cell) return;
       cell.addEventListener("mousemove", function (e) { hmShowTooltip(e, tooltipData[idx]); });
       cell.addEventListener("mouseleave", hmHideTooltip);
+      cell.addEventListener("click", function () { hmJumpToYearly(tooltipData[idx]); });
     })(i);
   }
 
   renderHmLegend(maxAbs, prepared);
+  renderHmStats(prepared);
+}
+
+// ─── Click → jump to yearly tab and fill symbol ───
+
+function hmJumpToYearly(d) {
+  if (!d || !d.symbol) return;
+
+  // Switch to yearly tab
+  var yearlyTab = document.querySelector('.tab-btn[data-tab="yearly"]');
+  if (yearlyTab) {
+    var allBtns = document.querySelectorAll('.tab-btn');
+    var allPanels = document.querySelectorAll('.tab-panel');
+    allBtns.forEach(function (b) { b.classList.remove('active'); });
+    allPanels.forEach(function (p) { p.classList.remove('active'); });
+    yearlyTab.classList.add('active');
+    var yearlyPanel = document.getElementById('tab-yearly');
+    if (yearlyPanel) yearlyPanel.classList.add('active');
+  }
+
+  // If symbol exists, remove it first; then insert at first position
+  if (typeof symbols !== 'undefined' && Array.isArray(symbols)) {
+    var sym = d.symbol.toUpperCase();
+    var type = d.type || 'stock';
+    var idx = symbols.findIndex(function (s) { return s.symbol === sym && s.type === type; });
+    if (idx !== -1) symbols.splice(idx, 1);
+    symbols.unshift({ symbol: sym, type: type, name: d.name || null });
+  }
+
+  // Update UI and fetch
+  if (typeof renderTags === 'function') renderTags();
+  if (typeof fetchData === 'function') {
+    setTimeout(function () { fetchData(); }, 50);
+  }
 }
 
 // ─── Tooltip ───
@@ -408,21 +531,27 @@ function renderHmLegend(maxAbs, prepared) {
   if (!hmLegend) return;
   hmLegend.style.display = "flex";
 
-  var gradientStops = [];
-  for (var s = 0; s <= 10; s++) {
-    var t = s / 10;
-    var pct = (t - 0.5) * 2 * maxAbs;
-    gradientStops.push(hmColor(pct, maxAbs).bg + " " + (t * 100) + "%");
-  }
+  // Discrete 5-stop legend matching the ramp palette.
+  var stops = [
+    { label: '< -' + (maxAbs * 0.7).toFixed(1) + '%', pct: -maxAbs },
+    { label: '-' + (maxAbs * 0.4).toFixed(1) + '%', pct: -maxAbs * 0.5 },
+    { label: '±' + HM_DEAD_ZONE.toFixed(1) + '%', pct: 0 },
+    { label: '+' + (maxAbs * 0.4).toFixed(1) + '%', pct: maxAbs * 0.5 },
+    { label: '> +' + (maxAbs * 0.7).toFixed(1) + '%', pct: maxAbs },
+  ];
 
   var sizeLabel = _hmSizeBy === "market_cap" ? __("heatmap.sizeByMarketCap")
     : _hmSizeBy === "return" ? __("heatmap.sizeByReturn") : __("heatmap.sizeByTurnover");
 
   var noData = prepared.every(function (d) { return !d.weight; });
 
-  var html = '<span class="hm-legend-seg">' + __("heatmap.legendLeft") + '</span>';
-  html += '<div class="hm-legend-gradient" style="background:linear-gradient(to right,' + gradientStops.join(",") + ');"></div>';
-  html += '<span class="hm-legend-seg">' + __("heatmap.legendRight") + '</span>';
+  var html = '';
+  for (var i = 0; i < stops.length; i++) {
+    var color = hmColor(stops[i].pct, maxAbs).bg;
+    html += '<div class="hm-legend-cell" style="background:' + color + ';"></div>';
+    html += '<span class="hm-legend-label">' + stops[i].label + '</span>';
+    if (i < stops.length - 1) html += '<span class="hm-legend-sep">·</span>';
+  }
   html += '<span class="hm-legend-sep">·</span>';
   html += '<span class="hm-legend-seg">' + __("heatmap.legendSizeHint") + ' ' + sizeLabel + '</span>';
   if (noData) {
@@ -430,6 +559,44 @@ function renderHmLegend(maxAbs, prepared) {
     html += '<span class="hm-legend-seg">' + __("heatmap.legendNoData") + '</span>';
   }
   hmLegend.innerHTML = html;
+}
+
+// ─── Overview Stats ───
+
+function renderHmStats(prepared) {
+  if (!hmStats || !prepared || !prepared.length) {
+    if (hmStats) hmStats.style.display = "none";
+    return;
+  }
+
+  var ups = 0, downs = 0, sumPct = 0, sumWeighted = 0, totalWeight = 0;
+  prepared.forEach(function (d) {
+    if (d.return_pct == null) return;
+    if (d.return_pct > 0) ups++;
+    else if (d.return_pct < 0) downs++;
+    sumPct += d.return_pct;
+    var wt = d.weight || 0;
+    sumWeighted += d.return_pct * wt;
+    totalWeight += wt;
+  });
+
+  var avgPct = prepared.length ? (sumPct / prepared.length) : 0;
+  var weightedPct = totalWeight ? (sumWeighted / totalWeight) : avgPct;
+
+  var avgCls = avgPct >= 0 ? 'hm-stat-up' : 'hm-stat-down';
+  var wtCls = weightedPct >= 0 ? 'hm-stat-up' : 'hm-stat-down';
+
+  var html = '';
+  html += '<div class="hm-stat-card"><span class="hm-stat-icon">↑</span><span class="hm-stat-val hm-stat-up">' + ups + '</span><span class="hm-stat-label">' + __("heatmap.statsUp") + '</span></div>';
+  html += '<div class="hm-stat-card"><span class="hm-stat-icon">↓</span><span class="hm-stat-val hm-stat-down">' + downs + '</span><span class="hm-stat-label">' + __("heatmap.statsDown") + '</span></div>';
+  html += '<div class="hm-stat-card"><span class="hm-stat-label">' + __("heatmap.statsAvg") + '</span><span class="hm-stat-val ' + avgCls + '">' + hmFormatPct(avgPct) + '</span></div>';
+  html += '<div class="hm-stat-card"><span class="hm-stat-label">' + __("heatmap.statsWeighted") + '</span><span class="hm-stat-val ' + wtCls + '">' + hmFormatPct(weightedPct) + '</span></div>';
+
+  // Force reflow to restart animation on re-render
+  hmStats.style.display = "none";
+  void hmStats.offsetWidth;
+  hmStats.innerHTML = html;
+  hmStats.style.display = "flex";
 }
 
 // ─── Data Fetching ───

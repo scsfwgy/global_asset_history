@@ -551,6 +551,10 @@
     "legendRight": "Up",
     "legendSizeHint": "Block size ∝",
     "legendNoVolume": "Some symbols have no turnover data, shown as smallest blocks",
-    "legendNoData": "No data for this dimension; shown equally"
+    "legendNoData": "No data for this dimension; shown equally",
+    "statsUp": "up",
+    "statsDown": "down",
+    "statsAvg": "Avg",
+    "statsWeighted": "Weighted Avg"
   }
 }

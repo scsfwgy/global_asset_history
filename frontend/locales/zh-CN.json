@@ -551,6 +551,10 @@
     "legendRight": "涨",
     "legendSizeHint": "块大小 ∝",
     "legendNoVolume": "部分标的不含成交额数据，以最小块显示",
-    "legendNoData": "当前维度无数据，已等比显示"
+    "legendNoData": "当前维度无数据，已等比显示",
+    "statsUp": "只上涨",
+    "statsDown": "只下跌",
+    "statsAvg": "平均",
+    "statsWeighted": "加权平均"
   }
 }
