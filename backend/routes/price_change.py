@@ -267,13 +267,17 @@ def heatmap():
     # Check cache (skip when force=true)
     cache_key = _heatmap_cache_key(symbols, period, auto_top_n, include_market_cap)
     if not force:
+        now = time.time()
         with _heatmap_cache_lock:
             entry = _heatmap_cache.get(cache_key)
-            if entry and time.time() - entry["ts"] < _HEATMAP_CACHE_TTL:
-                logger.info("Heatmap cache hit for %s", cache_key[:12])
-                result = dict(entry["data"])
-                result["cached"] = True
-                return jsonify(result)
+            if entry:
+                if now - entry["ts"] < _HEATMAP_CACHE_TTL:
+                    logger.info("Heatmap cache hit for %s", cache_key[:12])
+                    result = dict(entry["data"])
+                    result["cached"] = True
+                    return jsonify(result)
+                # Expired — delete it to free memory
+                del _heatmap_cache[cache_key]
 
     try:
         result = fetch_heatmap_data(symbols, period, auto_top_n=auto_top_n,

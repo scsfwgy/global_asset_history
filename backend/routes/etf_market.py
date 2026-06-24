@@ -704,6 +704,8 @@ def _read_etf_history_cache(symbol: str, days: int, *, allow_stale: bool = False
             response["cache_age_seconds"] = round(age)
             response["cache_ttl_seconds"] = _ETF_HISTORY_TTL_SECONDS
             return response
+        # Expired — delete it to free memory
+        del _etf_history_cache[key]
 
     shared = _read_etf_history_shared_cache(key)
     shared_age = _cache_payload_age_seconds(shared) if shared else None
@@ -902,9 +904,13 @@ def _compute_tracking_error_history(
         nav_dates = sorted(nav_map.keys())
         nav_hash = f":nav{nav_dates[0]}:{nav_dates[-1]}:{len(nav_dates)}"
     cache_key = f"{symbol}:{etf_rows[0]['date']}:{etf_rows[-1]['date']}:{len(etf_rows)}{nav_hash}"
+    now = time.time()
     cached = _tracking_error_cache.get(cache_key)
-    if cached and time.time() - cached[0] < _TRACKING_ERROR_TTL_SECONDS:
-        return cached[1]
+    if cached:
+        if now - cached[0] < _TRACKING_ERROR_TTL_SECONDS:
+            return cached[1]
+        # Expired — delete it to free memory
+        del _tracking_error_cache[cache_key]
 
     benchmark = _fetch_daily_series_cached(benchmark_symbol, "stock")
     if benchmark.error:
@@ -1279,10 +1285,14 @@ def qdii_funds():
         return jsonify({"error": "index must be one of: all, nasdaq100, sp500, active_qdii"}), 400
 
     cached = _qdii_fund_cache.get("all")
-    if cached and not fresh and time.time() - cached[0] < _QDII_FUND_TTL_SECONDS:
-        response = dict(cached[1])
-        response["cache_status"] = "memory"
-        return _qdii_json_response(_filter_qdii_response(response, index_key))
+    now = time.time()
+    if cached:
+        if not fresh and now - cached[0] < _QDII_FUND_TTL_SECONDS:
+            response = dict(cached[1])
+            response["cache_status"] = "memory"
+            return _qdii_json_response(_filter_qdii_response(response, index_key))
+        # Expired — delete it to free memory
+        del _qdii_fund_cache["all"]
 
     shared = _read_qdii_shared_cache() if not fresh else None
     shared_age = _qdii_snapshot_age_seconds(shared) if shared else None
@@ -1812,9 +1822,13 @@ def _write_etf_nav_snapshot(symbol: str, start_date: str, end_date: str, nav_map
 def _fetch_etf_nav_cached(symbol: str, start_date: str, end_date: str) -> dict:
     """Cached wrapper around _fetch_etf_nav with 4-hour L1 + shared cache."""
     cache_key = f"{symbol}:{start_date}:{end_date}"
+    now = time.time()
     cached = _nav_cache.get(cache_key)
-    if cached and time.time() - cached[0] < _NAV_CACHE_TTL_SECONDS:
-        return cached[1]
+    if cached:
+        if now - cached[0] < _NAV_CACHE_TTL_SECONDS:
+            return cached[1]
+        # Expired — delete it to free memory
+        del _nav_cache[cache_key]
 
     shared_key = f"{_ETF_NAV_SHARED_CACHE_PREFIX}:{cache_key}"
     raw = cache_store.cache_get(shared_key)
