@@ -1,25 +1,44 @@
-# GlobalAssetHistory — 历年涨跌幅与定投回测
+# GlobalAssetHistory — 全球资产历史收益分析工具
 
-> 跨资产类别（美股、数字货币、A 股指数）的历史收益查询工具，支持年 / 月 / 日钻取与基于日线的定投回测。
+> 跨资产类别（美股、数字货币、A 股）的历史收益查询与分析平台。支持年 / 月 / 日钻取、定投回测、暴跌统计、VIX 对比、美股热力图、A 股 ETF 市场、QDII 基金跟踪和心愿墙互动。
 
 ## 功能
+
+### 历史收益分析
 
 - **历年汇总**：多资产历年涨跌幅热力图
 - **年份钻取**：点击某个资产某一年，查看该年的月度涨跌幅
 - **月份钻取**：在月度卡片中继续点击某个月，查看该月的日涨跌幅和日收盘价
 - **月度走势**：指定年份后渲染月度折线图，支持图例交互
-- **定投回测**：按日线回测单资产策略，支持：
-  - 一次性
-  - 按日
-  - 按周
-  - 按月
+
+### 定投回测
+
+- **策略支持**：一次性、按日、按周、按月
 - **回测图表**：
   - 总资产蓝线
   - 累计投入灰线
   - 总收益分色面积（正收益绿色，负收益红色）
   - hover tooltip / 竖向参考线 / 回报率
-  - 可配置显示点数
-  - 可配置图表动画秒数，默认 5 秒
+  - 可配置显示点数和动画时长
+
+### 市场分析
+
+- **暴跌统计**：统计历史大跌行情，分析下跌幅度和频率
+- **VIX 恐慌指数**：VIX 与资产价格对比分析
+- **美股热力图**：Treemap 可视化美股市场板块表现
+
+### A 股 ETF 市场
+
+- **实时行情**：A 股 ETF 实时报价和涨跌幅
+- **历史数据**：ETF 历史行情查询
+- **估值分析**：ETF 相对估值数据
+- **QDII 基金**：QDII 基金净值和跟踪误差分析
+
+### 互动功能
+
+- **心愿墙**：用户匿名提交心愿和反馈
+- **验证码系统**：防刷验证
+- **管理员功能**：心愿审核和回复
 
 ## 截图
 
@@ -54,6 +73,8 @@
 | 美股 | Yahoo Finance | 优先 adjclose，失败时回退 |
 | 数字货币 | Binance → OKX → CoinGecko | 自动 fallback |
 | A 股指数 | East Money | 日线数据 |
+| A 股 ETF 行情 | Tencent Finance | 实时报价和 K 线 |
+| QDII 基金 | East Money mobile API | 净值、费率、限购状态 |
 
 ## 快速开始
 
@@ -165,7 +186,7 @@ PORT=8080 ./start.sh start
 
 ## API
 
-所有接口都在 `http://127.0.0.1:8730/api/price-change/` 下。
+### 历史收益分析 (`/api/price-change`)
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -175,12 +196,37 @@ PORT=8080 ./start.sh start
 | POST | `/monthly-batch` | 多资产某年的月度涨跌幅 |
 | POST | `/daily` | 单资产某年某月的日涨跌幅 |
 | POST | `/backtest` | 单资产基于日线的回测 |
+| POST | `/crash-stats` | 暴跌统计数据 |
+| POST | `/crash-chart` | 暴跌图表数据 |
+| POST | `/heatmap` | 美股热力图数据（Treemap） |
+| POST | `/vix-comparison` | VIX 恐慌指数对比 |
 
-健康检查：
+### A 股 ETF 市场 (`/api/etf-market`)
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/quote` | A 股 ETF 实时报价 |
+| GET | `/valuation` | ETF 估值数据 |
+| GET | `/qdii-funds` | QDII 基金净值和跟踪误差 |
+| GET | `/history` | ETF 历史行情数据 |
+
+### 心愿墙 (`/api/wishes`)
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/` | 获取心愿列表 |
+| POST | `/` | 提交新心愿 |
+| GET | `/captcha` | 获取验证码 |
+| POST | `/verify-admin` | 管理员验证 |
+| PATCH | `/<wish_id>/reply` | 回复心愿（管理员） |
+| DELETE | `/<wish_id>` | 删除心愿（管理员） |
+
+### 系统
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/health` | 健康检查 |
+| GET | `/api/diag` | 数据源诊断 |
 
 ### POST /api/price-change/daily
 
@@ -264,31 +310,60 @@ PORT=8080 ./start.sh start
 
 ```text
 ├── start.sh
+├── vercel.json
 ├── README.md
 ├── CLAUDE.md
 ├── backend/
-│   ├── app.py
+│   ├── app.py                     # Flask 主入口
 │   ├── requirements.txt
 │   ├── config/
 │   │   └── price_change_config.json
+│   ├── data/
+│   │   ├── etf_fees.json          # ETF 费率数据
+│   │   ├── etf_history/           # ETF 历史快照
+│   │   ├── etf_nav/               # ETF 净值快照
+│   │   └── qdii_funds.json        # QDII 基金快照
 │   ├── routes/
-│   │   └── price_change.py
-│   └── service/
-│       └── price_change/
-│           ├── calculations.py
-│           ├── common.py
-│           ├── config.py
-│           ├── fetchers.py
-│           └── price_change_service.py
+│   │   ├── price_change.py        # 收益分析 & 回测 & 热力图
+│   │   ├── etf_market.py          # A 股 ETF 市场 & QDII 基金
+│   │   └── wishes.py              # 心愿墙
+│   ├── service/
+│   │   ├── price_change/
+│   │   │   ├── calculations.py    # 收益计算、回测引擎
+│   │   │   ├── cache_store.py     # Upstash Redis 客户端
+│   │   │   ├── common.py          # PriceSeries、常量
+│   │   │   ├── config.py          # 配置加载
+│   │   │   ├── crash_stats.py     # 暴跌统计
+│   │   │   ├── diagnostics.py     # 数据源诊断
+│   │   │   ├── fetchers.py        # 数据源获取器
+│   │   │   └── price_change_service.py  # 公共 API 层
+│   │   └── wishes/
+│   │       ├── captcha.py         # SVG 验证码
+│   │       └── wishes_service.py  # 心愿增删查
+│   ├── scripts/
+│   │   └── scrape_etf_fees.py     # ETF 费率爬虫
+│   └── tests/
 ├── frontend/
-│   ├── price-change.html
-│   ├── css/app.css
-│   └── js/
-│       ├── api.js
-│       ├── backtest.js
-│       ├── charts.js
-│       ├── drilldown.js
-│       └── price-change.js
+│   ├── price-change.html          # 首页
+│   ├── etf-market.html            # ETF 市场页
+│   ├── css/
+│   │   └── app.css
+│   ├── js/
+│   │   ├── api.js                 # API 常量
+│   │   ├── backtest.js            # 回测控件
+│   │   ├── charts.js              # 年度/月度 SVG 图表
+│   │   ├── crash-stats.js         # 暴跌统计面板
+│   │   ├── drilldown.js           # 年→月→日钻取
+│   │   ├── etf-market.js          # ETF 行情面板
+│   │   ├── heatmap.js             # 美股热力图
+│   │   ├── i18n.js                # 国际化
+│   │   ├── price-change.js        # 主状态管理
+│   │   ├── qdii-funds.js          # QDII 基金面板
+│   │   ├── vix-chart.js           # VIX 对比图表
+│   │   └── wishes.js              # 心愿墙
+│   └── locales/
+│       ├── en.json
+│       └── zh-CN.json
 ├── doc/screenshot/
 └── logs/
 ```
@@ -297,10 +372,13 @@ PORT=8080 ./start.sh start
 
 | 层 | 技术 |
 |----|------|
-| 后端 | Python 3 + Flask |
-| 前端 | 原生 HTML / CSS / JS |
-| 图表 | 原生 SVG |
-| 数据获取 | requests, yfinance |
+| 后端 | Python 3 + Flask（蓝图模块化） |
+| 前端 | 原生 HTML / CSS / JS（无框架，classic script） |
+| 图表 | 原生 SVG + D3 Treemap |
+| 缓存 | 进程内存 + Upstash Redis + 本地文件（三级缓存） |
+| 数据获取 | requests、yfinance、Tencent Finance API、East Money API |
+| 部署 | Vercel Serverless Functions |
+| 国际化 | 自研 i18n 模块（中文 / 英文） |
 
 ## License
 

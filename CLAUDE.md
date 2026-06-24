@@ -41,13 +41,21 @@ GlobalAssetHistory 是一个独立的资产历史收益分析工具。
 
 新增资产类型时优先接 daily-series fetcher。
 
-### 4. Flask 同时托管 API 和前端
+### 4. Flask 蓝图架构
 
-- 注册蓝图：`price_change_bp`、`etf_market_bp`、`wishes_bp`
+项目采用蓝图（Blueprint）模块化架构：
+
+- **price_change_bp** (`/api/price-change`)：历史收益分析、定投回测、暴跌统计、VIX 对比、热力图
+- **etf_market_bp** (`/api/etf-market`)：A 股 ETF 实时行情、估值分析、QDII 基金、历史数据
+- **wishes_bp** (`/api/wishes`)：心愿墙系统、验证码、管理员功能
+
+每个蓝图独立管理路由和缓存，互不干扰。
+
+### 5. 前端静态托管
+
 - 托管静态文件：`frontend/` 目录
-- 路由规则：`/` → `price-change.html`
-
-前端使用相对路径请求 API（`API_BASE = ""`）。
+- 路由规则：`/` → `price-change.html`、`/etf-market` → `etf-market.html`
+- 前端使用相对路径请求 API（`API_BASE = ""`）
 
 ## 开发指南
 
