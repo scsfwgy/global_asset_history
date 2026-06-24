@@ -7724,8 +7724,8 @@
     "active_qdii": 191
   },
   "errors": [],
-  "updated_at": "2026-06-24T01:56:07.278204+00:00",
-  "stored_at_epoch": 1782266167.277934,
+  "updated_at": "2026-06-24T02:23:16.245065+00:00",
+  "stored_at_epoch": 1782267796.244833,
   "cache_ttl_seconds": 14400,
   "cache_status": "fresh",
   "source": "East Money public fund mobile API",
