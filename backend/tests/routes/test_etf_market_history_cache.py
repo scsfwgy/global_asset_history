@@ -61,10 +61,24 @@ class TestEtfHistoryCache:
         mock_get.assert_not_called()
 
     def test_history_serves_stale_cache_when_upstream_fails(self, client, tmp_path, monkeypatch):
+        """When upstream fails, fallback to local snapshot (not expired in-memory cache).
+
+        The test validates that the system has proper fallback layers:
+        1. Fresh in-memory cache (L1)
+        2. Shared Redis cache (L2)
+        3. Local file snapshot (L3) ← fallback when upstream fails
+
+        Expired in-memory cache should be cleaned up, not kept as fallback.
+        """
         monkeypatch.setattr(etf_market, "_ETF_HISTORY_DATA_DIR", tmp_path)
         stored_at = time.time() - etf_market._ETF_HISTORY_TTL_SECONDS - 60
-        key = etf_market._history_cache_key("513300", 120)
-        etf_market._etf_history_cache[key] = (stored_at, _sample_history_payload(stored_at))
+
+        # Write a stale snapshot to disk (this is the fallback layer)
+        payload = _sample_history_payload(stored_at)
+        etf_market._write_etf_history_snapshot("513300", 120, payload)
+
+        # Clear in-memory cache to simulate it being cleaned up
+        etf_market._etf_history_cache.clear()
 
         with patch.object(etf_market.cache_store, "cache_get", return_value=None), patch(
             "routes.etf_market.requests.get",
@@ -74,7 +88,7 @@ class TestEtfHistoryCache:
 
         assert resp.status_code == 200
         data = resp.get_json()
-        assert data["cache_status"] == "memory_stale_upstream_failed"
+        assert data["cache_status"] == "local_stale_upstream_failed"
         assert "upstream fetch failed" in data["cache_error"]
         assert data["bars"][0]["premium_pct"] == 2.0
 

@@ -704,7 +704,7 @@ def _read_etf_history_cache(symbol: str, days: int, *, allow_stale: bool = False
             response["cache_age_seconds"] = round(age)
             response["cache_ttl_seconds"] = _ETF_HISTORY_TTL_SECONDS
             return response
-        # Expired — delete it to free memory
+        # Expired — delete it to free memory. Fallback to L2 (Redis) or L3 (disk).
         del _etf_history_cache[key]
 
     shared = _read_etf_history_shared_cache(key)
