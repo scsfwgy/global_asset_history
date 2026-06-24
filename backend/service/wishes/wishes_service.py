@@ -205,4 +205,9 @@ def check_rate_limit(ip: Optional[str]) -> bool:
             return False
         hits.append(now)
         _rate_store[key] = hits
+        # Clean up empty/expired IP keys to prevent memory leak
+        expired_keys = [k for k, timestamps in _rate_store.items()
+                       if not timestamps or all(now - t >= RATE_WINDOW for t in timestamps)]
+        for k in expired_keys:
+            del _rate_store[k]
     return True

@@ -80,17 +80,21 @@ def _deserialize_series(raw: str) -> Optional[PriceSeries]:
 
 def _get_cached_daily_series(symbol: str, asset_type: str) -> PriceSeries | None:
     key = (asset_type, symbol)
+    now = time.time()
     # L1 — in-process
     with _CACHE_LOCK:
         series = _DAILY_SERIES_CACHE.get(key)
-        if series and time.time() - series.fetched_at < _cache_ttl(series):
-            return series
+        if series:
+            if now - series.fetched_at < _cache_ttl(series):
+                return series
+            # Expired — delete it to free memory
+            del _DAILY_SERIES_CACHE[key]
     # L2 — shared Redis. Redis EX handles expiry, but re-check fetched_at to
     # guard against clock skew between the writer and this reader.
     raw = cache_store.cache_get(_redis_key(symbol, asset_type))
     if raw:
         series = _deserialize_series(raw)
-        if series and time.time() - series.fetched_at < _cache_ttl(series):
+        if series and now - series.fetched_at < _cache_ttl(series):
             with _CACHE_LOCK:
                 _DAILY_SERIES_CACHE[key] = series  # warm L1
             return series
@@ -735,6 +739,11 @@ def _get_market_caps(symbols: List[str]) -> Dict[str, float]:
     result: Dict[str, float] = {}
     to_fetch: List[str] = []
     with _market_cap_lock:
+        # Clean expired entries while we're here (amortized cleanup)
+        expired_keys = [k for k, (_, ts) in _market_cap_cache.items() if now - ts >= _MARKET_CAP_TTL]
+        for k in expired_keys:
+            del _market_cap_cache[k]
+
         for s in symbols:
             entry = _market_cap_cache.get(s)
             if entry and now - entry[1] < _MARKET_CAP_TTL:
