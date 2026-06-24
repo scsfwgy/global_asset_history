@@ -111,7 +111,7 @@ PORT=8080 ./start.sh start
 
 ## 配置
 
-配置文件：
+### 配置文件
 
 `backend/config/price_change_config.json`
 
@@ -121,6 +121,47 @@ PORT=8080 ./start.sh start
 - `color_range`：热力图着色范围
 - `crypto.coin_ids`：CoinGecko 币种映射
 - `crypto.*_base_url`：各数据源地址
+
+### 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `PORT` | `8730` | Flask 服务端口 |
+| `HOST` | `0.0.0.0` | Flask 监听地址 |
+| `UPSTASH_REDIS_REST_URL` | 无 | 共享缓存（Upstash Redis REST）地址，未配置则降级为进程内缓存 |
+| `UPSTASH_REDIS_REST_TOKEN` | 无 | Upstash Redis REST token |
+| `KV_REST_API_URL` | 无 | Vercel KV 地址（与 Upstash 命名二选一，自动识别） |
+| `KV_REST_API_TOKEN` | 无 | Vercel KV token |
+
+## 部署
+
+### Vercel 部署
+
+项目已配置 Vercel 部署支持，包含：
+
+- Serverless Functions 托管后端 API
+- 静态文件托管前端资源
+- 路由重写规则（`vercel.json`）
+
+#### 共享缓存（Upstash Redis）
+
+为避免 Serverless 冷启动清空缓存和多实例不共享问题，建议接入 Upstash Redis：
+
+**工作原理**：
+
+- **L1 进程内存**：热实例快速响应
+- **L2 Upstash Redis**：跨实例共享，扛冷启动
+- **L3 本地文件**：持久化兜底
+
+接入后每个标的在 TTL（成功 6h / 错误 5min）内**全局最多向上游拉一次**，避免公共数据源限频。
+
+**接入步骤**：
+
+1. Vercel Marketplace → Upstash → 创建 Redis
+2. 连接到项目（自动注入环境变量）
+3. 重新部署
+
+未配置环境变量时全部优雅降级，本地开发行为不变。
 
 ## API
 
