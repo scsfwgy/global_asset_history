@@ -2,6 +2,33 @@
 
 This file provides guidance to Claude Code when working with code in this repository.
 
+## ⚠️ 最高优先级注意事项
+
+### 1. 新增功能必须写测试用例
+
+每次新增功能或修改核心逻辑时，**必须编写对应的测试用例**。
+
+- **后端测试**：使用 pytest，覆盖接口、数据处理、缓存逻辑
+- **前端测试**：如涉及关键交互逻辑（如热力图布局算法、数据计算），需提供测试说明或示例验证步骤
+- **如果确实无法编写测试**：必须明确说明原因（如临时脚本、纯 UI 调整、外部依赖不可测等）
+
+测试是保证系统稳定性的基石，避免改动引入回归问题。
+
+### 2. 新增路由必须检查 vercel.json
+
+每次在 `backend/app.py` 或 `backend/routes/` 中新增路由路径时，**必须同步检查 `vercel.json` 的 `rewrites`**：
+
+- 新增页面路径 → 添加 rewrite 规则，destination 指向 `/api/index`
+- 新增子路径参数 → 在已有正则中补充
+- **遗漏会导致 Vercel 上 404**，本地开发不受影响因此容易被忽略
+
+检查清单：
+1. 确认新增路由路径
+2. 打开 `vercel.json`，在 `rewrites` 数组中添加或更新规则
+3. 本地测试通过后，再次确认 `vercel.json` 已同步更新
+
+---
+
 ## 项目概述
 
 GlobalAssetHistory 是一个独立的资产历史收益分析工具。
@@ -80,23 +107,15 @@ backend/.venv/bin/pip install -r requirements.txt
 2. **前端图表**：延续 SVG 手工渲染风格，不引入图表库
 3. **无框架依赖**：前端使用 classic script，不引入 React/Vue
 
-## 关键注意事项
+## 其他注意事项
 
-### 1. 新增路由必须检查 vercel.json
-
-每次在 `backend/app.py` 或 `backend/routes/` 中新增路由路径时，必须同步检查 `vercel.json` 的 `rewrites`：
-
-- 新增页面路径 → 添加 rewrite 规则，destination 指向 `/api/index`
-- 新增子路径参数 → 在已有正则中补充
-- **遗漏会导致 Vercel 上 404**，本地开发不受影响因此容易被忽略
-
-### 2. 缓存清理机制
+### 缓存清理机制
 
 - **进程内存**：过期立即 `del`，不保留任何过期数据
 - **磁盘快照**：写入新文件前，用 `glob` 模式删除同标的所有旧版本
 - **降级策略**：依赖 L2 Redis 和 L3 文件，不依赖过期的 L1 内存
 
-### 3. 启动脚本特性
+### 启动脚本特性
 
 - `start.sh` 会自动释放端口占用
 - `backend/app.py` 使用 `debug=True`
