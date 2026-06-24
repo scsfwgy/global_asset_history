@@ -666,6 +666,19 @@ def _write_etf_history_snapshot(symbol: str, days: int, data: dict) -> None:
     path = _history_snapshot_path(symbol, days)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Clean up old snapshot files for this symbol before writing the new one.
+        # Pattern: {symbol}_*.json — keep only the file we're about to write.
+        safe_symbol = _safe_cache_filename(symbol, days).rsplit("_", 1)[0]  # Remove days suffix
+        pattern = f"{safe_symbol}_*.json"
+        for old_file in path.parent.glob(pattern):
+            if old_file != path:
+                try:
+                    old_file.unlink()
+                    logger.debug("Deleted old ETF history snapshot: %s", old_file.name)
+                except Exception as e:
+                    logger.warning("Failed to delete old snapshot %s: %s", old_file, e)
+
         tmp_path = path.with_suffix(".json.tmp")
         with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
@@ -1763,6 +1776,19 @@ def _write_etf_nav_snapshot(symbol: str, start_date: str, end_date: str, nav_map
     path = _nav_snapshot_path(symbol, start_date, end_date)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Clean up old snapshot files for this symbol before writing the new one.
+        # Pattern: {symbol}_*.json — keep only the file we're about to write.
+        safe_symbol = _safe_cache_filename(symbol)
+        pattern = f"{safe_symbol}_*.json"
+        for old_file in path.parent.glob(pattern):
+            if old_file != path:
+                try:
+                    old_file.unlink()
+                    logger.debug("Deleted old ETF NAV snapshot: %s", old_file.name)
+                except Exception as e:
+                    logger.warning("Failed to delete old snapshot %s: %s", old_file, e)
+
         tmp_path = path.with_suffix(".json.tmp")
         with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(
