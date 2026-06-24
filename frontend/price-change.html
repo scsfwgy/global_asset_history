@@ -1625,8 +1625,8 @@
                 <div class="control-group">
                     <span class="control-label" data-i18n="heatmap.period">统计周期</span>
                     <select id="hmPeriod" class="pc-type-select">
-                        <option value="today" data-i18n="heatmap.periodToday">今日</option>
-                        <option value="week" selected data-i18n="heatmap.periodWeek">本周</option>
+                        <option value="today" selected data-i18n="heatmap.periodToday">今日</option>
+                        <option value="week" data-i18n="heatmap.periodWeek">本周</option>
                         <option value="month" data-i18n="heatmap.periodMonth">本月</option>
                         <option value="quarter" data-i18n="heatmap.periodQuarter">本季</option>
                         <option value="year" data-i18n="heatmap.periodYear">本年</option>
@@ -1638,7 +1638,7 @@
                         <option value="return" data-i18n="heatmap.sizeByReturn">涨跌幅</option>
                     </select>
                     <span class="control-label" data-i18n="heatmap.topN">显示前</span>
-                    <input type="number" id="hmTopN" class="pc-range-input" value="20" min="1" max="60" style="width:55px;">
+                    <input type="number" id="hmTopN" class="pc-range-input" value="60" min="1" max="100" style="width:55px;">
                     <span class="control-label" data-i18n="heatmap.topNUnit">名</span>
                     <button id="hmRefreshBtn" class="pc-btn primary" data-i18n="heatmap.query">查询</button>
                     <button id="hmForceBtn" class="pc-btn" data-i18n-attr="title|heatmap.forceRefresh" data-i18n="heatmap.forceRefresh">🔄 强制刷新</button>

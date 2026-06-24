@@ -127,8 +127,8 @@ function saveHmState() {
   try {
     var state = {
       symbols: _hmSymbols.map(function (s) { return { symbol: s.symbol, type: s.type, name: s.name || null }; }),
-      period: hmPeriod ? hmPeriod.value : "week",
-      topN: hmTopN ? hmTopN.value : "20",
+      period: hmPeriod ? hmPeriod.value : "today",
+      topN: hmTopN ? hmTopN.value : "60",
       sizeBy: _hmSizeBy,
     };
     localStorage.setItem(HM_STORAGE_KEY, JSON.stringify(state));
@@ -459,6 +459,35 @@ function renderTreemap(result, animate) {
 
   renderHmLegend(maxAbs, prepared);
   renderHmStats(prepared);
+
+  // Trigger return-ranked breathing effect after initial animation completes
+  if (animate) {
+    setTimeout(function () { hmTriggerBreathing(prepared); }, 800);
+  }
+}
+
+// ─── Breathing effect: highlight tiles by return% descending ───
+
+function hmTriggerBreathing(prepared) {
+  // Sort by return descending (biggest gainers first)
+  var sorted = prepared.slice().sort(function (a, b) {
+    return (b.return_pct || 0) - (a.return_pct || 0);
+  });
+
+  var totalDuration = 5000; // 5s total
+  var perItem = totalDuration / sorted.length;
+
+  sorted.forEach(function (item, idx) {
+    var cellId = "hm-cell-" + prepared.indexOf(item);
+    var cell = document.getElementById(cellId);
+    if (!cell) return;
+
+    var delay = idx * perItem;
+    setTimeout(function () {
+      cell.classList.add("hm-breathing");
+      setTimeout(function () { cell.classList.remove("hm-breathing"); }, 800);
+    }, delay);
+  });
 }
 
 // ─── Click → jump to yearly tab and fill symbol ───
@@ -619,7 +648,7 @@ async function fetchHeatmap() {
   hmShowError(null);
   hmSetLoading(true);
 
-  var period = hmPeriod ? hmPeriod.value : "week";
+  var period = hmPeriod ? hmPeriod.value : "today";
 
   try {
     var body = { symbols: _hmSymbols, period: period, auto_top_n: autoN, include_market_cap: needMarketCap() };
@@ -671,7 +700,7 @@ async function initHeatmap() {
 
   restoreHmState();
   renderHmTags();
-  if (!hmPeriod.value) hmPeriod.value = "week";
+  if (!hmPeriod.value) hmPeriod.value = "today";
 
   hmAddBtn.addEventListener("click", function () { hmAddSymbol(hmSymInput.value, hmTypeSelect.value); });
   hmSymInput.addEventListener("keydown", function (e) {
@@ -731,6 +760,16 @@ async function initHeatmap() {
     _hmResizeTimer = setTimeout(rerender, 180);
   });
   window.addEventListener("scroll", hmHideTooltip, { passive: true });
+
+  // Register refresh hook for color scheme changes
+  var _origHmRefresh = window._refreshCharts;
+  window._refreshCharts = function () {
+    if (_origHmRefresh) _origHmRefresh();
+    // Re-render heatmap if data exists (color mapping depends on scheme)
+    if (_hmLastData && _hmLastData.data && _hmLastData.data.length) {
+      rerender();
+    }
+  };
 
   fetchHeatmap();
   _hmInitialFetchDone = true;
