@@ -122,32 +122,20 @@ function hmAddSymbol(symbol, type) {
 }
 
 // ─── State persistence ───
+//
+// Intentionally NOT persisted. Heatmap filters are session-only: every fresh
+// page load starts from the default filters (今日 / 成交额 / 前60名 / 无自选).
+// In-memory state still survives tab switching within one page session.
 
 function saveHmState() {
-  try {
-    var state = {
-      symbols: _hmSymbols.map(function (s) { return { symbol: s.symbol, type: s.type, name: s.name || null }; }),
-      period: hmPeriod ? hmPeriod.value : "today",
-      topN: hmTopN ? hmTopN.value : "60",
-      sizeBy: _hmSizeBy,
-    };
-    localStorage.setItem(HM_STORAGE_KEY, JSON.stringify(state));
-  } catch (_) { /* ignore */ }
+  // No-op stub: kept so existing call sites stay valid without persisting.
 }
 
 function restoreHmState() {
-  try {
-    var raw = localStorage.getItem(HM_STORAGE_KEY);
-    if (!raw) return false;
-    var state = JSON.parse(raw);
-    if (state.symbols && Array.isArray(state.symbols)) _hmSymbols = state.symbols;
-    if (state.period && hmPeriod) hmPeriod.value = state.period;
-    if (state.topN && hmTopN) hmTopN.value = state.topN;
-    if (state.sizeBy && hmSizeBySel) { _hmSizeBy = state.sizeBy; hmSizeBySel.value = state.sizeBy; }
-    return _hmSymbols.length > 0;
-  } catch (_) {
-    return false;
-  }
+  // Never restore — always default. Also remove any legacy cached state so a
+  // shared browser doesn't carry a previous user's filters.
+  try { localStorage.removeItem(HM_STORAGE_KEY); } catch (_) { /* ignore */ }
+  return false;
 }
 
 // ─── Responsive dimensions ───
