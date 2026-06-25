@@ -2,3 +2,7 @@ Flask==3.1.0
 Flask-Cors==5.0.0
 requests==2.32.3
 urllib3==2.3.0
+# Browser-TLS-impersonating HTTP client. Used for the heatmap market-cap
+# lookup (Yahoo v7/quote), whose crumb endpoint bot-throttles plain requests.
+# Code degrades to `requests` if absent, but the reliable overseas path needs this.
+curl_cffi==0.15.0

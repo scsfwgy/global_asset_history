@@ -630,8 +630,6 @@ function renderHmStats(prepared) {
 
 // ─── Data Fetching ───
 
-function needMarketCap() { return _hmSizeBy === "market_cap"; }
-
 function hasMarketCapData() {
   return _hmLastData && _hmLastData.data && _hmLastData.data.some(function (d) { return d.market_cap != null; });
 }
@@ -651,7 +649,10 @@ async function fetchHeatmap() {
   var period = hmPeriod ? hmPeriod.value : "today";
 
   try {
-    var body = { symbols: _hmSymbols, period: period, auto_top_n: autoN, include_market_cap: needMarketCap() };
+    // Always fetch market cap so the hover tooltip can show it in every
+    // size-by mode (not just when sizing by market cap). It's a single cached
+    // backend request, so the extra cost is negligible.
+    var body = { symbols: _hmSymbols, period: period, auto_top_n: autoN, include_market_cap: true };
     if (_hmForceRefresh) { body.force = true; _hmForceRefresh = false; }
     var resp = await fetch(HEATMAP_ENDPOINT, {
       method: "POST",

@@ -9,12 +9,6 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Callable, Dict, List, Optional, Tuple
 
-try:
-    import yfinance as _yf
-    _HAS_YFINANCE = True
-except ImportError:
-    _HAS_YFINANCE = False
-
 from .calculations import (
     _build_equity_curve,
     _compute_daily_returns_for_month,
@@ -682,19 +676,98 @@ def _period_label(period: str) -> str:
 
 
 # ── Market-cap fetch (best-effort, for heatmap "size by" dimension) ──
-# Primary: yfinance (works in overseas/HK production). Fallback: East Money
-# f116 (China-accessible). Both cached 24h.
+# Primary: Yahoo v7/quote, batched (one request for all symbols), authenticated
+# with a cached crumb and browser impersonation — this is the reliable path from
+# an overseas (US) server. Fallback: East Money f116 (per-symbol, China-domestic
+# — reachable when Yahoo is blocked). Results cached 24h.
+#
+# Why not yfinance.fast_info.market_cap: it fires a *second*, separately
+# rate-limited Yahoo request (get_shares_full) per symbol and routinely raises
+# YFRateLimitError, so it silently fell through to the slow China fallback.
 _market_cap_cache: Dict[str, Tuple[float, float]] = {}  # symbol -> (cap, ts)
 _market_cap_lock = threading.Lock()
 _MARKET_CAP_TTL = 24 * 60 * 60  # 24 hours
-_EM_QUOTE_URL = "https://push2.eastmoney.com/api/qt/stock/get"
+
+import requests as _requests
 
 # East Money is a direct domestic API — bypass any ambient proxy (trust_env),
 # which on some dev machines routes through a flaky proxy and fails.
-import requests as _requests
+_EM_QUOTE_URL = "https://push2.eastmoney.com/api/qt/stock/get"
 _em_session = _requests.Session()
 _em_session.trust_env = False
 _em_session.headers.update({"User-Agent": "Mozilla/5.0"})
+
+# Yahoo quote endpoint. Prefer curl_cffi (browser TLS impersonation dodges the
+# bot throttling that plain requests hits); fall back to requests if absent.
+_YH_QUOTE_URL = "https://query1.finance.yahoo.com/v7/finance/quote"
+_YH_CRUMB_URL = "https://query1.finance.yahoo.com/v1/test/getcrumb"
+_YH_COOKIE_URL = "https://fc.yahoo.com"
+_YH_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+_YH_BATCH = 50              # symbols per quote request
+_YH_CRUMB_TTL = 60 * 60     # re-prime crumb/cookies hourly
+
+try:
+    from curl_cffi import requests as _creq
+    _yh_session = _creq.Session(impersonate="chrome", trust_env=False)
+except Exception:  # pragma: no cover - curl_cffi optional
+    _yh_session = _requests.Session()
+    _yh_session.trust_env = False
+    _yh_session.headers.update({"User-Agent": _YH_UA})
+
+_yh_crumb: Optional[str] = None
+_yh_crumb_ts: float = 0.0
+_yh_crumb_lock = threading.Lock()
+
+
+def _yahoo_crumb() -> Optional[str]:
+    """Return a cached Yahoo crumb, priming cookies + crumb hourly."""
+    global _yh_crumb, _yh_crumb_ts
+    with _yh_crumb_lock:
+        if _yh_crumb and time.time() - _yh_crumb_ts < _YH_CRUMB_TTL:
+            return _yh_crumb
+        try:
+            _yh_session.get(_YH_COOKIE_URL, timeout=8)
+            r = _yh_session.get(_YH_CRUMB_URL, timeout=8)
+            crumb = (r.text or "").strip()
+            # A valid crumb is a short token, never an HTML error page.
+            if crumb and "<" not in crumb and len(crumb) < 64:
+                _yh_crumb = crumb
+                _yh_crumb_ts = time.time()
+                return _yh_crumb
+            logger.debug("Yahoo crumb fetch returned non-token (status %s)", r.status_code)
+        except Exception as e:
+            logger.debug("Yahoo crumb fetch failed: %s", e)
+    return None
+
+
+def _yahoo_market_caps(symbols: List[str]) -> Dict[str, float]:
+    """Batched Yahoo v7/quote market-cap lookup. Returns {symbol: cap}."""
+    out: Dict[str, float] = {}
+    crumb = _yahoo_crumb()
+    if not crumb:
+        return out
+    for i in range(0, len(symbols), _YH_BATCH):
+        chunk = symbols[i:i + _YH_BATCH]
+        try:
+            r = _yh_session.get(
+                _YH_QUOTE_URL,
+                params={"symbols": ",".join(chunk), "crumb": crumb},
+                timeout=10,
+            )
+            if r.status_code != 200:
+                logger.debug("Yahoo quote batch %s returned %s", i // _YH_BATCH, r.status_code)
+                continue
+            results = (r.json().get("quoteResponse") or {}).get("result") or []
+            for q in results:
+                sym = q.get("symbol")
+                mc = q.get("marketCap")
+                if sym and mc and float(mc) > 0:
+                    out[sym.upper()] = float(mc)
+        except Exception as e:
+            logger.debug("Yahoo quote batch failed: %s", e)
+            continue
+    return out
 
 
 def _em_market_cap(symbol: str) -> Optional[float]:
@@ -719,20 +792,11 @@ def _em_market_cap(symbol: str) -> Optional[float]:
     return None
 
 
-def _fetch_one_market_cap(symbol: str) -> Tuple[str, Optional[float]]:
-    """yfinance first (overseas), East Money fallback (China)."""
-    if _HAS_YFINANCE:
-        try:
-            mc = _yf.Ticker(symbol).fast_info.get("market_cap")
-            if mc and float(mc) > 0:
-                return symbol, float(mc)
-        except Exception as e:
-            logger.debug("yfinance market_cap failed for %s: %s", symbol, e)
-    return symbol, _em_market_cap(symbol)
-
-
 def _get_market_caps(symbols: List[str]) -> Dict[str, float]:
-    """Return {symbol: market_cap} for US stocks, using a 24h cache."""
+    """Return {symbol: market_cap} for US stocks, using a 24h cache.
+
+    Yahoo (batched, one request) is primary; East Money fills any misses.
+    """
     if not symbols:
         return {}
     now = time.time()
@@ -754,13 +818,23 @@ def _get_market_caps(symbols: List[str]) -> Dict[str, float]:
     if not to_fetch:
         return result
 
-    worker_count = min(MAX_YEARLY_WORKERS, max(1, len(to_fetch)))
-    with ThreadPoolExecutor(max_workers=worker_count) as ex:
-        for sym, mc in ex.map(_fetch_one_market_cap, to_fetch):
-            if mc and mc > 0:
-                with _market_cap_lock:
-                    _market_cap_cache[sym] = (mc, now)
-                result[sym] = mc
+    # 1) Yahoo batch — fast, reliable from a US server.
+    fetched = _yahoo_market_caps(to_fetch)
+
+    # 2) East Money fallback for whatever Yahoo didn't return (per-symbol).
+    misses = [s for s in to_fetch if s not in fetched]
+    if misses:
+        worker_count = min(MAX_YEARLY_WORKERS, max(1, len(misses)))
+        with ThreadPoolExecutor(max_workers=worker_count) as ex:
+            for sym, mc in zip(misses, ex.map(_em_market_cap, misses)):
+                if mc and mc > 0:
+                    fetched[sym] = mc
+
+    if fetched:
+        with _market_cap_lock:
+            for sym, mc in fetched.items():
+                _market_cap_cache[sym] = (mc, now)
+        result.update(fetched)
     return result
 
 
