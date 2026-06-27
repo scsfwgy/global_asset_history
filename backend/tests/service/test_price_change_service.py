@@ -4,7 +4,7 @@ All external data fetching is mocked — no network calls in tests.
 """
 
 import time
-from datetime import date
+from datetime import date, datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -586,3 +586,352 @@ class TestFetcherRegistration:
         assert "T" in result["data"]
         assert len(called) == 1
         track_coverage(MOD, 2)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Heatmap today fast-path tests
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestYahooQuoteBatch:
+    """Unit tests for _yahoo_quote_batch — batch v7/quote fetching."""
+
+    @patch("service.price_change.price_change_service._yh_session")
+    @patch("service.price_change.price_change_service._yahoo_crumb")
+    def test_returns_quotes(self, mock_crumb, mock_session):
+        """Valid crumb + 200 response → parsed quote list."""
+        mock_crumb.return_value = "valid-crumb"
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "quoteResponse": {
+                "result": [
+                    {
+                        "symbol": "AAPL",
+                        "shortName": "Apple Inc.",
+                        "regularMarketPrice": 150.0,
+                        "regularMarketChangePercent": 2.5,
+                        "regularMarketVolume": 1000000,
+                        "marketCap": 3000000000000,
+                    },
+                    {
+                        "symbol": "MSFT",
+                        "longName": "Microsoft Corporation",
+                        "regularMarketPrice": 300.0,
+                        "regularMarketChangePercent": -1.2,
+                        "regularMarketVolume": 500000,
+                        "marketCap": 2500000000000,
+                    },
+                ]
+            }
+        }
+        mock_session.get.return_value = mock_resp
+
+        result = svc._yahoo_quote_batch(["AAPL", "MSFT"])
+        assert len(result) == 2
+        assert result[0]["symbol"] == "AAPL"
+        assert result[0]["name"] == "Apple Inc."
+        assert result[0]["price"] == 150.0
+        assert result[0]["change_pct"] == 2.5
+        assert result[0]["volume"] == 1000000
+        assert result[0]["market_cap"] == 3000000000000
+        assert result[1]["symbol"] == "MSFT"
+        assert result[1]["name"] == "Microsoft Corporation"
+        track_coverage(MOD, 3)
+
+    @patch("service.price_change.price_change_service._yh_session")
+    @patch("service.price_change.price_change_service._yahoo_crumb")
+    def test_no_crumb_returns_empty(self, mock_crumb, mock_session):
+        """None crumb → empty list (no request made)."""
+        mock_crumb.return_value = None
+        result = svc._yahoo_quote_batch(["AAPL"])
+        assert result == []
+        mock_session.get.assert_not_called()
+        track_coverage(MOD, 1)
+
+    @patch("service.price_change.price_change_service._yh_session")
+    @patch("service.price_change.price_change_service._yahoo_crumb")
+    def test_non_200_returns_empty(self, mock_crumb, mock_session):
+        """Non-200 status → empty list for that chunk."""
+        mock_crumb.return_value = "crumb"
+        mock_resp = MagicMock()
+        mock_resp.status_code = 429
+        mock_session.get.return_value = mock_resp
+
+        result = svc._yahoo_quote_batch(["AAPL"])
+        assert result == []
+        track_coverage(MOD, 1)
+
+    @patch("service.price_change.price_change_service._yh_session")
+    @patch("service.price_change.price_change_service._yahoo_crumb")
+    def test_none_price_skipped(self, mock_crumb, mock_session):
+        """Symbol with regularMarketPrice=None is filtered out."""
+        mock_crumb.return_value = "crumb"
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "quoteResponse": {
+                "result": [
+                    {
+                        "symbol": "AAPL",
+                        "regularMarketPrice": None,  # no price
+                        "regularMarketChangePercent": 2.5,
+                    }
+                ]
+            }
+        }
+        mock_session.get.return_value = mock_resp
+
+        result = svc._yahoo_quote_batch(["AAPL"])
+        assert len(result) == 0
+        track_coverage(MOD, 1)
+
+    @patch("service.price_change.price_change_service._yh_session")
+    @patch("service.price_change.price_change_service._yahoo_crumb")
+    def test_batch_splitting(self, mock_crumb, mock_session):
+        """Symbols beyond _YH_BATCH (50) are split across multiple requests."""
+        mock_crumb.return_value = "crumb"
+
+        def make_page(url, params=None, **kwargs):
+            syms = (params or {}).get("symbols", "").split(",")
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = {
+                "quoteResponse": {
+                    "result": [
+                        {
+                            "symbol": s,
+                            "regularMarketPrice": 100.0,
+                            "regularMarketChangePercent": 1.0,
+                        }
+                        for s in syms
+                    ]
+                }
+            }
+            return mock_resp
+
+        mock_session.get.side_effect = make_page
+
+        symbols = [f"SYM{i}" for i in range(60)]
+        result = svc._yahoo_quote_batch(symbols)
+        assert len(result) == 60
+        assert mock_session.get.call_count == 2  # 50 + 10 = 2 batches
+        track_coverage(MOD, 2)
+
+
+class TestBuildHeatmapToday:
+    """Tests for _build_heatmap_today — today fast-path orchestrator."""
+
+    def _compute_stub(self, sym, atype):
+        """Stub matching _compute_one signature for non-stock entries."""
+        return {
+            "symbol": sym,
+            "name": None,
+            "type": atype,
+            "return_pct": 5.0,
+            "turnover": 999.0,
+            "turnover_currency": "USD" if atype == "stock" else "CNY",
+        }
+
+    @patch("service.price_change.price_change_service._yahoo_quote_batch")
+    def test_all_stocks_success(self, mock_batch):
+        """All entries are stocks → batch used, no fallback."""
+        mock_batch.return_value = [
+            {"symbol": "AAPL", "name": "Apple", "price": 150.0,
+             "change_pct": 2.5, "volume": 1000000, "market_cap": 3e12},
+            {"symbol": "MSFT", "name": "Microsoft", "price": 300.0,
+             "change_pct": -1.0, "volume": 500000, "market_cap": 2.5e12},
+        ]
+        entries = [("AAPL", "stock"), ("MSFT", "stock")]
+        user = {"MSFT"}
+        auto = {"AAPL"}
+
+        result = svc._build_heatmap_today(
+            entries, user, auto, auto_top_n=20,
+            include_market_cap=True, compute_fn=self._compute_stub,
+        )
+        assert result is not None
+        assert result["period"] == "today"
+        assert result["period_label"] == datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        assert len(result["data"]) == 2
+        # Auto symbols first, then user
+        assert result["data"][0]["symbol"] == "AAPL"
+        assert result["data"][0]["name"] == "Apple"
+        assert result["data"][0]["return_pct"] == 2.5
+        turnover = result["data"][0]["turnover"]
+        assert turnover == round(1000000 * 150.0, 2)
+        assert result["data"][0]["market_cap"] == 3e12
+        track_coverage(MOD, 3)
+
+    @patch("service.price_change.price_change_service._yahoo_quote_batch")
+    def test_batch_fails_fallback(self, mock_batch):
+        """Batch returns empty for non-empty stocks → return None."""
+        mock_batch.return_value = []
+        entries = [("AAPL", "stock"), ("MSFT", "stock")]
+
+        result = svc._build_heatmap_today(
+            entries, set(), set(), auto_top_n=0,
+            include_market_cap=False, compute_fn=self._compute_stub,
+        )
+        assert result is None
+        track_coverage(MOD, 1)
+
+    @patch("service.price_change.price_change_service._yahoo_quote_batch")
+    def test_market_cap_disabled(self, mock_batch):
+        """include_market_cap=False → market_cap absent from results."""
+        mock_batch.return_value = [
+            {"symbol": "AAPL", "name": "Apple", "price": 150.0,
+             "change_pct": 2.5, "volume": 1000000, "market_cap": 3e12},
+        ]
+        result = svc._build_heatmap_today(
+            [("AAPL", "stock")], {"AAPL"}, set(), auto_top_n=0,
+            include_market_cap=False, compute_fn=self._compute_stub,
+        )
+        assert result is not None
+        assert "market_cap" in result["data"][0]
+        assert result["data"][0]["market_cap"] is None
+        track_coverage(MOD, 1)
+
+    @patch("service.price_change.price_change_service._yahoo_quote_batch")
+    def test_mixed_stock_and_crypto(self, mock_batch):
+        """Stocks via batch, crypto via compute_fn."""
+        mock_batch.return_value = [
+            {"symbol": "AAPL", "name": "Apple", "price": 150.0,
+             "change_pct": 2.5, "volume": 1000000, "market_cap": 3e12},
+        ]
+        entries = [("AAPL", "stock"), ("BTC", "crypto")]
+        user = set()
+        auto = {"AAPL", "BTC"}
+
+        result = svc._build_heatmap_today(
+            entries, user, auto, auto_top_n=20,
+            include_market_cap=True, compute_fn=self._compute_stub,
+        )
+        assert result is not None
+        assert len(result["data"]) == 2
+        # BTC came from compute_stub
+        btc = next(r for r in result["data"] if r["symbol"] == "BTC")
+        assert btc["return_pct"] == 5.0
+        assert btc["type"] == "crypto"
+        track_coverage(MOD, 2)
+
+    @patch("service.price_change.price_change_service._yahoo_quote_batch")
+    def test_empty_entries(self, mock_batch):
+        """No entries → empty data, batch never called."""
+        result = svc._build_heatmap_today(
+            [], set(), set(), auto_top_n=0,
+            include_market_cap=True, compute_fn=self._compute_stub,
+        )
+        assert result is not None
+        assert result["data"] == []
+        mock_batch.assert_not_called()
+        track_coverage(MOD, 1)
+
+    @patch("service.price_change.price_change_service._yahoo_quote_batch")
+    def test_symbol_not_in_quote_map(self, mock_batch):
+        """Stock not in batch response → None values, no crash."""
+        mock_batch.return_value = []  # AAPL missing from response
+        entries = [("AAPL", "stock")]
+        # No stocks AND empty batch → _build_heatmap_today sees
+        # stock_syms=["AAPL"] but quotes=[] → returns None (fallback).
+        # Test the edge case: stock_syms non-empty, batch returned partial.
+        # Actually we need quotes non-empty to avoid the "fail" path.
+        mock_batch.return_value = [
+            {"symbol": "MSFT", "name": "MS", "price": 300.0,
+             "change_pct": 1.0, "volume": 500000, "market_cap": 2.5e12},
+        ]
+        result = svc._build_heatmap_today(
+            [("AAPL", "stock"), ("MSFT", "stock")],
+            {"AAPL", "MSFT"}, set(), auto_top_n=0,
+            include_market_cap=False, compute_fn=self._compute_stub,
+        )
+        assert result is not None
+        assert len(result["data"]) == 2
+        aapl = next(r for r in result["data"] if r["symbol"] == "AAPL")
+        assert aapl["return_pct"] is None
+        assert aapl["turnover"] is None
+        track_coverage(MOD, 1)
+
+    @patch("service.price_change.price_change_service._yahoo_quote_batch")
+    def test_auto_top_n_respected(self, mock_batch):
+        """auto_top_n limits auto results, user symbols always included."""
+        mock_batch.return_value = [
+            {"symbol": s, "name": s, "price": 100.0 + i,
+             "change_pct": 1.0, "volume": 100000 * (i + 1),
+             "market_cap": 1e12}
+            for i, s in enumerate(["A1", "A2", "A3", "A4", "A5"])
+        ]
+        entries = [("A1", "stock"), ("A2", "stock"), ("A3", "stock"),
+                   ("A4", "stock"), ("A5", "stock"), ("USER1", "stock")]
+        user = {"USER1"}
+        auto = {"A1", "A2", "A3", "A4", "A5"}
+
+        result = svc._build_heatmap_today(
+            entries, user, auto, auto_top_n=3,
+            include_market_cap=False, compute_fn=self._compute_stub,
+        )
+        assert result is not None
+        # Top 3 auto + 1 user = 4
+        assert len(result["data"]) == 4
+        # Auto sorted by turnover desc (A5 has highest vol)
+        assert result["data"][0]["symbol"] == "A5"
+        assert result["data"][1]["symbol"] == "A4"
+        assert result["data"][2]["symbol"] == "A3"
+        # User always present
+        assert result["data"][3]["symbol"] == "USER1"
+        track_coverage(MOD, 2)
+
+
+class TestFetchHeatmapToday:
+    """Integration tests: fetch_heatmap_data with period='today'."""
+
+    @patch("service.price_change.price_change_service._build_heatmap_today")
+    def test_today_fast_path_used(self, mock_build):
+        """period='today' routes through _build_heatmap_today."""
+        mock_build.return_value = {
+            "period": "today", "period_label": "1d",
+            "data": [{"symbol": "AAPL", "type": "stock"}],
+        }
+        result = svc.fetch_heatmap_data(
+            symbols=[{"symbol": "AAPL", "type": "stock"}],
+            period="today", auto_top_n=0, include_market_cap=True,
+        )
+        assert result["period"] == "today"
+        mock_build.assert_called_once()
+        track_coverage(MOD, 1)
+
+    @patch("service.price_change.price_change_service._build_heatmap_today")
+    def test_today_fast_path_fallback_to_ohlcv(self, mock_build):
+        """When fast path returns None, fall through to per-symbol OHLCV."""
+        mock_build.return_value = None
+
+        with patch(
+            "service.price_change.price_change_service._fetch_daily_series_cached"
+        ) as mock_fetch:
+            from tests.conftest import make_series
+            mock_fetch.return_value = make_series(years=1, start_price=100.0)
+
+            result = svc.fetch_heatmap_data(
+                symbols=[{"symbol": "AAPL", "type": "stock"}],
+                period="today", auto_top_n=0, include_market_cap=False,
+            )
+        assert result["period"] == "today"
+        mock_build.assert_called_once()
+        mock_fetch.assert_called()
+        track_coverage(MOD, 2)
+
+    @patch("service.price_change.price_change_service._build_heatmap_today")
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_non_today_skips_fast_path(self, mock_fetch, mock_build):
+        """period='month' should NOT use the today fast path."""
+        from tests.conftest import make_series
+        mock_fetch.return_value = make_series(years=1, start_price=100.0)
+
+        result = svc.fetch_heatmap_data(
+            symbols=[{"symbol": "AAPL", "type": "stock"}],
+            period="month", auto_top_n=0, include_market_cap=False,
+        )
+        assert result["period"] == "month"
+        mock_build.assert_not_called()
+        mock_fetch.assert_called()
+        track_coverage(MOD, 1)

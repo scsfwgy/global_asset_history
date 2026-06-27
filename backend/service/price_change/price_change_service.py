@@ -770,6 +770,147 @@ def _yahoo_market_caps(symbols: List[str]) -> Dict[str, float]:
     return out
 
 
+def _yahoo_quote_batch(symbols: List[str]) -> List[dict]:
+    """Fetch quote data for multiple US stocks in a single batch request.
+
+    Uses Yahoo v7/quote endpoint. Returns list of dicts with keys:
+    symbol, name, price, change_pct, volume, market_cap.
+    Returns empty list on failure (crumb unavailable, network error, etc.).
+    """
+    crumb = _yahoo_crumb()
+    if not crumb:
+        return []
+
+    results: List[dict] = []
+    for i in range(0, len(symbols), _YH_BATCH):
+        chunk = symbols[i:i + _YH_BATCH]
+        try:
+            r = _yh_session.get(
+                _YH_QUOTE_URL,
+                params={"symbols": ",".join(chunk), "crumb": crumb},
+                timeout=10,
+            )
+            if r.status_code != 200:
+                logger.debug("Yahoo quote batch returned %s", r.status_code)
+                continue
+            quotes = (r.json().get("quoteResponse") or {}).get("result") or []
+            for q in quotes:
+                sym = q.get("symbol", "").upper()
+                price = q.get("regularMarketPrice")
+                if not sym or price is None:
+                    continue
+                results.append({
+                    "symbol": sym,
+                    "name": q.get("shortName") or q.get("longName"),
+                    "price": price,
+                    "change_pct": q.get("regularMarketChangePercent"),
+                    "volume": q.get("regularMarketVolume"),
+                    "market_cap": q.get("marketCap"),
+                })
+        except Exception as e:
+            logger.debug("Yahoo quote batch failed: %s", e)
+            continue
+    return results
+
+
+def _build_heatmap_today(
+    unique_entries: List[Tuple[str, str]],
+    user_symbols_set: set,
+    auto_syms: set,
+    auto_top_n: int,
+    include_market_cap: bool,
+    compute_fn: Callable,
+) -> Optional[dict]:
+    """Build heatmap data for period='today' using batch v7/quote.
+
+    Stocks are fetched in a single batch request (1-2 HTTP calls for
+    up to 92 symbols). Non-stock symbols go through *compute_fn*
+    (per-symbol OHLCV). Returns None when the batch fails and the
+    caller should fall back to the per-symbol path for everything.
+    """
+    # Split entries
+    stock_syms: List[str] = []
+    non_stock_entries: List[Tuple[str, str]] = []
+    for sym, atype in unique_entries:
+        if atype == "stock":
+            stock_syms.append(sym)
+        else:
+            non_stock_entries.append((sym, atype))
+
+    # Batch v7/quote — 1 request for all stocks
+    quotes = _yahoo_quote_batch(stock_syms) if stock_syms else []
+
+    # Had stocks but batch returned nothing → fail, let caller fall back
+    if stock_syms and not quotes:
+        return None
+
+    quote_map = {q["symbol"]: q for q in quotes}
+    results: List[dict] = []
+
+    # --- stock results from batch quote data ---
+    for sym in stock_syms:
+        q = quote_map.get(sym)
+        if q:
+            turnover = None
+            if q["volume"] and q["price"]:
+                turnover = round(q["volume"] * q["price"], 2)
+            results.append({
+                "symbol": sym,
+                "name": q.get("name"),
+                "type": "stock",
+                "return_pct": round(q["change_pct"], 2) if q["change_pct"] is not None else None,
+                "turnover": turnover,
+                "turnover_currency": "USD",
+                "market_cap": q.get("market_cap") if include_market_cap else None,
+            })
+        else:
+            results.append({
+                "symbol": sym, "name": None, "type": "stock",
+                "return_pct": None, "turnover": None,
+                "turnover_currency": "USD",
+                "market_cap": None,
+            })
+
+    # --- non-stock: per-symbol OHLCV (usually 0 entries) ---
+    if non_stock_entries:
+        worker_count = min(MAX_YEARLY_WORKERS, max(1, len(non_stock_entries)))
+        with ThreadPoolExecutor(max_workers=worker_count) as executor:
+            futures = {
+                executor.submit(compute_fn, sym, atype): sym
+                for sym, atype in non_stock_entries
+            }
+            for future in as_completed(futures):
+                try:
+                    results.append(future.result())
+                except Exception:
+                    logger.exception(
+                        "Heatmap compute failed for %s", futures[future]
+                    )
+
+    # --- sort & filter (same logic as the generic path) ---
+    auto_results = [r for r in results if r["symbol"] in auto_syms]
+    user_results = [r for r in results if r["symbol"] in user_symbols_set]
+
+    auto_results.sort(
+        key=lambda r: r["turnover"] if r["turnover"] is not None else 0,
+        reverse=True,
+    )
+    top_auto = auto_results[:auto_top_n] if auto_top_n > 0 else []
+
+    ordered = list(top_auto)
+    for sym, _ in unique_entries:
+        if sym in user_symbols_set:
+            match = next((r for r in user_results if r["symbol"] == sym), None)
+            if match and match not in ordered:
+                ordered.append(match)
+
+    return {
+        "period": "today",
+        "period_label": _period_label("today"),
+        "data": ordered,
+    }
+
+
 def _em_market_cap(symbol: str) -> Optional[float]:
     """Fetch total market cap from East Money (f116). Resolves the US exchange
     prefix (105=NASDAQ, 106=NYSE) by trying both."""
@@ -942,6 +1083,18 @@ def fetch_heatmap_data(
             result["turnover"] = round(total_turnover, 2)
 
         return result
+
+    # ---- Today fast path: batch v7/quote for stocks (1 request vs 92) ----
+    if period == "today":
+        result = _build_heatmap_today(
+            unique_entries, user_symbols_set, auto_syms,
+            auto_top_n, include_market_cap, _compute_one,
+        )
+        if result is not None:
+            logger.info("Heatmap today: batch v7/quote used (%d symbols, 1 request)",
+                        len(result["data"]))
+            return result
+        logger.warning("Heatmap today: batch v7/quote failed, falling back to per-symbol OHLCV")
 
     # Fetch concurrently
     worker_count = min(MAX_YEARLY_WORKERS, max(1, len(unique_entries)))
