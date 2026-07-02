@@ -12,6 +12,7 @@ from service.price_change.price_change_service import (
     _fetch_daily_series_cached,
     fetch_daily_returns,
     fetch_heatmap_data,
+    fetch_return_detail,
     fetch_yearly_returns,
     fetch_monthly_returns,
     fetch_monthly_returns_batch,
@@ -160,6 +161,26 @@ def get_daily_returns():
         return jsonify({"symbol": symbol, "type": asset_type, "year": year, "month": month, "days": days})
     except Exception as e:
         logger.exception("Failed to fetch daily returns: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@price_change_bp.route("/detail", methods=["POST"])
+def get_return_detail():
+    """Return single-symbol yearly/monthly return detail."""
+    body = request.get_json(silent=True) or {}
+    symbol = body.get("symbol", "").strip().upper()
+    asset_type = body.get("type", "stock").strip().lower()
+
+    if not symbol:
+        return jsonify({"error": "symbol is required"}), 400
+
+    try:
+        result = fetch_return_detail(symbol, asset_type)
+        return jsonify(result)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.exception("Failed to fetch return detail: %s", e)
         return jsonify({"error": str(e)}), 500
 
 

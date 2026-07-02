@@ -483,6 +483,123 @@
             cursor: default;
         }
 
+        /* ─── Return detail heatmap ─── */
+        .pd-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 12px 0 16px;
+        }
+        .pd-summary-card {
+            background: var(--apple-surface-2);
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            padding: 12px;
+        }
+        .pd-summary-label {
+            font-size: 12px;
+            color: var(--apple-text-tertiary);
+            margin-bottom: 4px;
+        }
+        .pd-summary-value {
+            font-size: 18px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .pd-table-wrap {
+            overflow-x: auto;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+        }
+        .pd-table {
+            width: 100%;
+            min-width: 980px;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 13px;
+        }
+        .pd-table th,
+        .pd-table td {
+            padding: 10px 8px;
+            text-align: center;
+            border-right: 1px solid var(--apple-divider);
+            border-bottom: 1px solid var(--apple-divider);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        .pd-table th {
+            background: var(--apple-surface-2);
+            color: var(--apple-text-secondary);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .pd-table th:first-child,
+        .pd-table td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            background: var(--apple-surface-2);
+            color: var(--apple-text-primary);
+            font-weight: 600;
+        }
+        .pd-table tr:last-child td { border-bottom: none; }
+        .pd-table th:last-child,
+        .pd-table td:last-child { border-right: none; }
+        .pd-stat-row td:first-child {
+            color: var(--apple-text-secondary);
+        }
+        .pd-legend {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            color: var(--apple-text-tertiary);
+            font-size: 12px;
+        }
+        .pd-legend-chip {
+            width: 28px;
+            height: 10px;
+            border-radius: var(--radius-full);
+        }
+        .pd-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .pd-controls .control-label {
+            font-size: 12px;
+            color: var(--apple-text-tertiary);
+            white-space: nowrap;
+        }
+        @media (max-width: 768px) {
+            .pd-controls {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                width: 100%;
+                align-items: end;
+            }
+            .pd-controls .control-label {
+                grid-column: 1 / -1;
+                margin-top: 2px;
+            }
+            .pd-controls .pc-symbol-input,
+            .pd-controls .pc-type-select,
+            .pd-controls .pc-range-input,
+            .pd-controls .pc-btn {
+                width: 100%;
+            }
+            .pd-controls .pd-range-sep {
+                display: none;
+            }
+            .pd-controls #pdQueryBtn {
+                grid-column: 1 / -1;
+            }
+        }
+
         .pc-daily-wrap {
             margin-top: 16px;
             border-top: 1px solid var(--apple-divider);
@@ -1592,6 +1709,7 @@
         <nav class="tab-bar">
             <button class="tab-btn active" data-tab="heatmap" data-i18n="tab.heatmap">热力图</button>
             <button class="tab-btn" data-tab="yearly" data-i18n="tab.yearlyReturns">历年涨跌幅</button>
+            <button class="tab-btn" data-tab="detail" data-i18n="tab.returnDetail">涨跌详情</button>
             <button class="tab-btn" data-tab="backtest" data-i18n="tab.backtest">回测</button>
             <button class="tab-btn" data-tab="crash" data-i18n="tab.crashStats">暴跌统计</button>
             <button class="tab-btn" data-tab="etf" data-i18n="tab.etfTracking">标普纳指ETF追踪（场内）</button>
@@ -1611,7 +1729,7 @@
         </div>
         <div class="hm-filter-panel" id="hmFilterPanel" style="display:none;">
             <div class="controls-bar" style="margin-bottom: 12px;">
-                <div class="control-group">
+                <div class="control-group pd-controls">
                     <span class="control-label" data-i18n="yearly.symbolInput">统计代码</span>
                     <input type="text" id="hmSymbolInput" class="pc-symbol-input" data-i18n-attr="placeholder|yearly.placeholderSymbol" placeholder="AAPL" maxlength="10">
                     <select id="hmTypeSelect" class="pc-type-select">
@@ -1731,6 +1849,50 @@
         <div id="pcMonthlyContainer"></div>
 
         </div><!-- /tab-yearly -->
+
+        <div class="tab-panel" id="tab-detail">
+        <div class="pc-monthly">
+            <div class="pc-monthly-header">
+                <span class="pc-chart-title" data-i18n="detail.title">涨跌详情</span>
+            </div>
+            <div class="controls-bar" style="margin-bottom:12px;">
+                <div class="control-group">
+                    <span class="control-label" data-i18n="yearly.symbolInput">统计代码</span>
+                    <input type="text" id="pdSymbolInput" class="pc-symbol-input" data-i18n-attr="placeholder|yearly.placeholderSymbol" placeholder="BTC" maxlength="20">
+                    <select id="pdTypeSelect" class="pc-type-select">
+                        <option value="stock" data-i18n="yearly.assetTypeStock">美股</option>
+                        <option value="crypto" selected data-i18n="yearly.assetTypeCrypto">数字货币</option>
+                        <option value="cn_stock" data-i18n="yearly.assetTypeCnStock">A股</option>
+                    </select>
+                    <span class="control-label" data-i18n="yearly.colorRange">着色范围</span>
+                    <input type="number" id="pdMinRange" class="pc-range-input" value="-50" step="5">
+                    <span class="control-label pd-range-sep">~</span>
+                    <input type="number" id="pdMaxRange" class="pc-range-input" value="50" step="5">
+                    <button id="pdQueryBtn" class="pc-btn primary" data-i18n="yearly.query">查询</button>
+                </div>
+            </div>
+            <div class="pc-error" id="pdError"></div>
+            <div class="pc-loading" id="pdLoading" style="display:none;">
+                <div class="spinner"></div>
+                <span data-i18n="detail.fetching">获取涨跌详情中...</span>
+            </div>
+            <div id="pdEmpty" class="pc-empty">
+                <div style="font-size:32px;margin-bottom:8px;">▦</div>
+                <div data-i18n="detail.emptyPrompt">输入单个代码并点击「查询」查看年月涨跌热力图</div>
+                <div class="pc-empty-hint" data-i18n="detail.emptyHint">适合查看单一股票、ETF 或数字货币的历史季节性表现</div>
+            </div>
+            <div id="pdResult" style="display:none;">
+                <div class="pd-summary" id="pdSummary"></div>
+                <div class="pd-table-wrap">
+                    <table class="pd-table">
+                        <thead id="pdTableHead"></thead>
+                        <tbody id="pdTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="pd-legend" id="pdLegend"></div>
+            </div>
+        </div>
+        </div><!-- /tab-detail -->
 
         <!-- Backtest -->
         <div class="tab-panel" id="tab-backtest">
@@ -4022,6 +4184,7 @@
         .catch(function () {});
     </script>
     <script src="/js/price-change.js"></script>
+    <script src="/js/price-detail.js"></script>
     <script src="/js/charts.js"></script>
     <script src="/js/drilldown.js"></script>
     <script src="/js/backtest.js"></script>
@@ -4245,6 +4408,7 @@
             var PATH_TO_TAB = {
                 '/': 'heatmap',
                 '/yearly': 'yearly',
+                '/detail': 'detail',
                 '/backtest': 'backtest',
                 '/crash': 'crash',
                 '/etf': 'etf',
@@ -4269,6 +4433,7 @@
             var TAB_TO_PATH = {
                 'heatmap': '/heatmap',
                 'yearly': '/yearly',
+                'detail': '/detail',
                 'backtest': '/backtest',
                 'crash': '/crash',
                 'etf': '/etf',
@@ -4352,6 +4517,12 @@
                     titleKey: 'seo.indexTitle',
                     descKey: 'seo.indexDescription',
                     canonical: '/yearly'
+                },
+                'detail': {
+                    titleKey: 'seo.detailTitle',
+                    descKey: 'seo.detailDescription',
+                    canonical: '/detail',
+                    noindex: true
                 },
                 'backtest': {
                     titleKey: 'seo.backtestTitle',

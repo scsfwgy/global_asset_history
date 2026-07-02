@@ -924,6 +924,7 @@ async function init() {
 
   // Bind autocomplete
   attachAutocomplete(document.getElementById('pcSymbolInput'), document.getElementById('pcTypeSelect'));
+  attachAutocomplete(document.getElementById('pdSymbolInput'), document.getElementById('pdTypeSelect'));
   attachAutocomplete(document.getElementById('btSymbolInput'), document.getElementById('btTypeSelect'));
   attachAutocomplete(document.getElementById('crashSymbol'), document.getElementById('crashType'));
 }

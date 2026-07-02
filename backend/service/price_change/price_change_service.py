@@ -307,6 +307,96 @@ def fetch_monthly_returns_batch(symbols: List[Dict[str, str]], year: int) -> Dic
     return data
 
 
+def fetch_return_detail(symbol: str, asset_type: str) -> Dict:
+    """Fetch single-symbol yearly and monthly return detail."""
+    clean_sym = symbol.strip().upper()
+    clean_type = asset_type.strip().lower()
+    if not clean_sym:
+        raise ValueError("symbol is required")
+    if clean_type not in _DAILY_SERIES_FETCHERS:
+        raise ValueError(f"unknown asset type: {clean_type}")
+
+    series = _fetch_daily_series_cached(clean_sym, clean_type)
+    if series.error:
+        raise ValueError(series.error)
+
+    yearly = _compute_yearly_returns(series.timestamps, series.closes)
+    years = sorted((int(y) for y in yearly.keys()), reverse=True)
+    if not years:
+        raise ValueError("insufficient data")
+
+    monthly_rows = []
+    month_values: Dict[int, List[float]] = {m: [] for m in range(1, 13)}
+    year_values: List[float] = []
+    best_month = None
+    worst_month = None
+
+    for year in years:
+        months = _compute_monthly_returns(series.timestamps, series.closes, year)
+        clean_months = []
+        for item in months:
+            month = int(item["month"])
+            value = item["return"]
+            if value is not None:
+                month_values[month].append(float(value))
+                point = {"year": year, "month": month, "return": float(value)}
+                if best_month is None or point["return"] > best_month["return"]:
+                    best_month = point
+                if worst_month is None or point["return"] < worst_month["return"]:
+                    worst_month = point
+            clean_months.append({"month": month, "return": value})
+        y_ret = yearly.get(str(year))
+        if y_ret is not None:
+            year_values.append(float(y_ret))
+        monthly_rows.append({"year": year, "annual_return": y_ret, "months": clean_months})
+
+    def _avg(values: List[float]) -> Optional[float]:
+        return round(sum(values) / len(values), 2) if values else None
+
+    def _median(values: List[float]) -> Optional[float]:
+        if not values:
+            return None
+        ordered = sorted(values)
+        n = len(ordered)
+        if n % 2 == 1:
+            return round(ordered[n // 2], 2)
+        return round((ordered[n // 2 - 1] + ordered[n // 2]) / 2, 2)
+
+    def _win_rate(values: List[float]) -> Optional[float]:
+        if not values:
+            return None
+        return round(sum(1 for v in values if v > 0) / len(values) * 100, 1)
+
+    stats = []
+    for month in range(1, 13):
+        values = month_values[month]
+        stats.append({
+            "month": month,
+            "avg": _avg(values),
+            "median": _median(values),
+            "win_rate": _win_rate(values),
+            "count": len(values),
+        })
+
+    return {
+        "symbol": clean_sym,
+        "type": clean_type,
+        "source": series.source,
+        "meta": _series_meta(clean_sym, clean_type, series),
+        "years": years,
+        "rows": monthly_rows,
+        "stats": stats,
+        "summary": {
+            "year_count": len(years),
+            "avg_yearly_return": _avg(year_values),
+            "median_yearly_return": _median(year_values),
+            "yearly_win_rate": _win_rate(year_values),
+            "best_month": best_month,
+            "worst_month": worst_month,
+        },
+    }
+
+
 def run_dca_backtest(payload: Dict) -> Dict:
     """Run a single-symbol DCA backtest using daily price data."""
     symbol = str(payload.get("symbol", "")).strip().upper()

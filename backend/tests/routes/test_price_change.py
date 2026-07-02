@@ -239,6 +239,50 @@ class TestDailyEndpoint:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# POST /api/price-change/detail
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TestReturnDetailEndpoint:
+    """POST /api/price-change/detail"""
+
+    @patch("routes.price_change.fetch_return_detail")
+    def test_valid_request(self, mock_fetch, client):
+        mock_fetch.return_value = {
+            "symbol": "BTC",
+            "type": "crypto",
+            "years": [2025, 2024],
+            "rows": [{"year": 2025, "annual_return": 10.0, "months": []}],
+            "stats": [],
+            "summary": {"year_count": 2},
+        }
+        resp = client.post(
+            f"{BASE}/detail",
+            json={"symbol": "BTC", "type": "crypto"},
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["symbol"] == "BTC"
+        assert data["years"] == [2025, 2024]
+        mock_fetch.assert_called_once_with("BTC", "crypto")
+        track_coverage(MOD, 3)
+
+    def test_missing_symbol(self, client):
+        resp = client.post(f"{BASE}/detail", json={"type": "crypto"})
+        assert resp.status_code == 400
+        track_coverage(MOD, 1)
+
+    @patch("routes.price_change.fetch_return_detail")
+    def test_value_error_returns_400(self, mock_fetch, client):
+        mock_fetch.side_effect = ValueError("insufficient data")
+        resp = client.post(
+            f"{BASE}/detail",
+            json={"symbol": "BAD", "type": "crypto"},
+        )
+        assert resp.status_code == 400
+        track_coverage(MOD, 1)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # POST /api/price-change/backtest
 # ═══════════════════════════════════════════════════════════════════════════
 

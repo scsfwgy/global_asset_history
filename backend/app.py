@@ -212,6 +212,12 @@ def serve_frontend_html(filename: str):
         keywords = article["keywords"][lang]
         image_url = f"{base_url}/doc/screenshot/yearly-heatmap.png"
         og_type = "article"
+    elif page_path == "/detail":
+        title = _locale_value(locale, "seo.detailTitle", "GlobalAssetHistory")
+        desc = _locale_value(locale, "seo.detailDescription", "")
+        keywords = _locale_value(locale, "seo.indexKeywords", "")
+        image_url = f"{base_url}/doc/screenshot/yearly-heatmap.png"
+        og_type = "website"
     else:
         title = _locale_value(locale, "seo.indexTitle", "GlobalAssetHistory")
         desc = _locale_value(locale, "seo.indexDescription", "")
@@ -306,7 +312,7 @@ def add_seo_headers(response):
         response.headers.setdefault("X-Robots-Tag", "index,follow")
     elif base_path in INDEXABLE_PATHS:
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
-    elif base_path.startswith(ROBOT_BLOCKED_PREFIXES) or base_path in {"/yearly", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", *KNOWLEDGE_LEGACY_PATHS.keys(), "/wishes", "/heatmap"}:
+    elif base_path.startswith(ROBOT_BLOCKED_PREFIXES) or base_path in {"/yearly", "/detail", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", *KNOWLEDGE_LEGACY_PATHS.keys(), "/wishes", "/heatmap"}:
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
     return response
 
@@ -382,6 +388,7 @@ def etf_market():
 
 
 @app.route("/yearly")
+@app.route("/detail")
 @app.route("/backtest")
 @app.route("/crash")
 @app.route("/etf")
