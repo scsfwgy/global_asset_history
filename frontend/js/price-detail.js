@@ -3,6 +3,7 @@
 
   const $ = (id) => document.getElementById(id);
   const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -70,92 +71,169 @@
     if (result) result.style.display = hasResult ? "block" : "none";
   }
 
+  function getColorRange() {
+    const min = Number($("pdMinRange")?.value || -50);
+    const max = Number($("pdMaxRange")?.value || 50);
+    return { min, max };
+  }
+
+  function buildYearSelector(years) {
+    const sel = $("pdYearSelect");
+    if (!sel) return;
+    var selected = sel.value;
+    sel.innerHTML = '<option value="">' + __("detail.allYears") + '</option>';
+    years.forEach(function (y) {
+      var opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      sel.appendChild(opt);
+    });
+    // restore previous selection if still valid
+    if (selected && years.indexOf(Number(selected)) !== -1) {
+      sel.value = selected;
+    }
+  }
+
+  function renderYearlyTable(result) {
+    var head = $("pdTableHead");
+    var body = $("pdTableBody");
+    if (!head || !body) return;
+
+    var range = getColorRange();
+    var monthHead = MONTHS.map(function (m) { return "<th>" + __("yearly.monthLabel", { m: m }) + "</th>"; }).join("");
+    var statColHead = '<th class="pd-stat-col">' + __("detail.avg") + '</th>'
+      + '<th class="pd-stat-col">' + __("detail.median") + '</th>'
+      + '<th class="pd-stat-col">' + __("detail.total") + '</th>';
+    head.innerHTML = '<tr><th>' + __("yearly.colYear") + '</th>' + monthHead + '<th>' + __("yearly.annualTotal") + '</th>' + statColHead + '</tr>';
+
+    var rowsHtml = (result.rows || []).map(function (row) {
+      var monthMap = {};
+      (row.months || []).forEach(function (m) { monthMap[m.month] = m.return; });
+      var monthCells = MONTHS.map(function (month) {
+        var value = monthMap[month];
+        var color = cellColor(value, range.min, range.max);
+        return '<td style="background:' + color.bg + ';color:' + color.text + ';" title="' + row.year + '-' + String(month).padStart(2, "0") + ' ' + formatPct(value) + '">' + formatPct(value) + '</td>';
+      }).join("");
+      var annualColor = cellColor(row.annual_return, range.min, range.max);
+      var rs = row.row_stats || {};
+      return '<tr><td>' + row.year + '</td>' + monthCells
+        + '<td style="background:' + annualColor.bg + ';color:' + annualColor.text + ';font-weight:700;">' + formatPct(row.annual_return) + '</td>'
+        + '<td class="pd-stat-col" style="background:' + cellColor(rs.avg, range.min, range.max).bg + ';color:' + cellColor(rs.avg, range.min, range.max).text + ';">' + formatPct(rs.avg) + '</td>'
+        + '<td class="pd-stat-col" style="background:' + cellColor(rs.median, range.min, range.max).bg + ';color:' + cellColor(rs.median, range.min, range.max).text + ';">' + formatPct(rs.median) + '</td>'
+        + '<td class="pd-stat-col" style="background:' + cellColor(rs.total, range.min, range.max).bg + ';color:' + cellColor(rs.total, range.min, range.max).text + ';">' + formatPct(rs.total) + '</td></tr>';
+    });
+
+    // y-axis stat rows (avg / median / total per month)
+    var stats = result.stats || [];
+    var byMonth = {};
+    stats.forEach(function (s) { byMonth[s.month] = s; });
+
+    function statRow(label, field, formatter) {
+      var cells = MONTHS.map(function (month) {
+        var stat = byMonth[month] || {};
+        var value = stat[field];
+        var color = cellColor(value, range.min, range.max);
+        return '<td style="background:' + color.bg + ';color:' + color.text + ';">' + formatter(value) + '</td>';
+      }).join("");
+      return '<tr class="pd-stat-row"><td>' + escapeHtml(label) + '</td>' + cells + '<td>—</td><td>—</td><td>—</td><td>—</td></tr>';
+    }
+
+    rowsHtml.push(statRow(__("detail.avg"), "avg", function (v) { return formatPct(v); }));
+    rowsHtml.push(statRow(__("detail.median"), "median", function (v) { return formatPct(v); }));
+    rowsHtml.push(statRow(__("detail.total"), "total", function (v) { return formatPct(v); }));
+    body.innerHTML = rowsHtml.join("");
+  }
+
+  function renderDailyTable(result) {
+    var head = $("pdTableHead");
+    var body = $("pdTableBody");
+    if (!head || !body) return;
+
+    var range = getColorRange();
+    var monthHead = MONTHS.map(function (m) { return "<th>" + __("yearly.monthLabel", { m: m }) + "</th>"; }).join("");
+    var statColHead = '<th class="pd-stat-col">' + __("detail.avg") + '</th>'
+      + '<th class="pd-stat-col">' + __("detail.median") + '</th>'
+      + '<th class="pd-stat-col">' + __("detail.total") + '</th>';
+    head.innerHTML = '<tr><th>' + __("detail.day") + '</th>' + monthHead + statColHead + '</tr>';
+
+    var dailyRows = result.daily_rows || [];
+    var rowsHtml = dailyRows.map(function (row) {
+      var monthMap = {};
+      (row.months || []).forEach(function (m) { monthMap[m.month] = m.return; });
+      var monthCells = MONTHS.map(function (month) {
+        var value = monthMap[month];
+        var color = cellColor(value, range.min, range.max);
+        var title = result.year + '-' + String(month).padStart(2, "0") + '-' + String(row.day).padStart(2, "0") + ' ' + formatPct(value);
+        return '<td style="background:' + color.bg + ';color:' + color.text + ';" title="' + title + '">' + formatPct(value) + '</td>';
+      }).join("");
+      var rs = row.row_stats || {};
+      return '<tr><td>' + row.day + '</td>' + monthCells
+        + '<td class="pd-stat-col" style="background:' + cellColor(rs.avg, range.min, range.max).bg + ';color:' + cellColor(rs.avg, range.min, range.max).text + ';">' + formatPct(rs.avg) + '</td>'
+        + '<td class="pd-stat-col" style="background:' + cellColor(rs.median, range.min, range.max).bg + ';color:' + cellColor(rs.median, range.min, range.max).text + ';">' + formatPct(rs.median) + '</td>'
+        + '<td class="pd-stat-col" style="background:' + cellColor(rs.total, range.min, range.max).bg + ';color:' + cellColor(rs.total, range.min, range.max).text + ';">' + formatPct(rs.total) + '</td></tr>';
+    });
+
+    // y-axis stat rows (avg / median / total per month)
+    var stats = result.stats || [];
+    var byMonth = {};
+    stats.forEach(function (s) { byMonth[s.month] = s; });
+
+    function statRow(label, field, formatter) {
+      var cells = MONTHS.map(function (month) {
+        var stat = byMonth[month] || {};
+        var value = stat[field];
+        var color = cellColor(value, range.min, range.max);
+        return '<td style="background:' + color.bg + ';color:' + color.text + ';">' + formatter(value) + '</td>';
+      }).join("");
+      return '<tr class="pd-stat-row"><td>' + escapeHtml(label) + '</td>' + cells + '<td>—</td><td>—</td><td>—</td></tr>';
+    }
+
+    rowsHtml.push(statRow(__("detail.avg"), "avg", function (v) { return formatPct(v); }));
+    rowsHtml.push(statRow(__("detail.median"), "median", function (v) { return formatPct(v); }));
+    rowsHtml.push(statRow(__("detail.total"), "total", function (v) { return formatPct(v); }));
+    body.innerHTML = rowsHtml.join("");
+  }
+
   function renderSummary(result) {
-    const summaryEl = $("pdSummary");
+    var summaryEl = $("pdSummary");
     if (!summaryEl) return;
-    const summary = result.summary || {};
-    const best = summary.best_month;
-    const worst = summary.worst_month;
-    const source = result.meta && result.meta.source ? result.meta.source : result.source;
-    const cards = [
+    var summary = result.summary || {};
+
+    if (result.mode === "daily") {
+      var source = result.meta && result.meta.source ? result.meta.source : result.source;
+      var cards = [
+        [__("detail.summaryYears"), result.year],
+        [__("detail.summarySource"), source ? escapeHtml(source) : "—"],
+      ];
+      summaryEl.innerHTML = cards.map(function (pair) {
+        return '<div class="pd-summary-card"><div class="pd-summary-label">' + escapeHtml(pair[0]) + '</div><div class="pd-summary-value">' + pair[1] + '</div></div>';
+      }).join("");
+      return;
+    }
+
+    var best = summary.best_month;
+    var worst = summary.worst_month;
+    var source = result.meta && result.meta.source ? result.meta.source : result.source;
+    var cards = [
       [__("detail.summaryYears"), summary.year_count != null ? summary.year_count : "—"],
       [__("detail.summaryAvgYear"), formatPct(summary.avg_yearly_return)],
       [__("detail.summaryWinRate"), formatPct(summary.yearly_win_rate, 1)],
-      [__("detail.summaryBestMonth"), best ? `${best.year}-${String(best.month).padStart(2, "0")} ${formatPct(best.return)}` : "—"],
-      [__("detail.summaryWorstMonth"), worst ? `${worst.year}-${String(worst.month).padStart(2, "0")} ${formatPct(worst.return)}` : "—"],
+      [__("detail.summaryBestMonth"), best ? best.year + "-" + String(best.month).padStart(2, "0") + " " + formatPct(best.return) : "—"],
+      [__("detail.summaryWorstMonth"), worst ? worst.year + "-" + String(worst.month).padStart(2, "0") + " " + formatPct(worst.return) : "—"],
       [__("detail.summarySource"), source ? escapeHtml(source) : "—"],
     ];
-    summaryEl.innerHTML = cards.map(([label, value]) => (
-      `<div class="pd-summary-card">
-        <div class="pd-summary-label">${escapeHtml(label)}</div>
-        <div class="pd-summary-value">${value}</div>
-      </div>`
-    )).join("");
-  }
-
-  function renderTable(result) {
-    const head = $("pdTableHead");
-    const body = $("pdTableBody");
-    if (!head || !body) return;
-
-    const min = Number($("pdMinRange")?.value || -50);
-    const max = Number($("pdMaxRange")?.value || 50);
-    const monthHead = MONTHS.map((m) => `<th>${__("yearly.monthLabel", { m })}</th>`).join("");
-    head.innerHTML = `<tr><th>${__("yearly.colYear")}</th>${monthHead}<th>${__("yearly.annualTotal")}</th></tr>`;
-
-    const rows = (result.rows || []).map((row) => {
-      const monthMap = {};
-      (row.months || []).forEach((m) => { monthMap[m.month] = m.return; });
-      const monthCells = MONTHS.map((month) => {
-        const value = monthMap[month];
-        const color = cellColor(value, min, max);
-        return `<td style="background:${color.bg};color:${color.text};" title="${row.year}-${String(month).padStart(2, "0")} ${formatPct(value)}">${formatPct(value)}</td>`;
-      }).join("");
-      const annualColor = cellColor(row.annual_return, min, max);
-      return `<tr><td>${row.year}</td>${monthCells}<td style="background:${annualColor.bg};color:${annualColor.text};font-weight:700;">${formatPct(row.annual_return)}</td></tr>`;
-    });
-
-    const stats = result.stats || [];
-    const byMonth = {};
-    stats.forEach((s) => { byMonth[s.month] = s; });
-
-    function statRow(label, field, formatter) {
-      const cells = MONTHS.map((month) => {
-        const stat = byMonth[month] || {};
-        const value = stat[field];
-        return `<td>${formatter(value)}</td>`;
-      }).join("");
-      return `<tr class="pd-stat-row"><td>${escapeHtml(label)}</td>${cells}<td>—</td></tr>`;
-    }
-
-    rows.push(statRow(__("detail.avg"), "avg", (v) => formatPct(v)));
-    rows.push(statRow(__("detail.median"), "median", (v) => formatPct(v)));
-    rows.push(statRow(__("detail.winRate"), "win_rate", (v) => formatPct(v, 1)));
-    body.innerHTML = rows.join("");
-  }
-
-  function renderLegend() {
-    const el = $("pdLegend");
-    if (!el) return;
-    const neg = cellColor(-50, -50, 50).bg;
-    const flat = cellColor(0, -50, 50).bg || "var(--apple-surface-2)";
-    const pos = cellColor(50, -50, 50).bg;
-    el.innerHTML = `
-      <span>${__("detail.legend")}</span>
-      <span class="pd-legend-chip" style="background:${neg};"></span>
-      <span>${__("detail.negative")}</span>
-      <span class="pd-legend-chip" style="background:${flat};border:1px solid var(--apple-divider);"></span>
-      <span>${__("detail.neutral")}</span>
-      <span class="pd-legend-chip" style="background:${pos};"></span>
-      <span>${__("detail.positive")}</span>
-    `;
+    summaryEl.innerHTML = cards.map(function (pair) {
+      return '<div class="pd-summary-card"><div class="pd-summary-label">' + escapeHtml(pair[0]) + '</div><div class="pd-summary-value">' + pair[1] + '</div></div>';
+    }).join("");
   }
 
   async function queryDetail() {
-    const symbolInput = $("pdSymbolInput");
-    const typeSelect = $("pdTypeSelect");
-    const symbol = (symbolInput?.value || "").trim().toUpperCase();
-    const type = typeSelect?.value || "stock";
+    var symbolInput = $("pdSymbolInput");
+    var typeSelect = $("pdTypeSelect");
+    var yearSelect = $("pdYearSelect");
+    var symbol = (symbolInput?.value || "").trim().toUpperCase();
+    var type = typeSelect?.value || "stock";
+    var year = yearSelect?.value || "";
     if (!symbol) {
       showError(__("detail.errorNoSymbol"));
       setResultVisible(false);
@@ -164,8 +242,9 @@
 
     try {
       localStorage.setItem("gah_detail_state", JSON.stringify({
-        symbol,
-        type,
+        symbol: symbol,
+        type: type,
+        year: year,
         minRange: $("pdMinRange")?.value || "-50",
         maxRange: $("pdMaxRange")?.value || "50",
       }));
@@ -176,18 +255,24 @@
     setResultVisible(false);
 
     try {
-      const resp = await fetch(DETAIL_ENDPOINT, {
+      var body = { symbol: symbol, type: type };
+      if (year) body.year = parseInt(year, 10);
+      var resp = await fetch(DETAIL_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbol, type }),
+        body: JSON.stringify(body),
       });
-      const result = await resp.json().catch(() => ({}));
+      var result = await resp.json().catch(function () { return {}; });
       if (!resp.ok) {
-        throw new Error(result.error || `HTTP ${resp.status}`);
+        throw new Error(result.error || "HTTP " + resp.status);
       }
+      buildYearSelector(result.years || []);
       renderSummary(result);
-      renderTable(result);
-      renderLegend();
+      if (result.mode === "daily") {
+        renderDailyTable(result);
+      } else {
+        renderYearlyTable(result);
+      }
       setResultVisible(true);
     } catch (err) {
       showError(__("detail.errorRequest") + " " + err.message);
@@ -199,31 +284,41 @@
 
   function restoreState() {
     try {
-      const raw = localStorage.getItem("gah_detail_state");
+      var raw = localStorage.getItem("gah_detail_state");
       if (!raw) return;
-      const state = JSON.parse(raw);
+      var state = JSON.parse(raw);
       if (state.symbol && $("pdSymbolInput")) $("pdSymbolInput").value = state.symbol;
       if (state.type && $("pdTypeSelect")) $("pdTypeSelect").value = state.type;
       if (state.minRange && $("pdMinRange")) $("pdMinRange").value = state.minRange;
       if (state.maxRange && $("pdMaxRange")) $("pdMaxRange").value = state.maxRange;
+      if (state.year && $("pdYearSelect")) $("pdYearSelect").value = state.year;
     } catch (_) {}
   }
 
   function init() {
-    const btn = $("pdQueryBtn");
-    const input = $("pdSymbolInput");
+    var btn = $("pdQueryBtn");
+    var input = $("pdSymbolInput");
     if (!btn || !input) return;
     restoreState();
     btn.addEventListener("click", queryDetail);
-    input.addEventListener("keydown", (event) => {
+    input.addEventListener("keydown", function (event) {
       if (event.key === "Enter") queryDetail();
     });
-    ["pdMinRange", "pdMaxRange"].forEach((id) => {
-      const el = $(id);
-      if (el) el.addEventListener("keydown", (event) => {
+    ["pdMinRange", "pdMaxRange"].forEach(function (id) {
+      var el = $(id);
+      if (el) el.addEventListener("keydown", function (event) {
         if (event.key === "Enter") queryDetail();
       });
     });
+    // re-query on year change
+    var yearSel = $("pdYearSelect");
+    if (yearSel) {
+      yearSel.addEventListener("change", function () {
+        if ($("pdSymbolInput") && $("pdSymbolInput").value.trim()) {
+          queryDetail();
+        }
+      });
+    }
   }
 
   document.addEventListener("DOMContentLoaded", init);

@@ -510,6 +510,7 @@
             overflow-x: auto;
             border: 1px solid var(--apple-divider);
             border-radius: var(--radius-md);
+            -webkit-overflow-scrolling: touch;
         }
         .pd-table {
             width: 100%;
@@ -549,6 +550,9 @@
         .pd-table td:last-child { border-right: none; }
         .pd-stat-row td:first-child {
             color: var(--apple-text-secondary);
+        }
+        .pd-stat-col {
+            border-left: 2px solid var(--apple-divider) !important;
         }
         .pd-legend {
             display: flex;
@@ -597,6 +601,17 @@
             }
             .pd-controls #pdQueryBtn {
                 grid-column: 1 / -1;
+            }
+            /* ponytail: phones can't hold 12 month columns; keep the heatmap
+               table scrollable horizontally with tighter cell metrics instead
+               of forcing all columns into the narrow viewport. */
+            .pd-table {
+                min-width: 720px;
+                font-size: 11px;
+            }
+            .pd-table th,
+            .pd-table td {
+                padding: 6px 4px;
             }
         }
 
@@ -1864,6 +1879,10 @@
                         <option value="crypto" selected data-i18n="yearly.assetTypeCrypto">数字货币</option>
                         <option value="cn_stock" data-i18n="yearly.assetTypeCnStock">A股</option>
                     </select>
+                    <span class="control-label" data-i18n="detail.yearFilter">年份筛选</span>
+                    <select id="pdYearSelect" class="pc-type-select">
+                        <option value="" data-i18n="detail.allYears">全部年份</option>
+                    </select>
                     <span class="control-label" data-i18n="yearly.colorRange">着色范围</span>
                     <input type="number" id="pdMinRange" class="pc-range-input" value="-50" step="5">
                     <span class="control-label pd-range-sep">~</span>
@@ -1889,7 +1908,6 @@
                         <tbody id="pdTableBody"></tbody>
                     </table>
                 </div>
-                <div class="pd-legend" id="pdLegend"></div>
             </div>
         </div>
         </div><!-- /tab-detail -->

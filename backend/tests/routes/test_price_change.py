@@ -250,6 +250,7 @@ class TestReturnDetailEndpoint:
         mock_fetch.return_value = {
             "symbol": "BTC",
             "type": "crypto",
+            "mode": "yearly",
             "years": [2025, 2024],
             "rows": [{"year": 2025, "annual_return": 10.0, "months": []}],
             "stats": [],
@@ -263,11 +264,41 @@ class TestReturnDetailEndpoint:
         data = resp.get_json()
         assert data["symbol"] == "BTC"
         assert data["years"] == [2025, 2024]
-        mock_fetch.assert_called_once_with("BTC", "crypto")
+        mock_fetch.assert_called_once_with("BTC", "crypto", None)
+        track_coverage(MOD, 3)
+
+    @patch("routes.price_change.fetch_return_detail")
+    def test_valid_request_with_year(self, mock_fetch, client):
+        mock_fetch.return_value = {
+            "symbol": "BTC",
+            "type": "crypto",
+            "mode": "daily",
+            "year": 2025,
+            "years": [2025, 2024],
+            "daily_rows": [],
+            "stats": [],
+            "summary": {"selected_year": 2025},
+        }
+        resp = client.post(
+            f"{BASE}/detail",
+            json={"symbol": "BTC", "type": "crypto", "year": 2025},
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["mode"] == "daily"
+        mock_fetch.assert_called_once_with("BTC", "crypto", 2025)
         track_coverage(MOD, 3)
 
     def test_missing_symbol(self, client):
         resp = client.post(f"{BASE}/detail", json={"type": "crypto"})
+        assert resp.status_code == 400
+        track_coverage(MOD, 1)
+
+    def test_invalid_year(self, client):
+        resp = client.post(
+            f"{BASE}/detail",
+            json={"symbol": "BTC", "type": "crypto", "year": "abc"},
+        )
         assert resp.status_code == 400
         track_coverage(MOD, 1)
 

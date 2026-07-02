@@ -166,16 +166,22 @@ def get_daily_returns():
 
 @price_change_bp.route("/detail", methods=["POST"])
 def get_return_detail():
-    """Return single-symbol yearly/monthly return detail."""
+    """Return single-symbol yearly/monthly return detail, or daily grid for a specific year."""
     body = request.get_json(silent=True) or {}
     symbol = body.get("symbol", "").strip().upper()
     asset_type = body.get("type", "stock").strip().lower()
+    year = body.get("year")
 
     if not symbol:
         return jsonify({"error": "symbol is required"}), 400
+    if year is not None:
+        try:
+            year = int(year)
+        except (TypeError, ValueError):
+            return jsonify({"error": "year must be an integer"}), 400
 
     try:
-        result = fetch_return_detail(symbol, asset_type)
+        result = fetch_return_detail(symbol, asset_type, year)
         return jsonify(result)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
