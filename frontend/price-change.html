@@ -2265,6 +2265,63 @@
             </div>
 
             <div class="kb-section">
+            <h3 class="kb-section-title">费率对比</h3>
+            <p style="font-size:13px;line-height:1.7;color:var(--apple-text-secondary);margin-bottom:12px;">下面这张表只看官方页面里能直接确认的显性费率。Bitget 传统美股这一项需要把平台费和卖出附加费分开看，不能只看 0.05% 这一行。</p>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead>
+                <tr>
+                    <th style="min-width:120px;">平台 / 产品</th>
+                    <th style="min-width:150px;">显性费率</th>
+                    <th style="min-width:220px;">额外费用 / 备注</th>
+                    <th style="min-width:170px;">参考链接</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>传统券商</td>
+                    <td class="kb-text-left">在线自助买卖通常为 0 佣金</td>
+                    <td class="kb-text-left">期权、人工下单、转仓、换汇、服务费等可能另算</td>
+                    <td class="kb-text-left"><a href="https://www.schwab.com/pricing" target="_blank" rel="noopener">Schwab 费用页</a></td>
+                </tr>
+                <tr>
+                    <td>Binance 股票</td>
+                    <td class="kb-text-left">0.05%</td>
+                    <td class="kb-text-left">以官方股票费率页为准</td>
+                    <td class="kb-text-left"><a href="https://www.binance.com/zh-CN/fee/stocks" target="_blank" rel="noopener">Binance 股票费率页</a></td>
+                </tr>
+                <tr>
+                    <td>Bitget rToken / Stocks 2.0</td>
+                    <td class="kb-text-left">活动期 Maker / Taker 0.05%</td>
+                    <td class="kb-text-left">可能还有点差、入金换汇、提币和链上费用</td>
+                    <td class="kb-text-left"><a href="https://www.bitget.com/zh-CN/support/articles/12560603820584" target="_blank" rel="noopener">标准手续费</a> / <a href="https://www.bitget.com/zh-CN/support/articles/12560603884598" target="_blank" rel="noopener">活动费率</a></td>
+                </tr>
+                <tr>
+                    <td>Bitget 传统美股 / Stock+</td>
+                    <td class="kb-text-left">交易佣金 0 USD/股 + 平台费 0.05% * 交易金额</td>
+                    <td class="kb-text-left">卖出时还有 SEC fee、transaction activity fee、clearing fee</td>
+                    <td class="kb-text-left">参考下方截图，无单独手续费链接</td>
+                </tr>
+                <tr>
+                    <td>Interactive Brokers</td>
+                    <td class="kb-text-left">固定式 0.005 美元/股；阶梯式约 0.0005 - 0.0035 美元/股</td>
+                    <td class="kb-text-left">还可能有交易所与清算相关费用</td>
+                    <td class="kb-text-left"><a href="https://www.interactivebrokers.com.hk/cn/pricing/commissions-home.php" target="_blank" rel="noopener">IBKR 佣金页</a></td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+            <div class="kb-callout kb-callout-blue" style="margin-top:12px;">
+                <strong>怎么看：</strong>如果只看买入侧主费率，传统券商和部分 IBKR 方案通常更低；如果看平台产品入口，Bitget 的两条线要分开理解，不能把 Stock+ 和 Stocks 2.0 混成一条费率曲线。
+            </div>
+            <div style="margin-top:14px;">
+                <div style="font-size:13px;font-weight:600;color:var(--apple-text-primary);margin-bottom:8px;">参考截图</div>
+                <img src="/images/bitget-stock-fee-reference.jpg" alt="Bitget 传统美股费用截图" style="width:100%;max-width:520px;border-radius:var(--radius-md);box-shadow:var(--apple-card-shadow);display:block;" loading="lazy">
+                <div style="font-size:12px;line-height:1.7;color:var(--apple-text-secondary);margin-top:8px;">截图里可以看到：交易佣金为 0 USD / 股，平台费按 0.05% 计算，卖出侧还会叠加 SEC fee、transaction activity fee 和 clearing fee。</div>
+            </div>
+            </div>
+
+            <div class="kb-section">
             <h3 class="kb-section-title">注册链接</h3>
             <p style="font-size:13px;line-height:1.7;color:var(--apple-text-secondary);margin-bottom:8px;">如果你准备开始研究，可以通过下面链接注册：</p>
             <ul class="kb-ref-list">
@@ -2382,6 +2439,75 @@
                 <li>Confirm where buy, sell, position, settlement, and dividend records appear.</li>
                 <li>Do not mix up spot stock access with US stock derivatives or contracts.</li>
             </ol>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">Fee Comparison</h3>
+            <p style="font-size:13px;line-height:1.7;color:var(--apple-text-secondary);margin-bottom:12px;">This table keeps only the fee figures that can be checked directly from the official pages. For Bitget's direct US stock line, the platform fee and the sell-side add-ons need to be read separately.</p>
+            <div class="kb-table-wrap">
+            <table class="kb-table">
+                <thead>
+                <tr>
+                    <th>Platform / Product</th>
+                    <th>Headline Fee</th>
+                    <th>Extra Fees / Notes</th>
+                    <th>Reference</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>Traditional broker</td>
+                    <td class="kb-text-left">Often 0 commission for online self-directed trades</td>
+                    <td class="kb-text-left">Options, assisted trades, transfers, FX, and service fees may apply</td>
+                    <td class="kb-text-left"><a href="https://www.schwab.com/pricing" target="_blank" rel="noopener">Schwab pricing</a></td>
+                </tr>
+                <tr>
+                    <td>Binance stocks</td>
+                    <td class="kb-text-left">0.05%</td>
+                    <td class="kb-text-left">Use the official stock fee page as the source of truth</td>
+                    <td class="kb-text-left"><a href="https://www.binance.com/zh-CN/fee/stocks" target="_blank" rel="noopener">Binance stock fee page</a></td>
+                </tr>
+                <tr>
+                    <td>Bitget rToken / Stocks 2.0</td>
+                    <td class="kb-text-left">Promo maker / taker 0.05%</td>
+                    <td class="kb-text-left">May still involve spread, funding FX, withdrawals, and chain fees</td>
+                    <td class="kb-text-left"><a href="https://www.bitget.com/zh-CN/support/articles/12560603820584" target="_blank" rel="noopener">Standard fee</a> / <a href="https://www.bitget.com/zh-CN/support/articles/12560603884598" target="_blank" rel="noopener">Promo fee</a></td>
+                </tr>
+                <tr>
+                    <td>Bitget direct US stocks / Stock+</td>
+                    <td class="kb-text-left">0 USD/share commission + 0.05% platform fee</td>
+                    <td class="kb-text-left">Sell-side SEC fee, transaction activity fee, and clearing fee also apply</td>
+                    <td class="kb-text-left">See screenshot below; no separate fee link</td>
+                </tr>
+                <tr>
+                    <td>Interactive Brokers</td>
+                    <td class="kb-text-left">Fixed: US$0.005/share; Tiered: about US$0.0005 - 0.0035/share</td>
+                    <td class="kb-text-left">Exchange and clearing-related fees may also apply</td>
+                    <td class="kb-text-left"><a href="https://www.interactivebrokers.com.hk/cn/pricing/commissions-home.php" target="_blank" rel="noopener">IBKR commissions</a></td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+            <div class="kb-callout kb-callout-blue" style="margin-top:12px;">
+                <strong>How to read it:</strong> If you only compare the buy-side headline fee, traditional brokers and some IBKR setups are usually lower. For Bitget, Stock+ and Stocks 2.0 need to be treated as separate products.
+            </div>
+            <div style="margin-top:14px;">
+                <div style="font-size:13px;font-weight:600;color:var(--apple-text-primary);margin-bottom:8px;">Reference Screenshot</div>
+                <img src="/images/bitget-stock-fee-reference.jpg" alt="Bitget direct US stock fee screenshot" style="width:100%;max-width:520px;border-radius:var(--radius-md);box-shadow:var(--apple-card-shadow);display:block;" loading="lazy">
+                <div style="font-size:12px;line-height:1.7;color:var(--apple-text-secondary);margin-top:8px;">The screenshot shows 0 USD/share commission, a 0.05% platform fee, and additional sell-side charges such as SEC fee, transaction activity fee, and clearing fee.</div>
+            </div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">Invitation Links</h3>
+            <p style="font-size:13px;line-height:1.7;color:var(--apple-text-secondary);margin-bottom:8px;">If you want to try the platforms mentioned above, these are the current invite links:</p>
+            <ul class="kb-ref-list">
+                <li><a href="https://www.binance.com/register?ref=JZTZUS" target="_blank" rel="noopener">Binance invite link</a></li>
+                <li><a href="https://www.bsmkweb.cc/register?ref=JZTZUS" target="_blank" rel="noopener">Binance invite link (mirror)</a></li>
+                <li><a href="https://www.bitget.com/zh-CN/referral/register?clacCode=SUWT96JK" target="_blank" rel="noopener">Bitget invite link</a></li>
+                <li><a href="https://www.hdmune.cn/zh-CN/referral/register?clacCode=SUWT96JK" target="_blank" rel="noopener">Bitget invite link (mirror)</a></li>
+                <li><a href="https://bit.bshareweb.com/newRegister/cn?invite_code=WACZ2R" target="_blank" rel="noopener">BIT invite link</a></li>
+            </ul>
             </div>
 
             <div class="kb-section">
