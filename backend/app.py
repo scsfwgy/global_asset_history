@@ -4,7 +4,6 @@ import logging
 import os
 import re
 import threading
-from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import Flask, Response, jsonify, request, send_from_directory
@@ -32,6 +31,8 @@ KNOWLEDGE_ARTICLES = {
         "legacy_paths": ["/knowledge/how-to-buy"],
         "subtab": "how-to-buy",
         "en_indexable": True,
+        "published": "2026-06-15",
+        "updated": "2026-07-03",
         "title": {
             "zh-CN": "如何用稳定币购买美股和ETF - GlobalAssetHistory",
             "en": "How to Buy US Stocks and ETFs with Stablecoins — GlobalAssetHistory",
@@ -49,6 +50,8 @@ KNOWLEDGE_ARTICLES = {
         "legacy_paths": ["/knowledge/etf-intro"],
         "subtab": "etf-intro",
         "en_indexable": True,
+        "published": "2026-06-15",
+        "updated": "2026-07-03",
         "title": {
             "zh-CN": "核心美股ETF指南：SPY、VOO、QQQ、SMH、DRAM、EWY - GlobalAssetHistory",
             "en": "Core US ETF Guide: SPY, VOO, QQQ, SMH, DRAM, EWY — GlobalAssetHistory",
@@ -66,6 +69,8 @@ KNOWLEDGE_ARTICLES = {
         "legacy_paths": ["/knowledge/event-myth"],
         "subtab": "event-myth",
         "en_indexable": True,
+        "published": "2026-06-15",
+        "updated": "2026-07-03",
         "title": {
             "zh-CN": "美股数据魔咒统计：世界杯、选举、总统周期和奥运会 - GlobalAssetHistory",
             "en": "Market Data Myths: World Cup, Elections, Presidential Cycle, Olympics — GlobalAssetHistory",
@@ -83,6 +88,8 @@ KNOWLEDGE_ARTICLES = {
         "legacy_paths": ["/knowledge/terms"],
         "subtab": "terms",
         "en_indexable": True,
+        "published": "2026-06-15",
+        "updated": "2026-07-03",
         "title": {
             "zh-CN": "美股、A股ETF和基金专业术语表 - GlobalAssetHistory",
             "en": "US Stock and ETF Glossary — GlobalAssetHistory",
@@ -103,6 +110,12 @@ KNOWLEDGE_LEGACY_PATHS = {
     for legacy in meta.get("legacy_paths", [])
 }
 INDEXABLE_PATHS = {"/", "/etf-market", "/knowledge", *KNOWLEDGE_ARTICLES.keys()}
+
+# Real last-modified dates per page group. Update these ONLY when the page's
+# HTML/content actually changes — Google discounts <lastmod> if it always shows
+# "today". Knowledge articles use the per-article "updated" field instead.
+INDEX_LASTMOD = "2026-07-03"
+ETF_MARKET_LASTMOD = "2026-07-03"
 
 
 def site_url() -> str:
@@ -264,7 +277,8 @@ def serve_frontend_html(filename: str):
             },
             "mainEntityOfPage": page_url,
             "inLanguage": html_lang,
-            "dateModified": datetime.now(timezone.utc).date().isoformat(),
+            "datePublished": article.get("published", INDEX_LASTMOD),
+            "dateModified": article.get("updated", INDEX_LASTMOD),
             "articleSection": "Knowledge Base",
             "keywords": article["keywords"][lang],
         })
@@ -333,43 +347,32 @@ def robots_txt():
 @app.route("/sitemap.xml")
 def sitemap_xml():
     langs = [("zh", "zh-CN"), ("en", "en")]
+    # (path, changefreq, priority, lastmod, include_en)
     urls = [
-        ("/", "daily", "1.0", True),
-        ("/etf-market", "daily", "0.8", True),
-        *[(path, "weekly", "0.7", bool(meta.get("en_indexable"))) for path, meta in KNOWLEDGE_ARTICLES.items()],
+        ("/", "daily", "1.0", INDEX_LASTMOD, True),
+        ("/etf-market", "daily", "0.8", ETF_MARKET_LASTMOD, True),
+        *[(path, "weekly", "0.7", meta.get("updated", INDEX_LASTMOD), bool(meta.get("en_indexable")))
+          for path, meta in KNOWLEDGE_ARTICLES.items()],
     ]
     items = []
-    now = datetime.now(timezone.utc).date().isoformat()
     base_url = site_url()
-    for path, changefreq, priority, include_en in urls:
+    for path, changefreq, priority, lastmod, include_en in urls:
         page_langs = langs if include_en else [("zh", "zh-CN")]
-        # Default (x-default) URL — use zh as the canonical for the root
-        items.append(
-            "  <url>"
-            f"<loc>{base_url}{path}</loc>"
-            f"<lastmod>{now}</lastmod>"
-            f"<changefreq>{changefreq}</changefreq>"
-            f"<priority>{priority}</priority>"
-            + "".join(
-                f'<xhtml:link rel="alternate" hreflang="{hreflang}" href="{base_url}/{short}{path}"/>'
-                for short, hreflang in page_langs
-            )
-            + f'<xhtml:link rel="alternate" hreflang="x-default" href="{base_url}/zh{path}"/>'
-            "</url>"
-        )
-        # Language-specific URLs
-        for short, hreflang in page_langs:
+        # One <url> per language variant. The default (no-lang-prefix) URL is
+        # intentionally omitted: its canonical points to /zh, so listing it
+        # here would create duplicates that Google flags as redundant.
+        alternates = "".join(
+            f'<xhtml:link rel="alternate" hreflang="{h}" href="{base_url}/{s}{path}"/>'
+            for s, h in page_langs
+        ) + f'<xhtml:link rel="alternate" hreflang="x-default" href="{base_url}/zh{path}"/>'
+        for short, _ in page_langs:
             items.append(
                 "  <url>"
                 f"<loc>{base_url}/{short}{path}</loc>"
-                f"<lastmod>{now}</lastmod>"
+                f"<lastmod>{lastmod}</lastmod>"
                 f"<changefreq>{changefreq}</changefreq>"
                 f"<priority>{priority}</priority>"
-                + "".join(
-                    f'<xhtml:link rel="alternate" hreflang="{h}" href="{base_url}/{s}{path}"/>'
-                    for s, h in page_langs
-                )
-                + f'<xhtml:link rel="alternate" hreflang="x-default" href="{base_url}/zh{path}"/>'
+                f"{alternates}"
                 "</url>"
             )
     body = (

@@ -27,6 +27,20 @@ This file provides guidance to Claude Code when working with code in this reposi
 2. 打开 `vercel.json`，在 `rewrites` 数组中添加或更新规则
 3. 本地测试通过后，再次确认 `vercel.json` 已同步更新
 
+### 3. 改动页面内容必须同步更新 SEO lastmod 日期
+
+`sitemap.xml` 和文章 JSON-LD 的日期是**固定常量**（故意不取 `datetime.now()`——Google 会降低"永远今天"的 sitemap 的信任度）。当**真正改动**页面 HTML/内容时，必须手动更新对应日期，否则 lastmod 会失真：
+
+- 首页改版 → 更新 `app.py` 的 `INDEX_LASTMOD`
+- ETF 市场页改版 → 更新 `app.py` 的 `ETF_MARKET_LASTMOD`
+- 单篇知识文章内容改动 → 更新 `KNOWLEDGE_ARTICLES` 中该文章的 `updated` 字段（`published` 仅在首次发布时设）
+
+检查清单：
+1. 确认本次改动是否影响某个页面的可见内容/HTML 结构
+2. 若是，找到对应的 lastmod 常量/字段并更新为当天日期
+3. 仅改后端逻辑/缓存/测试、不影响页面渲染的改动**无需**更新 lastmod
+4. 对应测试见 `backend/tests/routes/test_seo.py`，会校验 lastmod 来自固定常量集
+
 ---
 
 ## 项目概述
