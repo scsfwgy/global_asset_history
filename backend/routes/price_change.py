@@ -590,3 +590,81 @@ def vix_comparison():
         }
 
     return jsonify(result)
+
+
+@price_change_bp.route("/header-trend", methods=["GET"])
+def header_trend():
+    """Return a downsampled full-history daily close series for the header
+    background sparkline. Decoration-only.
+
+    Query params:
+        symbol (default "QQQ") -- a US stock/ETF ticker handled by the daily
+                                   series fetcher (Yahoo primary, yfinance fallback).
+        points (default 240)   -- target sample size, clamped to [60, 400].
+
+    Returns:
+        {"symbol": "QQQ",
+         "points": [{"date": "YYYY-MM-DD", "close": float}, ...],
+         "meta": {"source": str, "points": int, "error": str | None}}
+
+    The series is downsampled server-side so a full listing history (e.g. QQQ
+    since 1999, ~6500 daily bars) ships as a few hundred points — light payload
+    and a smooth SVG path. Failures degrade gracefully (empty points, HTTP 200)
+    so the header simply renders without the decoration.
+    """
+    from datetime import datetime, timezone
+
+    symbol = (request.args.get("symbol") or "QQQ").strip().upper() or "QQQ"
+
+    try:
+        target = int(request.args.get("points", 240))
+    except (ValueError, TypeError):
+        target = 240
+    target = max(60, min(target, 400))
+
+    try:
+        series = _fetch_daily_series_cached(symbol, "stock")
+    except Exception as e:
+        logger.exception("header-trend fetch failed for %s: %s", symbol, e)
+        return jsonify({
+            "symbol": symbol,
+            "points": [],
+            "meta": {"source": None, "points": 0, "error": str(e)},
+        })
+
+    if not series or series.error or not series.timestamps:
+        return jsonify({
+            "symbol": symbol,
+            "points": [],
+            "meta": {
+                "source": getattr(series, "source", None) if series else None,
+                "points": 0,
+                "error": (series.error if series else "no data"),
+            },
+        })
+
+    # Build (date_str, close) pairs, skipping missing closes, keep order.
+    pairs = []
+    for ts, close in zip(series.timestamps, series.closes):
+        if close is None:
+            continue
+        dt = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+        pairs.append((dt, round(close, 2)))
+
+    if len(pairs) > target:
+        # Even stride downsample; always include first and last samples.
+        stride = (len(pairs) - 1) / (target - 1) if target > 1 else len(pairs)
+        indices = sorted({0, len(pairs) - 1} | {
+            min(len(pairs) - 1, int(round(i * stride))) for i in range(target)
+        })
+        pairs = [pairs[i] for i in indices]
+
+    return jsonify({
+        "symbol": symbol,
+        "points": [{"date": d, "close": c} for d, c in pairs],
+        "meta": {
+            "source": series.source,
+            "points": len(pairs),
+            "error": None,
+        },
+    })

@@ -210,6 +210,29 @@ body {
             --vix-header-tint: rgba(0, 255, 106, 0.14);
         }
 .logo { display: flex; align-items: center; gap: 12px; }
+/* Header background trend: faint QQQ area chart behind the title text.
+   Layered above the header's gradient background but below the text/buttons.
+   overflow:hidden lives here (not on .header) so the settings dropdown can
+   still spill outside the header. */
+.header-trend {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+.header-trend svg { display: block; width: 100%; height: 100%; }
+.header-trend .ht-area   { fill: url(#htGrad); }
+.header-trend .ht-stroke {
+            fill: none;
+            stroke: var(--header-trend-color, rgba(0, 113, 227, 0.10));
+            stroke-width: 1.5;
+            vector-effect: non-scaling-stroke;
+            stroke-linejoin: round;
+            stroke-linecap: round;
+        }
+/* Lift header content above the trend layer. */
+.header-left, .status { position: relative; z-index: 1; }
 .header-left {
             display: flex;
             align-items: center;

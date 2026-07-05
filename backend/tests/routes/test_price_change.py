@@ -538,3 +538,118 @@ class TestVixComparisonEndpoint:
         )
         assert resp.status_code in (200, 500)
         track_coverage(MOD, 1)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# GET /api/price-change/header-trend
+# ═══════════════════════════════════════════════════════════════════════════
+
+FETCHER = "routes.price_change._fetch_daily_series_cached"
+
+
+def _series(n):
+    """Build a fake PriceSeries-like object with n daily bars (ascending close)."""
+    from types import SimpleNamespace
+
+    # timestamps: 2024-01-01 + n days (UTC), closes: 100..100+n
+    import calendar
+    from datetime import datetime, timezone
+
+    base = calendar.timegm(datetime(2024, 1, 1, tzinfo=timezone.utc).timetuple())
+    timestamps = [base + i * 86400 for i in range(n)]
+    closes = [100.0 + i for i in range(n)]
+    return SimpleNamespace(timestamps=timestamps, closes=closes, source="yahoo", error=None)
+
+
+class TestHeaderTrendEndpoint:
+    """GET /api/price-change/header-trend"""
+
+    @patch(FETCHER)
+    def test_downsamples_to_target(self, mock_fetch, client):
+        """Full history (500 pts) → downsampled to <= target points, ends kept."""
+        mock_fetch.return_value = _series(500)
+        resp = client.get(f"{BASE}/header-trend?symbol=QQQ&points=120")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["symbol"] == "QQQ"
+        pts = data["points"]
+        assert 60 <= len(pts) <= 120
+        # Every point has date + close; close is rounded 2dp; dates ascending.
+        assert all("date" in p and "close" in p for p in pts)
+        assert pts == sorted(pts, key=lambda p: p["date"])
+        # First and last samples preserved.
+        assert pts[0]["close"] == 100.0
+        assert pts[-1]["close"] == 599.0
+        diagnose("header-trend points", len(pts))
+        track_coverage(MOD, 3)
+
+    @patch(FETCHER)
+    def test_small_series_passthrough(self, mock_fetch, client):
+        """Series smaller than target is returned whole (no padding)."""
+        mock_fetch.return_value = _series(80)
+        resp = client.get(f"{BASE}/header-trend?points=240")
+        assert resp.status_code == 200
+        assert len(resp.get_json()["points"]) == 80
+        track_coverage(MOD, 1)
+
+    @patch(FETCHER)
+    def test_default_symbol_and_points(self, mock_fetch, client):
+        """No params → defaults: QQQ, target 240."""
+        mock_fetch.return_value = _series(300)
+        resp = client.get(f"{BASE}/header-trend")
+        assert resp.status_code == 200
+        assert resp.get_json()["symbol"] == "QQQ"
+        mock_fetch.assert_called_once_with("QQQ", "stock")
+        track_coverage(MOD, 1)
+
+    def test_points_clamped(self, client):
+        """Out-of-range points clamps to [60, 400] (no 400, just clamp)."""
+        with patch(FETCHER) as mock_fetch:
+            mock_fetch.return_value = _series(50)
+            resp = client.get(f"{BASE}/header-trend?points=99999")
+            assert resp.status_code == 200
+            assert len(resp.get_json()["points"]) == 50  # series smaller than 60
+        with patch(FETCHER) as mock_fetch:
+            mock_fetch.return_value = _series(50)
+            resp = client.get(f"{BASE}/header-trend?points=1")
+            assert resp.status_code == 200
+        track_coverage(MOD, 1)
+
+    @patch(FETCHER)
+    def test_skips_none_closes(self, mock_fetch, client):
+        """None closes are dropped before downsampling."""
+        from types import SimpleNamespace
+
+        s = _series(10)
+        s.closes = [None] + s.closes[1:]  # first close missing
+        mock_fetch.return_value = s
+        resp = client.get(f"{BASE}/header-trend")
+        pts = resp.get_json()["points"]
+        assert resp.status_code == 200
+        assert all(p["close"] is not None for p in pts)
+        assert len(pts) == 9
+        track_coverage(MOD, 1)
+
+    @patch(FETCHER)
+    def test_fetch_error_degrades_gracefully(self, mock_fetch, client):
+        """Fetcher returns errored series → 200 with empty points."""
+        from types import SimpleNamespace
+
+        mock_fetch.return_value = SimpleNamespace(
+            timestamps=[], closes=[], source=None, error="boom"
+        )
+        resp = client.get(f"{BASE}/header-trend")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["points"] == []
+        assert data["meta"]["error"] == "boom"
+        track_coverage(MOD, 1)
+
+    @patch(FETCHER)
+    def test_fetch_exception_returns_200_empty(self, mock_fetch, client):
+        """Fetcher raises → 200 with empty points (decoration-only)."""
+        mock_fetch.side_effect = RuntimeError("network")
+        resp = client.get(f"{BASE}/header-trend")
+        assert resp.status_code == 200
+        assert resp.get_json()["points"] == []
+        track_coverage(MOD, 1)
