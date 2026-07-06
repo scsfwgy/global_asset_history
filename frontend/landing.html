@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="tools24.uk — 实用工具聚合平台，涵盖全球资产历史收益分析（QQQ Tools）与开发者日常工具集（Dev Tools）。">
+    <meta name="keywords" content="tools24,在线工具,开发者工具,资产收益分析,定投回测,JSON格式化,curl工具,加解密工具">
+    <meta name="author" content="tools24.uk">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="https://tools24.uk/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="tools24.uk">
+    <meta property="og:title" content="tools24.uk — 实用工具聚合平台">
+    <meta property="og:description" content="全球资产历史收益分析 & 开发者日常工具集，两个项目一站聚合。">
+    <meta property="og:url" content="https://tools24.uk/">
+    <meta property="og:image" content="https://qqq.tools24.uk/doc/screenshot/yearly-heatmap.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="tools24.uk — 实用工具聚合平台">
+    <meta name="twitter:description" content="全球资产历史收益分析 & 开发者日常工具集。">
+    <meta name="twitter:image" content="https://qqq.tools24.uk/doc/screenshot/yearly-heatmap.png">
+    <title>tools24.uk — 实用工具聚合平台</title>
+    <style>
+        :root {
+            --bg: #fafafa;
+            --card-bg: #ffffff;
+            --text: #1a1a1a;
+            --text-secondary: #666;
+            --border: #e5e5e5;
+            --accent-qqq: #2563eb;
+            --accent-dev: #059669;
+            --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+            --shadow-hover: 0 4px 16px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0d0d0d;
+                --card-bg: #171717;
+                --text: #e5e5e5;
+                --text-secondary: #999;
+                --border: #2a2a2a;
+                --accent-qqq: #60a5fa;
+                --accent-dev: #34d399;
+                --shadow: 0 1px 3px rgba(0,0,0,.3);
+                --shadow-hover: 0 4px 16px rgba(0,0,0,.4), 0 2px 4px rgba(0,0,0,.3);
+            }
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 720px;
+            width: 100%;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+        .logo {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -.5px;
+            color: var(--text);
+        }
+        .logo-dot {
+            color: var(--accent-qqq);
+        }
+        .tagline {
+            margin-top: 8px;
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 560px) {
+            .cards { grid-template-columns: 1fr; }
+            .logo { font-size: 26px; }
+        }
+        .card {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px 28px;
+            box-shadow: var(--shadow);
+            transition: box-shadow .2s, transform .2s;
+        }
+        .card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+        .card-icon.qqq {
+            background: color-mix(in srgb, var(--accent-qqq) 12%, transparent);
+            color: var(--accent-qqq);
+        }
+        .card-icon.dev {
+            background: color-mix(in srgb, var(--accent-dev) 12%, transparent);
+            color: var(--accent-dev);
+        }
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .card-domain {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;
+            margin-bottom: 12px;
+        }
+        .card-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+        .card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 14px;
+        }
+        .tag {
+            font-size: 12px;
+            padding: 3px 10px;
+            border-radius: 100px;
+            background: color-mix(in srgb, var(--text-secondary) 8%, transparent);
+            color: var(--text-secondary);
+        }
+        .footer {
+            text-align: center;
+            margin-top: 48px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .footer a {
+            color: var(--accent-qqq);
+            text-decoration: none;
+        }
+        .footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">tools24<span class="logo-dot">.</span>uk</div>
+            <p class="tagline">实用工具聚合平台</p>
+        </header>
+        <div class="cards">
+            <a class="card" href="https://qqq.tools24.uk/">
+                <div class="card-icon qqq">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                </div>
+                <div class="card-title">QQQ Tools</div>
+                <div class="card-domain">qqq.tools24.uk</div>
+                <div class="card-desc">跨资产历史收益分析与定投回测工具，覆盖美股、ETF、数字货币、A股指数。</div>
+                <div class="card-tags">
+                    <span class="tag">历史涨跌幅</span>
+                    <span class="tag">定投回测</span>
+                    <span class="tag">热力图</span>
+                    <span class="tag">多资产</span>
+                </div>
+            </a>
+            <a class="card" href="https://dev.tools24.uk/">
+                <div class="card-icon dev">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="16 18 22 12 16 6"/>
+                        <polyline points="8 6 2 12 8 18"/>
+                    </svg>
+                </div>
+                <div class="card-title">Dev Tools</div>
+                <div class="card-domain">dev.tools24.uk</div>
+                <div class="card-desc">开发者日常工具集：JSON 格式化、curl 转换、加解密、二维码生成等。</div>
+                <div class="card-tags">
+                    <span class="tag">JSON</span>
+                    <span class="tag">curl</span>
+                    <span class="tag">加解密</span>
+                    <span class="tag">二维码</span>
+                </div>
+            </a>
+        </div>
+        <footer class="footer">
+            <p>© 2026 <a href="https://tools24.uk/">tools24.uk</a> — 持续添加更多实用工具</p>
+        </footer>
+    </div>
+</body>
+</html>

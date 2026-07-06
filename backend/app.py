@@ -527,8 +527,13 @@ def link_clicks():
     return jsonify(_read_link_clicks())
 
 
+_LANDING_HOSTS = {"tools24.uk", "www.tools24.uk"}
+
+
 @app.route("/")
 def index():
+    if request.host in _LANDING_HOSTS:
+        return (FRONTEND_DIR / "landing.html").read_text(encoding="utf-8")
     return serve_frontend_html("price-change.html")
 
 
