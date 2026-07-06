@@ -8,7 +8,7 @@ from typing import Dict, Optional
 logger = logging.getLogger(__name__)
 
 CONFIG_PATH = Path(__file__).resolve().parents[3] / "backend" / "config" / "price_change_config.json"
-DEFAULT_SITE_BASE_URL = "https://qqq.jztzus.uk"
+DEFAULT_SITE_BASE_URL = "https://qqq.tools24.uk"
 
 _CONFIG_CACHE: Optional[Dict] = None
 
