@@ -25,26 +25,36 @@ import requests
 
 # ── Config ──────────────────────────────────────────────────────────────────
 
-# All ETF codes from frontend/js/etf-market.js ETF_GROUPS
+# All ETF codes — must mirror the cn_etf_* presets in
+# backend/config/price_change_config.json. Kept in sync so this script is the
+# single source for regenerating data/etf_fees.json.
 ETF_CODES = [
-    # NASDAQ 100
+    # NASDAQ 100 (cn_etf_nasdaq100)
     "513300",  # 华夏
     "513110",  # 华泰柏瑞
-    "159655",  # 华安
-    "159660",  # 博时
-    "159632",  # 易方达
-    "159501",  # 招商
-    "159513",  # 富国
-    "159696",  # 摩根
-    "159529",  # 汇添富
+    "159660",  # 汇添富
+    "159632",  # 华安
+    "159501",  # 嘉实
+    "159513",  # 大成
+    "159696",  # 易方达
     "513100",  # 国泰
     "159941",  # 广发
     "159659",  # 招商
-    # S&P 500
-    "513650",  # 华夏
+    # S&P 500 (cn_etf_sp500)
+    "513650",  # 南方
     "159612",  # 国泰
     "513500",  # 博时
-    "159652",  # 易方达
+    "159655",  # 华夏
+    # Others (cn_etf_others)
+    "513310",  # 华泰柏瑞（中韩半导体）
+    "161128",  # 标普信息科技LOF
+    "501225",  # 全球芯片LOF
+    "160644",  # 港美互联网LOF
+    "159509",  # 景顺（纳指科技）
+    "159529",  # 景顺（标普消费）
+    "159652",  # 汇添富（有色）
+    "159577",  # 汇添富（美国50）
+    "513850",  # 易方达（美国50）
 ]
 
 FUND_PROFILE_URL = "https://fundf10.eastmoney.com/jbgk_{code}.html"
