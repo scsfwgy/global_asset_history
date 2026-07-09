@@ -588,6 +588,7 @@ body {
     box-shadow: var(--apple-shadow-tooltip);
     pointer-events: none;
     word-break: break-word;
+    white-space: pre-line;
 }
 .vix-advice-value {
             font-size: 24px;
