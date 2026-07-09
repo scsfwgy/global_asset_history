@@ -1,4 +1,6 @@
 """Standalone Flask app for Price Change feature."""
+import hmac
+import html
 import json
 import logging
 import os
@@ -311,12 +313,24 @@ def serve_frontend_html(filename: str):
 
     return Response(html, mimetype="text/html")
 
-# Visit counter.
+# ─── Visit counter ───────────────────────────────────────────────────────────
 # Preferred: shared Redis INCR (atomic, cross-instance, survives cold starts).
 # Fallback (no Redis configured, e.g. local dev): a local JSON file. Note the
 # file fallback is per-instance and reset on serverless cold start — it is only
 # reliable on a persistent single-process server.
 _VISIT_KEY = "visit_count"
+_TAB_VISITS_KEY = "tab_visits"       # Redis hash: {tab_id: count}
+_AD_CLICKS_KEY = "ad_clicks"         # Redis hash: {link_name: count}
+_SETTINGS_CLICKS_KEY = "settings_clicks"       # Redis string: settings panel opens
+_SETTINGS_ACTIONS_KEY = "settings_actions"     # Redis hash: {action: count}
+# Legacy external links in the settings menu. Tracked by /api/link-click as
+# separate `link_click:<name>` string keys (NOT in the ad_clicks hash), so the
+# stats dashboard must read them explicitly and merge into the ad table.
+_TRACKED_LINK_NAMES = ["feishu_us_stock", "github", "xiaohongshu", "tools24"]
+# In-menu toggle actions (theme / color scheme / language) tracked via
+# settings_action events into the settings_actions hash.
+_VALID_SETTINGS_ACTIONS = {"theme", "colorscheme", "language"}
+
 _COUNTER_PATH = Path("/tmp/visit_count.json") if os.path.exists("/tmp") else \
     Path(__file__).resolve().parent / "config" / "visit_count.json"
 _counter_lock = threading.Lock()
@@ -334,6 +348,15 @@ def _read_counter() -> int:
 def _write_counter(count: int) -> None:
     _COUNTER_PATH.parent.mkdir(parents=True, exist_ok=True)
     _COUNTER_PATH.write_text(json.dumps({"count": count}))
+
+
+def _check_admin_token() -> bool:
+    """Verify admin token from ?token= query param. Uses WISH_ADMIN_TOKEN env var."""
+    token = request.args.get("token", "")
+    admin = os.getenv("WISH_ADMIN_TOKEN", "")
+    if not admin or not token:
+        return False
+    return hmac.compare_digest(token, admin)
 
 
 @app.after_request
@@ -474,16 +497,205 @@ def diag():
 
 @app.route("/api/visits")
 def visits():
-    # Shared Redis path — atomic, correct across instances.
+    """Read current visit count without incrementing."""
+    if cache_store.is_enabled():
+        result = cache_store.cache_get(_VISIT_KEY)
+        if result is not None:
+            try:
+                return jsonify({"count": int(result)})
+            except (TypeError, ValueError):
+                pass
+    with _counter_lock:
+        count = _read_counter()
+    return jsonify({"count": count})
+
+
+@app.route("/api/visits/increment", methods=["POST"])
+def visits_increment():
+    """Increment visit count and return new value."""
     if cache_store.is_enabled():
         count = cache_store.cache_incr(_VISIT_KEY)
         if count is not None:
             return jsonify({"count": count})
-        # Redis transiently unavailable — fall through to the file counter.
     with _counter_lock:
         count = _read_counter() + 1
         _write_counter(count)
     return jsonify({"count": count})
+
+
+# ─── Event tracking ─────────────────────────────────────────────────────────
+# POST /api/track  body: {"type": "tab_view", "tab": "heatmap"}
+#                        {"type": "ad_click", "link": "value-investing"}
+#                        {"type": "settings_click"}
+_VALID_TABS = {"heatmap", "yearly", "detail", "backtest", "crash",
+               "etf", "qdii-funds", "vix", "knowledge", "wishes"}
+
+
+@app.route("/api/track", methods=["POST"])
+def track():
+    """Record a tracking event. Fire-and-forget — always returns 200."""
+    body = request.get_json(silent=True) or {}
+    event_type = str(body.get("type", "")).strip()
+
+    if event_type == "tab_view":
+        tab = str(body.get("tab", "")).strip()
+        if tab not in _VALID_TABS:
+            return jsonify({"ok": False, "error": f"unknown tab: {tab}"}), 400
+        if cache_store.is_enabled():
+            cache_store.cache_hincrby(_TAB_VISITS_KEY, tab)
+        return jsonify({"ok": True})
+
+    if event_type == "ad_click":
+        link = str(body.get("link", "")).strip()
+        if not link:
+            return jsonify({"ok": False, "error": "link is required"}), 400
+        if cache_store.is_enabled():
+            cache_store.cache_hincrby(_AD_CLICKS_KEY, link)
+        return jsonify({"ok": True})
+
+    if event_type == "settings_click":
+        if cache_store.is_enabled():
+            cache_store.cache_incr(_SETTINGS_CLICKS_KEY)
+        return jsonify({"ok": True})
+
+    if event_type == "settings_action":
+        action = str(body.get("action", "")).strip()
+        if action not in _VALID_SETTINGS_ACTIONS:
+            return jsonify({"ok": False, "error": f"unknown action: {action}"}), 400
+        if cache_store.is_enabled():
+            cache_store.cache_hincrby(_SETTINGS_ACTIONS_KEY, action)
+        return jsonify({"ok": True})
+
+    return jsonify({"ok": False, "error": f"unknown event type: {event_type}"}), 400
+
+
+# ─── Admin stats dashboard ──────────────────────────────────────────────────
+@app.route("/api/stats")
+def stats_dashboard():
+    """Admin-only stats dashboard. Access with ?token=<WISH_ADMIN_TOKEN>."""
+    if not _check_admin_token():
+        return Response(
+            "<h1>401 Unauthorized</h1><p>需要 ?token= 鉴权参数</p>",
+            status=401,
+        )
+
+    # Gather all stats from Redis (with file fallback for visit count + links)
+    if cache_store.is_enabled():
+        visit_count = cache_store.cache_get(_VISIT_KEY) or "0"
+        tab_stats = cache_store.cache_hgetall(_TAB_VISITS_KEY)
+        ad_stats = cache_store.cache_hgetall(_AD_CLICKS_KEY)
+        settings_count = cache_store.cache_get(_SETTINGS_CLICKS_KEY) or "0"
+        settings_actions = cache_store.cache_hgetall(_SETTINGS_ACTIONS_KEY)
+        # Merge legacy settings-menu external links (separate string keys).
+        for name in _TRACKED_LINK_NAMES:
+            val = cache_store.cache_get(f"link_click:{name}")
+            if val:
+                ad_stats[name] = val
+    else:
+        with _counter_lock:
+            visit_count = str(_read_counter())
+        tab_stats = {}
+        settings_count = "0"
+        settings_actions = {}
+        # Legacy external links still have a file fallback for local dev.
+        with _link_clicks_lock:
+            ad_stats = dict(_read_link_clicks())
+
+    # Sort tab stats by count desc
+    tab_rows = ""
+    sorted_tabs = sorted(tab_stats.items(), key=lambda x: int(x[1]), reverse=True)
+    tab_labels = {
+        "heatmap": "热力图", "yearly": "历年涨跌幅", "detail": "涨跌详情",
+        "backtest": "回测", "crash": "暴跌统计", "etf": "标普纳指ETF追踪（场内）",
+        "qdii-funds": "标普纳指基金追踪（场外）", "vix": "VIX恐慌指数",
+        "knowledge": "数据科普", "wishes": "心愿墙",
+    }
+    for rank, (tab, count) in enumerate(sorted_tabs, 1):
+        label = tab_labels.get(tab, tab)
+        tab_rows += f"<tr><td>{rank}</td><td>{html.escape(label)}</td><td><code>{html.escape(tab)}</code></td><td>{count}</td></tr>"
+
+    if not sorted_tabs:
+        tab_rows = '<tr><td colspan="4" style="color:#666">暂无数据</td></tr>'
+
+    # Sort ad click stats by count desc
+    ad_rows = ""
+    sorted_ads = sorted(ad_stats.items(), key=lambda x: int(x[1]), reverse=True)
+    ad_labels = {
+        "value-investing": "何为价值投资",
+        "how-to-buy": "如何投资美股",
+        "feishu_us_stock": "美股投资新途径",
+        "github": "Github",
+        "xiaohongshu": "小红书",
+        "tools24": "开发者工具",
+    }
+    for rank, (link, count) in enumerate(sorted_ads, 1):
+        label = ad_labels.get(link, link)
+        ad_rows += f"<tr><td>{rank}</td><td>{html.escape(label)}</td><td><code>{html.escape(link)}</code></td><td>{count}</td></tr>"
+
+    if not sorted_ads:
+        ad_rows = '<tr><td colspan="4" style="color:#666">暂无数据</td></tr>'
+
+    # Settings menu toggle actions (theme / color scheme / language)
+    action_rows = ""
+    sorted_actions = sorted(settings_actions.items(), key=lambda x: int(x[1]), reverse=True)
+    action_labels = {
+        "theme": "深色/浅色模式",
+        "colorscheme": "涨跌配色",
+        "language": "语言切换",
+    }
+    for rank, (action, count) in enumerate(sorted_actions, 1):
+        label = action_labels.get(action, action)
+        action_rows += f"<tr><td>{rank}</td><td>{html.escape(label)}</td><td><code>{html.escape(action)}</code></td><td>{count}</td></tr>"
+
+    if not sorted_actions:
+        action_rows = '<tr><td colspan="4" style="color:#666">暂无数据</td></tr>'
+
+    total_tab_views = sum(int(v) for v in tab_stats.values())
+    total_ad_clicks = sum(int(v) for v in ad_stats.values())
+    total_settings_actions = sum(int(v) for v in settings_actions.values())
+
+    html_page = f"""<!DOCTYPE html>
+<meta charset="utf-8"><title>站点统计 — GlobalAssetHistory</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+body{{font-family:system-ui,-apple-system,Helvetica,Arial,sans-serif;max-width:900px;margin:30px auto;padding:0 20px;background:#f5f5f7;color:#1d1d1f}}
+@media(prefers-color-scheme:dark){{body{{background:#111;color:#eee}}}}
+h1{{font-size:1.4rem;margin-bottom:4px}}h2{{font-size:1rem;margin:28px 0 10px;color:#86868b}}
+.summary{{display:flex;gap:16px;margin:16px 0;flex-wrap:wrap}}
+.summary-card{{background:#fff;border-radius:12px;padding:14px 20px;min-width:130px;box-shadow:0 1px 3px rgba(0,0,0,.08)}}
+@media(prefers-color-scheme:dark){{.summary-card{{background:#1a1a1a}}}}
+.summary-card .num{{font-size:2rem;font-weight:700;color:#0071e3}}
+.summary-card .label{{font-size:.75rem;color:#86868b;margin-top:2px}}
+table{{width:100%;border-collapse:collapse;margin-bottom:8px;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}}
+@media(prefers-color-scheme:dark){{table{{background:#1a1a1a}}}}
+th,td{{padding:8px 12px;text-align:left;border-bottom:1px solid #e5e5e5}}
+@media(prefers-color-scheme:dark){{th,td{{border-color:#333}}}}
+th{{color:#86868b;font-size:.75rem;font-weight:600}}
+td{{font-size:.82rem}}tr:hover{{background:#f5f5f7}}
+@media(prefers-color-scheme:dark){{tr:hover{{background:#222}}}}
+code{{color:#0071e3;font-size:.78rem}}
+.sub{{font-size:.7rem;color:#86868b}}
+</style>
+<h1>📊 GlobalAssetHistory 站点统计</h1>
+<div class="summary">
+<div class="summary-card"><div class="num">{visit_count}</div><div class="label">总访问次数</div></div>
+<div class="summary-card"><div class="num">{total_tab_views}</div><div class="label">Tab 浏览</div></div>
+<div class="summary-card"><div class="num">{total_ad_clicks}</div><div class="label">广告位点击</div></div>
+<div class="summary-card"><div class="num">{settings_count}</div><div class="label">设置面板打开</div></div>
+<div class="summary-card"><div class="num">{total_settings_actions}</div><div class="label">设置项操作</div></div>
+</div>
+
+<h2>📑 Tab 访问排行 <span class="sub">（所有用户累计）</span></h2>
+<table><thead><tr><th>#</th><th>Tab</th><th>ID</th><th>次数</th></tr></thead><tbody>{tab_rows}</tbody></table>
+
+<h2>🔗 广告位 / 外链点击排行 <span class="sub">（所有用户累计）</span></h2>
+<table><thead><tr><th>#</th><th>链接</th><th>ID</th><th>次数</th></tr></thead><tbody>{ad_rows}</tbody></table>
+
+<h2>⚙️ 设置项操作排行 <span class="sub">（所有用户累计）</span></h2>
+<table><thead><tr><th>#</th><th>操作</th><th>ID</th><th>次数</th></tr></thead><tbody>{action_rows}</tbody></table>
+
+<p class="sub" style="margin-top:24px">数据来源：Upstash Redis <code>gah:tab_visits</code> / <code>gah:ad_clicks</code> / <code>gah:settings_actions</code> / <code>gah:link_click:*</code></p>"""
+    return html_page
 
 
 _LINK_CLICKS_PATH = Path("/tmp/link_clicks.json") if os.path.exists("/tmp") else \

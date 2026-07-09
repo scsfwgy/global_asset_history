@@ -557,6 +557,19 @@ class TestGetCrashChartData:
 class TestFetcherRegistration:
     """Custom fetcher registration."""
 
+    @pytest.fixture(autouse=True)
+    def _isolate_fetcher_state(self):
+        """Save/restore module-level fetcher dicts so test registrations
+        don't leak into other tests (which may call _get_cached_daily_series
+        with symbols like AAPL and interfere with mock assertions)."""
+        orig_fetchers = dict(svc._FETCHERS)
+        orig_daily = dict(svc._DAILY_SERIES_FETCHERS)
+        yield
+        svc._FETCHERS.clear()
+        svc._FETCHERS.update(orig_fetchers)
+        svc._DAILY_SERIES_FETCHERS.clear()
+        svc._DAILY_SERIES_FETCHERS.update(orig_daily)
+
     def test_register_and_use(self):
         """Register a custom fetcher and verify it's used."""
         called_with = []

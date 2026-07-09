@@ -8,6 +8,7 @@ import inspect
 import time
 from datetime import date, datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
+from unittest.mock import patch
 
 import pytest
 
@@ -16,6 +17,22 @@ import pytest
 import os
 
 os.environ.setdefault("PYTHONPATH", "backend")
+
+
+# ——— hermetic tests: never touch real Upstash Redis ————————————————————————
+# .env.local ships real Redis credentials. If the shell loads it, cache_store
+# reads them at import time and is_enabled() becomes True — so the suite would
+# read/write SHARED PRODUCTION Redis, poison the cross-test cache (a stale
+# gah:v3:daily:* key makes a fetcher-registration test see an L2 hit and skip
+# the fetcher), and inflate live counters. Force L2 off for every test. Tests
+# that intentionally exercise L2 patch cache_store.cache_get directly, which
+# still works because that bypasses _command()/is_enabled().
+@pytest.fixture(autouse=True)
+def _disable_l2_redis():
+    import service.price_change.cache_store as cache_store
+
+    with patch.object(cache_store, "is_enabled", return_value=False):
+        yield
 
 
 # ——— diagnostic helper ——————————————————————————————————————————————————

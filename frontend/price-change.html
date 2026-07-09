@@ -4411,12 +4411,36 @@
       //   }
       //   return String(n);
       // }
-      fetch('/api/visits')
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          document.getElementById('settingsVisitCount').textContent = __("settings.visitCountPrefix") + String(d.count);
-        })
-        .catch(function () {});
+      // Visit counter: increment on page load, then read back.
+      function _trackVisit() {
+        fetch('/api/visits/increment', { method: 'POST' })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            document.getElementById('settingsVisitCount').textContent = __("settings.visitCountPrefix") + String(d.count);
+          })
+          .catch(function () {
+            // Fallback: read without increment
+            fetch('/api/visits')
+              .then(function (r) { return r.json(); })
+              .then(function (d) {
+                document.getElementById('settingsVisitCount').textContent = __("settings.visitCountPrefix") + String(d.count);
+              })
+              .catch(function () {});
+          });
+      }
+      _trackVisit();
+
+      // ─── Event tracking helper ───────────────────────────────────────────
+      function _track(type, data) {
+        var body = { type: type };
+        if (data) { for (var k in data) { if (data.hasOwnProperty(k)) body[k] = data[k]; } }
+        fetch('/api/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          keepalive: true
+        }).catch(function () {});
+      }
     </script>
     <script src="/js/price-change.js"></script>
     <script src="/js/price-detail.js"></script>
@@ -4449,7 +4473,8 @@
             var TRACKED_LINKS = {
                 'feishu_us_stock': 'a[href*="kcn9via7j7oq"]',
                 'github': 'a[href*="github.com"]',
-                'xiaohongshu': 'a[href*="xhslink.com"]'
+                'xiaohongshu': 'a[href*="xhslink.com"]',
+                'tools24': 'a[href*="tools24.uk"]'
             };
             Object.keys(TRACKED_LINKS).forEach(function (name) {
                 var link = menu.querySelector(TRACKED_LINKS[name]);
@@ -4479,6 +4504,8 @@
                     var newLink = menu.querySelector('a[href*="kcn9via7j7oq"]');
                     if (newLink) newLink.classList.add('highlight-link');
                     history.pushState({ _settingsOpen: true, _prev: location.pathname }, '', '/settings');
+                    // Track settings panel open
+                    if (typeof _track === 'function') _track('settings_click');
                 }
             });
             document.addEventListener('click', function () {
@@ -4535,6 +4562,7 @@
                     applyTheme(next);
                     localStorage.setItem(STORAGE_KEY, next);
                     if (typeof window._refreshCharts === 'function') window._refreshCharts();
+                    if (typeof _track === 'function') _track('settings_action', { action: 'theme' });
                 });
             }
 
@@ -4585,6 +4613,7 @@
                     var next = current === 'red_up' ? 'green_up' : 'red_up';
                     applyColorScheme(next);
                     localStorage.setItem(COLOR_SCHEME_KEY, next);
+                    if (typeof _track === 'function') _track('settings_action', { action: 'colorscheme' });
                 });
             }
 
@@ -4619,6 +4648,7 @@
             if (toggle) {
                 toggle.addEventListener('click', function() {
                     var next = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
+                    if (typeof _track === 'function') _track('settings_action', { action: 'language' });
                     if (typeof window.__switchLang === 'function') {
                         window.__switchLang(next);
                     }
@@ -4940,7 +4970,10 @@
                     if (menu && menu.style.display === 'block') {
                         menu.style.display = 'none';
                     }
-                    activateTab(btn.dataset.tab, true);
+                    var tab = btn.dataset.tab;
+                    activateTab(tab, true);
+                    // Track tab view
+                    if (typeof _track === 'function') _track('tab_view', { tab: tab });
                 });
             });
 
@@ -4975,6 +5008,8 @@
                     var path = KB_SUB_PATH[sub] || '/knowledge';
                     history.pushState({ tab: 'knowledge', kbSub: sub }, '', _pathWithLang(path));
                     updateSeo('knowledge');
+                    // Track ad click
+                    if (typeof _track === 'function') _track('ad_click', { link: sub });
                 });
             });
 
