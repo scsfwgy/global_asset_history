@@ -508,6 +508,9 @@
   "knowledge": {
     "title": "📚 Knowledge Base",
     "howToBuy": "How to Buy US Stocks",
+    "quickLearn": "Learn:",
+    "quickHowToBuy": "How to Invest in US Stocks",
+    "valueInvesting": "Value Investing",
     "etfIntro": "Core ETF Guide",
     "eventMyth": "Data Myths",
     "terms": "Terminology"
@@ -531,6 +534,8 @@
     "knowledgeDescription": "US stock investing guides, ETF basics, macro data interpretation, and financial terminology reference.",
     "knowledgeHowToBuyTitle": "How to Buy US Stocks and ETFs with Stablecoins — GlobalAssetHistory",
     "knowledgeHowToBuyDescription": "A practical guide to buying US stocks and ETFs with USDT or USDC through crypto platforms, including product structure, suitability, and risks.",
+    "knowledgeValueInvestingTitle": "What Is Value Investing — GlobalAssetHistory",
+    "knowledgeValueInvestingDescription": "A plain-language guide to value investing: investing vs trading, durable asset traits, long-term holding, drawdown recovery, and building an investing system.",
     "knowledgeEtfIntroTitle": "Core US ETF Guide: SPY, VOO, QQQ, SMH, DRAM, EWY — GlobalAssetHistory",
     "knowledgeEtfIntroDescription": "Compare core US ETFs, technology and semiconductor ETFs, plus DRAM and EWY by performance, holdings, investment use case, and key risks.",
     "knowledgeEventMythTitle": "Market Data Myths: World Cup, Elections, Presidential Cycle, Olympics — GlobalAssetHistory",

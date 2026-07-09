@@ -269,6 +269,39 @@ body {
             transition: opacity var(--transition-fast);
         }
 .logo-text p a:hover { opacity: 0.8; text-decoration: underline; }
+.header-quick-links {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+            font-size: 12px;
+            color: var(--apple-text-tertiary);
+        }
+.header-quick-label {
+            color: var(--apple-text-tertiary);
+        }
+.header-quick-link {
+            display: inline-flex;
+            align-items: center;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: var(--apple-text-tertiary);
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.4;
+            text-decoration: none;
+            transition: color var(--transition-fast), opacity var(--transition-fast);
+        }
+.header-quick-link:hover {
+            color: var(--apple-blue);
+            opacity: 0.9;
+        }
+.header-quick-sep {
+            color: var(--apple-text-tertiary);
+            opacity: 0.65;
+        }
 /* Status — simplified, no pill */
 .status {
             display: flex;
@@ -876,4 +909,3 @@ body {
             .hm-stat-val { font-size: 13px; }
             .hm-stat-label { font-size: 10px; }
         }
-

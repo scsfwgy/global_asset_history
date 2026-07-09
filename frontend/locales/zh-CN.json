@@ -508,6 +508,9 @@
   "knowledge": {
     "title": "📚 数据科普",
     "howToBuy": "如何购买美股",
+    "quickLearn": "学习入口：",
+    "quickHowToBuy": "如何投资美股",
+    "valueInvesting": "何为价值投资",
     "etfIntro": "核心ETF介绍",
     "eventMyth": "数据魔咒",
     "terms": "专业术语"
@@ -531,6 +534,8 @@
     "knowledgeDescription": "美股投资科普、ETF入门、宏观数据解读与金融术语参考。",
     "knowledgeHowToBuyTitle": "如何用稳定币购买美股和ETF - GlobalAssetHistory",
     "knowledgeHowToBuyDescription": "了解通过 BIT、币安和 Bitget 等平台用 USDT、USDC 参与美股和 ETF 的方式、产品结构、适合人群与风险提示。",
+    "knowledgeValueInvestingTitle": "何为价值投资 - GlobalAssetHistory",
+    "knowledgeValueInvestingDescription": "用科普方式理解价值投资：投资和交易的区别、好投资品的特征、长期持有的前提、回撤修复和普通投资者如何建立投资系统。",
     "knowledgeEtfIntroTitle": "核心美股ETF指南：SPY、VOO、QQQ、SMH、DRAM、EWY - GlobalAssetHistory",
     "knowledgeEtfIntroDescription": "对比核心美股 ETF、科技与半导体 ETF、DRAM 与 EWY 的历史表现、持仓特征、热门原因和主要风险。",
     "knowledgeEventMythTitle": "美股数据魔咒统计：世界杯、选举、总统周期和奥运会 - GlobalAssetHistory",

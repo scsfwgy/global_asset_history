@@ -85,7 +85,7 @@ class TestSitemap:
         assert len(locs) == len(set(locs)), "duplicate loc in sitemap"
 
     def test_url_count_matches_pages_times_languages(self, client):
-        # 6 pages (/, /etf-market, 4 knowledge articles), all en-indexable → 2 langs
+        # 2 top-level pages + all knowledge articles, all en-indexable → 2 langs
         urls = _sitemap_urls(client)
         expected = (2 + len(KNOWLEDGE_ARTICLES)) * 2
         assert len(urls) == expected
@@ -136,12 +136,23 @@ class TestHtmlMeta:
             in html
         )
 
-    def test_knowledge_article_jsonld_dates(self, client):
-        path = "/knowledge/how-to-buy-us-stocks"
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/knowledge/how-to-buy-us-stocks",
+            "/knowledge/value-investing",
+        ],
+    )
+    def test_knowledge_article_jsonld_dates(self, client, path):
         article = KNOWLEDGE_ARTICLES[path]
         html = client.get(f"/zh{path}").get_data(as_text=True)
         assert '"datePublished"' in html
         assert f'"dateModified": "{article["updated"]}"' in html
+
+    def test_knowledge_legacy_alias_is_noindex_and_canonicalized(self, client):
+        html = client.get("/zh/knowledge/what-is-value-investing").get_data(as_text=True)
+        assert 'name="robots" content="noindex,follow"' in html
+        assert '<link rel="canonical" href="https://test.local/zh/knowledge/value-investing"' in html
 
 
 # ═══════════════════════════════════════════════════════════════════════════

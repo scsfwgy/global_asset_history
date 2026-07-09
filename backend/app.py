@@ -46,6 +46,25 @@ KNOWLEDGE_ARTICLES = {
             "en": "buy US stocks with stablecoins,USDT US stocks,USDC ETFs,Binance stocks,Bitget Stocks,BIT stocks,tokenized stocks,rToken,US ETFs",
         },
     },
+    "/knowledge/value-investing": {
+        "legacy_paths": ["/knowledge/what-is-value-investing"],
+        "subtab": "value-investing",
+        "en_indexable": True,
+        "published": "2026-07-09",
+        "updated": "2026-07-09",
+        "title": {
+            "zh-CN": "何为价值投资 - GlobalAssetHistory",
+            "en": "What Is Value Investing — GlobalAssetHistory",
+        },
+        "description": {
+            "zh-CN": "用科普方式理解价值投资：投资和交易的区别、好投资品的特征、长期持有的前提、回撤修复和普通投资者如何建立投资系统。",
+            "en": "A plain-language guide to value investing: investing vs trading, durable asset traits, long-term holding, drawdown recovery, and building an investing system.",
+        },
+        "keywords": {
+            "zh-CN": "价值投资,长期投资,投资和交易,好公司,安全边际,投资体系,回撤修复,普通投资者",
+            "en": "value investing,long-term investing,investing vs trading,quality business,margin of safety,drawdown recovery,investment system",
+        },
+    },
     "/knowledge/core-etf-guide": {
         "legacy_paths": ["/knowledge/etf-intro"],
         "subtab": "etf-intro",
@@ -114,7 +133,7 @@ INDEXABLE_PATHS = {"/", "/etf-market", "/knowledge", *KNOWLEDGE_ARTICLES.keys()}
 # Real last-modified dates per page group. Update these ONLY when the page's
 # HTML/content actually changes — Google discounts <lastmod> if it always shows
 # "today". Knowledge articles use the per-article "updated" field instead.
-INDEX_LASTMOD = "2026-07-05"
+INDEX_LASTMOD = "2026-07-09"
 ETF_MARKET_LASTMOD = "2026-07-08"
 
 
@@ -403,6 +422,8 @@ def etf_market():
 @app.route("/knowledge")
 @app.route("/knowledge/how-to-buy")
 @app.route("/knowledge/how-to-buy-us-stocks")
+@app.route("/knowledge/value-investing")
+@app.route("/knowledge/what-is-value-investing")
 @app.route("/knowledge/etf-intro")
 @app.route("/knowledge/core-etf-guide")
 @app.route("/knowledge/event-myth")
