@@ -17,6 +17,54 @@ var _hmSizeBy = "turnover";
 var _hmForceRefresh = false;
 const HM_STORAGE_KEY = "gah_heatmap_state";
 
+// Common Chinese display names for the built-in US heatmap watchlist.
+// Unknown/user-entered symbols fall back to the official English quote name.
+var HM_ZH_NAMES = {
+  SPY: "标普500ETF", QQQ: "纳指100ETF", IWM: "罗素2000ETF", DIA: "道指ETF",
+  TLT: "长期美债ETF", HYG: "高收益债ETF", LQD: "投资级债ETF", EEM: "新兴市场ETF",
+  EFA: "发达市场ETF", GLD: "黄金ETF", VOO: "标普500ETF", VTI: "美国全市场ETF",
+  VEA: "发达市场ETF", VWO: "新兴市场ETF", BND: "美国债券ETF", ARKK: "方舟创新ETF",
+  XLE: "能源ETF", XLF: "金融ETF", XLV: "医疗ETF", SMH: "半导体ETF",
+  AAPL: "苹果", MSFT: "微软", NVDA: "英伟达", GOOGL: "谷歌", AMZN: "亚马逊",
+  META: "Meta", TSLA: "特斯拉", AVGO: "博通", ADBE: "Adobe", CRM: "赛富时",
+  INTC: "英特尔", AMD: "超威半导体", QCOM: "高通", CSCO: "思科", ORCL: "甲骨文",
+  IBM: "IBM", NFLX: "奈飞", UBER: "优步", PYPL: "PayPal", NOW: "ServiceNow",
+  PANW: "Palo Alto", SNOW: "Snowflake", PLTR: "Palantir", ARM: "Arm",
+  JPM: "摩根大通", V: "Visa", MA: "万事达", BAC: "美国银行", WFC: "富国银行",
+  GS: "高盛", MS: "摩根士丹利", AXP: "美国运通", C: "花旗", BLK: "贝莱德",
+  SCHW: "嘉信理财", LLY: "礼来", UNH: "联合健康", JNJ: "强生", ABBV: "艾伯维",
+  MRK: "默沙东", PFE: "辉瑞", TMO: "赛默飞", AMGN: "安进", ISRG: "直觉外科",
+  GILD: "吉利德", WMT: "沃尔玛", HD: "家得宝", PG: "宝洁", KO: "可口可乐",
+  PEP: "百事", COST: "好市多", NKE: "耐克", MCD: "麦当劳", SBUX: "星巴克",
+  LOW: "劳氏", TGT: "塔吉特", XOM: "埃克森美孚", CVX: "雪佛龙", CAT: "卡特彼勒",
+  BA: "波音", GE: "通用电气", RTX: "RTX", LMT: "洛克希德马丁", DIS: "迪士尼",
+  VZ: "Verizon", T: "AT&T", CMCSA: "康卡斯特", NEE: "新纪元能源", SPGI: "标普全球"
+};
+
+var HM_EN_NAMES = {
+  SPY: "S&P 500 ETF", QQQ: "Nasdaq-100 ETF", IWM: "Russell 2000 ETF", DIA: "Dow Jones ETF",
+  TLT: "20+ Year Treasury ETF", HYG: "High Yield Bond ETF", LQD: "Investment Grade Bond ETF",
+  EEM: "Emerging Markets ETF", EFA: "Developed Markets ETF", GLD: "Gold ETF",
+  VOO: "S&P 500 ETF", VTI: "US Total Market ETF", VEA: "Developed Markets ETF",
+  VWO: "Emerging Markets ETF", BND: "US Bond ETF", ARKK: "ARK Innovation ETF",
+  XLE: "Energy ETF", XLF: "Financial ETF", XLV: "Health Care ETF", SMH: "Semiconductor ETF",
+  AAPL: "Apple", MSFT: "Microsoft", NVDA: "NVIDIA", GOOGL: "Alphabet", AMZN: "Amazon",
+  META: "Meta", TSLA: "Tesla", AVGO: "Broadcom", ADBE: "Adobe", CRM: "Salesforce",
+  INTC: "Intel", AMD: "AMD", QCOM: "Qualcomm", CSCO: "Cisco", ORCL: "Oracle", IBM: "IBM",
+  NFLX: "Netflix", UBER: "Uber", PYPL: "PayPal", NOW: "ServiceNow", PANW: "Palo Alto Networks",
+  SNOW: "Snowflake", PLTR: "Palantir", ARM: "Arm", JPM: "JPMorgan Chase", V: "Visa",
+  MA: "Mastercard", BAC: "Bank of America", WFC: "Wells Fargo", GS: "Goldman Sachs",
+  MS: "Morgan Stanley", AXP: "American Express", C: "Citigroup", BLK: "BlackRock",
+  SCHW: "Charles Schwab", LLY: "Eli Lilly", UNH: "UnitedHealth", JNJ: "Johnson & Johnson",
+  ABBV: "AbbVie", MRK: "Merck", PFE: "Pfizer", TMO: "Thermo Fisher", AMGN: "Amgen",
+  ISRG: "Intuitive Surgical", GILD: "Gilead", WMT: "Walmart", HD: "Home Depot",
+  PG: "Procter & Gamble", KO: "Coca-Cola", PEP: "PepsiCo", COST: "Costco", NKE: "Nike",
+  MCD: "McDonald's", SBUX: "Starbucks", LOW: "Lowe's", TGT: "Target", XOM: "Exxon Mobil",
+  CVX: "Chevron", CAT: "Caterpillar", BA: "Boeing", GE: "GE Aerospace", RTX: "RTX",
+  LMT: "Lockheed Martin", DIS: "Disney", VZ: "Verizon", T: "AT&T", CMCSA: "Comcast",
+  NEE: "NextEra Energy", SPGI: "S&P Global"
+};
+
 // ─── DOM refs ───
 const hmFilterToggle = document.getElementById("hmFilterToggle");
 const hmFilterPanel = document.getElementById("hmFilterPanel");
@@ -77,6 +125,27 @@ function hmUpdateFreshness() {
 
 function hmDisplayName(s) {
   return s.name ? s.symbol + "(" + s.name + ")" : s.symbol;
+}
+
+function hmLocalizedName(d) {
+  var isEnglish = typeof __lang === "function" && __lang() === "en";
+  if (isEnglish) return d.name || HM_EN_NAMES[d.symbol] || "";
+  return HM_ZH_NAMES[d.symbol] || d.name || HM_EN_NAMES[d.symbol] || "";
+}
+
+function hmFitLabel(text, maxWidth, fontSize) {
+  if (!text) return "";
+  var width = 0;
+  var output = "";
+  var limit = Math.max(0, maxWidth - fontSize);
+  for (var i = 0; i < text.length; i++) {
+    var code = text.charCodeAt(i);
+    var charWidth = code > 255 ? fontSize : fontSize * 0.58;
+    if (width + charWidth > limit) return output ? output + "…" : "";
+    output += text[i];
+    width += charWidth;
+  }
+  return output;
 }
 
 // ─── Tags ───
@@ -416,7 +485,17 @@ function renderTreemap(result, animate) {
       var labelDelay = animate ? (delay + 90) : 0;
       var labelStyle = animate ? (' style="animation-delay:' + labelDelay + 'ms"') : '';
 
-      if (isLarge) {
+      var localizedName = hmLocalizedName(d);
+      var hasNameRoom = localizedName && rw >= 96 && rh >= 56;
+      if (hasNameRoom) {
+        var symbolSize = isLarge ? 14 : 12;
+        var nameSize = isLarge ? 10 : 9;
+        var returnSize = isLarge ? 16 : 12;
+        var fittedName = hmFitLabel(localizedName, rw - 16, nameSize);
+        svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh * 0.25).toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" font-size="' + symbolSize + '" font-weight="700" fill="#fff" filter="url(#hmLabelShadow)" class="hm-label"' + labelStyle + '>' + escapeHtml(d.symbol) + '</text>');
+        svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh * 0.50).toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" font-size="' + nameSize + '" font-weight="500" fill="rgba(255,255,255,0.92)" filter="url(#hmLabelShadow)" class="hm-label"' + labelStyle + '>' + escapeHtml(fittedName) + '</text>');
+        svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh * 0.76).toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" font-size="' + returnSize + '" font-weight="700" fill="#fff" filter="url(#hmLabelShadow)" class="hm-label"' + labelStyle + '>' + escapeHtml(hmFormatPct(d.return_pct)) + '</text>');
+      } else if (isLarge) {
         svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh * 0.40).toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="600" fill="#fff" filter="url(#hmLabelShadow)" class="hm-label"' + labelStyle + '>' + escapeHtml(d.symbol) + '</text>');
         svgParts.push('<text x="' + cx.toFixed(1) + '" y="' + (ry + rh * 0.66).toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" font-size="17" font-weight="700" fill="#fff" filter="url(#hmLabelShadow)" class="hm-label"' + labelStyle + '>' + escapeHtml(hmFormatPct(d.return_pct)) + '</text>');
       } else if (isMedium) {
@@ -516,7 +595,8 @@ function hmJumpToYearly(d) {
 function hmShowTooltip(evt, d) {
   if (!d) return;
   var retCls = d.return_pct >= 0 ? "hm-tt-up" : "hm-tt-down";
-  var nameLine = d.name ? escapeHtml(d.name) : "";
+  var localizedName = hmLocalizedName(d);
+  var nameLine = localizedName ? escapeHtml(localizedName) : "";
   var rows = "";
   rows += '<div class="hm-tt-row"><span class="hm-tt-label">' + __("heatmap.tooltipReturn") + '</span><span class="hm-tt-val ' + retCls + '">' + hmFormatPct(d.return_pct) + '</span></div>';
   rows += '<div class="hm-tt-row"><span class="hm-tt-label">' + __("heatmap.tooltipTurnover") + '</span><span class="hm-tt-val">' + hmFormatBig(d.turnover) + " " + (d.turnover_currency || "") + '</span></div>';

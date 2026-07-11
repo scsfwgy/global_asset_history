@@ -920,7 +920,13 @@ class TestFetchHeatmapToday:
 
         with patch(
             "service.price_change.price_change_service._fetch_daily_series_cached"
-        ) as mock_fetch:
+        ) as mock_fetch, patch(
+            "service.price_change.price_change_service._yahoo_quote_batch",
+            return_value=[{
+                "symbol": "AAPL", "name": "Apple Inc.", "price": 150.0,
+                "change_pct": 1.0, "volume": 1000, "market_cap": 3e12,
+            }],
+        ):
             from tests.conftest import make_series
             mock_fetch.return_value = make_series(years=1, start_price=100.0)
 
@@ -940,11 +946,20 @@ class TestFetchHeatmapToday:
         from tests.conftest import make_series
         mock_fetch.return_value = make_series(years=1, start_price=100.0)
 
-        result = svc.fetch_heatmap_data(
-            symbols=[{"symbol": "AAPL", "type": "stock"}],
-            period="month", auto_top_n=0, include_market_cap=False,
-        )
+        with patch(
+            "service.price_change.price_change_service._yahoo_quote_batch",
+            return_value=[{
+                "symbol": "AAPL", "name": "Apple Inc.", "price": 150.0,
+                "change_pct": 1.0, "volume": 1000, "market_cap": 3e12,
+            }],
+        ) as mock_quotes:
+            result = svc.fetch_heatmap_data(
+                symbols=[{"symbol": "AAPL", "type": "stock"}],
+                period="month", auto_top_n=0, include_market_cap=False,
+            )
         assert result["period"] == "month"
+        assert result["data"][0]["name"] == "Apple Inc."
         mock_build.assert_not_called()
         mock_fetch.assert_called()
-        track_coverage(MOD, 1)
+        mock_quotes.assert_called_once_with(["AAPL"])
+        track_coverage(MOD, 2)

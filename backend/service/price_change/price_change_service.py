@@ -1303,12 +1303,31 @@ def fetch_heatmap_data(
             if match and match not in ordered:
                 ordered.append(match)
 
-    # Best-effort market cap (only for displayed stocks, only when requested)
-    if include_market_cap and ordered:
+    # Attach display names for every period, not only the "today" fast path.
+    # Reuse the same quote response for market caps to avoid another Yahoo call.
+    if ordered:
         stock_syms = [r["symbol"] for r in ordered if r["type"] == "stock"]
-        caps = _get_market_caps(stock_syms)
+        quote_map = {
+            q["symbol"]: q for q in _yahoo_quote_batch(stock_syms)
+        } if stock_syms else {}
+
         for r in ordered:
-            r["market_cap"] = caps.get(r["symbol"]) if r["type"] == "stock" else None
+            if r["type"] == "stock":
+                quote = quote_map.get(r["symbol"])
+                if quote and quote.get("name"):
+                    r["name"] = quote["name"]
+
+        if include_market_cap:
+            caps = {
+                sym: float(quote["market_cap"])
+                for sym, quote in quote_map.items()
+                if quote.get("market_cap") and float(quote["market_cap"]) > 0
+            }
+            missing_caps = [sym for sym in stock_syms if sym not in caps]
+            if missing_caps:
+                caps.update(_get_market_caps(missing_caps))
+            for r in ordered:
+                r["market_cap"] = caps.get(r["symbol"]) if r["type"] == "stock" else None
 
     return {
         "period": period,
