@@ -141,6 +141,7 @@ class TestHtmlMeta:
         [
             "/knowledge/how-to-buy-us-stocks",
             "/knowledge/value-investing",
+            "/knowledge/nasdaq-etf-guide",
         ],
     )
     def test_knowledge_article_jsonld_dates(self, client, path):
@@ -153,6 +154,13 @@ class TestHtmlMeta:
         html = client.get("/zh/knowledge/what-is-value-investing").get_data(as_text=True)
         assert 'name="robots" content="noindex,follow"' in html
         assert '<link rel="canonical" href="https://test.local/zh/knowledge/value-investing"' in html
+
+    def test_nasdaq_etf_article_route_and_content(self, client):
+        html = client.get("/zh/knowledge/nasdaq-etf-guide").get_data(as_text=True)
+        assert "QQQM" in html
+        assert "QNDX" in html
+        assert 'data-kb-tab="nasdaq-etf"' in html
+        assert '<link rel="canonical" href="https://test.local/zh/knowledge/nasdaq-etf-guide"' in html
 
 
 # ═══════════════════════════════════════════════════════════════════════════

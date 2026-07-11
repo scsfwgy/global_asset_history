@@ -512,6 +512,7 @@
     "quickHowToBuy": "如何投资美股",
     "valueInvesting": "何为价值投资",
     "etfIntro": "核心ETF介绍",
+    "nasdaqEtf": "纳指ETF",
     "eventMyth": "数据魔咒",
     "terms": "专业术语"
   },
@@ -538,6 +539,8 @@
     "knowledgeValueInvestingDescription": "用科普方式理解价值投资：投资和交易的区别、好投资品的特征、长期持有的前提、回撤修复和普通投资者如何建立投资系统。",
     "knowledgeEtfIntroTitle": "核心美股ETF指南：SPY、VOO、QQQ、SMH、DRAM、EWY - GlobalAssetHistory",
     "knowledgeEtfIntroDescription": "对比核心美股 ETF、科技与半导体 ETF、DRAM 与 EWY 的历史表现、持仓特征、热门原因和主要风险。",
+    "knowledgeNasdaqEtfTitle": "纳指ETF指南：QQQ、QQQM、IQQ、QNDX与衍生产品 - GlobalAssetHistory",
+    "knowledgeNasdaqEtfDescription": "对比 QQQ、QQQM、IQQ、QNDX 的价格、发行商、费率、规模、优缺点，并介绍 ONEQ、QQEW、QQQJ、TQQQ、QLD、QYLD 等纳指衍生 ETF。",
     "knowledgeEventMythTitle": "美股数据魔咒统计：世界杯、选举、总统周期和奥运会 - GlobalAssetHistory",
     "knowledgeEventMythDescription": "用历史数据检验世界杯、美国中期选举、总统四年周期、奥运会等市场魔咒，区分统计现象与交易信号。",
     "knowledgeTermsTitle": "美股、A股ETF和基金专业术语表 - GlobalAssetHistory",

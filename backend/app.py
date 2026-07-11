@@ -86,6 +86,25 @@ KNOWLEDGE_ARTICLES = {
             "en": "core ETFs,US ETFs,SPY,VOO,QQQ,QQQM,VGT,XLK,SMH,SOXX,DRAM,EWY,ETF holdings,ETF allocation",
         },
     },
+    "/knowledge/nasdaq-etf-guide": {
+        "legacy_paths": ["/knowledge/nasdaq-etf"],
+        "subtab": "nasdaq-etf",
+        "en_indexable": True,
+        "published": "2026-07-11",
+        "updated": "2026-07-11",
+        "title": {
+            "zh-CN": "纳指ETF指南：QQQ、QQQM、IQQ、QNDX与衍生产品 - GlobalAssetHistory",
+            "en": "Nasdaq ETF Guide: QQQ, QQQM, IQQ, QNDX and Variants — GlobalAssetHistory",
+        },
+        "description": {
+            "zh-CN": "对比 QQQ、QQQM、IQQ、QNDX 的价格、发行商、费率、规模、优缺点，并介绍 ONEQ、QQEW、QQQJ、TQQQ、QLD、QYLD 等纳指衍生 ETF。",
+            "en": "Compare QQQ, QQQM, IQQ, and QNDX by price, issuer, fees, size, strengths, and drawbacks, then understand ONEQ, QQEW, QQQJ, TQQQ, QLD, and QYLD.",
+        },
+        "keywords": {
+            "zh-CN": "纳指ETF,QQQ,QQQM,IQQ,QNDX,ONEQ,QQEW,QQQJ,TQQQ,QLD,SQQQ,QYLD,纳斯达克100ETF",
+            "en": "Nasdaq ETFs,QQQ,QQQM,IQQ,QNDX,ONEQ,QQEW,QQQJ,TQQQ,QLD,SQQQ,QYLD,Nasdaq-100 ETF",
+        },
+    },
     "/knowledge/market-data-myths": {
         "legacy_paths": ["/knowledge/event-myth"],
         "subtab": "event-myth",
@@ -135,7 +154,7 @@ INDEXABLE_PATHS = {"/", "/etf-market", "/knowledge", *KNOWLEDGE_ARTICLES.keys()}
 # Real last-modified dates per page group. Update these ONLY when the page's
 # HTML/content actually changes — Google discounts <lastmod> if it always shows
 # "today". Knowledge articles use the per-article "updated" field instead.
-INDEX_LASTMOD = "2026-07-09"
+INDEX_LASTMOD = "2026-07-11"
 ETF_MARKET_LASTMOD = "2026-07-08"
 
 
@@ -449,6 +468,8 @@ def etf_market():
 @app.route("/knowledge/what-is-value-investing")
 @app.route("/knowledge/etf-intro")
 @app.route("/knowledge/core-etf-guide")
+@app.route("/knowledge/nasdaq-etf")
+@app.route("/knowledge/nasdaq-etf-guide")
 @app.route("/knowledge/event-myth")
 @app.route("/knowledge/market-data-myths")
 @app.route("/knowledge/terms")

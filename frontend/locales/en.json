@@ -512,6 +512,7 @@
     "quickHowToBuy": "How to Invest in US Stocks",
     "valueInvesting": "Value Investing",
     "etfIntro": "Core ETF Guide",
+    "nasdaqEtf": "Nasdaq ETFs",
     "eventMyth": "Data Myths",
     "terms": "Terminology"
   },
@@ -538,6 +539,8 @@
     "knowledgeValueInvestingDescription": "A plain-language guide to value investing: investing vs trading, durable asset traits, long-term holding, drawdown recovery, and building an investing system.",
     "knowledgeEtfIntroTitle": "Core US ETF Guide: SPY, VOO, QQQ, SMH, DRAM, EWY — GlobalAssetHistory",
     "knowledgeEtfIntroDescription": "Compare core US ETFs, technology and semiconductor ETFs, plus DRAM and EWY by performance, holdings, investment use case, and key risks.",
+    "knowledgeNasdaqEtfTitle": "Nasdaq ETF Guide: QQQ, QQQM, IQQ, QNDX and Variants — GlobalAssetHistory",
+    "knowledgeNasdaqEtfDescription": "Compare QQQ, QQQM, IQQ, and QNDX by price, issuer, fees, size, strengths, and drawbacks, then understand ONEQ, QQEW, QQQJ, TQQQ, QLD, and QYLD.",
     "knowledgeEventMythTitle": "Market Data Myths: World Cup, Elections, Presidential Cycle, Olympics — GlobalAssetHistory",
     "knowledgeEventMythDescription": "Use historical market data to test popular market myths around the World Cup, US elections, presidential cycles, and the Olympics.",
     "knowledgeTermsTitle": "US Stock and ETF Glossary — GlobalAssetHistory",

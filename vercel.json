@@ -8,13 +8,13 @@
     { "source": "/etf-market", "destination": "/api/index" },
     { "source": "/(yearly|detail|backtest|crash|etf|qdii-funds|vix|wishes|settings|knowledge|heatmap)", "destination": "/api/index" },
     { "source": "/etf/:sub(nasdaq100|sp500|global_others)", "destination": "/api/index" },
-    { "source": "/knowledge/:sub(how-to-buy|how-to-buy-us-stocks|value-investing|what-is-value-investing|etf-intro|core-etf-guide|event-myth|market-data-myths|terms|financial-terms)", "destination": "/api/index" },
+    { "source": "/knowledge/:sub(how-to-buy|how-to-buy-us-stocks|value-investing|what-is-value-investing|etf-intro|core-etf-guide|nasdaq-etf|nasdaq-etf-guide|event-myth|market-data-myths|terms|financial-terms)", "destination": "/api/index" },
     { "source": "/:lang(en|zh)", "destination": "/api/index" },
     { "source": "/:lang(en|zh)/", "destination": "/api/index" },
     { "source": "/:lang(en|zh)/etf-market", "destination": "/api/index" },
     { "source": "/:lang(en|zh)/(yearly|detail|backtest|crash|etf|qdii-funds|vix|wishes|settings|knowledge|heatmap)", "destination": "/api/index" },
     { "source": "/:lang(en|zh)/etf/:sub(nasdaq100|sp500|global_others)", "destination": "/api/index" },
-    { "source": "/:lang(en|zh)/knowledge/:sub(how-to-buy|how-to-buy-us-stocks|value-investing|what-is-value-investing|etf-intro|core-etf-guide|event-myth|market-data-myths|terms|financial-terms)", "destination": "/api/index" },
+    { "source": "/:lang(en|zh)/knowledge/:sub(how-to-buy|how-to-buy-us-stocks|value-investing|what-is-value-investing|etf-intro|core-etf-guide|nasdaq-etf|nasdaq-etf-guide|event-myth|market-data-myths|terms|financial-terms)", "destination": "/api/index" },
     { "source": "/", "destination": "/api/index" }
   ],
   "functions": {
