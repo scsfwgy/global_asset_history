@@ -92,9 +92,10 @@ class TestEtfGroupAssignments:
     """
 
     def test_known_nasdaq100_codes(self):
-        """159529 (S&P consumer theme) must NOT be in nasdaq100."""
+        """Broad Nasdaq-100 funds belong here; S&P consumer theme does not."""
         syms = set(_etf_symbols_by_group()["cn_etf_nasdaq100"])
         assert "159529" not in syms
+        assert {"513390", "513870"} <= syms
 
     def test_known_sp500_codes(self):
         """159652 (commodities theme) must NOT be in sp500."""

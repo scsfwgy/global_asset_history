@@ -28,7 +28,9 @@
         { "symbol": "159696", "type": "cn_stock", "name": "纳指ETF易方达" },
         { "symbol": "513100", "type": "cn_stock", "name": "纳指ETF国泰" },
         { "symbol": "159941", "type": "cn_stock", "name": "纳指ETF广发" },
-        { "symbol": "159659", "type": "cn_stock", "name": "纳斯达克100ETF招商" }
+        { "symbol": "159659", "type": "cn_stock", "name": "纳斯达克100ETF招商" },
+        { "symbol": "513390", "type": "cn_stock", "name": "纳斯达克100ETF博时" },
+        { "symbol": "513870", "type": "cn_stock", "name": "纳斯达克100ETF富国" }
       ]
     },
 
