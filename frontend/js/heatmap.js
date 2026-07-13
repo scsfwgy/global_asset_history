@@ -15,6 +15,7 @@ var _hmLastSymbolKeys = "";
 var _hmInitialFetchDone = false;
 var _hmSizeBy = "turnover";
 var _hmForceRefresh = false;
+var _marketPulseData = null;
 const HM_STORAGE_KEY = "gah_heatmap_state";
 
 // Common Chinese display names for the built-in US heatmap watchlist.
@@ -86,6 +87,9 @@ const hmEmpty = document.getElementById("hmEmpty");
 const hmLegend = document.getElementById("hmLegend");
 const hmFreshness = document.getElementById("hmFreshness");
 const hmStats = document.getElementById("hmStats");
+const marketPulse = document.getElementById("marketPulse");
+const marketPulseGrid = document.getElementById("marketPulseGrid");
+const marketPulseToggle = document.getElementById("marketPulseToggle");
 
 // ─── HTML tooltip overlay ───
 var hmTooltipEl = document.createElement("div");
@@ -146,6 +150,83 @@ function hmFitLabel(text, maxWidth, fontSize) {
     width += charWidth;
   }
   return output;
+}
+
+// ─── Global market pulse ───
+
+function pulseFormatPrice(value) {
+  if (value == null || !isFinite(value)) return "—";
+  return new Intl.NumberFormat(typeof __lang === "function" && __lang() === "en" ? "en-US" : "zh-CN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function pulseColor(change) {
+  var value = Number(change);
+  var isRedUp = (typeof window.getColorScheme === "function" && window.getColorScheme() === "red_up");
+  if (!isFinite(value) || Math.abs(value) < HM_DEAD_ZONE) {
+    return { bg: "rgb(" + HM_NEUTRAL.join(",") + ")", text: "#fff" };
+  }
+
+  var isUp = value >= 0;
+  var useGreen = isUp ? !isRedUp : isRedUp;
+  var rgb = _pulseSemanticColor(
+    Math.abs(value),
+    useGreen ? PULSE_GREEN_COLORS : PULSE_RED_COLORS
+  );
+  return {
+    bg: "rgb(" + Math.round(rgb[0]) + "," + Math.round(rgb[1]) + "," + Math.round(rgb[2]) + ")",
+    text: "#fff",
+  };
+}
+
+function renderMarketPulse(result) {
+  if (!marketPulseGrid) return;
+  _marketPulseData = result;
+  var markets = result && Array.isArray(result.markets) ? result.markets : [];
+
+  marketPulseGrid.innerHTML = markets.map(function (item, index) {
+    var name = typeof __lang === "function" && __lang() === "en" ? item.name_en : item.name;
+    if (item.error || item.price == null) {
+      return '<div class="market-pulse-card" title="' + escapeHtml(item.error || "") + '">' +
+        '<div class="market-pulse-card-top"><span class="market-pulse-name">' + escapeHtml(name || item.symbol) + '</span>' +
+        '<span class="market-pulse-market">' + escapeHtml(item.market || "") + '</span></div>' +
+        '<div class="market-pulse-error">' + __("heatmap.pulseUnavailable") + '</div></div>';
+    }
+
+    var change = Number(item.change_pct || 0);
+    var direction = change > 0 ? "pulse-up" : change < 0 ? "pulse-down" : "";
+    var color = pulseColor(change);
+    var sign = change > 0 ? "+" : "";
+    var date = item.trade_date ? item.trade_date.slice(5) : "";
+    return '<button type="button" class="market-pulse-card market-pulse-card-colored ' + direction + '" data-pulse-index="' + index + '"' +
+      ' style="--pulse-bg:' + color.bg + '"' +
+      ' title="' + escapeHtml((item.source || "") + (item.trade_date ? " · " + item.trade_date : "")) + '">' +
+      '<span class="market-pulse-card-top"><span class="market-pulse-name">' + escapeHtml(name || item.symbol) + '</span>' +
+      '<span class="market-pulse-market">' + escapeHtml(item.market || "") + '</span></span>' +
+      '<span class="market-pulse-price">' + pulseFormatPrice(item.price) + '</span>' +
+      '<span class="market-pulse-foot"><span class="market-pulse-change ' + direction + '">' + sign + change.toFixed(2) + '%</span>' +
+      '<span class="market-pulse-date">' + escapeHtml(date) + '</span></span></button>';
+  }).join("");
+
+  marketPulseGrid.querySelectorAll("[data-pulse-index]").forEach(function (card) {
+    card.addEventListener("click", function () {
+      var item = markets[parseInt(card.dataset.pulseIndex, 10)];
+      if (item) hmJumpToYearly(item);
+    });
+  });
+}
+
+async function fetchMarketPulse() {
+  if (!marketPulseGrid || typeof MARKET_PULSE_ENDPOINT === "undefined") return;
+  try {
+    var response = await fetch(MARKET_PULSE_ENDPOINT, { headers: { "Accept": "application/json" } });
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    renderMarketPulse(await response.json());
+  } catch (error) {
+    marketPulseGrid.innerHTML = '<div class="market-pulse-card"><div class="market-pulse-error">' + __("heatmap.pulseUnavailable") + '</div></div>';
+  }
 }
 
 // ─── Tags ───
@@ -332,12 +413,23 @@ var HM_RED_RAMP = [
 ];
 var HM_DEAD_ZONE = 0.3;                          // |return%| below this = neutral
 
+// Market-pulse semantic stops: mild, notable, large, severe, extreme. Once a
+// move leaves the neutral dead zone it stays on a clean hue; severity is shown
+// through lightness/depth, never by blending red/green into muddy slate.
+var PULSE_COLOR_STOPS = [0.3, 1, 2, 4, 6, 8];
+var PULSE_GREEN_COLORS = [
+  [86, 196, 120], [72, 184, 108], [55, 168, 94], [34, 148, 78], [22, 128, 66], [16, 110, 56],
+];
+var PULSE_RED_COLORS = [
+  [233, 110, 104], [224, 91, 86], [210, 69, 67], [190, 49, 50], [173, 38, 41], [156, 30, 34],
+];
+
 function _hmLerp(a, b, t) { return a + (b - a) * t; }
 
 function _hmRampColor(ramp, intensity) {
-  // intensity 0..1 → blend from neutral (at 0) through the ramp stops.
+  // intensity 0..1 → blend from neutral through the ramp stops.
   if (intensity <= 0) return HM_NEUTRAL.slice();
-  var stops = [HM_NEUTRAL].concat(ramp);         // anchor low end at neutral
+  var stops = [HM_NEUTRAL].concat(ramp);          // anchor low end at neutral
   var seg = (stops.length - 1) * Math.min(intensity, 1);
   var lo = Math.floor(seg);
   var hi = Math.min(lo + 1, stops.length - 1);
@@ -347,6 +439,23 @@ function _hmRampColor(ramp, intensity) {
     _hmLerp(stops[lo][1], stops[hi][1], t),
     _hmLerp(stops[lo][2], stops[hi][2], t),
   ];
+}
+
+function _pulseSemanticColor(magnitude, colors) {
+  if (magnitude <= PULSE_COLOR_STOPS[0]) return colors[0].slice();
+  for (var i = 1; i < PULSE_COLOR_STOPS.length; i++) {
+    if (magnitude <= PULSE_COLOR_STOPS[i]) {
+      var low = PULSE_COLOR_STOPS[i - 1];
+      var high = PULSE_COLOR_STOPS[i];
+      var t = (magnitude - low) / (high - low);
+      return [
+        _hmLerp(colors[i - 1][0], colors[i][0], t),
+        _hmLerp(colors[i - 1][1], colors[i][1], t),
+        _hmLerp(colors[i - 1][2], colors[i][2], t),
+      ];
+    }
+  }
+  return colors[colors.length - 1].slice();
 }
 
 function hmColor(returnPct, maxAbs) {
@@ -760,6 +869,15 @@ var _hmResizeTimer;
 async function initHeatmap() {
   if (!hmRefreshBtn || !hmPeriod) return;
 
+  if (marketPulseToggle && marketPulseGrid) {
+    marketPulseToggle.addEventListener("click", function () {
+      var expanded = marketPulseToggle.getAttribute("aria-expanded") !== "false";
+      marketPulseToggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+      marketPulseGrid.hidden = expanded;
+      if (marketPulse) marketPulse.classList.toggle("market-pulse-collapsed", expanded);
+    });
+  }
+
   hmFilterToggle.addEventListener("click", function () {
     var isOpen = hmFilterPanel.style.display !== "none";
     hmFilterPanel.style.display = isOpen ? "none" : "block";
@@ -834,6 +952,7 @@ async function initHeatmap() {
   var _origHmRefresh = window._refreshCharts;
   window._refreshCharts = function () {
     if (_origHmRefresh) _origHmRefresh();
+    if (_marketPulseData) renderMarketPulse(_marketPulseData);
     // Re-render heatmap if data exists (color mapping depends on scheme)
     if (_hmLastData && _hmLastData.data && _hmLastData.data.length) {
       rerender();
@@ -841,6 +960,7 @@ async function initHeatmap() {
   };
 
   fetchHeatmap();
+  fetchMarketPulse();
   _hmInitialFetchDone = true;
 }
 

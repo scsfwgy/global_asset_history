@@ -34,6 +34,28 @@ class TestConfigEndpoint:
         track_coverage(MOD, 3)
 
 
+class TestMarketPulseEndpoint:
+    """GET /api/price-change/market-pulse"""
+
+    @patch("routes.price_change.fetch_market_pulse")
+    def test_returns_market_summary(self, mock_fetch, client):
+        mock_fetch.return_value = {
+            "as_of": "2026-07-13T00:00:00+00:00",
+            "summary": {"up": 3, "down": 2, "flat": 0, "available": 5},
+            "markets": [{"symbol": "000001", "price": 4000.0, "change_pct": 1.0}],
+        }
+        resp = client.get(f"{BASE}/market-pulse")
+        assert resp.status_code == 200
+        assert resp.get_json()["summary"]["up"] == 3
+
+    @patch("routes.price_change.fetch_market_pulse")
+    def test_service_error_returns_500(self, mock_fetch, client):
+        mock_fetch.side_effect = RuntimeError("boom")
+        resp = client.get(f"{BASE}/market-pulse")
+        assert resp.status_code == 500
+        assert resp.get_json()["error"] == "boom"
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # POST /api/price-change/yearly
 # ═══════════════════════════════════════════════════════════════════════════

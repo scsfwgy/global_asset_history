@@ -16,6 +16,7 @@ from service.price_change.price_change_service import (
     fetch_yearly_returns,
     fetch_monthly_returns,
     fetch_monthly_returns_batch,
+    fetch_market_pulse,
     get_presets,
     get_color_range,
     get_color_scheme,
@@ -48,6 +49,16 @@ def config():
         "color_scheme": color_scheme,
         "site": site,
     })
+
+
+@price_change_bp.route("/market-pulse", methods=["GET"])
+def market_pulse():
+    """Return the latest daily move for the global benchmark strip."""
+    try:
+        return jsonify(fetch_market_pulse())
+    except Exception as e:
+        logger.exception("Failed to fetch market pulse: %s", e)
+        return jsonify({"error": str(e)}), 500
 
 
 @price_change_bp.route("/yearly", methods=["POST"])

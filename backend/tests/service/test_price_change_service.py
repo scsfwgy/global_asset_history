@@ -99,6 +99,100 @@ class TestCache:
         track_coverage(MOD, 2)
 
 
+class TestMarketPulse:
+    """Fixed global benchmark strip."""
+
+    @patch("service.price_change.price_change_service._market_pulse_yahoo_quotes", return_value=[])
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_returns_markets_in_display_order_with_summary(self, mock_fetch, mock_quotes):
+        def series_for(symbol, asset_type):
+            closes = {
+                "000001": [100.0, 101.0],
+                "^KS11": [100.0, 99.0],
+                "^GSPC": [100.0, 102.0],
+                "^NDX": [100.0, 100.0],
+                "BTC": [100.0, 103.0],
+            }[symbol]
+            timestamps = [1704067200, 1704153600]
+            return PriceSeries(timestamps, closes, "test", time.time())
+
+        mock_fetch.side_effect = series_for
+        result = svc.fetch_market_pulse()
+
+        assert [item["symbol"] for item in result["markets"]] == [
+            "000001", "^KS11", "^GSPC", "^NDX", "BTC",
+        ]
+        assert result["markets"][0]["price"] == 101.0
+        assert result["markets"][0]["change_pct"] == 1.0
+        assert result["markets"][0]["trade_date"] == "2024-01-02"
+        assert "trend" not in result["markets"][0]
+        assert result["summary"] == {"up": 3, "down": 1, "flat": 1, "available": 5}
+
+    @patch("service.price_change.price_change_service._market_pulse_yahoo_quotes", return_value=[])
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_one_failure_does_not_hide_other_markets(self, mock_fetch, mock_quotes):
+        def series_for(symbol, asset_type):
+            if symbol == "^KS11":
+                return empty_series("yahoo", "upstream failed")
+            return PriceSeries([1704067200, 1704153600], [100.0, 101.0], "test", time.time())
+
+        mock_fetch.side_effect = series_for
+        result = svc.fetch_market_pulse()
+        korea = next(item for item in result["markets"] if item["symbol"] == "^KS11")
+
+        assert korea["price"] is None
+        assert "trend" not in korea
+        assert korea["error"] == "upstream failed"
+        assert result["summary"]["available"] == 4
+
+    @patch("service.price_change.price_change_service._market_pulse_yahoo_quotes")
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_batches_yahoo_indices_and_fetches_only_cn_and_btc_separately(self, mock_fetch, mock_quotes):
+        mock_quotes.return_value = [
+            {"symbol": "^KS11", "price": 2600.0, "change_pct": -1.2, "trade_time": 1704153600},
+            {"symbol": "^GSPC", "price": 4800.0, "change_pct": 0.5, "trade_time": 1704153600},
+            {"symbol": "^NDX", "price": 16800.0, "change_pct": 0.8, "trade_time": 1704153600},
+        ]
+
+        def series_for(symbol, asset_type):
+            closes = {"000001": [100.0, 101.0], "BTC": [100.0, 103.0]}[symbol]
+            return PriceSeries([1704067200, 1704153600], closes, "test", time.time())
+
+        mock_fetch.side_effect = series_for
+        result = svc.fetch_market_pulse()
+
+        mock_quotes.assert_called_once_with(["^KS11", "^GSPC", "^NDX"])
+        assert {call.args for call in mock_fetch.call_args_list} == {
+            ("000001", "cn_stock"), ("BTC", "crypto"),
+        }
+        korea = next(item for item in result["markets"] if item["symbol"] == "^KS11")
+        assert korea["price"] == 2600.0
+        assert korea["change_pct"] == -1.2
+        assert korea["trade_date"] == "2024-01-02"
+        assert korea["source"] == "yahoo-quote"
+
+    @patch("service.price_change.price_change_service._market_pulse_yahoo_quotes")
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_partial_yahoo_batch_falls_back_only_for_missing_index(self, mock_fetch, mock_quotes):
+        mock_quotes.return_value = [
+            {"symbol": "^GSPC", "price": 4800.0, "change_pct": 0.5, "trade_time": 1704153600},
+            {"symbol": "^NDX", "price": 16800.0, "change_pct": 0.8, "trade_time": 1704153600},
+        ]
+
+        def series_for(symbol, asset_type):
+            closes = {
+                "000001": [100.0, 101.0], "BTC": [100.0, 103.0], "^KS11": [100.0, 99.0],
+            }[symbol]
+            return PriceSeries([1704067200, 1704153600], closes, "test", time.time())
+
+        mock_fetch.side_effect = series_for
+        svc.fetch_market_pulse()
+
+        assert {call.args for call in mock_fetch.call_args_list} == {
+            ("000001", "cn_stock"), ("BTC", "crypto"), ("^KS11", "stock"),
+        }
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # fetch_yearly_returns
 # ═══════════════════════════════════════════════════════════════════════════
@@ -624,6 +718,7 @@ class TestYahooQuoteBatch:
                         "shortName": "Apple Inc.",
                         "regularMarketPrice": 150.0,
                         "regularMarketChangePercent": 2.5,
+                        "regularMarketTime": 1704153600,
                         "regularMarketVolume": 1000000,
                         "marketCap": 3000000000000,
                     },
@@ -646,6 +741,7 @@ class TestYahooQuoteBatch:
         assert result[0]["name"] == "Apple Inc."
         assert result[0]["price"] == 150.0
         assert result[0]["change_pct"] == 2.5
+        assert result[0]["trade_time"] == 1704153600
         assert result[0]["volume"] == 1000000
         assert result[0]["market_cap"] == 3000000000000
         assert result[1]["symbol"] == "MSFT"

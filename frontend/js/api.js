@@ -11,6 +11,7 @@ const BACKTEST_ENDPOINT = `${API_BASE}/api/price-change/backtest`;
 const CRASH_STATS_ENDPOINT = `${API_BASE}/api/price-change/crash-stats`;
 const CRASH_CHART_ENDPOINT = `${API_BASE}/api/price-change/crash-chart`;
 const HEATMAP_ENDPOINT = `${API_BASE}/api/price-change/heatmap`;
+const MARKET_PULSE_ENDPOINT = `${API_BASE}/api/price-change/market-pulse`;
 const VIX_COMPARISON_ENDPOINT = `${API_BASE}/api/price-change/vix-comparison`;
 const QDII_FUNDS_ENDPOINT = `${API_BASE}/api/etf-market/qdii-funds`;
 const WISHES_ENDPOINT = `${API_BASE}/api/wishes`;

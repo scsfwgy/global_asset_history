@@ -46,6 +46,14 @@ _CACHE_LOCK = threading.RLock()
 _FETCHERS: Dict[str, Callable[[str], Dict[str, float]]] = dict(FETCHERS)
 _DAILY_SERIES_FETCHERS: Dict[str, Callable[[str], PriceSeries]] = dict(DAILY_SERIES_FETCHERS)
 
+MARKET_PULSE_TARGETS = (
+    {"market": "CN", "symbol": "000001", "type": "cn_stock", "name": "上证指数", "name_en": "SSE Composite"},
+    {"market": "KR", "symbol": "^KS11", "type": "stock", "name": "韩国KOSPI", "name_en": "KOSPI"},
+    {"market": "US", "symbol": "^GSPC", "type": "stock", "name": "标普500", "name_en": "S&P 500"},
+    {"market": "US", "symbol": "^NDX", "type": "stock", "name": "纳指100", "name_en": "Nasdaq-100"},
+    {"market": "24/7", "symbol": "BTC", "type": "crypto", "name": "比特币", "name_en": "Bitcoin"},
+)
+
 
 def _cache_ttl(series: PriceSeries) -> int:
     return ERROR_CACHE_TTL_SECONDS if series.error else DAILY_SERIES_TTL_SECONDS
@@ -105,8 +113,12 @@ def _set_cached_daily_series(symbol: str, asset_type: str, series: PriceSeries) 
 
 def clear_price_change_cache() -> None:
     """Clear in-memory market-data cache. Mainly useful for tests."""
+    global _market_pulse_quote_cache, _market_pulse_quote_ts
     with _CACHE_LOCK:
         _DAILY_SERIES_CACHE.clear()
+    with _market_pulse_quote_lock:
+        _market_pulse_quote_cache = []
+        _market_pulse_quote_ts = 0.0
 
 
 def _series_meta(symbol: str, asset_type: str, series: PriceSeries) -> Dict:
@@ -291,6 +303,114 @@ def fetch_daily_returns(symbol: str, asset_type: str, year: int, month: int) -> 
     if series.error:
         return []
     return _compute_daily_returns_for_month(series.timestamps, series.closes, year, month)
+
+
+def fetch_market_pulse() -> Dict:
+    """Return latest daily closes and moves for five global benchmarks.
+
+    Each market is independent: an upstream failure is represented on that
+    item and never prevents the remaining benchmarks from rendering.
+    """
+
+    def fetch_one(target: Dict[str, str]) -> Dict:
+        item = dict(target)
+        try:
+            series = _fetch_daily_series_cached(target["symbol"], target["type"])
+        except Exception as exc:
+            logger.warning("Market pulse fetch failed for %s: %s", target["symbol"], exc)
+            return {**item, "price": None, "change_pct": None, "trade_date": None,
+                    "source": None, "error": str(exc)}
+
+        points = [
+            (ts, float(close))
+            for ts, close in zip(series.timestamps, series.closes)
+            if close is not None
+        ]
+        if series.error or len(points) < 2:
+            return {**item, "price": None, "change_pct": None, "trade_date": None,
+                    "source": series.source, "error": series.error or "insufficient data"}
+
+        (_, previous_close), (latest_ts, latest_close) = points[-2:]
+        change_pct = round((latest_close / previous_close - 1) * 100, 2) if previous_close else None
+        return {
+            **item,
+            "price": round(latest_close, 4),
+            "change_pct": change_pct,
+            "trade_date": datetime.fromtimestamp(latest_ts, tz=timezone.utc).date().isoformat(),
+            "source": series.source,
+            "error": None,
+        }
+
+    yahoo_targets = [target for target in MARKET_PULSE_TARGETS if target["symbol"] in {"^GSPC", "^NDX", "^KS11"}]
+    other_targets = [target for target in MARKET_PULSE_TARGETS if target not in yahoo_targets]
+    results: Dict[str, Dict] = {}
+
+    # Fetch the three Yahoo indices in one batch while CN/BTC load in parallel.
+    with ThreadPoolExecutor(max_workers=1 + len(other_targets)) as executor:
+        yahoo_future = executor.submit(
+            _market_pulse_yahoo_quotes,
+            [target["symbol"] for target in yahoo_targets],
+        )
+        futures = {executor.submit(fetch_one, target): target for target in other_targets}
+        for future in as_completed(futures):
+            target = futures[future]
+            try:
+                results[target["symbol"]] = future.result()
+            except Exception as exc:
+                results[target["symbol"]] = {
+                    **target, "price": None, "change_pct": None, "trade_date": None,
+                    "source": None, "error": str(exc),
+                }
+
+        try:
+            quote_map = {quote["symbol"]: quote for quote in yahoo_future.result()}
+        except Exception as exc:
+            logger.warning("Market pulse Yahoo batch failed: %s", exc)
+            quote_map = {}
+
+    missing_yahoo_targets = []
+    for target in yahoo_targets:
+        quote = quote_map.get(target["symbol"])
+        if not quote or quote.get("price") is None or quote.get("change_pct") is None:
+            missing_yahoo_targets.append(target)
+            continue
+        trade_time = quote.get("trade_time")
+        results[target["symbol"]] = {
+            **target,
+            "price": round(float(quote["price"]), 4),
+            "change_pct": round(float(quote["change_pct"]), 2),
+            "trade_date": (
+                datetime.fromtimestamp(trade_time, tz=timezone.utc).date().isoformat()
+                if trade_time else None
+            ),
+            "source": "yahoo-quote",
+            "error": None,
+        }
+
+    # A partial/failed batch falls back only for the missing symbols.
+    if missing_yahoo_targets:
+        with ThreadPoolExecutor(max_workers=len(missing_yahoo_targets)) as executor:
+            futures = {executor.submit(fetch_one, target): target for target in missing_yahoo_targets}
+            for future in as_completed(futures):
+                target = futures[future]
+                try:
+                    results[target["symbol"]] = future.result()
+                except Exception as exc:
+                    results[target["symbol"]] = {
+                        **target, "price": None, "change_pct": None, "trade_date": None,
+                        "source": None, "error": str(exc),
+                    }
+
+    markets = [results[target["symbol"]] for target in MARKET_PULSE_TARGETS]
+    valid_changes = [item["change_pct"] for item in markets if item["change_pct"] is not None]
+    up = sum(1 for value in valid_changes if value > 0)
+    down = sum(1 for value in valid_changes if value < 0)
+    flat = len(valid_changes) - up - down
+    return {
+        "as_of": datetime.now(timezone.utc).isoformat(),
+        "summary": {"up": up, "down": down, "flat": flat, "available": len(valid_changes)},
+        "markets": markets,
+    }
 
 
 def fetch_monthly_returns_batch(symbols: List[Dict[str, str]], year: int) -> Dict[str, list]:
@@ -948,7 +1068,7 @@ def _yahoo_quote_batch(symbols: List[str]) -> List[dict]:
     """Fetch quote data for multiple US stocks in a single batch request.
 
     Uses Yahoo v7/quote endpoint. Returns list of dicts with keys:
-    symbol, name, price, change_pct, volume, market_cap.
+    symbol, name, price, change_pct, trade_time, volume, market_cap.
     Returns empty list on failure (crumb unavailable, network error, etc.).
     """
     crumb = _yahoo_crumb()
@@ -978,6 +1098,7 @@ def _yahoo_quote_batch(symbols: List[str]) -> List[dict]:
                     "name": q.get("shortName") or q.get("longName"),
                     "price": price,
                     "change_pct": q.get("regularMarketChangePercent"),
+                    "trade_time": q.get("regularMarketTime"),
                     "volume": q.get("regularMarketVolume"),
                     "market_cap": q.get("marketCap"),
                 })
@@ -985,6 +1106,28 @@ def _yahoo_quote_batch(symbols: List[str]) -> List[dict]:
             logger.debug("Yahoo quote batch failed: %s", e)
             continue
     return results
+
+
+_MARKET_PULSE_QUOTE_TTL = 5 * 60
+_market_pulse_quote_cache: List[dict] = []
+_market_pulse_quote_ts = 0.0
+_market_pulse_quote_lock = threading.Lock()
+
+
+def _market_pulse_yahoo_quotes(symbols: List[str]) -> List[dict]:
+    """Return one cached Yahoo batch for the market-pulse stock indices.
+
+    The lock is intentionally held during refresh so concurrent cold requests
+    share one upstream call instead of causing a cache stampede.
+    """
+    global _market_pulse_quote_cache, _market_pulse_quote_ts
+    with _market_pulse_quote_lock:
+        if time.time() - _market_pulse_quote_ts < _MARKET_PULSE_QUOTE_TTL:
+            return list(_market_pulse_quote_cache)
+        quotes = _yahoo_quote_batch(symbols)
+        _market_pulse_quote_cache = list(quotes)
+        _market_pulse_quote_ts = time.time()
+        return list(_market_pulse_quote_cache)
 
 
 def _build_heatmap_today(

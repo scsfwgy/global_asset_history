@@ -551,6 +551,10 @@
     "etfMarketDescription": "Track China-listed Nasdaq 100 and S&P 500 ETFs with real-time quotes, market cap, fee totals, premiums, and 30-day tracking error."
   },
   "heatmap": {
+    "pulseTitle": "Global Market Pulse",
+    "pulseSubtitle": "Latest session · Daily move",
+    "pulseToggle": "Expand or collapse global market pulse",
+    "pulseUnavailable": "Unavailable",
     "period": "Period",
     "periodToday": "Today",
     "periodWeek": "This Week",

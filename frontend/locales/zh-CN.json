@@ -551,6 +551,10 @@
     "etfMarketDescription": "查看纳指100、标普500等A股场内ETF的实时行情、总市值、费率合计、溢价率和30日跟踪误差。"
   },
   "heatmap": {
+    "pulseTitle": "全球大盘情绪",
+    "pulseSubtitle": "最新交易日 · 日涨跌幅",
+    "pulseToggle": "展开或收起全球大盘情绪",
+    "pulseUnavailable": "暂无数据",
     "period": "统计周期",
     "periodToday": "今日",
     "periodWeek": "本周",

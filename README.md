@@ -167,6 +167,7 @@ Redis 两套变量会自动识别，优先使用 `UPSTASH_*`。
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | GET | `/config` | 站点、资产组和颜色配置 |
+| GET | `/market-pulse` | 上证、KOSPI、标普500、纳指100和 BTC 最新价格及日涨跌幅 |
 | POST | `/yearly` | 多资产年度收益 |
 | POST | `/monthly` | 单资产月度收益 |
 | POST | `/monthly-batch` | 多资产批量月度收益 |

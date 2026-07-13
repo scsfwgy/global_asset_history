@@ -1748,6 +1748,22 @@
 
         <!-- Heatmap (treemap) -->
         <div class="tab-panel active" id="tab-heatmap">
+        <section class="market-pulse" id="marketPulse" aria-labelledby="marketPulseTitle">
+            <button type="button" class="market-pulse-head" id="marketPulseToggle" aria-expanded="true" aria-controls="marketPulseGrid" data-i18n-attr="aria-label|heatmap.pulseToggle" aria-label="展开或收起全球大盘情绪">
+                <div>
+                    <div class="market-pulse-title" id="marketPulseTitle" data-i18n="heatmap.pulseTitle">全球大盘情绪</div>
+                    <div class="market-pulse-subtitle" data-i18n="heatmap.pulseSubtitle">最新交易日 · 日涨跌幅</div>
+                </div>
+                <span class="market-pulse-arrow" aria-hidden="true">⌃</span>
+            </button>
+            <div class="market-pulse-grid" id="marketPulseGrid" aria-live="polite">
+                <div class="market-pulse-card pulse-skeleton"></div>
+                <div class="market-pulse-card pulse-skeleton"></div>
+                <div class="market-pulse-card pulse-skeleton"></div>
+                <div class="market-pulse-card pulse-skeleton"></div>
+                <div class="market-pulse-card pulse-skeleton"></div>
+            </div>
+        </section>
         <!-- Collapsible filter bar -->
         <div class="hm-filter-toggle" id="hmFilterToggle">
             <span class="hm-filter-icon">⚙</span>
