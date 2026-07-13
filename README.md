@@ -1,384 +1,270 @@
 # GlobalAssetHistory — 全球资产历史收益分析工具
 
-> 跨资产类别（美股、数字货币、A 股）的历史收益查询与分析平台。支持年 / 月 / 日钻取、定投回测、暴跌统计、VIX 对比、美股热力图、A 股 ETF 市场、QDII 基金跟踪和心愿墙互动。
+GlobalAssetHistory 是一个跨资产历史收益查询、市场分析与投资回测站点，覆盖美股、数字货币、A 股指数、场内 ETF 和 QDII 基金。
 
-## 功能
+项目采用轻量架构：Flask 提供 API、动态页面与 SEO 响应，前端使用原生 HTML/CSS/JavaScript 和 SVG，不需要 Node.js 或前端构建步骤。生产环境面向 Vercel Serverless Functions。
 
-### 历史收益分析
+## 主要功能
 
-- **历年汇总**：多资产历年涨跌幅热力图
-- **年份钻取**：点击某个资产某一年，查看该年的月度涨跌幅
-- **月份钻取**：在月度卡片中继续点击某个月，查看该月的日涨跌幅和日收盘价
-- **月度走势**：指定年份后渲染月度折线图，支持图例交互
+### 历史收益与回测
 
-### 定投回测
-
-- **策略支持**：一次性、按日、按周、按月
-- **回测图表**：
-  - 总资产蓝线
-  - 累计投入灰线
-  - 总收益分色面积（正收益绿色，负收益红色）
-  - hover tooltip / 竖向参考线 / 回报率
-  - 可配置显示点数和动画时长
+- 多资产历年涨跌幅热力表和年度走势图
+- 年 → 月 → 日三级钻取，展示涨跌幅与收盘价
+- 一次性、每日、每周、每月投入策略回测
+- 总资产、累计投入、收益曲线和逐笔投入明细
+- CSV 导出和浏览器本地状态保存
 
 ### 市场分析
 
-- **暴跌统计**：统计历史大跌行情，分析下跌幅度和频率
-- **VIX 恐慌指数**：VIX 与资产价格对比分析
-- **美股热力图**：Treemap 可视化美股市场板块表现
+- 历史暴跌区间、频率和修复统计
+- VIX 恐慌指数与资产价格对比
+- 美股市场 Treemap 热力图
+- A 股场内 ETF 实时报价、费率、溢价率和跟踪误差
+- QDII 基金净值、收益、费率与限购状态
 
-### A 股 ETF 市场
+### 内容与互动
 
-- **实时行情**：A 股 ETF 实时报价和涨跌幅
-- **历史数据**：ETF 历史行情查询
-- **估值分析**：ETF 相对估值数据
-- **QDII 基金**：QDII 基金净值和跟踪误差分析
+- 中文、英文界面和语言前缀 URL
+- 金融知识文章及 Article JSON-LD
+- 心愿墙、SVG 验证码、管理员回复和删除
+- 访问次数、Tab 浏览、设置操作和链接点击统计
 
-### 互动功能
+## 技术架构
 
-- **心愿墙**：用户匿名提交心愿和反馈
-- **验证码系统**：防刷验证
-- **管理员功能**：心愿审核和回复
+| 层 | 实现 |
+| --- | --- |
+| 后端 | Python 3、Flask 3、Flask Blueprint |
+| 前端 | 原生 HTML、CSS、classic JavaScript |
+| 图表 | 原生 SVG，自实现折线图、热力图和 Treemap 布局 |
+| 数据请求 | `requests`、`curl_cffi`（可用时模拟浏览器 TLS） |
+| 缓存 | L1 进程内存 + L2 Upstash Redis/Vercel KV + L3 JSON 快照 |
+| 测试 | pytest，当前收集 260 个测试 |
+| 部署 | Vercel 静态资源 + Python Serverless Function |
 
-## 截图
+### 后端模块
 
-### 历年涨跌幅热力图
+- `backend/app.py`：Flask 入口、页面托管、SEO、健康检查和站点统计
+- `backend/routes/price_change.py`：收益、回测、暴跌、热力图、VIX 等 API
+- `backend/routes/etf_market.py`：场内 ETF、QDII 和历史行情 API
+- `backend/routes/wishes.py`：心愿墙 API
+- `backend/service/price_change/`：数据抓取、统一日线模型、计算、缓存和诊断
+- `backend/service/wishes/`：验证码和心愿业务逻辑
 
-![历年热力图](doc/screenshot/yearly-heatmap.png)
+所有核心收益能力均建立在统一的 `PriceSeries` 日线数据上。新增资产类型时，应优先实现 daily-series fetcher，再复用年度、月度、日度、回测和暴跌计算。
 
-### 历年走势折线图
+### 数据源
 
-![历年走势](doc/screenshot/yearly-chart.png)
+| 类型 | 主要来源 | 降级策略 |
+| --- | --- | --- |
+| 美股/美股 ETF | Yahoo Finance | 多种 Yahoo 接口互相回退 |
+| 数字货币 | Binance | Binance → OKX → CoinGecko |
+| A 股指数/股票 | East Money、Tencent Finance | 按数据类型回退 |
+| A 股场内 ETF | Tencent Finance、East Money | 本地历史与净值快照兜底 |
+| QDII 基金 | East Money 移动端接口 | Redis/本地快照兜底 |
 
-### 指定年份月度涨跌幅
+核心日线缓存成功结果保留 6 小时，错误结果保留 5 分钟。ETF 历史、净值和 QDII 数据的主要 TTL 为 4 小时。
 
-![月度涨跌幅](doc/screenshot/monthly-breakdown.png)
+## 本地启动
 
-### 指定年份月度走势
-
-![月度走势](doc/screenshot/monthly-trend.png)
-
-### 回测图表
-
-![回测图表](doc/screenshot/backtest.png)
-
-### 回测明细
-
-![回测明细](doc/screenshot/backtest-detail.png)
-
-## 数据源
-
-| 类型 | 数据源 | 备注 |
-|------|--------|------|
-| 美股 | Yahoo Finance | 优先 adjclose，失败时回退 |
-| 数字货币 | Binance → OKX → CoinGecko | 自动 fallback |
-| A 股指数 | East Money | 日线数据 |
-| A 股 ETF 行情 | Tencent Finance | 实时报价和 K 线 |
-| QDII 基金 | East Money mobile API | 净值、费率、限购状态 |
-
-## 快速开始
+需要 Python 3、`venv`、`pip`、`curl` 和常见 Unix 工具。推荐直接使用启动脚本：
 
 ```bash
-./start.sh
+./start.sh debug
 ```
 
-首次运行会自动：
-
-- 创建 `backend/.venv`
-- 安装 `requirements.txt`
-- 启动服务
+首次运行会创建 `backend/.venv` 并安装根目录 `requirements.txt`。
 
 默认地址：
 
-- 前端: [http://127.0.0.1:8730](http://127.0.0.1:8730)
-- 健康检查: [http://127.0.0.1:8730/api/health](http://127.0.0.1:8730/api/health)
+- 首页：<http://127.0.0.1:8730>
+- 健康检查：<http://127.0.0.1:8730/api/health>
+- 数据源诊断：<http://127.0.0.1:8730/api/diag>
 
-## 启动脚本
-
-### 交互模式
-
-```bash
-./start.sh
-```
-
-### 命令模式
+### 启动命令
 
 | 命令 | 说明 |
-|------|------|
-| `./start.sh` | 交互式菜单 |
+| --- | --- |
+| `./start.sh` | 打开交互式菜单 |
+| `./start.sh debug` | 前台启动，便于查看日志 |
 | `./start.sh start` | 后台启动 |
-| `./start.sh debug` | 前台调试启动 |
-| `./start.sh stop` | 停止服务 |
-| `./start.sh restart` | 重启服务 |
-| `./start.sh status` | 查看状态 |
+| `./start.sh stop` | 停止后台服务 |
+| `./start.sh restart` | 重启后台服务 |
+| `./start.sh status` | 查看 PID 状态 |
+| `./start.sh test` | 运行完整测试套件 |
+| `./start.sh start --test` | 测试通过后后台启动 |
+| `./start.sh debug --test` | 测试通过后前台启动 |
 
-### 端口配置
+`debug` 命令指“前台运行”，Flask debug/reloader 默认并不开启。如需自动重载：
 
 ```bash
-PORT=8080 ./start.sh start
+FLASK_DEBUG=1 ./start.sh debug
 ```
 
-### 端口占用
+自定义地址和端口：
 
-启动前脚本会检查目标端口；若被占用，会先尝试释放端口再启动新服务。
+```bash
+HOST=127.0.0.1 PORT=8080 ./start.sh debug
+```
 
-注意：
+也可以手动启动：
 
-- 当前 `backend/app.py` 使用 `debug=True`
-- 在 `start.sh start` 下仍会触发 Flask reloader
-- 因此 `logs/server.pid` 与真实监听进程偶尔会不一致，`status` 可能出现 “PID 文件残留”
+```bash
+python3 -m venv backend/.venv
+backend/.venv/bin/pip install -r requirements.txt
+PYTHONPATH=backend backend/.venv/bin/python3 backend/app.py
+```
 
-如果后续要进一步稳定后台运行，建议把生产模式切到 `debug=False`
+## 测试
+
+```bash
+./start.sh test
+```
+
+或：
+
+```bash
+PYTHONPATH=backend backend/.venv/bin/python3 -m pytest backend/tests -q
+```
+
+测试覆盖收益计算、回测、缓存、API、ETF/QDII、SEO 和站点统计。新增功能或修改核心逻辑时必须补充对应测试。
 
 ## 配置
 
-### 配置文件
-
-`backend/config/price_change_config.json`
-
-支持：
-
-- `presets`：预设资产组
-- `color_range`：热力图着色范围
-- `crypto.coin_ids`：CoinGecko 币种映射
-- `crypto.*_base_url`：各数据源地址
-
 ### 环境变量
 
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `PORT` | `8730` | Flask 服务端口 |
-| `HOST` | `0.0.0.0` | Flask 监听地址 |
-| `UPSTASH_REDIS_REST_URL` | 无 | 共享缓存（Upstash Redis REST）地址，未配置则降级为进程内缓存 |
-| `UPSTASH_REDIS_REST_TOKEN` | 无 | Upstash Redis REST token |
-| `KV_REST_API_URL` | 无 | Vercel KV 地址（与 Upstash 命名二选一，自动识别） |
-| `KV_REST_API_TOKEN` | 无 | Vercel KV token |
+本地可将敏感变量写入不会提交的 `.env.local`，`start.sh` 会自动加载。
 
-## 部署
+| 变量 | 默认值 | 用途 |
+| --- | --- | --- |
+| `HOST` | `0.0.0.0` | 本地 Flask 监听地址 |
+| `PORT` | `8730` | 本地 Flask 端口 |
+| `FLASK_DEBUG` | 关闭 | 设为 `1/true/yes/on` 开启 debug 和 reloader |
+| `SITE_URL` | 站点配置值 | canonical、Open Graph、sitemap 的绝对域名 |
+| `WISH_ADMIN_TOKEN` | 无 | 心愿管理和 `/api/stats` 管理员鉴权 |
+| `UPSTASH_REDIS_REST_URL` | 无 | Upstash Redis REST 地址 |
+| `UPSTASH_REDIS_REST_TOKEN` | 无 | Upstash Redis REST Token |
+| `KV_REST_API_URL` | 无 | 兼容 Vercel KV 的 Redis 地址 |
+| `KV_REST_API_TOKEN` | 无 | 兼容 Vercel KV 的 Token |
 
-### Vercel 部署
+Redis 两套变量会自动识别，优先使用 `UPSTASH_*`。
 
-项目已配置 Vercel 部署支持，包含：
+### 业务配置
 
-- Serverless Functions 托管后端 API
-- 静态文件托管前端资源
-- 路由重写规则（`vercel.json`）
+`backend/config/price_change_config.json` 包含：
 
-#### 共享缓存（Upstash Redis）
+- 资产预设组
+- 热力图颜色范围
+- CoinGecko 币种映射
+- 外部数据源地址
+- 站点基础配置
 
-为避免 Serverless 冷启动清空缓存和多实例不共享问题，建议接入 Upstash Redis：
+`backend/data/` 存放 ETF 费率、QDII 及行情快照。这些文件既是数据资产，也是 Serverless 冷启动时的 L3 兜底。
 
-**工作原理**：
+## API 概览
 
-- **L1 进程内存**：热实例快速响应
-- **L2 Upstash Redis**：跨实例共享，扛冷启动
-- **L3 本地文件**：持久化兜底
-
-接入后每个标的在 TTL（成功 6h / 错误 5min）内**全局最多向上游拉一次**，避免公共数据源限频。
-
-**接入步骤**：
-
-1. Vercel Marketplace → Upstash → 创建 Redis
-2. 连接到项目（自动注入环境变量）
-3. 重新部署
-
-未配置环境变量时全部优雅降级，本地开发行为不变。
-
-## API
-
-### 历史收益分析 (`/api/price-change`)
+### 历史收益 `/api/price-change`
 
 | 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/config` | 获取预设和颜色配置 |
-| POST | `/yearly` | 多资产历年涨跌幅 |
-| POST | `/monthly` | 单资产某年的月度涨跌幅 |
-| POST | `/monthly-batch` | 多资产某年的月度涨跌幅 |
-| POST | `/daily` | 单资产某年某月的日涨跌幅 |
-| POST | `/backtest` | 单资产基于日线的回测 |
-| POST | `/crash-stats` | 暴跌统计数据 |
+| --- | --- | --- |
+| GET | `/config` | 站点、资产组和颜色配置 |
+| POST | `/yearly` | 多资产年度收益 |
+| POST | `/monthly` | 单资产月度收益 |
+| POST | `/monthly-batch` | 多资产批量月度收益 |
+| POST | `/daily` | 单资产指定月份日收益 |
+| POST | `/detail` | 资产明细 |
+| POST | `/backtest` | 投资回测 |
+| POST | `/crash-stats` | 暴跌统计 |
 | POST | `/crash-chart` | 暴跌图表数据 |
-| POST | `/heatmap` | 美股热力图数据（Treemap） |
-| POST | `/vix-comparison` | VIX 恐慌指数对比 |
+| POST | `/heatmap` | 美股市场热力图 |
+| POST | `/vix-comparison` | VIX 对比 |
+| GET | `/header-trend` | 页头市场趋势 |
 
-### A 股 ETF 市场 (`/api/etf-market`)
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/quote` | A 股 ETF 实时报价 |
-| GET | `/valuation` | ETF 估值数据 |
-| GET | `/qdii-funds` | QDII 基金净值和跟踪误差 |
-| GET | `/history` | ETF 历史行情数据 |
-
-### 心愿墙 (`/api/wishes`)
+### ETF 市场 `/api/etf-market`
 
 | 方法 | 路径 | 说明 |
-|------|------|------|
+| --- | --- | --- |
+| GET | `/quote` | 场内 ETF 报价 |
+| GET | `/valuation` | ETF 估值和跟踪分析 |
+| GET | `/qdii-funds` | QDII 基金数据 |
+| GET | `/history` | ETF 历史行情 |
+
+### 心愿墙 `/api/wishes`
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
 | GET | `/` | 获取心愿列表 |
-| POST | `/` | 提交新心愿 |
-| GET | `/captcha` | 获取验证码 |
-| POST | `/verify-admin` | 管理员验证 |
-| PATCH | `/<wish_id>/reply` | 回复心愿（管理员） |
-| DELETE | `/<wish_id>` | 删除心愿（管理员） |
+| POST | `/` | 提交心愿 |
+| GET | `/captcha` | 获取 SVG 验证码 |
+| POST | `/verify-admin` | 验证管理员 Token |
+| PATCH | `/<wish_id>/reply` | 管理员回复 |
+| DELETE | `/<wish_id>` | 管理员删除 |
 
-### 系统
+其他系统接口包括 `/api/health`、`/api/diag`、`/api/visits`、`/api/track` 和管理员统计页 `/api/stats?token=...`。
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/health` | 健康检查 |
-| GET | `/api/diag` | 数据源诊断 |
+## Vercel 部署
 
-### POST /api/price-change/daily
+项目不需要前端构建。`vercel.json` 指定：
 
-请求：
+- `frontend/` 为静态输出目录
+- `api/index.py` 为 Flask Serverless 入口
+- `/api/*`、页面路径、语言路径、`robots.txt` 和 `sitemap.xml` rewrite 到 Flask
+- Function 使用 512 MB 内存、30 秒超时
+- 默认区域为香港 `hkg1`
 
-```json
-{
-  "symbol": "BTC",
-  "type": "crypto",
-  "year": 2024,
-  "month": 3
-}
-```
+部署时至少应配置 `SITE_URL`；生产环境强烈建议连接 Upstash Redis，并配置 `WISH_ADMIN_TOKEN`。
 
-响应：
+Redis 提供跨实例共享缓存和原子计数。未配置时，项目会降级到进程内存和本地文件，但 Vercel 的临时文件系统无法保证跨实例或冷启动持久化。
 
-```json
-{
-  "symbol": "BTC",
-  "type": "crypto",
-  "year": 2024,
-  "month": 3,
-  "days": [
-    { "day": 1, "date": "2024-03-01", "return": 2.15, "close": 62451.12 }
-  ]
-}
-```
+新增 Flask 页面路由时必须同步检查 `vercel.json` 的 rewrite，否则可能出现“本地正常、Vercel 404”。
 
-### POST /api/price-change/backtest
+## SEO
 
-请求：
+动态 HTML 响应提供：
 
-```json
-{
-  "symbol": "BTC",
-  "type": "crypto",
-  "start_date": "2024-01-01",
-  "end_date": "2024-12-31",
-  "initial_amount": 0,
-  "amount": 1000,
-  "frequency": "monthly",
-  "interval": 1,
-  "day_of_month": 1,
-  "weekday": 0
-}
-```
+- 中文 `/zh/...`、英文 `/en/...` canonical URL
+- `title`、description、keywords 和 robots
+- Open Graph 与 Twitter Card
+- `zh-CN`、`en`、`x-default` hreflang
+- Website/Article JSON-LD
+- `robots.txt`、`sitemap.xml` 和 `X-Robots-Tag`
+- 旧知识文章路径 canonical 到新路径并设为 `noindex,follow`
 
-`frequency` 支持：
+Sitemap 只列语言前缀的 canonical URL，避免无前缀页面造成重复收录。
 
-- `once`
-- `daily`
-- `weekly`
-- `monthly`
+页面内容发生实质变化时，需要更新 `backend/app.py` 中对应的固定日期：
 
-响应：
+- 首页：`INDEX_LASTMOD`
+- ETF 市场页：`ETF_MARKET_LASTMOD`
+- 知识文章：`KNOWLEDGE_ARTICLES` 对应条目的 `updated`
 
-```json
-{
-  "symbol": "BTC",
-  "type": "crypto",
-  "source": "binance",
-  "frequency": "monthly",
-  "interval": 1,
-  "start_date": "2024-01-01",
-  "end_date": "2024-12-31",
-  "summary": {
-    "invested": 12000.0,
-    "final_value": 14320.55,
-    "profit": 2320.55,
-    "return_pct": 19.34,
-    "annualized_return_pct": 19.34,
-    "trade_count": 12,
-    "last_price": 92123.11
-  },
-  "cashflows": [],
-  "equity_curve": []
-}
-```
+不要用 `datetime.now()` 动态生成 `lastmod`。SEO 回归测试位于 `backend/tests/routes/test_seo.py`。
 
 ## 项目结构
 
 ```text
-├── start.sh
-├── vercel.json
-├── README.md
-├── CLAUDE.md
+├── api/index.py                    # Vercel Python Function 入口
 ├── backend/
-│   ├── app.py                     # Flask 主入口
-│   ├── requirements.txt
+│   ├── app.py                      # Flask 应用、页面、SEO、统计
 │   ├── config/
-│   │   └── price_change_config.json
-│   ├── data/
-│   │   ├── etf_fees.json          # ETF 费率数据
-│   │   ├── etf_history/           # ETF 历史快照
-│   │   ├── etf_nav/               # ETF 净值快照
-│   │   └── qdii_funds.json        # QDII 基金快照
-│   ├── routes/
-│   │   ├── price_change.py        # 收益分析 & 回测 & 热力图
-│   │   ├── etf_market.py          # A 股 ETF 市场 & QDII 基金
-│   │   └── wishes.py              # 心愿墙
-│   ├── service/
-│   │   ├── price_change/
-│   │   │   ├── calculations.py    # 收益计算、回测引擎
-│   │   │   ├── cache_store.py     # Upstash Redis 客户端
-│   │   │   ├── common.py          # PriceSeries、常量
-│   │   │   ├── config.py          # 配置加载
-│   │   │   ├── crash_stats.py     # 暴跌统计
-│   │   │   ├── diagnostics.py     # 数据源诊断
-│   │   │   ├── fetchers.py        # 数据源获取器
-│   │   │   └── price_change_service.py  # 公共 API 层
-│   │   └── wishes/
-│   │       ├── captcha.py         # SVG 验证码
-│   │       └── wishes_service.py  # 心愿增删查
-│   ├── scripts/
-│   │   └── scrape_etf_fees.py     # ETF 费率爬虫
-│   └── tests/
+│   ├── data/                       # ETF/QDII/净值历史快照
+│   ├── routes/                     # 三个业务 Blueprint
+│   ├── service/                    # 抓取、计算、缓存、心愿服务
+│   ├── scripts/                    # ETF 费率采集脚本
+│   └── tests/                      # pytest 测试
 ├── frontend/
-│   ├── price-change.html          # 首页
-│   ├── etf-market.html            # ETF 市场页
+│   ├── price-change.html           # 主站及知识内容
+│   ├── etf-market.html             # ETF 市场独立页
+│   ├── landing.html                # tools24.uk Host 的落地页
+│   ├── health.html
 │   ├── css/
-│   │   └── app.css
 │   ├── js/
-│   │   ├── api.js                 # API 常量
-│   │   ├── backtest.js            # 回测控件
-│   │   ├── charts.js              # 年度/月度 SVG 图表
-│   │   ├── crash-stats.js         # 暴跌统计面板
-│   │   ├── drilldown.js           # 年→月→日钻取
-│   │   ├── etf-market.js          # ETF 行情面板
-│   │   ├── heatmap.js             # 美股热力图
-│   │   ├── i18n.js                # 国际化
-│   │   ├── price-change.js        # 主状态管理
-│   │   ├── qdii-funds.js          # QDII 基金面板
-│   │   ├── vix-chart.js           # VIX 对比图表
-│   │   └── wishes.js              # 心愿墙
-│   └── locales/
-│       ├── en.json
-│       └── zh-CN.json
-├── doc/screenshot/
-└── logs/
+│   ├── locales/
+│   └── doc/screenshot/             # 线上 SEO 分享图
+├── scripts/capture_screenshots.py
+├── requirements.txt
+├── start.sh
+└── vercel.json
 ```
-
-## 技术栈
-
-| 层 | 技术 |
-|----|------|
-| 后端 | Python 3 + Flask（蓝图模块化） |
-| 前端 | 原生 HTML / CSS / JS（无框架，classic script） |
-| 图表 | 原生 SVG + D3 Treemap |
-| 缓存 | 进程内存 + Upstash Redis + 本地文件（三级缓存） |
-| 数据获取 | requests、yfinance、Tencent Finance API、East Money API |
-| 部署 | Vercel Serverless Functions |
-| 国际化 | 自研 i18n 模块（中文 / 英文） |
 
 ## License
 
