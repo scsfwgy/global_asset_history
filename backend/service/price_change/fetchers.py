@@ -2,7 +2,7 @@
 
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Dict, List
 
 from .common import BINANCE_MAX_LIMIT, REQUEST_TIMEOUT, YAHOO_BASE, PriceSeries, ThreadLocalSession, empty_series, series_from_points
@@ -441,6 +441,137 @@ def _fetch_daily_series_crypto(symbol: str) -> PriceSeries:
         errors.append(f"{series.source}: {series.error}")
     logger.warning("All crypto data sources failed for %s", symbol)
     return empty_series("crypto", "; ".join(errors))
+
+
+# ---------------------------------------------------------------------------
+# Intraday fetchers used by the data-download tool
+# ---------------------------------------------------------------------------
+
+def _aggregate_intraday_hours(series: PriceSeries, hours: int) -> PriceSeries:
+    """Aggregate an intraday series into fixed UTC hour buckets."""
+    buckets: Dict[int, List[int]] = {}
+    bucket_seconds = hours * 3600
+    for index, timestamp in enumerate(series.timestamps):
+        buckets.setdefault(timestamp // bucket_seconds * bucket_seconds, []).append(index)
+
+    timestamps = []
+    opens = []
+    highs = []
+    lows = []
+    closes = []
+    volumes = []
+    for bucket, indices in sorted(buckets.items()):
+        valid_closes = [series.closes[i] for i in indices if series.closes[i] is not None]
+        if not valid_closes:
+            continue
+        bucket_opens = [series.opens[i] for i in indices if series.opens and i < len(series.opens) and series.opens[i] is not None]
+        bucket_highs = [series.highs[i] for i in indices if series.highs and i < len(series.highs) and series.highs[i] is not None]
+        bucket_lows = [series.lows[i] for i in indices if series.lows and i < len(series.lows) and series.lows[i] is not None]
+        bucket_volumes = [series.volumes[i] for i in indices if series.volumes and i < len(series.volumes) and series.volumes[i] is not None]
+        timestamps.append(bucket)
+        opens.append(bucket_opens[0] if bucket_opens else valid_closes[0])
+        highs.append(max(bucket_highs) if bucket_highs else max(valid_closes))
+        lows.append(min(bucket_lows) if bucket_lows else min(valid_closes))
+        closes.append(valid_closes[-1])
+        volumes.append(sum(bucket_volumes) if bucket_volumes else None)
+    return series_from_points(
+        timestamps, closes, series.source or "intraday",
+        opens=opens, highs=highs, lows=lows, volumes=volumes,
+    )
+
+
+def _fetch_intraday_crypto_binance(
+    symbol: str, interval: str, start_date: date, end_date: date,
+) -> PriceSeries:
+    pair = _binance_pair(symbol)
+    start_ms = int(datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc).timestamp() * 1000)
+    end_exclusive = datetime.combine(end_date + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
+    end_ms = int(end_exclusive.timestamp() * 1000) - 1
+    all_klines: List[list] = []
+
+    for _ in range(20):
+        try:
+            response = _session.get(
+                f"{binance_base_url()}/api/v3/klines",
+                params={
+                    "symbol": pair,
+                    "interval": interval,
+                    "startTime": start_ms,
+                    "endTime": end_ms,
+                    "limit": BINANCE_MAX_LIMIT,
+                },
+                timeout=REQUEST_TIMEOUT,
+            )
+            response.raise_for_status()
+            klines = response.json()
+        except Exception as exc:
+            return empty_series("binance", str(exc))
+        if not klines or not isinstance(klines, list):
+            break
+        all_klines.extend(klines)
+        next_start = int(klines[-1][0]) + 1
+        if len(klines) < BINANCE_MAX_LIMIT or next_start > end_ms:
+            break
+        start_ms = next_start
+        time.sleep(0.02)
+
+    if not all_klines:
+        return empty_series("binance", "empty intraday data")
+    unique = {int(item[0]): item for item in all_klines}
+    ordered = [unique[key] for key in sorted(unique)]
+    return series_from_points(
+        [int(item[0]) // 1000 for item in ordered],
+        [float(item[4]) for item in ordered],
+        "binance",
+        opens=[float(item[1]) for item in ordered],
+        highs=[float(item[2]) for item in ordered],
+        lows=[float(item[3]) for item in ordered],
+        volumes=[float(item[5]) for item in ordered],
+    )
+
+
+def _fetch_intraday_stock_yahoo(
+    symbol: str, interval: str, start_date: date, end_date: date,
+) -> PriceSeries:
+    yahoo_interval = "1h" if interval == "4h" else interval
+    period1 = int(datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc).timestamp())
+    period2 = int(datetime.combine(end_date + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc).timestamp())
+    try:
+        response = _session.get(
+            f"{YAHOO_BASE}/{symbol}",
+            params={"period1": period1, "period2": period2, "interval": yahoo_interval},
+            timeout=REQUEST_TIMEOUT,
+        )
+        response.raise_for_status()
+        result = response.json()["chart"]["result"][0]
+        quote = result["indicators"]["quote"][0]
+        series = series_from_points(
+            result["timestamp"], quote.get("close", []), "yahoo",
+            opens=quote.get("open"), highs=quote.get("high"),
+            lows=quote.get("low"), volumes=quote.get("volume"),
+        )
+    except Exception as exc:
+        return empty_series("yahoo", str(exc))
+    if not series.timestamps:
+        return empty_series("yahoo", "empty intraday data")
+    return _aggregate_intraday_hours(series, 4) if interval == "4h" else series
+
+
+def fetch_intraday_series(
+    symbol: str,
+    asset_type: str,
+    interval: str,
+    start_date: date,
+    end_date: date,
+) -> PriceSeries:
+    """Fetch exact intraday OHLCV bars for supported asset types."""
+    if asset_type == "crypto":
+        return _fetch_intraday_crypto_binance(symbol, interval, start_date, end_date)
+    if asset_type == "stock":
+        return _fetch_intraday_stock_yahoo(symbol, interval, start_date, end_date)
+    if asset_type == "cn_stock":
+        return empty_series(None, "intraday download is not supported for A-shares")
+    return empty_series(None, f"unknown asset type: {asset_type}")
 
 
 # ---------------------------------------------------------------------------

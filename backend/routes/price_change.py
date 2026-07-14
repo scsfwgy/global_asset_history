@@ -17,6 +17,7 @@ from service.price_change.price_change_service import (
     fetch_monthly_returns,
     fetch_monthly_returns_batch,
     fetch_market_pulse,
+    fetch_price_history,
     get_presets,
     get_color_range,
     get_color_scheme,
@@ -198,6 +199,27 @@ def get_return_detail():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.exception("Failed to fetch return detail: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@price_change_bp.route("/history-download", methods=["POST"])
+def history_download():
+    """Return date-bounded price history as a JSON collection."""
+    body = request.get_json(silent=True) or {}
+    symbol = str(body.get("symbol", "")).strip().upper()
+    asset_type = str(body.get("type", "crypto")).strip().lower()
+    period = str(body.get("period", "daily")).strip().lower()
+    start_date = str(body.get("start_date", "")).strip()
+    end_date = str(body.get("end_date", "")).strip()
+    if not symbol or not start_date or not end_date:
+        return jsonify({"error": "symbol, start_date and end_date are required"}), 400
+
+    try:
+        return jsonify(fetch_price_history(symbol, asset_type, period, start_date, end_date))
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.exception("Failed to build history download: %s", e)
         return jsonify({"error": str(e)}), 500
 
 

@@ -675,3 +675,47 @@ class TestHeaderTrendEndpoint:
         assert resp.status_code == 200
         assert resp.get_json()["points"] == []
         track_coverage(MOD, 1)
+
+
+class TestHistoryDownloadEndpoint:
+    """POST /api/price-change/history-download"""
+
+    @patch("routes.price_change.fetch_price_history")
+    def test_valid_request_returns_json_collection(self, mock_fetch, client):
+        mock_fetch.return_value = {
+            "symbol": "BTC",
+            "type": "crypto",
+            "period": "monthly",
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+            "source": "binance",
+            "updated_at": "2024-12-31T00:00:00+00:00",
+            "count": 1,
+            "data": [{"date": "2024-01-01", "period_end": "2024-01-31", "close": 42000.0}],
+        }
+        response = client.post(f"{BASE}/history-download", json={
+            "symbol": "btc",
+            "type": "crypto",
+            "period": "monthly",
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+        })
+        assert response.status_code == 200
+        assert response.get_json()["data"][0]["close"] == 42000.0
+        mock_fetch.assert_called_once_with("BTC", "crypto", "monthly", "2024-01-01", "2024-12-31")
+
+    def test_missing_fields_returns_400(self, client):
+        response = client.post(f"{BASE}/history-download", json={"symbol": "BTC"})
+        assert response.status_code == 400
+        assert "required" in response.get_json()["error"]
+
+    @patch("routes.price_change.fetch_price_history")
+    def test_validation_error_returns_400(self, mock_fetch, client):
+        mock_fetch.side_effect = ValueError("start_date must be on or before end_date")
+        response = client.post(f"{BASE}/history-download", json={
+            "symbol": "BTC",
+            "start_date": "2025-01-02",
+            "end_date": "2025-01-01",
+        })
+        assert response.status_code == 400
+        assert "on or before" in response.get_json()["error"]

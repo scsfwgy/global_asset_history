@@ -272,7 +272,7 @@ INDEXABLE_PATHS = {
 # Real last-modified dates per page group. Update these ONLY when the page's
 # HTML/content actually changes — Google discounts <lastmod> if it always shows
 # "today". Knowledge articles use the per-article "updated" field instead.
-INDEX_LASTMOD = "2026-07-13"
+INDEX_LASTMOD = "2026-07-14"
 ETF_MARKET_LASTMOD = "2026-07-08"
 
 
@@ -535,7 +535,7 @@ def add_seo_headers(response):
         response.headers.setdefault("X-Robots-Tag", "index,follow")
     elif base_path in INDEXABLE_PATHS:
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
-    elif base_path.startswith(ROBOT_BLOCKED_PREFIXES) or base_path in {"/yearly", "/detail", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", *KNOWLEDGE_LEGACY_PATHS.keys(), "/wishes", "/heatmap"}:
+    elif base_path.startswith(ROBOT_BLOCKED_PREFIXES) or base_path in {"/yearly", "/detail", "/download", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", *KNOWLEDGE_LEGACY_PATHS.keys(), "/wishes", "/heatmap"}:
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
     return response
 
@@ -658,6 +658,7 @@ def etf_market():
 
 @app.route("/yearly")
 @app.route("/detail")
+@app.route("/download")
 @app.route("/backtest")
 @app.route("/crash")
 @app.route("/etf")
@@ -755,7 +756,7 @@ def visits_increment():
 # POST /api/track  body: {"type": "tab_view", "tab": "heatmap"}
 #                        {"type": "ad_click", "link": "value-investing"}
 #                        {"type": "settings_click"}
-_VALID_TABS = {"heatmap", "yearly", "detail", "backtest", "crash",
+_VALID_TABS = {"heatmap", "yearly", "detail", "download", "backtest", "crash",
                "etf", "qdii-funds", "vix", "knowledge", "wishes"}
 
 
@@ -833,7 +834,7 @@ def stats_dashboard():
     tab_rows = ""
     sorted_tabs = sorted(tab_stats.items(), key=lambda x: int(x[1]), reverse=True)
     tab_labels = {
-        "heatmap": "热力图", "yearly": "历年涨跌幅", "detail": "涨跌详情",
+        "heatmap": "热力图", "yearly": "历年涨跌幅", "detail": "涨跌详情", "download": "数据下载",
         "backtest": "回测", "crash": "暴跌统计", "etf": "标普纳指ETF追踪（场内）",
         "qdii-funds": "标普纳指基金追踪（场外）", "vix": "VIX恐慌指数",
         "knowledge": "数据科普", "wishes": "心愿墙",

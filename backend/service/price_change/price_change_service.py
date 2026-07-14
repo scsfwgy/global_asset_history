@@ -6,7 +6,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Callable, Dict, List, Optional, Tuple
 
 from .calculations import (
@@ -32,7 +32,7 @@ from .common import (
     empty_series,
 )
 from .config import get_color_range, get_color_scheme, get_presets, get_site_config
-from .fetchers import DAILY_SERIES_FETCHERS, FETCHERS
+from .fetchers import DAILY_SERIES_FETCHERS, FETCHERS, fetch_intraday_series
 from . import cache_store
 
 logger = logging.getLogger(__name__)
@@ -303,6 +303,144 @@ def fetch_daily_returns(symbol: str, asset_type: str, year: int, month: int) -> 
     if series.error:
         return []
     return _compute_daily_returns_for_month(series.timestamps, series.closes, year, month)
+
+
+def fetch_price_history(
+    symbol: str,
+    asset_type: str,
+    period: str,
+    start_date: str,
+    end_date: str,
+) -> Dict:
+    """Return a date-bounded OHLCV collection aggregated to the requested period."""
+    clean_symbol = symbol.strip().upper()
+    clean_type = asset_type.strip().lower()
+    clean_period = period.strip().lower()
+    if not clean_symbol:
+        raise ValueError("symbol is required")
+    intraday_periods = {"1m", "5m", "1h", "4h"}
+    if clean_period not in {*intraday_periods, "daily", "weekly", "monthly", "yearly"}:
+        raise ValueError("period must be 1m, 5m, 1h, 4h, daily, weekly, monthly, or yearly")
+    try:
+        start = date.fromisoformat(start_date)
+        end = date.fromisoformat(end_date)
+    except (TypeError, ValueError):
+        raise ValueError("start_date and end_date must use YYYY-MM-DD") from None
+    if start > end:
+        raise ValueError("start_date must be on or before end_date")
+
+    if clean_period in intraday_periods:
+        max_days = {"1m": 7, "5m": 60, "1h": 730, "4h": 730}[clean_period]
+        if (end - start).days + 1 > max_days:
+            raise ValueError(f"{clean_period} period supports a maximum date range of {max_days} days")
+        series = fetch_intraday_series(clean_symbol, clean_type, clean_period, start, end)
+        if series.error:
+            raise ValueError(series.error)
+        data = []
+        optional = (series.opens, series.highs, series.lows, series.volumes)
+        for index, (timestamp, close) in enumerate(zip(series.timestamps, series.closes)):
+            instant = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+            if instant.date() < start or instant.date() > end or close is None:
+                continue
+            values = [items[index] if items is not None and index < len(items) else None for items in optional]
+            data.append({
+                "date": instant.isoformat().replace("+00:00", "Z"),
+                "open": values[0],
+                "high": values[1],
+                "low": values[2],
+                "close": close,
+                "volume": values[3],
+            })
+        return {
+            "symbol": clean_symbol,
+            "type": clean_type,
+            "period": clean_period,
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+            "source": series.source,
+            "updated_at": datetime.fromtimestamp(series.fetched_at, tz=timezone.utc).isoformat(),
+            "count": len(data),
+            "data": data,
+        }
+
+    series = _fetch_daily_series_cached(clean_symbol, clean_type)
+    if series.error:
+        raise ValueError(series.error)
+    if not series.timestamps:
+        raise ValueError("price history is unavailable")
+
+    optional_series = {
+        "open": series.opens,
+        "high": series.highs,
+        "low": series.lows,
+        "volume": series.volumes,
+    }
+    daily_points = []
+    for index, (timestamp, close) in enumerate(zip(series.timestamps, series.closes)):
+        day = datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
+        if day < start or day > end or close is None:
+            continue
+
+        def optional_value(field: str):
+            values = optional_series[field]
+            return values[index] if values is not None and index < len(values) else None
+
+        daily_points.append({
+            "date": day.isoformat(),
+            "open": optional_value("open"),
+            "high": optional_value("high"),
+            "low": optional_value("low"),
+            "close": close,
+            "volume": optional_value("volume"),
+        })
+
+    def group_key(point: Dict):
+        point_date = date.fromisoformat(point["date"])
+        if clean_period == "weekly":
+            iso_year, iso_week, _ = point_date.isocalendar()
+            return iso_year, iso_week
+        if clean_period == "monthly":
+            return point_date.year, point_date.month
+        if clean_period == "yearly":
+            return (point_date.year,)
+        return (point["date"],)
+
+    if clean_period == "daily":
+        data = daily_points
+    else:
+        grouped: Dict[Tuple, List[Dict]] = {}
+        for point in daily_points:
+            grouped.setdefault(group_key(point), []).append(point)
+
+        data = []
+        for points in grouped.values():
+            closes = [point["close"] for point in points if point["close"] is not None]
+            highs = [point["high"] for point in points if point["high"] is not None]
+            lows = [point["low"] for point in points if point["low"] is not None]
+            volumes = [point["volume"] for point in points if point["volume"] is not None]
+            first = points[0]
+            last = points[-1]
+            data.append({
+                "date": first["date"],
+                "period_end": last["date"],
+                "open": first["open"] if first["open"] is not None else first["close"],
+                "high": max(highs) if highs else (max(closes) if closes else None),
+                "low": min(lows) if lows else (min(closes) if closes else None),
+                "close": last["close"],
+                "volume": sum(volumes) if volumes else None,
+            })
+
+    return {
+        "symbol": clean_symbol,
+        "type": clean_type,
+        "period": clean_period,
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+        "source": series.source,
+        "updated_at": datetime.fromtimestamp(series.fetched_at, tz=timezone.utc).isoformat(),
+        "count": len(data),
+        "data": data,
+    }
 
 
 def fetch_market_pulse() -> Dict:

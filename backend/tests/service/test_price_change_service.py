@@ -16,6 +16,83 @@ from tests.conftest import diagnose, make_daily_data, make_series, track_coverag
 MOD = "price_change_service.py"
 
 
+class TestFetchPriceHistory:
+    """Date filtering and OHLCV period aggregation for JSON downloads."""
+
+    @staticmethod
+    def _series():
+        timestamps = [
+            int(datetime(2024, 1, day, 12, tzinfo=timezone.utc).timestamp())
+            for day in (1, 2, 8)
+        ]
+        return PriceSeries(
+            timestamps=timestamps,
+            closes=[11.0, 12.0, 13.0],
+            source="test-source",
+            fetched_at=timestamps[-1],
+            opens=[10.0, 11.0, 12.0],
+            highs=[12.0, 13.0, 14.0],
+            lows=[9.0, 10.0, 11.0],
+            volumes=[100.0, 200.0, 300.0],
+        )
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_daily_filters_requested_date_range(self, mock_fetch):
+        mock_fetch.return_value = self._series()
+        result = svc.fetch_price_history("btc", "crypto", "daily", "2024-01-02", "2024-01-08")
+        assert result["symbol"] == "BTC"
+        assert result["count"] == 2
+        assert [row["date"] for row in result["data"]] == ["2024-01-02", "2024-01-08"]
+        assert result["data"][0]["volume"] == 200.0
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_weekly_aggregates_ohlcv(self, mock_fetch):
+        mock_fetch.return_value = self._series()
+        result = svc.fetch_price_history("BTC", "crypto", "weekly", "2024-01-01", "2024-01-31")
+        assert result["count"] == 2
+        first = result["data"][0]
+        assert first == {
+            "date": "2024-01-01",
+            "period_end": "2024-01-02",
+            "open": 10.0,
+            "high": 13.0,
+            "low": 9.0,
+            "close": 12.0,
+            "volume": 300.0,
+        }
+
+    @patch("service.price_change.price_change_service.fetch_intraday_series")
+    def test_intraday_returns_timestamped_bars(self, mock_fetch):
+        timestamp = int(datetime(2024, 1, 2, 3, 0, tzinfo=timezone.utc).timestamp())
+        mock_fetch.return_value = PriceSeries(
+            timestamps=[timestamp], closes=[101.0], source="binance", fetched_at=timestamp,
+            opens=[100.0], highs=[102.0], lows=[99.0], volumes=[1234.0],
+        )
+        result = svc.fetch_price_history("btc", "crypto", "1h", "2024-01-01", "2024-01-03")
+        assert result["period"] == "1h"
+        assert result["data"] == [{
+            "date": "2024-01-02T03:00:00Z",
+            "open": 100.0,
+            "high": 102.0,
+            "low": 99.0,
+            "close": 101.0,
+            "volume": 1234.0,
+        }]
+        mock_fetch.assert_called_once_with("BTC", "crypto", "1h", date(2024, 1, 1), date(2024, 1, 3))
+
+    @patch("service.price_change.price_change_service.fetch_intraday_series")
+    def test_intraday_rejects_excessive_date_range(self, mock_fetch):
+        with pytest.raises(ValueError, match="maximum date range of 7 days"):
+            svc.fetch_price_history("BTC", "crypto", "1m", "2024-01-01", "2024-01-08")
+        mock_fetch.assert_not_called()
+
+    def test_rejects_invalid_period_and_date_range(self):
+        with pytest.raises(ValueError, match="period must be"):
+            svc.fetch_price_history("BTC", "crypto", "hourly", "2024-01-01", "2024-01-02")
+        with pytest.raises(ValueError, match="on or before"):
+            svc.fetch_price_history("BTC", "crypto", "daily", "2024-01-03", "2024-01-02")
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Cache tests
 # ═══════════════════════════════════════════════════════════════════════════
