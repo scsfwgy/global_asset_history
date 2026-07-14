@@ -213,7 +213,7 @@ function renderMarketPulse(result) {
   marketPulseGrid.querySelectorAll("[data-pulse-index]").forEach(function (card) {
     card.addEventListener("click", function () {
       var item = markets[parseInt(card.dataset.pulseIndex, 10)];
-      if (item) hmJumpToYearly(item);
+      if (item) hmJumpToDetail(item);
     });
   });
 }
@@ -629,7 +629,7 @@ function renderTreemap(result, animate) {
       if (!cell) return;
       cell.addEventListener("mousemove", function (e) { hmShowTooltip(e, tooltipData[idx]); });
       cell.addEventListener("mouseleave", hmHideTooltip);
-      cell.addEventListener("click", function () { hmJumpToYearly(tooltipData[idx]); });
+      cell.addEventListener("click", function () { hmJumpToDetail(tooltipData[idx]); });
     })(i);
   }
 
@@ -666,37 +666,40 @@ function hmTriggerBreathing(prepared) {
   });
 }
 
-// ─── Click → jump to yearly tab and fill symbol ───
+// ─── Click → jump to detail tab and auto-load 2026 data ───
 
-function hmJumpToYearly(d) {
+function hmJumpToDetail(d) {
   if (!d || !d.symbol) return;
 
-  // Switch to yearly tab
-  var yearlyTab = document.querySelector('.tab-btn[data-tab="yearly"]');
-  if (yearlyTab) {
-    var allBtns = document.querySelectorAll('.tab-btn');
-    var allPanels = document.querySelectorAll('.tab-panel');
-    allBtns.forEach(function (b) { b.classList.remove('active'); });
-    allPanels.forEach(function (p) { p.classList.remove('active'); });
-    yearlyTab.classList.add('active');
-    var yearlyPanel = document.getElementById('tab-yearly');
-    if (yearlyPanel) yearlyPanel.classList.add('active');
-  }
+  // Korean indices: no reaction
+  if (d.symbol === '^KS11' || d.market === 'KR') return;
 
-  // If symbol exists, remove it first; then insert at first position
-  if (typeof symbols !== 'undefined' && Array.isArray(symbols)) {
-    var sym = d.symbol.toUpperCase();
-    var type = d.type || 'stock';
-    var idx = symbols.findIndex(function (s) { return s.symbol === sym && s.type === type; });
-    if (idx !== -1) symbols.splice(idx, 1);
-    symbols.unshift({ symbol: sym, type: type, name: d.name || null });
-  }
+  // Switch to detail tab (DOM toggle + URL update)
+  var allBtns = document.querySelectorAll('.tab-btn');
+  var allPanels = document.querySelectorAll('.tab-panel');
+  for (var i = 0; i < allBtns.length; i++) allBtns[i].classList.remove('active');
+  for (var j = 0; j < allPanels.length; j++) allPanels[j].classList.remove('active');
+  var detailBtn = document.querySelector('.tab-btn[data-tab="detail"]');
+  var detailPanel = document.getElementById('tab-detail');
+  if (detailBtn) detailBtn.classList.add('active');
+  if (detailPanel) detailPanel.classList.add('active');
+  try { history.pushState({ tab: 'detail' }, '', (window.__lang && __lang() === 'en' ? '/en' : '/zh') + '/detail'); } catch (_) {}
 
-  // Update UI and fetch
-  if (typeof renderTags === 'function') renderTags();
-  if (typeof fetchData === 'function') {
-    setTimeout(function () { fetchData(); }, 50);
+  // Fill symbol, type, and year into the detail form
+  var symInput = document.getElementById('pdSymbolInput');
+  var typeSelect = document.getElementById('pdTypeSelect');
+  if (symInput) symInput.value = d.symbol.toUpperCase();
+  if (typeSelect) {
+    if (d.type === 'crypto') typeSelect.value = 'crypto';
+    else if (d.type === 'cn_stock') typeSelect.value = 'cn_stock';
+    else typeSelect.value = 'stock';
   }
+  var yearSelect = document.getElementById('pdYearSelect');
+  if (yearSelect) yearSelect.value = '2026';
+
+  // Run the detail query
+  var queryBtn = document.getElementById('pdQueryBtn');
+  if (queryBtn) queryBtn.click();
 }
 
 // ─── Tooltip ───
