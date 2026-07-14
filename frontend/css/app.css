@@ -422,6 +422,7 @@ body {
             transition: all var(--transition-fast);
             white-space: nowrap;
             flex-shrink: 0;
+            text-decoration: none;
         }
 .transfer-tab:hover { color: var(--apple-text-primary); }
 .transfer-tab.active { background: var(--apple-blue); color: #fff; }

@@ -60,7 +60,7 @@ start_debug() {
     echo "  访问: http://127.0.0.1:8730"
     echo "  按 Ctrl+C 停止"
     echo ""
-    PYTHONPATH=backend "$VENV_PYTHON" backend/app.py
+    HOST=127.0.0.1 FLASK_DEBUG=1 PYTHONPATH=backend "$VENV_PYTHON" backend/app.py
 }
 
 stop() {

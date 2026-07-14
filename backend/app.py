@@ -1,11 +1,15 @@
 """Standalone Flask app for Price Change feature."""
 import hmac
 import html
+import csv
+import hashlib
+import io
 import json
 import logging
 import os
 import re
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import Flask, Response, jsonify, request, send_from_directory
@@ -16,6 +20,8 @@ from routes.wishes import wishes_bp
 from routes.etf_market import etf_market_bp
 from service.price_change.config import get_site_base_url
 from service.price_change import cache_store, diagnostics
+from service.price_change.price_change_service import _fetch_daily_series_cached
+from seo_data import QQQM_TOP_HOLDINGS
 
 app = Flask(__name__, static_folder=None)
 CORS(app)
@@ -27,6 +33,45 @@ app.register_blueprint(etf_market_bp)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 ROBOT_BLOCKED_PREFIXES = ("/api/", "/settings")
+_FRONTEND_VERSION_LOCK = threading.Lock()
+_FRONTEND_VERSION_SIGNATURE = None
+_FRONTEND_VERSION_VALUE = None
+
+
+def _frontend_asset_version() -> str:
+    """Return a content fingerprint that changes for uncommitted frontend edits.
+
+    The lightweight stat signature avoids re-hashing unchanged files on every
+    HTML request, while file contents—not the Git commit—produce the version.
+    """
+    global _FRONTEND_VERSION_SIGNATURE, _FRONTEND_VERSION_VALUE
+    files = sorted(
+        path for path in FRONTEND_DIR.rglob("*")
+        if path.is_file() and path.suffix.lower() in {".css", ".js", ".json", ".html"}
+    )
+    signature = tuple((str(path.relative_to(FRONTEND_DIR)), path.stat().st_mtime_ns, path.stat().st_size) for path in files)
+    if signature == _FRONTEND_VERSION_SIGNATURE and _FRONTEND_VERSION_VALUE:
+        return _FRONTEND_VERSION_VALUE
+    with _FRONTEND_VERSION_LOCK:
+        if signature != _FRONTEND_VERSION_SIGNATURE or not _FRONTEND_VERSION_VALUE:
+            digest = hashlib.sha256()
+            for path in files:
+                digest.update(str(path.relative_to(FRONTEND_DIR)).encode("utf-8"))
+                digest.update(b"\0")
+                digest.update(path.read_bytes())
+                digest.update(b"\0")
+            _FRONTEND_VERSION_SIGNATURE = signature
+            _FRONTEND_VERSION_VALUE = digest.hexdigest()[:12]
+    return _FRONTEND_VERSION_VALUE
+
+
+def _version_frontend_assets(html_text: str, version: str) -> str:
+    """Append the current content version to local CSS and JavaScript URLs."""
+    return re.sub(
+        r'((?:src|href)="/(?:css|js)/[^"?]+)(?:\?[^"#]*)?("\s*)',
+        rf'\1?v={version}\2',
+        html_text,
+    )
 
 KNOWLEDGE_ARTICLES = {
     "/knowledge/how-to-buy-us-stocks": {
@@ -72,7 +117,7 @@ KNOWLEDGE_ARTICLES = {
         "subtab": "etf-intro",
         "en_indexable": True,
         "published": "2026-06-15",
-        "updated": "2026-07-03",
+        "updated": "2026-07-13",
         "title": {
             "zh-CN": "核心美股ETF指南：SPY、VOO、QQQ、SMH、DRAM、EWY - GlobalAssetHistory",
             "en": "Core US ETF Guide: SPY, VOO, QQQ, SMH, DRAM, EWY — GlobalAssetHistory",
@@ -91,7 +136,7 @@ KNOWLEDGE_ARTICLES = {
         "subtab": "nasdaq-etf",
         "en_indexable": True,
         "published": "2026-07-11",
-        "updated": "2026-07-11",
+        "updated": "2026-07-13",
         "title": {
             "zh-CN": "纳指ETF指南：QQQ、QQQM、IQQ、QNDX与衍生产品 - GlobalAssetHistory",
             "en": "Nasdaq ETF Guide: QQQ, QQQM, IQQ, QNDX and Variants — GlobalAssetHistory",
@@ -143,13 +188,86 @@ KNOWLEDGE_ARTICLES = {
             "en": "US stock glossary,ETF glossary,index funds,expense ratio,holdings,premium,drawdown,volatility,financial terms",
         },
     },
+    "/knowledge/svol-volatility-premium-etf": {
+        "legacy_paths": [],
+        "subtab": "svol",
+        "en_indexable": True,
+        "published": "2026-07-13",
+        "updated": "2026-07-13",
+        "title": {
+            "zh-CN": "Simplify波动率溢价ETF：SVOL净值、走势与表现 - GlobalAssetHistory",
+            "en": "SVOL Volatility Premium ETF: NAV, Performance and Risk — GlobalAssetHistory",
+        },
+        "description": {
+            "zh-CN": "理解 SVOL 的波动率溢价策略、净值与市价、历史表现、风险，以及为什么传统指数跟踪误差未必适用。",
+            "en": "Understand SVOL strategy, NAV versus market price, performance evaluation, volatility risks, and why index tracking error may not apply.",
+        },
+        "keywords": {
+            "zh-CN": "SVOL,Simplify波动率溢价ETF,SVOL净值,SVOL走势,SVOL表现,波动率溢价,跟踪误差",
+            "en": "SVOL,Simplify Volatility Premium ETF,SVOL NAV,SVOL performance,volatility premium,tracking error",
+        },
+    },
+    "/knowledge/china-sp-500-equivalent": {
+        "legacy_paths": [],
+        "subtab": "china-sp500",
+        "en_indexable": True,
+        "published": "2026-07-13",
+        "updated": "2026-07-13",
+        "title": {
+            "zh-CN": "中国版标普500是什么？沪深300、中证A500与上证50对比 - GlobalAssetHistory",
+            "en": "What Is China's Equivalent of the S&P 500? — GlobalAssetHistory",
+        },
+        "description": {
+            "zh-CN": "对比沪深300、中证A500和上证50，理解不同语境下哪个指数更接近标普500。",
+            "en": "Compare the CSI 300, CSI A500 and SSE 50 to understand which Chinese index is closest to the S&P 500 for different use cases.",
+        },
+        "keywords": {
+            "zh-CN": "中国版标普500,沪深300,中证A500,上证50,中国宽基指数",
+            "en": "Chinese S&P 500 equivalent,China S&P 500,CSI 300,CSI A500,SSE 50,China index",
+        },
+    },
+    "/us-etf/dram": {
+        "legacy_paths": [],
+        "subtab": "dram",
+        "en_indexable": True,
+        "published": "2026-07-13",
+        "updated": "2026-07-13",
+        "title": {"zh-CN": "DRAM持仓与官方CSV下载指南 - GlobalAssetHistory", "en": "DRAM Holdings & Official CSV Guide — GlobalAssetHistory"},
+        "description": {"zh-CN": "查看 Roundhill Memory ETF 的主要持仓、暴露类型、数据口径和官方 DRAM 持仓下载入口。", "en": "Review Roundhill Memory ETF holdings, exposure types, data caveats, and the official DRAM holdings download source."},
+        "keywords": {"zh-CN": "DRAM持仓,Roundhill Memory ETF,DRAM CSV,内存ETF", "en": "DRAM holdings,Roundhill Memory ETF,DRAM CSV,memory ETF"},
+    },
+    "/us-etf/qqqm": {
+        "legacy_paths": [],
+        "subtab": "qqqm",
+        "en_indexable": True,
+        "published": "2026-07-13",
+        "updated": "2026-07-13",
+        "title": {"zh-CN": "QQQM持仓与行业配置 - GlobalAssetHistory", "en": "QQQM Holdings & Sector Allocation — GlobalAssetHistory"},
+        "description": {"zh-CN": "查看 QQQM 前十大持仓、行业配置、集中度、费率与有日期的数据来源。", "en": "Explore QQQM top holdings, sector allocation, concentration, fees, and dated official sources."},
+        "keywords": {"zh-CN": "QQQM持仓,QQQM行业配置,纳斯达克100ETF", "en": "QQQM holdings,QQQM sector allocation,Nasdaq 100 ETF"},
+    },
+    "/us-etf/tqqq/historical-prices": {
+        "legacy_paths": [],
+        "subtab": "tqqq-csv",
+        "en_indexable": True,
+        "published": "2026-07-13",
+        "updated": "2026-07-13",
+        "title": {"zh-CN": "TQQQ历史价格CSV下载 - GlobalAssetHistory", "en": "TQQQ Historical Prices CSV Download — GlobalAssetHistory"},
+        "description": {"zh-CN": "下载 TQQQ 历史日线复权价格 CSV，支持日期筛选，并查看杠杆 ETF 数据口径。", "en": "Download TQQQ historical daily adjusted prices as CSV with date filtering and leveraged ETF methodology notes."},
+        "keywords": {"zh-CN": "TQQQ历史价格,TQQQ CSV,TQQQ下载", "en": "TQQQ historical prices,TQQQ CSV,TQQQ download"},
+    },
 }
 KNOWLEDGE_LEGACY_PATHS = {
     legacy: path
     for path, meta in KNOWLEDGE_ARTICLES.items()
     for legacy in meta.get("legacy_paths", [])
 }
-INDEXABLE_PATHS = {"/", "/etf-market", "/knowledge", *KNOWLEDGE_ARTICLES.keys()}
+INDEXABLE_TOOL_PATHS = {"/yearly", "/detail", "/backtest", "/tools/qqq-return-calculator"}
+INDEXABLE_PATHS = {
+    "/", "/etf-market", "/knowledge",
+    *INDEXABLE_TOOL_PATHS,
+    *KNOWLEDGE_ARTICLES.keys(),
+}
 
 # Real last-modified dates per page group. Update these ONLY when the page's
 # HTML/content actually changes — Google discounts <lastmod> if it always shows
@@ -208,6 +326,8 @@ def _canonical_content_path(base_path: str, filename: str) -> str:
         return KNOWLEDGE_LEGACY_PATHS[base_path]
     if base_path in KNOWLEDGE_ARTICLES:
         return base_path
+    if base_path in INDEXABLE_TOOL_PATHS:
+        return base_path
     return "/"
 
 
@@ -245,12 +365,15 @@ def serve_frontend_html(filename: str):
     page_path = _canonical_content_path(base_request_path, filename)
     page_url = f"{base_url}{prefix}{page_path}"
 
+    asset_version = _frontend_asset_version()
     html = (FRONTEND_DIR / filename).read_text(encoding="utf-8")
+    html = _version_frontend_assets(html, asset_version)
     html = html.replace("__SITE_BASE_URL__", base_url)
     html = re.sub(r'<html lang="[^"]*"', f'<html lang="{html_lang}"', html, count=1)
     html = html.replace('window.__GAH_SITE_BASE_URL__ = "' + base_url + '";',
                         'window.__GAH_SITE_BASE_URL__ = "' + base_url + '";\n'
-                        f'      window.__GAH_INITIAL_LANG__ = "{lang}";')
+                        f'      window.__GAH_INITIAL_LANG__ = "{lang}";\n'
+                        f'      window.__GAH_ASSET_VERSION__ = "{asset_version}";')
 
     if filename == "etf-market.html":
         title = _locale_value(locale, "seo.etfMarketTitle", _locale_value(locale, "seo.etfTitle", "GlobalAssetHistory"))
@@ -265,9 +388,15 @@ def serve_frontend_html(filename: str):
         keywords = article["keywords"][lang]
         image_url = f"{base_url}/doc/screenshot/yearly-heatmap.png"
         og_type = "article"
-    elif page_path == "/detail":
-        title = _locale_value(locale, "seo.detailTitle", "GlobalAssetHistory")
-        desc = _locale_value(locale, "seo.detailDescription", "")
+    elif page_path in INDEXABLE_TOOL_PATHS:
+        seo_key = {
+            "/yearly": "yearly",
+            "/detail": "detail",
+            "/backtest": "backtest",
+            "/tools/qqq-return-calculator": "qqqCalculator",
+        }[page_path]
+        title = _locale_value(locale, f"seo.{seo_key}Title", "GlobalAssetHistory")
+        desc = _locale_value(locale, f"seo.{seo_key}Description", "")
         keywords = _locale_value(locale, "seo.indexKeywords", "")
         image_url = f"{base_url}/doc/screenshot/yearly-heatmap.png"
         og_type = "website"
@@ -297,6 +426,7 @@ def serve_frontend_html(filename: str):
     html = re.sub(r'(<link rel="alternate" hreflang="zh-CN" href=")[^"]*(")', rf'\g<1>{base_url}/zh{page_path}\2', html, count=1)
     html = re.sub(r'(<link rel="alternate" hreflang="en" href=")[^"]*(")', rf'\g<1>{base_url}/en{page_path}\2', html, count=1)
     html = re.sub(r'(<link rel="alternate" hreflang="x-default" href=")[^"]*(")', rf'\g<1>{base_url}/zh{page_path}\2', html, count=1)
+    html = html.replace("__LANG_PREFIX__", prefix)
 
     if page_path in KNOWLEDGE_ARTICLES:
         article = KNOWLEDGE_ARTICLES[page_path]
@@ -330,7 +460,25 @@ def serve_frontend_html(filename: str):
         html = re.sub(r'("url":\s*)"[^"]*/"', rf'\1{_json_script_value(page_url)}', html, count=1)
         html = re.sub(r'("description":\s*)"[^"]*"', rf'\1{_json_script_value(desc)}', html, count=1)
 
-    return Response(html, mimetype="text/html")
+    response = Response(html, mimetype="text/html")
+    # HTML must revalidate so it can advertise the newest content-versioned
+    # asset URLs after a local edit or deployment.
+    response.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
+    response.headers["CDN-Cache-Control"] = "no-cache"
+    response.headers["Vercel-CDN-Cache-Control"] = "no-cache"
+    response.headers["X-Frontend-Version"] = asset_version
+    return response
+
+
+def serve_frontend_asset(relative_path: str):
+    """Serve local frontend assets with cache rules matching their version URL."""
+    response = send_from_directory(str(FRONTEND_DIR), relative_path)
+    requested_version = request.args.get("v", "")
+    if requested_version and requested_version == _frontend_asset_version():
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    else:
+        response.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
+    return response
 
 # ─── Visit counter ───────────────────────────────────────────────────────────
 # Preferred: shared Redis INCR (atomic, cross-instance, survives cold starts).
@@ -412,6 +560,7 @@ def sitemap_xml():
     urls = [
         ("/", "daily", "1.0", INDEX_LASTMOD, True),
         ("/etf-market", "daily", "0.8", ETF_MARKET_LASTMOD, True),
+        *[(path, "weekly", "0.8", INDEX_LASTMOD, True) for path in sorted(INDEXABLE_TOOL_PATHS)],
         *[(path, "weekly", "0.7", meta.get("updated", INDEX_LASTMOD), bool(meta.get("en_indexable")))
           for path, meta in KNOWLEDGE_ARTICLES.items()],
     ]
@@ -446,6 +595,62 @@ def sitemap_xml():
     return Response(body, mimetype="application/xml")
 
 
+@app.route("/api/assets/QQQM/holdings.csv")
+def qqqm_holdings_csv():
+    """Download the dated top-10 QQQM snapshot displayed on the landing page."""
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerow(["ticker", "company", "weight", "as_of", "source"])
+    for ticker, company, weight in QQQM_TOP_HOLDINGS:
+        writer.writerow([ticker, company, weight, "2026-07-10", "Invesco"])
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=qqqm-top-10-holdings-2026-07-10.csv"},
+    )
+
+
+@app.route("/api/assets/TQQQ/history.csv")
+def tqqq_history_csv():
+    """Generate a machine-readable TQQQ daily price export."""
+    start = request.args.get("start", "").strip()
+    end = request.args.get("end", "").strip()
+    iso_date = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+    if (start and not iso_date.match(start)) or (end and not iso_date.match(end)):
+        return jsonify({"error": "start and end must use YYYY-MM-DD"}), 400
+    if start and end and start > end:
+        return jsonify({"error": "start must be on or before end"}), 400
+
+    series = _fetch_daily_series_cached("TQQQ", "stock")
+    if series.error or not series.timestamps:
+        return jsonify({"error": series.error or "TQQQ history unavailable"}), 503
+
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerow(["date", "open", "high", "low", "adjusted_close", "volume", "source"])
+    optional = (series.opens, series.highs, series.lows, series.volumes)
+    for index, timestamp in enumerate(series.timestamps):
+        day = datetime.fromtimestamp(timestamp, timezone.utc).date().isoformat()
+        if (start and day < start) or (end and day > end):
+            continue
+        values = [items[index] if items and index < len(items) else "" for items in optional]
+        writer.writerow([day, values[0], values[1], values[2], series.closes[index], values[3], series.source or ""])
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=tqqq-historical-prices.csv"},
+    )
+
+
+@app.route("/us-etf/<path:subpath>")
+@app.route("/tools/<path:subpath>")
+def seo_landing_unprefixed(subpath):
+    base_path = _base_request_path()
+    if base_path not in KNOWLEDGE_ARTICLES and base_path not in INDEXABLE_TOOL_PATHS:
+        return Response("Not found", status=404)
+    return serve_frontend_html("price-change.html")
+
+
 @app.route("/etf-market")
 def etf_market():
     return serve_frontend_html("etf-market.html")
@@ -474,6 +679,8 @@ def etf_market():
 @app.route("/knowledge/market-data-myths")
 @app.route("/knowledge/terms")
 @app.route("/knowledge/financial-terms")
+@app.route("/knowledge/svol-volatility-premium-etf")
+@app.route("/knowledge/china-sp-500-equivalent")
 @app.route("/wishes")
 @app.route("/settings")
 @app.route("/heatmap")
@@ -497,7 +704,7 @@ def lang_frontend(lang, subpath):
         full_path = lang + "/" + subpath
         if full_path in {"price-change.html", "etf-market.html"}:
             return serve_frontend_html(full_path)
-        return send_from_directory(str(FRONTEND_DIR), full_path)
+        return serve_frontend_asset(full_path)
     if subpath == "etf-market":
         return serve_frontend_html("etf-market.html")
     return serve_frontend_html("price-change.html")
@@ -795,7 +1002,7 @@ def index():
 def frontend_files(filename):
     if filename in {"price-change.html", "etf-market.html"}:
         return serve_frontend_html(filename)
-    return send_from_directory(str(FRONTEND_DIR), filename)
+    return serve_frontend_asset(filename)
 
 
 if __name__ == "__main__":

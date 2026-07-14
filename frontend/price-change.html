@@ -3,7 +3,7 @@
 <head>
     <!-- Google tag (gtag.js) — config lives in js/gtag.js -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-X0YCL6L7J2"></script>
-    <script src="js/gtag.js"></script>
+    <script src="/js/gtag.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="gQoncVBJIUyqz2ofHIIyuMzasJ2FH0GCSVkiHka2UPk">
@@ -367,6 +367,7 @@
             border-radius: var(--radius-sm) 6px 0 0;
             white-space: nowrap;
             flex-shrink: 0;
+            text-decoration: none;
         }
 
         .tab-btn:hover { color: var(--apple-text-primary); }
@@ -1487,6 +1488,67 @@
     .kb-section { margin-bottom: 28px; }
     .kb-section:last-child { margin-bottom: 0; }
 
+    .kb-page-hero {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid var(--apple-divider);
+        border-radius: var(--radius-lg);
+        background: linear-gradient(135deg, var(--apple-surface-1), var(--apple-surface-2));
+        box-shadow: var(--apple-card-shadow);
+    }
+    .kb-page-hero h2 { margin: 0 0 7px; font-size: 21px; color: var(--apple-text-primary); }
+    .kb-page-hero p { margin: 0; max-width: 760px; color: var(--apple-text-secondary); font-size: 13px; line-height: 1.65; }
+    .kb-page-symbol {
+        flex: 0 0 auto;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: rgba(0, 113, 227, 0.1);
+        color: var(--apple-blue);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: .4px;
+    }
+    .kb-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+    .kb-stat-card {
+        min-width: 0;
+        padding: 15px 16px;
+        border: 1px solid var(--apple-divider);
+        border-radius: var(--radius-md);
+        background: var(--apple-surface-1);
+        box-shadow: var(--apple-card-shadow);
+    }
+    .kb-stat-label { color: var(--apple-text-tertiary); font-size: 11px; margin-bottom: 7px; }
+    .kb-stat-value { color: var(--apple-text-primary); font-size: 18px; line-height: 1.2; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .kb-stat-note { color: var(--apple-text-secondary); font-size: 11px; line-height: 1.45; margin-top: 6px; }
+    .kb-bar-list { display: grid; gap: 10px; }
+    .kb-bar-row { display: grid; grid-template-columns: minmax(120px, 190px) 1fr 58px; gap: 12px; align-items: center; font-size: 12px; }
+    .kb-bar-label { color: var(--apple-text-secondary); }
+    .kb-bar-track { height: 9px; overflow: hidden; border-radius: 999px; background: var(--apple-surface-3); }
+    .kb-bar-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--apple-blue), #64a8ff); }
+    .kb-bar-value { text-align: right; color: var(--apple-text-primary); font-variant-numeric: tabular-nums; font-weight: 600; }
+    .kb-tool-panel {
+        padding: 18px;
+        border: 1px solid var(--apple-divider);
+        border-radius: var(--radius-lg);
+        background: var(--apple-surface-1);
+        box-shadow: var(--apple-card-shadow);
+    }
+    .kb-tool-panel .pc-controls { margin-bottom: 16px; }
+    .kb-tool-status { min-height: 20px; margin: 0 0 12px; color: var(--apple-text-secondary); font-size: 12px; }
+    .kb-tool-status.is-error { color: var(--data-negative); }
+    .kb-preview-empty { padding: 26px 16px; text-align: center; color: var(--apple-text-tertiary); font-size: 12px; }
+    .kb-inline-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .kb-inline-actions a { text-decoration: none; }
+
     .kb-section-title {
         font-size: 17px;
         font-weight: 700;
@@ -1650,7 +1712,16 @@
         .kb-grid {
             grid-template-columns: 1fr;
         }
+        .kb-page-hero { padding: 16px; }
+        .kb-page-hero h2 { font-size: 18px; }
+        .kb-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .kb-bar-row { grid-template-columns: 105px 1fr 48px; gap: 8px; }
         .kb-section-title { font-size: 15px; }
+    }
+
+    @media (max-width: 430px) {
+        .kb-page-symbol { display: none; }
+        .kb-stat-grid { grid-template-columns: 1fr; }
     }
 
     </style>
@@ -1685,9 +1756,9 @@
                     <p data-i18n="nav.siteTagline">价值投资，相信长期的力量。回测历史，知晓未来。</p>
                     <div class="header-quick-links" aria-label="学习入口">
                         <span class="header-quick-label" data-i18n="knowledge.quickLearn">学习入口：</span>
-                        <a class="header-quick-link" href="/knowledge/value-investing" data-kb-link="value-investing" data-i18n="knowledge.valueInvesting">何为价值投资</a>
+                        <a class="header-quick-link" href="__LANG_PREFIX__/knowledge/value-investing" data-kb-link="value-investing" data-i18n="knowledge.valueInvesting">何为价值投资</a>
                         <span class="header-quick-sep" aria-hidden="true">·</span>
-                        <a class="header-quick-link" href="/knowledge/how-to-buy-us-stocks" data-kb-link="how-to-buy" data-i18n="knowledge.quickHowToBuy">如何投资美股</a>
+                        <a class="header-quick-link" href="__LANG_PREFIX__/knowledge/how-to-buy-us-stocks" data-kb-link="how-to-buy" data-i18n="knowledge.quickHowToBuy">如何投资美股</a>
                     </div>
                 </div>
             </div>
@@ -1734,16 +1805,16 @@
 
     <main class="main pc-main">
         <nav class="tab-bar">
-            <button class="tab-btn active" data-tab="heatmap" data-i18n="tab.heatmap">热力图</button>
-            <button class="tab-btn" data-tab="yearly" data-i18n="tab.yearlyReturns">历年涨跌幅</button>
-            <button class="tab-btn" data-tab="detail" data-i18n="tab.returnDetail">涨跌详情</button>
-            <button class="tab-btn" data-tab="backtest" data-i18n="tab.backtest">回测</button>
-            <button class="tab-btn" data-tab="crash" data-i18n="tab.crashStats">暴跌统计</button>
-            <button class="tab-btn" data-tab="etf" data-i18n="tab.etfTracking">标普纳指ETF追踪（场内）</button>
-            <button class="tab-btn" data-tab="qdii-funds" data-i18n="tab.qdiiFunds">标普纳指基金追踪（场外）</button>
-            <button class="tab-btn" data-tab="vix" data-i18n="tab.vixIndex">VIX恐慌指数</button>
-            <button class="tab-btn" data-tab="knowledge" data-i18n="tab.knowledge">数据科普</button>
-            <button class="tab-btn" data-tab="wishes" data-i18n="tab.wishes">心愿墙</button>
+            <a class="tab-btn active" href="__LANG_PREFIX__/heatmap" data-tab="heatmap" data-i18n="tab.heatmap">热力图</a>
+            <a class="tab-btn" href="__LANG_PREFIX__/yearly" data-tab="yearly" data-i18n="tab.yearlyReturns">历年涨跌幅</a>
+            <a class="tab-btn" href="__LANG_PREFIX__/detail" data-tab="detail" data-i18n="tab.returnDetail">涨跌详情</a>
+            <a class="tab-btn" href="__LANG_PREFIX__/backtest" data-tab="backtest" data-i18n="tab.backtest">回测</a>
+            <a class="tab-btn" href="__LANG_PREFIX__/crash" data-tab="crash" data-i18n="tab.crashStats">暴跌统计</a>
+            <a class="tab-btn" href="__LANG_PREFIX__/etf" data-tab="etf" data-i18n="tab.etfTracking">标普纳指ETF追踪（场内）</a>
+            <a class="tab-btn" href="__LANG_PREFIX__/qdii-funds" data-tab="qdii-funds" data-i18n="tab.qdiiFunds">标普纳指基金追踪（场外）</a>
+            <a class="tab-btn" href="__LANG_PREFIX__/vix" data-tab="vix" data-i18n="tab.vixIndex">VIX恐慌指数</a>
+            <a class="tab-btn" href="__LANG_PREFIX__/knowledge" data-tab="knowledge" data-i18n="tab.knowledge">数据科普</a>
+            <a class="tab-btn" href="__LANG_PREFIX__/wishes" data-tab="wishes" data-i18n="tab.wishes">心愿墙</a>
         </nav>
 
         <!-- Heatmap (treemap) -->
@@ -2281,12 +2352,17 @@
             <div class="pc-monthly-header">
                 <span class="pc-chart-title" data-i18n="knowledge.title">📚 数据科普</span>
                 <div class="transfer-tabs" id="kbSubTabs" style="margin-left:auto;">
-                    <button class="transfer-tab active" data-kb-tab="how-to-buy" data-i18n="knowledge.howToBuy">如何购买美股</button>
-                    <button class="transfer-tab" data-kb-tab="value-investing" data-i18n="knowledge.valueInvesting">何为价值投资</button>
-                    <button class="transfer-tab" data-kb-tab="etf-intro" data-i18n="knowledge.etfIntro">核心ETF介绍</button>
-                    <button class="transfer-tab" data-kb-tab="nasdaq-etf" data-i18n="knowledge.nasdaqEtf">纳指ETF</button>
-                    <button class="transfer-tab" data-kb-tab="event-myth" data-i18n="knowledge.eventMyth">数据魔咒</button>
-                    <button class="transfer-tab" data-kb-tab="terms" data-i18n="knowledge.terms">专业术语</button>
+                    <a class="transfer-tab active" href="__LANG_PREFIX__/knowledge/how-to-buy-us-stocks" data-kb-tab="how-to-buy" data-i18n="knowledge.howToBuy">如何购买美股</a>
+                    <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/value-investing" data-kb-tab="value-investing" data-i18n="knowledge.valueInvesting">何为价值投资</a>
+                    <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/core-etf-guide" data-kb-tab="etf-intro" data-i18n="knowledge.etfIntro">核心ETF介绍</a>
+                    <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/nasdaq-etf-guide" data-kb-tab="nasdaq-etf" data-i18n="knowledge.nasdaqEtf">纳指ETF</a>
+                    <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/market-data-myths" data-kb-tab="event-myth" data-i18n="knowledge.eventMyth">数据魔咒</a>
+                    <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/financial-terms" data-kb-tab="terms" data-i18n="knowledge.terms">专业术语</a>
+                    <a class="transfer-tab" href="__LANG_PREFIX__/us-etf/dram" data-kb-tab="dram" data-i18n="knowledge.dramTab">DRAM持仓</a>
+                    <a class="transfer-tab" href="__LANG_PREFIX__/us-etf/qqqm" data-kb-tab="qqqm" data-i18n="knowledge.qqqmTab">QQQM持仓</a>
+                    <a class="transfer-tab" href="__LANG_PREFIX__/us-etf/tqqq/historical-prices" data-kb-tab="tqqq-csv" data-i18n="knowledge.tqqqCsvTab">TQQQ CSV</a>
+                    <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/svol-volatility-premium-etf" data-kb-tab="svol" data-i18n="knowledge.svolTab">SVOL</a>
+                    <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/china-sp-500-equivalent" data-kb-tab="china-sp500" data-i18n="knowledge.chinaSp500Tab">中国版标普500</a>
                 </div>
             </div>
 
@@ -3143,6 +3219,7 @@
 
             <div class="kb-callout kb-callout-blue">
                 <strong>怎么查最新持仓：</strong>DRAM 看 Roundhill 官方页面的 Holdings / Download CSV；EWY 看 iShares 官方页面的 Holdings / Data Download Excel。DRAM 这类含互换的主动主题 ETF，尤其要优先看官网口径，不要只看券商或第三方网站。
+                <br><a href="__LANG_PREFIX__/us-etf/dram">查看本站 DRAM 持仓与官方 CSV 指南</a> · <a href="__LANG_PREFIX__/us-etf/qqqm">查看 QQQM 持仓与行业配置</a>
             </div>
             </div>
 
@@ -3434,6 +3511,7 @@
 
             <div class="kb-callout kb-callout-blue">
                 <strong>Where to check latest holdings:</strong> For DRAM, use Roundhill's official Holdings / Download CSV / Fact Sheet. For EWY, use the iShares official Holdings / Data Download page. For a fund like DRAM that may use swaps, official fund disclosures should take priority over brokerage or third-party websites.
+                <br><a href="__LANG_PREFIX__/us-etf/dram">DRAM holdings and official CSV guide</a> · <a href="__LANG_PREFIX__/us-etf/qqqm">QQQM holdings and sector allocation</a>
             </div>
             </div>
 
@@ -3612,6 +3690,7 @@
                 </tbody>
             </table></div>
             <div class="kb-callout kb-callout-yellow"><strong>综合推荐：</strong>若没有期权和高频交易需求，QQQM 是当前最稳妥、最容易解释的长期 Nasdaq-100 选择；愿意承担新基金观察期并极度重视费率，可关注 QNDX。QQQ 更适合交易，IQQ 更适合偏好 iShares 的投资者。任何一只 Nasdaq-100 ETF 都高度集中于大型成长和科技公司，不应仅因过去涨得好就忽视估值、回撤与组合分散。</div>
+            <p><a href="__LANG_PREFIX__/tools/qqq-return-calculator">使用 QQQ 收益与定投计算器</a> · <a href="__LANG_PREFIX__/us-etf/qqqm">查看 QQQM 持仓与行业配置</a> · <a href="__LANG_PREFIX__/us-etf/tqqq/historical-prices">下载 TQQQ 历史价格 CSV</a></p>
             </div>
 
             <div class="kb-section">
@@ -3664,6 +3743,7 @@
                 <tr><td>Long-term core for most investors</td><td>Avoid TQQQ / QLD / SQQQ</td><td class="kb-text-left">Daily leverage materially changes long-term risk.</td></tr>
             </tbody></table></div>
             <div class="kb-callout kb-callout-yellow"><strong>General conclusion:</strong> without active trading or options needs, QQQM is the easiest long-term Nasdaq-100 choice to justify. QNDX may appeal to fee-focused investors who accept limited fund history. This is educational information, not individualized investment advice.</div></div>
+            <p><a href="__LANG_PREFIX__/tools/qqq-return-calculator">Use the QQQ return calculator</a> · <a href="__LANG_PREFIX__/us-etf/qqqm">View QQQM holdings and sector allocation</a> · <a href="__LANG_PREFIX__/us-etf/tqqq/historical-prices">Download TQQQ historical prices CSV</a></p>
             </div><!-- /kb-nasdaq-etf-en -->
 
             <!-- ====== 数据魔咒（全部魔咒一一对比） ====== -->
@@ -4494,6 +4574,112 @@
 
             </div><!-- /kb-terms-en -->
 
+            <!-- ====== ETF 数据下载 ====== -->
+            <div class="kb-sub-panel" id="kb-dram" style="display:none;">
+            <div class="kb-page-hero"><div><h2>Roundhill DRAM ETF 持仓解读</h2><p>先看它实际暴露于哪些存储环节，再判断持仓披露中的股票、存托凭证和总收益互换是否被重复计算。</p></div><span class="kb-page-symbol">DRAM</span></div>
+            <div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">主题范围</div><div class="kb-stat-value">存储全产业链</div><div class="kb-stat-note">HBM、DRAM、NAND、SSD 与 HDD</div></div><div class="kb-stat-card"><div class="kb-stat-label">组合方式</div><div class="kb-stat-value">主动管理</div><div class="kb-stat-note">权重会随基金经理判断变化</div></div><div class="kb-stat-card"><div class="kb-stat-label">披露口径</div><div class="kb-stat-value">股票 + 互换</div><div class="kb-stat-note">需要合并理解实际经济敞口</div></div><div class="kb-stat-card"><div class="kb-stat-label">主要风险</div><div class="kb-stat-value">高集中 / 强周期</div><div class="kb-stat-note">受存储价格与 AI 资本开支影响</div></div></div>
+            <div class="kb-section"><div class="kb-callout kb-callout-green"><strong>核心结论：</strong>DRAM 聚焦 HBM、DRAM、NAND、SSD 与硬盘产业链，暴露可能同时来自股票和总收益互换。不同网站的权重口径可能不一致，应优先核对 Roundhill 官方披露。</div></div>
+            <div class="kb-section"><h3 class="kb-section-title">主要公开暴露</h3><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>名称</th><th>产业暴露</th><th>查看时要注意</th></tr></thead><tbody>
+                <tr><td>Samsung Electronics</td><td>Memory / HBM</td><td class="kb-text-left">股票与衍生品敞口可能需要合并理解。</td></tr><tr><td>SK Hynix</td><td>Memory / HBM</td><td class="kb-text-left">受存储价格和AI资本开支周期影响。</td></tr><tr><td>Micron Technology</td><td>Memory / HBM</td><td class="kb-text-left">美国上市持仓，周期弹性较高。</td></tr><tr><td>Kioxia</td><td>NAND Flash</td><td class="kb-text-left">关注披露使用的证券或互换口径。</td></tr><tr><td>SanDisk</td><td>Flash Storage</td><td class="kb-text-left">权重随主动管理调整而变化。</td></tr>
+            </tbody></table></div><p class="kb-data-note">以上用于解释主要暴露，不是实时完整持仓表。</p></div>
+            <div class="kb-section"><h3 class="kb-section-title">阅读持仓的正确顺序</h3><div class="kb-grid"><div class="kb-grid-col"><h4>① 先确认数据日期</h4><ul><li>核对官方页面的 as-of 日期</li><li>不同聚合网站可能更新不同步</li><li>主动 ETF 的旧快照很快会失真</li></ul></div><div class="kb-grid-col"><h4>② 再合并经济敞口</h4><ul><li>识别普通股、ADR 与总收益互换</li><li>不要把同一公司的两种工具简单相加</li><li>最后再判断国家与产业环节集中度</li></ul></div></div><div class="kb-callout kb-callout-yellow">主题集中且基金历史较短，短期表现不能外推长期收益。第三方数据只适合发现线索，最终以官方披露为准。</div><div class="kb-inline-actions"><a class="pc-btn primary" href="https://www.roundhillinvestments.com/etf/dram/#holdings" target="_blank" rel="noopener">查看官方完整持仓 / CSV</a><a class="pc-btn" href="__LANG_PREFIX__/detail?symbol=DRAM&amp;type=stock">查看 DRAM 历史走势</a></div></div>
+            </div>
+            <div class="kb-sub-panel" id="kb-dram-en" style="display:none;">
+            <div class="kb-page-hero"><div><h2>Roundhill DRAM ETF Holdings</h2><p>Map the fund's memory-chain exposure, then check whether equities, depositary receipts, and total-return swaps are being double-counted.</p></div><span class="kb-page-symbol">DRAM</span></div>
+            <div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">Theme</div><div class="kb-stat-value">Memory chain</div><div class="kb-stat-note">HBM, DRAM, NAND, SSD, and HDD</div></div><div class="kb-stat-card"><div class="kb-stat-label">Management</div><div class="kb-stat-value">Active</div><div class="kb-stat-note">Weights can change with manager views</div></div><div class="kb-stat-card"><div class="kb-stat-label">Disclosure</div><div class="kb-stat-value">Stocks + swaps</div><div class="kb-stat-note">Combine instruments into economic exposure</div></div><div class="kb-stat-card"><div class="kb-stat-label">Key risk</div><div class="kb-stat-value">Concentrated</div><div class="kb-stat-note">Sensitive to memory prices and AI capex</div></div></div>
+            <div class="kb-section"><div class="kb-callout kb-callout-green"><strong>Core conclusion:</strong> DRAM focuses on HBM, DRAM, NAND, SSDs, and hard drives. Exposure may combine equities and total-return swaps, so third-party weights can differ; prioritize Roundhill's disclosure.</div></div>
+            <div class="kb-section"><h3 class="kb-section-title">Major Disclosed Exposures</h3><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>Name</th><th>Exposure</th><th>What to Check</th></tr></thead><tbody>
+                <tr><td>Samsung Electronics</td><td>Memory / HBM</td><td class="kb-text-left">Equity and derivative exposure may need combined interpretation.</td></tr><tr><td>SK Hynix</td><td>Memory / HBM</td><td class="kb-text-left">Sensitive to memory pricing and AI capital spending.</td></tr><tr><td>Micron Technology</td><td>Memory / HBM</td><td class="kb-text-left">A listed holding with high cycle sensitivity.</td></tr><tr><td>Kioxia</td><td>NAND Flash</td><td class="kb-text-left">Check whether disclosure uses securities or swaps.</td></tr><tr><td>SanDisk</td><td>Flash Storage</td><td class="kb-text-left">Weight can change with active management.</td></tr>
+            </tbody></table></div><p class="kb-data-note">This explains major exposures; it is not a live complete holdings table.</p></div>
+            <div class="kb-section"><h3 class="kb-section-title">How to Read the Holdings</h3><div class="kb-grid"><div class="kb-grid-col"><h4>1. Confirm the date</h4><ul><li>Check the official as-of date</li><li>Aggregators can update on different schedules</li><li>Old snapshots decay quickly for active ETFs</li></ul></div><div class="kb-grid-col"><h4>2. Combine economic exposure</h4><ul><li>Identify common stock, ADRs, and swaps</li><li>Do not blindly add instruments tied to one company</li><li>Then assess country and industry concentration</li></ul></div></div><div class="kb-callout kb-callout-yellow">The fund is concentrated and new, so a short history is not a long-term expectation. Treat third-party data as a lead and official disclosure as the source of truth.</div><div class="kb-inline-actions"><a class="pc-btn primary" href="https://www.roundhillinvestments.com/etf/dram/#holdings" target="_blank" rel="noopener">Roundhill official holdings / CSV</a><a class="pc-btn" href="__LANG_PREFIX__/detail?symbol=DRAM&amp;type=stock">View DRAM history</a></div></div>
+            </div>
+
+            <div class="kb-sub-panel" id="kb-qqqm" style="display:none;">
+            <div class="kb-page-hero"><div><h2>QQQM 持仓与行业配置</h2><p>把前十大集中度、科技行业权重和数据日期放在一起看，避免只凭“纳斯达克100”名称判断风险。</p></div><span class="kb-page-symbol">QQQM</span></div>
+            <div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">跟踪指数</div><div class="kb-stat-value">Nasdaq-100</div><div class="kb-stat-note">纳斯达克上市的 100 家大型非金融公司</div></div><div class="kb-stat-card"><div class="kb-stat-label">费用率</div><div class="kb-stat-value">0.15%</div><div class="kb-stat-note">长期持有成本指标</div></div><div class="kb-stat-card"><div class="kb-stat-label">前十大合计</div><div class="kb-stat-value">45.26%</div><div class="kb-stat-note">按 2026-07-10 页面快照计算</div></div><div class="kb-stat-card"><div class="kb-stat-label">科技行业</div><div class="kb-stat-value">68.51%</div><div class="kb-stat-note">行业快照日期 2026-06-30</div></div></div>
+            <div class="kb-section"><div class="kb-callout kb-callout-green"><strong>数据口径：</strong>QQQM 跟踪纳斯达克100指数，费用率0.15%。持仓快照来自 Invesco 官方页面：持仓日期2026-07-10，行业配置日期2026-06-30。</div></div>
+            <div class="kb-section"><h3 class="kb-section-title">前十大持仓</h3><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>代码</th><th>公司</th><th>权重</th></tr></thead><tbody>
+                <tr><td>NVDA</td><td>NVIDIA</td><td>8.01%</td></tr><tr><td>AAPL</td><td>Apple</td><td>7.27%</td></tr><tr><td>MU</td><td>Micron</td><td>4.79%</td></tr><tr><td>MSFT</td><td>Microsoft</td><td>4.49%</td></tr><tr><td>AMZN</td><td>Amazon</td><td>4.14%</td></tr><tr><td>AMD</td><td>Advanced Micro Devices</td><td>3.94%</td></tr><tr><td>GOOGL</td><td>Alphabet A</td><td>3.27%</td></tr><tr><td>TSLA</td><td>Tesla</td><td>3.20%</td></tr><tr><td>META</td><td>Meta Platforms</td><td>3.11%</td></tr><tr><td>GOOG</td><td>Alphabet C</td><td>3.04%</td></tr>
+            </tbody></table></div><p><a href="/api/assets/QQQM/holdings.csv">下载前十大持仓 CSV</a> · <a href="https://www.invesco.com/us/en/financial-products/etfs/invesco-nasdaq-100-etf.html#Portfolio" target="_blank" rel="noopener">Invesco 完整持仓</a></p></div>
+            <div class="kb-section"><h3 class="kb-section-title">行业配置</h3><div class="kb-grid"><div class="kb-grid-col"><h4>权重分布</h4><div class="kb-bar-list"><div class="kb-bar-row"><span class="kb-bar-label">科技</span><span class="kb-bar-track"><span class="kb-bar-fill" style="display:block;width:68.51%"></span></span><span class="kb-bar-value">68.51%</span></div><div class="kb-bar-row"><span class="kb-bar-label">可选消费</span><span class="kb-bar-track"><span class="kb-bar-fill" style="display:block;width:16.43%"></span></span><span class="kb-bar-value">16.43%</span></div><div class="kb-bar-row"><span class="kb-bar-label">医疗保健</span><span class="kb-bar-track"><span class="kb-bar-fill" style="display:block;width:3.56%"></span></span><span class="kb-bar-value">3.56%</span></div><div class="kb-bar-row"><span class="kb-bar-label">通信</span><span class="kb-bar-track"><span class="kb-bar-fill" style="display:block;width:3.46%"></span></span><span class="kb-bar-value">3.46%</span></div><div class="kb-bar-row"><span class="kb-bar-label">其他</span><span class="kb-bar-track"><span class="kb-bar-fill" style="display:block;width:8.04%"></span></span><span class="kb-bar-value">8.04%</span></div></div></div><div class="kb-grid-col"><h4>如何理解</h4><ul><li>它是大型成长股组合，不是全市场基金</li><li>科技与可选消费合计接近 85%</li><li>前十大约占 45%，龙头公司影响明显</li><li>行业和持仓权重会随价格与指数调整变化</li></ul></div></div><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>行业</th><th>权重</th></tr></thead><tbody><tr><td>Technology</td><td>68.51%</td></tr><tr><td>Consumer discretionary</td><td>16.43%</td></tr><tr><td>Health care</td><td>3.56%</td></tr><tr><td>Telecommunications</td><td>3.46%</td></tr><tr><td>Industrials</td><td>3.13%</td></tr><tr><td>Consumer staples</td><td>2.04%</td></tr><tr><td>Basic materials</td><td>1.28%</td></tr><tr><td>Utilities</td><td>1.14%</td></tr><tr><td>Energy</td><td>0.45%</td></tr></tbody></table></div></div>
+            </div>
+            <div class="kb-sub-panel" id="kb-qqqm-en" style="display:none;">
+            <div class="kb-page-hero"><div><h2>QQQM Holdings and Sectors</h2><p>Read top-10 concentration, technology weight, and snapshot dates together instead of treating “Nasdaq-100” as a complete risk description.</p></div><span class="kb-page-symbol">QQQM</span></div>
+            <div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">Index</div><div class="kb-stat-value">Nasdaq-100</div><div class="kb-stat-note">100 large non-financial Nasdaq-listed companies</div></div><div class="kb-stat-card"><div class="kb-stat-label">Expense ratio</div><div class="kb-stat-value">0.15%</div><div class="kb-stat-note">Annual fund operating cost</div></div><div class="kb-stat-card"><div class="kb-stat-label">Top 10 total</div><div class="kb-stat-value">45.26%</div><div class="kb-stat-note">Calculated from the July 10 snapshot</div></div><div class="kb-stat-card"><div class="kb-stat-label">Technology</div><div class="kb-stat-value">68.51%</div><div class="kb-stat-note">Sector snapshot dated June 30</div></div></div>
+            <div class="kb-section"><div class="kb-callout kb-callout-green"><strong>Data scope:</strong> QQQM tracks the Nasdaq-100 with a 0.15% expense ratio. The Invesco snapshot uses holdings as of July 10, 2026 and sectors as of June 30, 2026.</div></div>
+            <div class="kb-section"><h3 class="kb-section-title">Top 10 Holdings</h3><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>Ticker</th><th>Company</th><th>Weight</th></tr></thead><tbody><tr><td>NVDA</td><td>NVIDIA</td><td>8.01%</td></tr><tr><td>AAPL</td><td>Apple</td><td>7.27%</td></tr><tr><td>MU</td><td>Micron</td><td>4.79%</td></tr><tr><td>MSFT</td><td>Microsoft</td><td>4.49%</td></tr><tr><td>AMZN</td><td>Amazon</td><td>4.14%</td></tr><tr><td>AMD</td><td>Advanced Micro Devices</td><td>3.94%</td></tr><tr><td>GOOGL</td><td>Alphabet A</td><td>3.27%</td></tr><tr><td>TSLA</td><td>Tesla</td><td>3.20%</td></tr><tr><td>META</td><td>Meta Platforms</td><td>3.11%</td></tr><tr><td>GOOG</td><td>Alphabet C</td><td>3.04%</td></tr></tbody></table></div><p><a href="/api/assets/QQQM/holdings.csv">Download top-10 holdings CSV</a> · <a href="https://www.invesco.com/us/en/financial-products/etfs/invesco-nasdaq-100-etf.html#Portfolio" target="_blank" rel="noopener">Invesco full holdings</a></p></div>
+            <div class="kb-section"><h3 class="kb-section-title">Sector Allocation</h3><div class="kb-grid"><div class="kb-grid-col"><h4>Weight distribution</h4><div class="kb-bar-list"><div class="kb-bar-row"><span class="kb-bar-label">Technology</span><span class="kb-bar-track"><span class="kb-bar-fill" style="display:block;width:68.51%"></span></span><span class="kb-bar-value">68.51%</span></div><div class="kb-bar-row"><span class="kb-bar-label">Consumer disc.</span><span class="kb-bar-track"><span class="kb-bar-fill" style="display:block;width:16.43%"></span></span><span class="kb-bar-value">16.43%</span></div><div class="kb-bar-row"><span class="kb-bar-label">Health care</span><span class="kb-bar-track"><span class="kb-bar-fill" style="display:block;width:3.56%"></span></span><span class="kb-bar-value">3.56%</span></div><div class="kb-bar-row"><span class="kb-bar-label">Telecom</span><span class="kb-bar-track"><span class="kb-bar-fill" style="display:block;width:3.46%"></span></span><span class="kb-bar-value">3.46%</span></div><div class="kb-bar-row"><span class="kb-bar-label">Other</span><span class="kb-bar-track"><span class="kb-bar-fill" style="display:block;width:8.04%"></span></span><span class="kb-bar-value">8.04%</span></div></div></div><div class="kb-grid-col"><h4>How to read it</h4><ul><li>A large-growth portfolio, not a total-market fund</li><li>Technology and consumer discretionary approach 85%</li><li>The top 10 are about 45% of assets</li><li>Weights move with prices and index rebalances</li></ul></div></div><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>Sector</th><th>Weight</th></tr></thead><tbody><tr><td>Technology</td><td>68.51%</td></tr><tr><td>Consumer discretionary</td><td>16.43%</td></tr><tr><td>Health care</td><td>3.56%</td></tr><tr><td>Telecommunications</td><td>3.46%</td></tr><tr><td>Industrials</td><td>3.13%</td></tr><tr><td>Consumer staples</td><td>2.04%</td></tr><tr><td>Basic materials</td><td>1.28%</td></tr><tr><td>Utilities</td><td>1.14%</td></tr><tr><td>Energy</td><td>0.45%</td></tr></tbody></table></div></div>
+            </div>
+
+            <div class="kb-sub-panel" id="kb-tqqq-csv" style="display:none;">
+            <div class="kb-page-hero"><div><h2>TQQQ 历史价格与 CSV</h2><p>默认展示最近一年日线数据。先在线核对日期范围、记录数和区间表现，再下载相同口径的 CSV。</p></div><span class="kb-page-symbol">TQQQ · 3X</span></div>
+            <div class="kb-section"><div class="kb-callout kb-callout-green"><strong>下载说明：</strong>CSV 由站点统一日线数据层按请求生成，包含日期、复权收盘价，以及上游可用时的 OHLC 和成交量。</div></div>
+            <div class="kb-section kb-tool-panel tqqq-tool" data-locale="zh"><h3 class="kb-section-title">选择范围并预览</h3><form class="pc-controls" action="/api/assets/TQQQ/history.csv" method="get"><label class="control-label">开始日期 <input class="pc-bt-input" name="start" data-role="start" type="date"></label><label class="control-label">结束日期 <input class="pc-bt-input" name="end" data-role="end" type="date"></label><button class="pc-btn" data-role="preview" type="button">刷新预览</button><button class="pc-btn primary" type="submit">下载 CSV</button></form><p class="kb-tool-status" data-role="status">正在加载最近一年数据…</p><div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">数据范围</div><div class="kb-stat-value" data-role="range">—</div><div class="kb-stat-note">首个交易日 → 最新交易日</div></div><div class="kb-stat-card"><div class="kb-stat-label">交易日记录</div><div class="kb-stat-value" data-role="count">—</div><div class="kb-stat-note">当前筛选范围</div></div><div class="kb-stat-card"><div class="kb-stat-label">最新复权收盘价</div><div class="kb-stat-value" data-role="latest">—</div><div class="kb-stat-note">adjusted_close</div></div><div class="kb-stat-card"><div class="kb-stat-label">区间价格变化</div><div class="kb-stat-value" data-role="return">—</div><div class="kb-stat-note">首尾复权收盘价计算</div></div></div><h4 class="kb-section-subtitle">最近 10 个交易日预览</h4><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>日期</th><th>开盘</th><th>最高</th><th>最低</th><th>复权收盘</th><th>成交量</th></tr></thead><tbody data-role="rows"><tr><td colspan="6"><div class="kb-preview-empty">正在获取数据…</div></td></tr></tbody></table></div></div>
+            <div class="kb-section"><h3 class="kb-section-title">数据口径与杠杆风险</h3><div class="kb-grid"><div class="kb-grid-col"><h4>CSV 字段</h4><ul><li>date：交易日期</li><li>open / high / low：上游可用的原始价格</li><li>adjusted_close：适合历史收益研究的复权收盘价</li><li>volume：当日成交量</li></ul></div><div class="kb-grid-col"><h4>不能忽略的风险</h4><ul><li>TQQQ 追求纳斯达克100单日 3 倍表现</li><li>多日收益不等于指数区间收益简单乘以 3</li><li>每日重置会产生路径依赖和波动损耗</li><li>高波动阶段可能出现极深回撤</li></ul></div></div><div class="kb-callout kb-callout-yellow">预览中的“区间价格变化”没有计入税费，也不是未来收益预测。研究长期持有结果时，必须把每日重置与波动路径纳入判断。</div><div class="kb-inline-actions"><a class="pc-btn" href="https://www.proshares.com/our-etfs/leveraged-and-inverse/tqqq" target="_blank" rel="noopener">ProShares 官方页面</a><a class="pc-btn" href="__LANG_PREFIX__/detail?symbol=TQQQ&amp;type=stock">查看完整历史走势</a></div></div>
+            </div>
+            <div class="kb-sub-panel" id="kb-tqqq-csv-en" style="display:none;">
+            <div class="kb-page-hero"><div><h2>TQQQ Historical Prices and CSV</h2><p>The latest year is selected by default. Verify dates, record count, and period change online before downloading the same filtered data.</p></div><span class="kb-page-symbol">TQQQ · 3X</span></div>
+            <div class="kb-section"><div class="kb-callout kb-callout-green"><strong>Download scope:</strong> The CSV is generated by the unified daily-price layer and includes date, adjusted close, and OHLC/volume when available upstream.</div></div>
+            <div class="kb-section kb-tool-panel tqqq-tool" data-locale="en"><h3 class="kb-section-title">Select a Range and Preview</h3><form class="pc-controls" action="/api/assets/TQQQ/history.csv" method="get"><label class="control-label">Start date <input class="pc-bt-input" name="start" data-role="start" type="date"></label><label class="control-label">End date <input class="pc-bt-input" name="end" data-role="end" type="date"></label><button class="pc-btn" data-role="preview" type="button">Refresh preview</button><button class="pc-btn primary" type="submit">Download CSV</button></form><p class="kb-tool-status" data-role="status">Loading the latest year…</p><div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">Data range</div><div class="kb-stat-value" data-role="range">—</div><div class="kb-stat-note">First → latest trading day</div></div><div class="kb-stat-card"><div class="kb-stat-label">Trading days</div><div class="kb-stat-value" data-role="count">—</div><div class="kb-stat-note">Within the current filter</div></div><div class="kb-stat-card"><div class="kb-stat-label">Latest adjusted close</div><div class="kb-stat-value" data-role="latest">—</div><div class="kb-stat-note">adjusted_close</div></div><div class="kb-stat-card"><div class="kb-stat-label">Period price change</div><div class="kb-stat-value" data-role="return">—</div><div class="kb-stat-note">From first and last adjusted close</div></div></div><h4 class="kb-section-subtitle">Latest 10 Trading Days</h4><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>Date</th><th>Open</th><th>High</th><th>Low</th><th>Adjusted close</th><th>Volume</th></tr></thead><tbody data-role="rows"><tr><td colspan="6"><div class="kb-preview-empty">Fetching data…</div></td></tr></tbody></table></div></div>
+            <div class="kb-section"><h3 class="kb-section-title">Data Scope and Leverage Risk</h3><div class="kb-grid"><div class="kb-grid-col"><h4>CSV fields</h4><ul><li>date: trading date</li><li>open / high / low: raw prices when available</li><li>adjusted_close: adjusted close for historical research</li><li>volume: daily trading volume</li></ul></div><div class="kb-grid-col"><h4>Risks that matter</h4><ul><li>TQQQ targets 3x the daily Nasdaq-100 return</li><li>Multi-day return is not simply index return times three</li><li>Daily reset creates path dependence and volatility decay</li><li>Drawdowns can be extreme in volatile markets</li></ul></div></div><div class="kb-callout kb-callout-yellow">The preview's period price change excludes taxes and costs and is not a forecast. Long-horizon analysis must account for daily reset and the realized volatility path.</div><div class="kb-inline-actions"><a class="pc-btn" href="https://www.proshares.com/our-etfs/leveraged-and-inverse/tqqq" target="_blank" rel="noopener">Official ProShares page</a><a class="pc-btn" href="__LANG_PREFIX__/detail?symbol=TQQQ&amp;type=stock">View full price history</a></div></div>
+            </div>
+
+            <!-- ====== SVOL 波动率溢价 ETF ====== -->
+            <div class="kb-sub-panel" id="kb-svol" style="display:none;">
+            <div class="kb-page-hero"><div><h2>SVOL 波动率溢价 ETF</h2><p>它的收益来源、现金分配和尾部风险与普通指数 ETF 不同。这里用策略链条解释为什么“分配率高”不等于“总回报高”。</p></div><span class="kb-page-symbol">SVOL</span></div>
+            <div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">管理方式</div><div class="kb-stat-value">主动策略</div><div class="kb-stat-note">不是机械复制股票指数</div></div><div class="kb-stat-card"><div class="kb-stat-label">主要收益源</div><div class="kb-stat-value">波动率溢价</div><div class="kb-stat-note">承担市场对冲需求与尾部风险</div></div><div class="kb-stat-card"><div class="kb-stat-label">正确收益口径</div><div class="kb-stat-value">总回报</div><div class="kb-stat-note">价格变化 + 现金分配再投资</div></div><div class="kb-stat-card"><div class="kb-stat-label">核心风险</div><div class="kb-stat-value">波动率跃升</div><div class="kb-stat-note">压力期可能出现非线性损失</div></div></div>
+            <div class="kb-section">
+            <div class="kb-callout kb-callout-green"><strong>核心结论：</strong>SVOL 是主动管理的波动率溢价策略 ETF，不是简单复制某个股票指数。分析时应同时看净值、市价、总回报、现金分配、回撤与尾部风险，而不是只看传统指数基金的跟踪误差。</div>
+            </div>
+            <div class="kb-section"><h3 class="kb-section-title">应该看哪些指标</h3><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>指标</th><th>作用</th><th>常见误区</th></tr></thead><tbody>
+                <tr><td>净值与市价</td><td class="kb-text-left">区分策略本身的表现与场内交易折溢价。</td><td class="kb-text-left">只看收盘价，忽略现金分配与净值变化。</td></tr>
+                <tr><td>总回报</td><td class="kb-text-left">把现金分配重新计入收益，更接近完整持有结果。</td><td class="kb-text-left">把高分配率直接等同于高收益。</td></tr>
+                <tr><td>回撤与波动</td><td class="kb-text-left">观察卖出波动率策略在压力期的尾部风险。</td><td class="kb-text-left">用平静时期的波动外推极端市场。</td></tr>
+                <tr><td>基准对比</td><td class="kb-text-left">理解风险调整后的相对表现。</td><td class="kb-text-left">把主动策略偏离基准一概视为跟踪失败。</td></tr>
+            </tbody></table></div></div>
+            <div class="kb-section"><h3 class="kb-section-title">策略如何转化为持有人回报</h3><div class="kb-grid"><div class="kb-grid-col"><h4>正常市场阶段</h4><ul><li>市场参与者支付价格购买波动率保护</li><li>策略通过承担部分波动率风险获取溢价</li><li>基金把投资结果的一部分以现金形式分配</li></ul></div><div class="kb-grid-col"><h4>压力市场阶段</h4><ul><li>隐含波动率可能快速上升</li><li>卖出波动率方向可能遭遇非线性损失</li><li>对冲能降低风险，但不能保证消除回撤</li></ul></div></div><h3 class="kb-section-title">为什么传统“跟踪误差”未必适用</h3><p>主动策略可以根据市场环境调整仓位；与参考指数的差异可能是策略设计结果，而不是指数复制失败。更合适的观察方式是比较长期净值、风险、分配后的总回报，以及官方披露的策略目标。</p><div class="kb-callout kb-callout-yellow">波动率溢价来自承担市场对冲需求和尾部风险，并不是稳定无风险收益。历史分配与表现不代表未来结果。</div><div class="kb-inline-actions"><a class="pc-btn primary" href="__LANG_PREFIX__/detail?symbol=SVOL&amp;type=stock">查看 SVOL 历史走势</a><a class="pc-btn" href="https://www.simplify.us/etfs/svol-simplify-volatility-premium-etf" target="_blank" rel="noopener">Simplify 官方页面</a></div></div>
+            </div>
+
+            <div class="kb-sub-panel" id="kb-svol-en" style="display:none;">
+            <div class="kb-page-hero"><div><h2>SVOL Volatility Premium ETF</h2><p>Its return source, distributions, and tail risk differ from a plain index ETF. Follow the strategy chain to see why a high distribution rate is not the same as a high total return.</p></div><span class="kb-page-symbol">SVOL</span></div>
+            <div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">Management</div><div class="kb-stat-value">Active</div><div class="kb-stat-note">Not a mechanical equity index tracker</div></div><div class="kb-stat-card"><div class="kb-stat-label">Return source</div><div class="kb-stat-value">Vol premium</div><div class="kb-stat-note">Compensation for hedging demand and tail risk</div></div><div class="kb-stat-card"><div class="kb-stat-label">Right measure</div><div class="kb-stat-value">Total return</div><div class="kb-stat-note">Price change plus reinvested distributions</div></div><div class="kb-stat-card"><div class="kb-stat-label">Core risk</div><div class="kb-stat-value">Volatility spike</div><div class="kb-stat-note">Losses can become nonlinear in stress</div></div></div>
+            <div class="kb-section"><div class="kb-callout kb-callout-green"><strong>Core conclusion:</strong> SVOL is an actively managed volatility-premium ETF, not a plain index tracker. Evaluate NAV, market price, total return, distributions, drawdown, and tail risk rather than relying only on traditional tracking error.</div></div>
+            <div class="kb-section"><h3 class="kb-section-title">What to Evaluate</h3><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>Metric</th><th>Why It Matters</th><th>Common Mistake</th></tr></thead><tbody>
+                <tr><td>NAV vs Market Price</td><td class="kb-text-left">Separates strategy performance from trading premium or discount.</td><td class="kb-text-left">Looking only at closing price and ignoring distributions.</td></tr>
+                <tr><td>Total Return</td><td class="kb-text-left">Reinvests cash distributions for a fuller holding-period result.</td><td class="kb-text-left">Treating a high distribution rate as guaranteed return.</td></tr>
+                <tr><td>Drawdown and Volatility</td><td class="kb-text-left">Shows tail risk during stressed volatility regimes.</td><td class="kb-text-left">Extrapolating calm-market behavior into crises.</td></tr>
+                <tr><td>Benchmark Comparison</td><td class="kb-text-left">Provides risk-adjusted performance context.</td><td class="kb-text-left">Calling every intentional benchmark deviation tracking failure.</td></tr>
+            </tbody></table></div></div>
+            <div class="kb-section"><h3 class="kb-section-title">How the Strategy Becomes Investor Return</h3><div class="kb-grid"><div class="kb-grid-col"><h4>Normal markets</h4><ul><li>Market participants pay for volatility protection</li><li>The strategy accepts some volatility risk for premium</li><li>Part of the investment result may be distributed in cash</li></ul></div><div class="kb-grid-col"><h4>Stressed markets</h4><ul><li>Implied volatility can rise rapidly</li><li>Short-vol exposure can suffer nonlinear losses</li><li>Hedges reduce risk but cannot guarantee no drawdown</li></ul></div></div><h3 class="kb-section-title">Why Traditional Tracking Error May Not Apply</h3><p>An active strategy may deliberately change exposures. Deviation from a reference index can be intentional rather than replication failure. Compare long-run NAV, risk, distribution-adjusted total return, and the fund's disclosed objective.</p><div class="kb-callout kb-callout-yellow">The volatility premium compensates investors for accepting hedging demand and tail risk; it is not stable risk-free income. Past distributions and performance do not predict future results.</div><div class="kb-inline-actions"><a class="pc-btn primary" href="__LANG_PREFIX__/detail?symbol=SVOL&amp;type=stock">View SVOL history</a><a class="pc-btn" href="https://www.simplify.us/etfs/svol-simplify-volatility-premium-etf" target="_blank" rel="noopener">Official Simplify page</a></div></div>
+            </div>
+
+            <!-- ====== 中国版标普500 ====== -->
+            <div class="kb-sub-panel" id="kb-china-sp500" style="display:none;">
+            <div class="kb-page-hero"><div><h2>“中国版标普500”怎么选？</h2><p>这不是寻找一个名称翻译，而是比较市场代表性、成分数量、行业覆盖和集中度。不同问题会对应不同答案。</p></div><span class="kb-page-symbol">指数对比</span></div>
+            <div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">最常用中国大盘基准</div><div class="kb-stat-value">沪深300</div><div class="kb-stat-note">跨沪深市场的大型 A 股组合</div></div><div class="kb-stat-card"><div class="kb-stat-label">成分数量最接近</div><div class="kb-stat-value">中证A500</div><div class="kb-stat-note">500 只，并强调行业代表性</div></div><div class="kb-stat-card"><div class="kb-stat-label">最集中候选</div><div class="kb-stat-value">上证50</div><div class="kb-stat-note">仅覆盖上海大型龙头</div></div><div class="kb-stat-card"><div class="kb-stat-label">真正结论</div><div class="kb-stat-value">没有一一对应</div><div class="kb-stat-note">市场结构与编制规则不同</div></div></div>
+            <div class="kb-section"><div class="kb-callout kb-callout-green"><strong>核心结论：</strong>没有一个中国指数与标普500完全一一对应。强调 A 股大盘代表性时，沪深300是最常见答案；强调成分数量和行业覆盖时，中证A500值得一起比较；上证50则更集中于上海市场的大型龙头。</div></div>
+            <div class="kb-section"><h3 class="kb-section-title">四个指数放在同一张表里</h3><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>指数</th><th>成分数量</th><th>市场范围</th><th>行业广度</th><th>更适合怎么理解</th></tr></thead><tbody>
+                <tr><td>标普500</td><td>约 500</td><td>美国大型股</td><td>广</td><td class="kb-text-left">美国大盘股核心基准，也是本次比较的参照物。</td></tr>
+                <tr><td>沪深300</td><td>300</td><td>沪市 + 深市</td><td>较广</td><td class="kb-text-left">最常见的中国大盘基准答案。</td></tr>
+                <tr><td>中证A500</td><td>500</td><td>A 股市场</td><td>广</td><td class="kb-text-left">在成分数量和行业代表性的讨论方式上更接近标普500。</td></tr>
+                <tr><td>上证50</td><td>50</td><td>仅上海市场</td><td>较窄</td><td class="kb-text-left">更集中的超大盘蓝筹指数。</td></tr>
+            </tbody></table></div></div>
+            <div class="kb-section"><h3 class="kb-section-title">按问题选择，而不是硬找唯一答案</h3><div class="kb-grid"><div class="kb-grid-col"><h4>想看中国大盘整体表现</h4><ul><li>优先使用沪深300作为常见基准</li><li>它跨越沪深两个市场</li><li>相关指数基金和研究资料更容易获取</li></ul></div><div class="kb-grid-col"><h4>想比较“500家公司”的广度</h4><ul><li>把中证A500纳入比较</li><li>同时检查行业权重与选样规则</li><li>不能只因数量相同就认为风险收益相同</li></ul></div></div><div class="kb-callout kb-callout-blue">“中国版标普500”是帮助理解的类比，不表示两个指数拥有相同的选样规则、行业结构、盈利质量或长期风险收益。</div><div class="kb-inline-actions"><a class="pc-btn primary" href="__LANG_PREFIX__/detail?symbol=000300&amp;type=cn_stock">查看沪深300历史收益</a><a class="pc-btn" href="__LANG_PREFIX__/backtest">进入回测</a></div></div>
+            </div>
+
+            <div class="kb-sub-panel" id="kb-china-sp500-en" style="display:none;">
+            <div class="kb-page-hero"><div><h2>What Is China's S&amp;P 500 Equivalent?</h2><p>This is not a translation exercise. Compare market representation, constituent count, sector breadth, and concentration—the answer changes with the question.</p></div><span class="kb-page-symbol">INDEX MAP</span></div>
+            <div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">Common large-cap benchmark</div><div class="kb-stat-value">CSI 300</div><div class="kb-stat-note">Large A-shares across Shanghai and Shenzhen</div></div><div class="kb-stat-card"><div class="kb-stat-label">Closest constituent count</div><div class="kb-stat-value">CSI A500</div><div class="kb-stat-note">500 names with industry representation</div></div><div class="kb-stat-card"><div class="kb-stat-label">Most concentrated</div><div class="kb-stat-value">SSE 50</div><div class="kb-stat-note">Shanghai-listed mega-cap leaders</div></div><div class="kb-stat-card"><div class="kb-stat-label">Real answer</div><div class="kb-stat-value">No exact match</div><div class="kb-stat-note">Market structure and rules differ</div></div></div>
+            <div class="kb-section"><div class="kb-callout kb-callout-green"><strong>Core conclusion:</strong> There is no exact one-to-one Chinese S&amp;P 500. The CSI 300 is the most common shorthand for large-cap A-share exposure, the CSI A500 offers broader industry representation, and the SSE 50 is a narrower group of Shanghai-listed leaders.</div></div>
+            <div class="kb-section"><h3 class="kb-section-title">Four Indices in One View</h3><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>Index</th><th>Constituents</th><th>Market</th><th>Sector breadth</th><th>Best interpretation</th></tr></thead><tbody>
+                <tr><td>S&amp;P 500</td><td>~500</td><td>US large caps</td><td>Broad</td><td class="kb-text-left">The US core large-cap benchmark and reference for this comparison.</td></tr>
+                <tr><td>CSI 300</td><td>300</td><td>Shanghai + Shenzhen</td><td>Fairly broad</td><td class="kb-text-left">The most common China large-cap benchmark.</td></tr>
+                <tr><td>CSI A500</td><td>500</td><td>A-share market</td><td>Broad</td><td class="kb-text-left">Closer in constituent count and industry-representation framing.</td></tr>
+                <tr><td>SSE 50</td><td>50</td><td>Shanghai only</td><td>Narrower</td><td class="kb-text-left">A concentrated mega-cap blue-chip index.</td></tr>
+            </tbody></table></div></div>
+            <div class="kb-section"><h3 class="kb-section-title">Choose by Question, Not by Nickname</h3><div class="kb-grid"><div class="kb-grid-col"><h4>China large-cap performance</h4><ul><li>Start with the CSI 300 as the common benchmark</li><li>It spans both Shanghai and Shenzhen</li><li>Linked funds and research are widely available</li></ul></div><div class="kb-grid-col"><h4>Breadth across roughly 500 names</h4><ul><li>Add the CSI A500 to the comparison</li><li>Check sector weights and selection rules</li><li>Equal constituent counts do not imply equal risk or return</li></ul></div></div><div class="kb-callout kb-callout-blue">“China's S&amp;P 500” is an explanatory analogy. It does not mean the indices share the same selection rules, sector structure, earnings quality, or long-run risk and return.</div><div class="kb-inline-actions"><a class="pc-btn primary" href="__LANG_PREFIX__/detail?symbol=000300&amp;type=cn_stock">Explore CSI 300 history</a><a class="pc-btn" href="__LANG_PREFIX__/backtest">Open backtest</a></div></div>
+            </div>
+
 
         </div>
         </div><!-- /tab-knowledge -->
@@ -4815,6 +5001,7 @@
                 '/yearly': 'yearly',
                 '/detail': 'detail',
                 '/backtest': 'backtest',
+                '/tools/qqq-return-calculator': 'backtest',
                 '/crash': 'crash',
                 '/etf': 'etf',
                 '/etf/nasdaq100': 'etf',
@@ -4835,6 +5022,11 @@
                 '/knowledge/market-data-myths': 'knowledge',
                 '/knowledge/terms': 'knowledge',
                 '/knowledge/financial-terms': 'knowledge',
+                '/knowledge/svol-volatility-premium-etf': 'knowledge',
+                '/knowledge/china-sp-500-equivalent': 'knowledge',
+                '/us-etf/dram': 'knowledge',
+                '/us-etf/qqqm': 'knowledge',
+                '/us-etf/tqqq/historical-prices': 'knowledge',
                 '/wishes': 'wishes',
                 '/heatmap': 'heatmap',
                 '/settings': 'yearly'
@@ -4866,7 +5058,12 @@
                 'etf-intro': '/knowledge/core-etf-guide',
                 'nasdaq-etf': '/knowledge/nasdaq-etf-guide',
                 'event-myth': '/knowledge/market-data-myths',
-                'terms': '/knowledge/financial-terms'
+                'terms': '/knowledge/financial-terms',
+                'svol': '/knowledge/svol-volatility-premium-etf',
+                'china-sp500': '/knowledge/china-sp-500-equivalent',
+                'dram': '/us-etf/dram',
+                'qqqm': '/us-etf/qqqm',
+                'tqqq-csv': '/us-etf/tqqq/historical-prices'
             };
             var KB_PATH_ALIASES = {
                 '/knowledge/how-to-buy': 'how-to-buy',
@@ -4880,7 +5077,12 @@
                 '/knowledge/event-myth': 'event-myth',
                 '/knowledge/market-data-myths': 'event-myth',
                 '/knowledge/terms': 'terms',
-                '/knowledge/financial-terms': 'terms'
+                '/knowledge/financial-terms': 'terms',
+                '/knowledge/svol-volatility-premium-etf': 'svol',
+                '/knowledge/china-sp-500-equivalent': 'china-sp500',
+                '/us-etf/dram': 'dram',
+                '/us-etf/qqqm': 'qqqm',
+                '/us-etf/tqqq/historical-prices': 'tqqq-csv'
             };
             var KB_SEO = {
                 'how-to-buy': {
@@ -4912,6 +5114,31 @@
                     titleKey: 'seo.knowledgeTermsTitle',
                     descKey: 'seo.knowledgeTermsDescription',
                     canonical: '/knowledge/financial-terms'
+                },
+                'svol': {
+                    titleKey: 'seo.knowledgeSvolTitle',
+                    descKey: 'seo.knowledgeSvolDescription',
+                    canonical: '/knowledge/svol-volatility-premium-etf'
+                },
+                'china-sp500': {
+                    titleKey: 'seo.knowledgeChinaSp500Title',
+                    descKey: 'seo.knowledgeChinaSp500Description',
+                    canonical: '/knowledge/china-sp-500-equivalent'
+                },
+                'dram': {
+                    titleKey: 'seo.knowledgeDramTitle',
+                    descKey: 'seo.knowledgeDramDescription',
+                    canonical: '/us-etf/dram'
+                },
+                'qqqm': {
+                    titleKey: 'seo.knowledgeQqqmTitle',
+                    descKey: 'seo.knowledgeQqqmDescription',
+                    canonical: '/us-etf/qqqm'
+                },
+                'tqqq-csv': {
+                    titleKey: 'seo.knowledgeTqqqCsvTitle',
+                    descKey: 'seo.knowledgeTqqqCsvDescription',
+                    canonical: '/us-etf/tqqq/historical-prices'
                 }
             };
 
@@ -4939,21 +5166,19 @@
                     canonical: '/'
                 },
                 'yearly': {
-                    titleKey: 'seo.indexTitle',
-                    descKey: 'seo.indexDescription',
+                    titleKey: 'seo.yearlyTitle',
+                    descKey: 'seo.yearlyDescription',
                     canonical: '/yearly'
                 },
                 'detail': {
                     titleKey: 'seo.detailTitle',
                     descKey: 'seo.detailDescription',
-                    canonical: '/detail',
-                    noindex: true
+                    canonical: '/detail'
                 },
                 'backtest': {
                     titleKey: 'seo.backtestTitle',
                     descKey: 'seo.backtestDescription',
-                    canonical: '/backtest',
-                    noindex: true
+                    canonical: '/backtest'
                 },
                 'crash': {
                     titleKey: 'seo.crashTitle',
@@ -5020,8 +5245,16 @@
 
             function updateSeo(tabName) {
                 var seo = TAB_SEO[tabName] || TAB_SEO.yearly;
+                var currentPath = _stripLang(location.pathname);
+                if (tabName === 'backtest' && currentPath === '/tools/qqq-return-calculator') {
+                    seo = {
+                        titleKey: 'seo.qqqCalculatorTitle',
+                        descKey: 'seo.qqqCalculatorDescription',
+                        canonical: '/tools/qqq-return-calculator'
+                    };
+                }
                 if (tabName === 'knowledge') {
-                    var kbSub = kbSubFromPath(_stripLang(location.pathname));
+                    var kbSub = kbSubFromPath(currentPath);
                     if (kbSub && KB_SEO[kbSub]) seo = KB_SEO[kbSub];
                     if ((typeof __lang === 'function') && __lang() === 'en' && !document.getElementById('kb-' + kbSub + '-en')) {
                         seo = Object.assign({}, seo, { noindex: true });
@@ -5113,7 +5346,8 @@
 
             // Tab button click handlers
             document.querySelectorAll('.tab-btn').forEach(function(btn) {
-                btn.addEventListener('click', function() {
+                btn.addEventListener('click', function(event) {
+                    event.preventDefault();
                     // Close settings menu if open (visual only — tab pushState handles URL)
                     var menu = document.getElementById('headerSettingsMenu');
                     if (menu && menu.style.display === 'block') {
@@ -5137,7 +5371,8 @@
 
             // Knowledge sub-tab click → show/hide panels + update URL
             document.querySelectorAll('#kbSubTabs .transfer-tab').forEach(function(btn) {
-                btn.addEventListener('click', function() {
+                btn.addEventListener('click', function(event) {
+                    event.preventDefault();
                     var sub = btn.dataset.kbTab;
                     showKnowledgeSub(sub);
                     // Update URL
@@ -5252,6 +5487,119 @@
             } else {
                 restoreFromUrl();
             }
+        })();
+
+        // ─── TQQQ CSV preview ───
+        (function() {
+            function isoDate(date) {
+                return date.toISOString().slice(0, 10);
+            }
+
+            function formatNumber(value, digits) {
+                var number = Number(value);
+                if (!Number.isFinite(number)) return '—';
+                return number.toLocaleString(undefined, {
+                    minimumFractionDigits: digits,
+                    maximumFractionDigits: digits
+                });
+            }
+
+            function setText(tool, role, value) {
+                var element = tool.querySelector('[data-role="' + role + '"]');
+                if (element) element.textContent = value;
+            }
+
+            function renderRows(tool, rows) {
+                var body = tool.querySelector('[data-role="rows"]');
+                if (!body) return;
+                body.textContent = '';
+                rows.slice(-10).reverse().forEach(function(row) {
+                    var tr = document.createElement('tr');
+                    [row[0], formatNumber(row[1], 2), formatNumber(row[2], 2), formatNumber(row[3], 2), formatNumber(row[4], 2), formatNumber(row[5], 0)].forEach(function(value) {
+                        var td = document.createElement('td');
+                        td.textContent = value;
+                        tr.appendChild(td);
+                    });
+                    body.appendChild(tr);
+                });
+            }
+
+            async function loadPreview(tool) {
+                var start = tool.querySelector('[data-role="start"]');
+                var end = tool.querySelector('[data-role="end"]');
+                var status = tool.querySelector('[data-role="status"]');
+                var isEnglish = tool.dataset.locale === 'en';
+                if (!start || !end || !status) return;
+                if (start.value && end.value && start.value > end.value) {
+                    status.classList.add('is-error');
+                    status.textContent = isEnglish ? 'Start date must be on or before end date.' : '开始日期不能晚于结束日期。';
+                    return;
+                }
+                status.classList.remove('is-error');
+                status.textContent = isEnglish ? 'Loading price data…' : '正在加载价格数据…';
+                var preview = tool.querySelector('[data-role="preview"]');
+                if (preview) preview.disabled = true;
+                try {
+                    var query = new URLSearchParams({ start: start.value, end: end.value });
+                    var response = await fetch('/api/assets/TQQQ/history.csv?' + query.toString(), { headers: { Accept: 'text/csv' } });
+                    if (!response.ok) {
+                        var message = isEnglish ? 'Data is temporarily unavailable.' : '数据暂时不可用，请稍后重试。';
+                        try {
+                            var error = await response.json();
+                            if (error && error.error) message = error.error;
+                        } catch (_) {}
+                        throw new Error(message);
+                    }
+                    var csv = await response.text();
+                    var lines = csv.trim().split(/\r?\n/);
+                    var rows = lines.slice(1).filter(Boolean).map(function(line) { return line.split(','); });
+                    if (!rows.length) throw new Error(isEnglish ? 'No trading data in this date range.' : '所选日期范围内没有交易数据。');
+                    var first = rows[0];
+                    var last = rows[rows.length - 1];
+                    var firstClose = Number(first[4]);
+                    var lastClose = Number(last[4]);
+                    var change = firstClose ? ((lastClose / firstClose) - 1) * 100 : NaN;
+                    setText(tool, 'range', first[0] + ' → ' + last[0]);
+                    setText(tool, 'count', rows.length.toLocaleString());
+                    setText(tool, 'latest', '$' + formatNumber(lastClose, 2));
+                    setText(tool, 'return', Number.isFinite(change) ? ((change >= 0 ? '+' : '') + change.toFixed(2) + '%') : '—');
+                    var returnElement = tool.querySelector('[data-role="return"]');
+                    if (returnElement) returnElement.style.color = Number.isFinite(change) ? (change >= 0 ? 'var(--data-positive)' : 'var(--data-negative)') : '';
+                    renderRows(tool, rows);
+                    status.textContent = isEnglish ? ('Loaded ' + rows.length + ' trading days. The preview shows the latest 10.') : ('已加载 ' + rows.length + ' 个交易日，表格展示最近 10 条。');
+                } catch (error) {
+                    status.classList.add('is-error');
+                    status.textContent = error.message || (isEnglish ? 'Unable to load data.' : '无法加载数据。');
+                    setText(tool, 'range', '—');
+                    setText(tool, 'count', '—');
+                    setText(tool, 'latest', '—');
+                    setText(tool, 'return', '—');
+                    var body = tool.querySelector('[data-role="rows"]');
+                    if (body) body.innerHTML = '<tr><td colspan="6"><div class="kb-preview-empty">' + (isEnglish ? 'No preview available' : '暂无数据预览') + '</div></td></tr>';
+                } finally {
+                    if (preview) preview.disabled = false;
+                }
+            }
+
+            function initTqqqTools() {
+                var today = new Date();
+                var oneYearAgo = new Date(today);
+                oneYearAgo.setUTCFullYear(oneYearAgo.getUTCFullYear() - 1);
+                var locale = (typeof __lang === 'function' && __lang() === 'en') ? 'en' : 'zh';
+                document.querySelectorAll('.tqqq-tool[data-locale="' + locale + '"]').forEach(function(tool) {
+                    var start = tool.querySelector('[data-role="start"]');
+                    var end = tool.querySelector('[data-role="end"]');
+                    if (start && !start.value) start.value = isoDate(oneYearAgo);
+                    if (end && !end.value) end.value = isoDate(today);
+                    if (end) end.max = isoDate(today);
+                    var button = tool.querySelector('[data-role="preview"]');
+                    if (button) button.addEventListener('click', function() { loadPreview(tool); });
+                    loadPreview(tool);
+                });
+            }
+
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initTqqqTools);
+            else initTqqqTools();
         })();
 
         /* ── Custom instant tooltip system ──

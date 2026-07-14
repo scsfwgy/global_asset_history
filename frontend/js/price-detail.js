@@ -300,6 +300,12 @@
     var input = $("pdSymbolInput");
     if (!btn || !input) return;
     restoreState();
+    var params = new URLSearchParams(window.location.search);
+    var linkedSymbol = (params.get("symbol") || "").trim().toUpperCase();
+    if (linkedSymbol) {
+      input.value = linkedSymbol;
+      if ($("pdTypeSelect") && params.get("type")) $("pdTypeSelect").value = params.get("type");
+    }
     btn.addEventListener("click", queryDetail);
     input.addEventListener("keydown", function (event) {
       if (event.key === "Enter") queryDetail();
@@ -319,6 +325,7 @@
         }
       });
     }
+    if (linkedSymbol) queryDetail();
   }
 
   document.addEventListener("DOMContentLoaded", init);

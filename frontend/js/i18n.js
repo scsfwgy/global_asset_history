@@ -65,6 +65,11 @@
     });
   }
 
+  function _assetUrl(path) {
+    var version = window.__GAH_ASSET_VERSION__ || '';
+    return version ? path + '?v=' + encodeURIComponent(version) : path;
+  }
+
   // ── Public API ─────────────────────────────────────────────────────
 
   /**
@@ -137,7 +142,7 @@
     // translations are ready before any other script runs.  We use a
     // blocking synchronous XHR here because other scripts reference __()
     // at global scope evaluation time.
-    var url = '/locales/' + _currentLang + '.json';
+    var url = _assetUrl('/locales/' + _currentLang + '.json');
     try {
       var xhr = new XMLHttpRequest();
       xhr.open('GET', url, false); // synchronous — intentional
@@ -148,7 +153,7 @@
         console.warn('[i18n] Failed to load locale ' + _currentLang + ' (' + xhr.status + '), falling back to ' + DEFAULT_LANG);
         // Retry with default language
         if (_currentLang !== DEFAULT_LANG) {
-          xhr.open('GET', '/locales/' + DEFAULT_LANG + '.json', false);
+          xhr.open('GET', _assetUrl('/locales/' + DEFAULT_LANG + '.json'), false);
           xhr.send();
           if (xhr.status === 200) {
             _translations = JSON.parse(xhr.responseText);
