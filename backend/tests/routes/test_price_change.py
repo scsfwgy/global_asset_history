@@ -4,6 +4,8 @@ All service-layer functions are mocked. These tests verify HTTP concerns:
 status codes, response shapes, input validation, and error formatting.
 """
 
+import json
+import time
 from unittest.mock import patch
 
 import pytest
@@ -54,6 +56,88 @@ class TestMarketPulseEndpoint:
         resp = client.get(f"{BASE}/market-pulse")
         assert resp.status_code == 500
         assert resp.get_json()["error"] == "boom"
+
+    @patch("routes.price_change.fetch_market_pulse")
+    @patch("routes.price_change.cache_store.cache_get")
+    def test_shared_cache_hit_skips_service(self, mock_get, mock_fetch, client):
+        mock_get.return_value = json.dumps({
+            "ts": time.time(),
+            "data": {
+                "as_of": "2026-07-15T00:00:00+00:00",
+                "summary": {"up": 3, "down": 2, "flat": 0, "available": 5},
+                "markets": [],
+            },
+        })
+
+        resp = client.get(f"{BASE}/market-pulse")
+
+        assert resp.status_code == 200
+        assert resp.get_json()["cached"] is True
+        mock_fetch.assert_not_called()
+
+    @patch("routes.price_change.cache_store.cache_set")
+    @patch("routes.price_change.cache_store.cache_get", return_value=None)
+    @patch("routes.price_change.fetch_market_pulse")
+    def test_fresh_result_is_written_to_shared_cache(
+        self, mock_fetch, _mock_get, mock_set, client
+    ):
+        mock_fetch.return_value = {
+            "as_of": "2026-07-15T00:00:00+00:00",
+            "summary": {"up": 3, "down": 2, "flat": 0, "available": 5},
+            "markets": [],
+        }
+
+        resp = client.get(f"{BASE}/market-pulse")
+
+        assert resp.status_code == 200
+        mock_set.assert_called_once()
+        assert mock_set.call_args.args[0] == "market-pulse:v1"
+
+
+class TestHeatmapSharedCache:
+    """POST /api/price-change/heatmap cross-instance cache behavior."""
+
+    def setup_method(self):
+        from routes import price_change
+
+        with price_change._heatmap_cache_lock:
+            price_change._heatmap_cache.clear()
+
+    @patch("routes.price_change.fetch_heatmap_data")
+    @patch("routes.price_change.cache_store.cache_get")
+    def test_shared_cache_hit_skips_service(self, mock_get, mock_fetch, client):
+        mock_get.return_value = json.dumps({
+            "ts": time.time(),
+            "data": {"period": "today", "period_label": "2026-07-15", "data": []},
+        })
+
+        resp = client.post(
+            f"{BASE}/heatmap",
+            json={"symbols": [], "period": "today", "auto_top_n": 20},
+        )
+
+        assert resp.status_code == 200
+        assert resp.get_json()["cached"] is True
+        mock_fetch.assert_not_called()
+
+    @patch("routes.price_change.cache_store.cache_set")
+    @patch("routes.price_change.cache_store.cache_get", return_value=None)
+    @patch("routes.price_change.fetch_heatmap_data")
+    def test_computed_result_is_written_to_shared_cache(
+        self, mock_fetch, _mock_get, mock_set, client
+    ):
+        mock_fetch.return_value = {
+            "period": "today", "period_label": "2026-07-15", "data": []
+        }
+
+        resp = client.post(
+            f"{BASE}/heatmap",
+            json={"symbols": [], "period": "today", "auto_top_n": 20},
+        )
+
+        assert resp.status_code == 200
+        mock_set.assert_called_once()
+        assert mock_set.call_args.args[0].startswith("heatmap:v1:")
 
 
 # ═══════════════════════════════════════════════════════════════════════════

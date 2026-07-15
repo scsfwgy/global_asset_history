@@ -848,9 +848,14 @@ def visits():
 def visits_increment():
     """Increment visit count and return new value."""
     body = request.get_json(silent=True) or {}
+    initial_tab = str(body.get("tab", "")).strip()
+    if initial_tab not in _VALID_TABS:
+        initial_tab = ""
     if cache_store.is_enabled():
         count = cache_store.cache_incr(_VISIT_KEY)
         if count is not None:
+            if initial_tab:
+                cache_store.cache_hincrby(_TAB_VISITS_KEY, initial_tab)
             payload = {"count": count}
             unique_visit = _record_unique_visit(body.get("anonymous_id"))
             if unique_visit:

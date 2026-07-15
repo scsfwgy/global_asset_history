@@ -1,6 +1,7 @@
 """Tests for visit counter, event tracking, and admin stats dashboard."""
 
 import os
+from unittest.mock import patch
 
 import pytest
 
@@ -45,6 +46,21 @@ class TestVisitCounter:
         assert second["unique_users_today"] == 2
         assert second["is_new_daily_user"] is True
         assert first_uid not in app_module._UNIQUE_VISITS_PATH.read_text()
+
+    def test_increment_can_record_initial_tab_in_same_request(self, client):
+        import app as app_module
+
+        with (
+            patch.object(app_module.cache_store, "is_enabled", return_value=True),
+            patch.object(app_module.cache_store, "cache_incr", return_value=7),
+            patch.object(app_module.cache_store, "cache_hincrby") as mock_hincrby,
+            patch.object(app_module, "_record_unique_visit", return_value=None),
+        ):
+            resp = client.post("/api/visits/increment", json={"tab": "heatmap"})
+
+        assert resp.status_code == 200
+        assert resp.get_json()["count"] == 7
+        mock_hincrby.assert_called_once_with(app_module._TAB_VISITS_KEY, "heatmap")
 
 
 class TestEventTracking:

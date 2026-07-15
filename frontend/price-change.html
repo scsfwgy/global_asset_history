@@ -4842,11 +4842,21 @@
         localStorage.setItem(ANONYMOUS_ID_STORAGE_KEY, id);
         return id;
       }
+      function _initialTabForVisit() {
+        var path = location.pathname.replace(/^\/(?:en|zh)(?=\/|$)/, '') || '/';
+        if (path === '/' || path === '/heatmap') return 'heatmap';
+        if (path.indexOf('/etf') === 0) return 'etf';
+        if (path.indexOf('/qdii-funds') === 0) return 'qdii-funds';
+        if (path.indexOf('/knowledge') === 0 || path.indexOf('/us-etf') === 0) return 'knowledge';
+        if (path.indexOf('/tools/') === 0 || path === '/backtest') return 'backtest';
+        var tab = path.split('/')[1];
+        return ['yearly', 'detail', 'download', 'crash', 'vix', 'wishes'].indexOf(tab) >= 0 ? tab : 'heatmap';
+      }
       function _trackVisit() {
         fetch('/api/visits/increment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ anonymous_id: _getAnonymousId() })
+          body: JSON.stringify({ anonymous_id: _getAnonymousId(), tab: _initialTabForVisit() })
         })
           .then(function (r) { return r.json(); })
           .then(function (d) {
@@ -5270,6 +5280,9 @@
                 document.querySelectorAll('#tab-knowledge .kb-sub-panel').forEach(function(p) { p.style.display = 'none'; });
                 var panel = getKnowledgePanel(sub);
                 if (panel) panel.style.display = 'block';
+                if (sub === 'tqqq-csv' && typeof window.__GAH_ACTIVATE_TQQQ_TOOL__ === 'function') {
+                    window.__GAH_ACTIVATE_TQQQ_TOOL__();
+                }
             }
             var TAB_SEO = {
                 'heatmap': {
@@ -5462,6 +5475,8 @@
                 }
             }
 
+            var isRestoringInitialTab = false;
+
             // Tab button click handlers
             document.querySelectorAll('.tab-btn').forEach(function(btn) {
                 btn.addEventListener('click', function(event) {
@@ -5474,7 +5489,9 @@
                     var tab = btn.dataset.tab;
                     activateTab(tab, true);
                     // Track tab view
-                    if (typeof _track === 'function') _track('tab_view', { tab: tab });
+                    if (!isRestoringInitialTab && typeof _track === 'function') {
+                        _track('tab_view', { tab: tab });
+                    }
                 });
             });
 
@@ -5538,7 +5555,10 @@
                 // Set DOM state without pushing history, then fire click for lazy-loads
                 activateTab(tab, false);
                 var btn = document.querySelector('.tab-btn[data-tab="' + tab + '"]');
-                if (btn) btn.click();
+                if (btn) {
+                    isRestoringInitialTab = true;
+                    try { btn.click(); } finally { isRestoringInitialTab = false; }
+                }
 
                 // If ETF tab with a sub-tab, activate the sub-tab
                 var etfSub = etfSubFromPath(cleanPath);
@@ -5699,7 +5719,7 @@
                 }
             }
 
-            function initTqqqTools() {
+            function prepareTqqqTools() {
                 var today = new Date();
                 var oneYearAgo = new Date(today);
                 oneYearAgo.setUTCFullYear(oneYearAgo.getUTCFullYear() - 1);
@@ -5711,13 +5731,27 @@
                     if (end && !end.value) end.value = isoDate(today);
                     if (end) end.max = isoDate(today);
                     var button = tool.querySelector('[data-role="preview"]');
-                    if (button) button.addEventListener('click', function() { loadPreview(tool); });
-                    loadPreview(tool);
+                    if (button && tool.dataset.previewBound !== '1') {
+                        button.addEventListener('click', function() { loadPreview(tool); });
+                        tool.dataset.previewBound = '1';
+                    }
                 });
             }
 
-            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initTqqqTools);
-            else initTqqqTools();
+            window.__GAH_ACTIVATE_TQQQ_TOOL__ = function() {
+                prepareTqqqTools();
+                var locale = (typeof __lang === 'function' && __lang() === 'en') ? 'en' : 'zh';
+                document.querySelectorAll('.tqqq-tool[data-locale="' + locale + '"]').forEach(function(tool) {
+                    if (tool.dataset.previewLoaded === '1') return;
+                    tool.dataset.previewLoaded = '1';
+                    loadPreview(tool);
+                });
+            };
+
+            // Bind controls and dates up front, but leave the network request to
+            // the first activation of the TQQQ knowledge panel.
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', prepareTqqqTools);
+            else prepareTqqqTools();
         })();
 
         /* ── Custom instant tooltip system ──

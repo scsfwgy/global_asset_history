@@ -27,6 +27,7 @@
     var _aggregateHistory = {};
     var _aggregateLoading = false;
     var _aggregateHidden = {};
+    var _dataStarted = false;
 
     /* ── Chart type selection (single-select) ── */
     function activeChartType() {
@@ -54,8 +55,10 @@
     }
 
     function loadEtfGroupsFromConfig() {
-        return fetch(CONFIG_ENDPOINT)
-            .then(function (r) { return r.ok ? r.json() : null; })
+        var request = typeof window.gahLoadConfig === "function"
+            ? window.gahLoadConfig()
+            : fetch("/api/price-change/config").then(function (r) { return r.ok ? r.json() : null; });
+        return request
             .then(function (cfg) {
                 var presets = cfg && cfg.presets ? cfg.presets : [];
                 for (var key in ETF_GROUPS) {
@@ -155,16 +158,22 @@
             });
         });
 
+        // The embedded ETF panel starts on first activation.  The standalone
+        // ETF page has no tab panel, so it still loads immediately below.
+    }
+
+    function startDataLoad() {
+        if (_dataStarted) return;
+        _dataStarted = true;
         loadEtfGroupsFromConfig().then(function () {
             renderTable();        // show skeleton (names + "--") as soon as groups are known
             return fetchQuotes(); // fills in live numbers, re-renders on completion
         });
     }
 
-    // Idempotent (re)entry used when the ETF tab is activated in the host page.
-    // Loading is kicked off eagerly in init(); this just re-renders the current
-    // state immediately so switching to the tab never shows a stale "加载中...".
+    // Idempotent entry used when the embedded ETF tab is first activated.
     window._etfActivate = function () {
+        startDataLoad();
         renderTable();
         if (_activeView === "aggregate") {
             renderAggregateSymbols();
@@ -173,9 +182,13 @@
     };
 
     if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", init);
+        document.addEventListener("DOMContentLoaded", function () {
+            init();
+            if (!document.getElementById("tab-etf")) startDataLoad();
+        });
     } else {
         init();
+        if (!document.getElementById("tab-etf")) startDataLoad();
     }
 
     // Hook into theme-switch refresh chain (follows same pattern as vix-chart.js)

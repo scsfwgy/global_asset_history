@@ -526,7 +526,9 @@
     }
 
     function init() {
-        fetchLatestVix();
+        var loadBadge = function () { if (!_vixData) fetchLatestVix(); };
+        if (typeof window.gahRunWhenIdle === "function") window.gahRunWhenIdle(loadBadge, 2500);
+        else window.setTimeout(loadBadge, 800);
         initPeriodTabs();
         initReloadControls();
         initDemoControls();

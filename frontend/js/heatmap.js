@@ -829,10 +829,14 @@ async function fetchHeatmap() {
   var period = hmPeriod ? hmPeriod.value : "today";
 
   try {
-    // Always fetch market cap so the hover tooltip can show it in every
-    // size-by mode (not just when sizing by market cap). It's a single cached
-    // backend request, so the extra cost is negligible.
-    var body = { symbols: _hmSymbols, period: period, auto_top_n: autoN, include_market_cap: true };
+    // Market cap can trigger expensive per-symbol fallbacks when the Yahoo
+    // batch endpoint is unavailable.  Fetch it only when it drives the layout.
+    var body = {
+      symbols: _hmSymbols,
+      period: period,
+      auto_top_n: autoN,
+      include_market_cap: _hmSizeBy === "market_cap"
+    };
     if (_hmForceRefresh) { body.force = true; _hmForceRefresh = false; }
     var resp = await fetch(HEATMAP_ENDPOINT, {
       method: "POST",
@@ -869,6 +873,18 @@ function rerender() {
 // ─── Init ───
 
 var _hmResizeTimer;
+function startHeatmapData() {
+  if (_hmInitialFetchDone) return;
+  _hmInitialFetchDone = true;
+  fetchHeatmap();
+  fetchMarketPulse();
+}
+
+function isHeatmapRoute() {
+  var path = window.location.pathname.replace(/^\/(?:en|zh)(?=\/|$)/, "") || "/";
+  return path === "/" || path === "/heatmap";
+}
+
 async function initHeatmap() {
   if (!hmRefreshBtn || !hmPeriod) return;
 
@@ -903,7 +919,7 @@ async function initHeatmap() {
     _hmLastData = null;
     _hmLastFetchTime = null;
     _hmLastSymbolKeys = "";
-    _hmInitialFetchDone = false;
+    _hmInitialFetchDone = true;
     saveHmState();
     hmUpdateFreshness();
     hmEmpty.style.display = "block";
@@ -934,7 +950,7 @@ async function initHeatmap() {
       renderHmTags();
       var currentKeys = _hmSymbols.map(function (s) { return s.symbol + "|" + s.type; }).sort().join(",");
       if (!_hmInitialFetchDone) {
-        fetchHeatmap();
+        startHeatmapData();
       } else if (_hmSymbols.length > 0 && currentKeys !== _hmLastSymbolKeys) {
         fetchHeatmap();
       } else {
@@ -962,9 +978,7 @@ async function initHeatmap() {
     }
   };
 
-  fetchHeatmap();
-  fetchMarketPulse();
-  _hmInitialFetchDone = true;
+  if (isHeatmapRoute()) startHeatmapData();
 }
 
 // Wait for DOM and i18n

@@ -19,6 +19,7 @@ let _sortBy = null; // symbol key currently sorted (null = default year desc)
 let _sortDir = "desc"; // "asc" or "desc"
 let _lastFetchTime = null; // Date.now() of last successful data fetch
 let _lastFetchFn = null; // retry callback for the most recent fetch
+let _initialYearlyFetchDone = false;
 const STORAGE_KEY = "gah_state";
 
 // ─── DOM refs ───
@@ -249,6 +250,7 @@ function formatPct(val) {
 // ─── API call ───
 
 async function fetchData() {
+  _initialYearlyFetchDone = true;
   if (symbols.length === 0) {
     showError(__("yearly.errorNoSymbols"));
     return;
@@ -436,17 +438,21 @@ function renderTable(result) {
 
 async function loadConfigFromServer() {
   try {
-    const resp = await fetch(CONFIG_ENDPOINT);
-    if (!resp.ok) return { presets: [], colorRange: { min: -100, max: 100 }, colorScheme: "green_up", site: {} };
-    const cfg = await resp.json();
+    const cfg = typeof window.gahLoadConfig === "function"
+      ? await window.gahLoadConfig()
+      : await fetch(CONFIG_ENDPOINT).then((resp) => {
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          return resp.json();
+        });
     return {
       presets: cfg.presets || [],
       colorRange: cfg.color_range || { min: -100, max: 100 },
       colorScheme: cfg.color_scheme || "green_up",
       site: cfg.site || {},
+      connected: true,
     };
   } catch {
-    return { presets: [], colorRange: { min: -100, max: 100 }, colorScheme: "green_up", site: {} };
+    return { presets: [], colorRange: { min: -100, max: 100 }, colorScheme: "green_up", site: {}, connected: false };
   }
 }
 
@@ -719,11 +725,17 @@ function exportCSV() {
 
 // ─── Init ───
 
+function isYearlyRoute() {
+  var path = window.location.pathname.replace(/^\/(?:en|zh)(?=\/|$)/, "") || "/";
+  return path === "/yearly";
+}
+
 async function init() {
   // Load config (presets + color range + color scheme)
   const cfg = await loadConfigFromServer();
   PRESETS = cfg.presets;
   applySiteConfig(cfg.site);
+  setConnected(cfg.connected);
 
   // Apply color scheme from backend if no localStorage override
   if (typeof window.applyColorScheme === 'function') {
@@ -745,11 +757,18 @@ async function init() {
   var csvBtn = $("pcExportCsv");
   if (csvBtn) csvBtn.addEventListener("click", exportCSV);
 
-  // Auto-refresh if state was restored
+  // Restore the controls immediately, but fetch only when the yearly panel is
+  // actually being viewed.  A saved query must not run behind the heatmap home.
   if (hadState) {
     renderTags();
-    fetchData();
+    if (isYearlyRoute()) fetchData();
   }
+
+  document.querySelectorAll('.tab-btn[data-tab="yearly"]').forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (hadState && !_initialYearlyFetchDone) fetchData();
+    });
+  });
 
   // Add button
   addBtn.addEventListener("click", () => {
@@ -828,11 +847,6 @@ async function init() {
   maxRange.addEventListener("keydown", (e) => { if (e.key === "Enter") fetchData(); });
   minRange.addEventListener("change", saveState);
   maxRange.addEventListener("change", saveState);
-
-  // Check backend health
-  fetch(`${API_BASE}/api/health`)
-    .then((r) => r.ok && setConnected(true))
-    .catch(() => setConnected(false));
 
   // ── Autocomplete: build search index from all presets ──
   var _acIndex = [];

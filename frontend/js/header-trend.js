@@ -139,9 +139,14 @@
         fetchAndRender();
     }
 
+    function scheduleInit() {
+        if (typeof window.gahRunWhenIdle === "function") window.gahRunWhenIdle(init, 2500);
+        else window.setTimeout(init, 800);
+    }
+
     if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", init);
+        document.addEventListener("DOMContentLoaded", scheduleInit);
     } else {
-        init();
+        scheduleInit();
     }
 })();

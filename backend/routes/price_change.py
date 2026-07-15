@@ -2,11 +2,13 @@
 Yearly price change API blueprint.
 """
 import hashlib
+import json
 import logging
 import threading as _threading
 import time
 
 from flask import Blueprint, jsonify, request
+from service.price_change import cache_store
 
 from service.price_change.price_change_service import (
     _fetch_daily_series_cached,
@@ -30,6 +32,31 @@ from service.price_change.price_change_service import (
 logger = logging.getLogger(__name__)
 
 price_change_bp = Blueprint("price_change", __name__, url_prefix="/api/price-change")
+
+_MARKET_PULSE_SHARED_CACHE_KEY = "market-pulse:v1"
+_MARKET_PULSE_CACHE_TTL = 5 * 60
+
+
+def _get_cached_market_pulse() -> dict | None:
+    raw = cache_store.cache_get(_MARKET_PULSE_SHARED_CACHE_KEY)
+    if not raw:
+        return None
+    try:
+        payload = json.loads(raw)
+        if time.time() - float(payload["ts"]) >= _MARKET_PULSE_CACHE_TTL:
+            return None
+        data = payload["data"]
+        return dict(data) if isinstance(data, dict) else None
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def _set_cached_market_pulse(result: dict) -> None:
+    cache_store.cache_set(
+        _MARKET_PULSE_SHARED_CACHE_KEY,
+        json.dumps({"ts": time.time(), "data": result}, separators=(",", ":")),
+        _MARKET_PULSE_CACHE_TTL,
+    )
 
 
 @price_change_bp.route("/config", methods=["GET"])
@@ -55,8 +82,14 @@ def config():
 @price_change_bp.route("/market-pulse", methods=["GET"])
 def market_pulse():
     """Return the latest daily move for the global benchmark strip."""
+    cached_result = _get_cached_market_pulse()
+    if cached_result is not None:
+        cached_result["cached"] = True
+        return jsonify(cached_result)
     try:
-        return jsonify(fetch_market_pulse())
+        result = fetch_market_pulse()
+        _set_cached_market_pulse(result)
+        return jsonify(result)
     except Exception as e:
         logger.exception("Failed to fetch market pulse: %s", e)
         return jsonify({"error": str(e)}), 500
@@ -280,6 +313,7 @@ def crash_chart():
 _heatmap_cache: dict = {}
 _heatmap_cache_lock = _threading.Lock()
 _HEATMAP_CACHE_TTL = 4 * 60 * 60  # 4 hours
+_HEATMAP_SHARED_CACHE_PREFIX = "heatmap:v1:"
 
 
 def _heatmap_cache_key(symbols: list, period: str, auto_top_n: int, include_market_cap: bool) -> str:
@@ -290,6 +324,46 @@ def _heatmap_cache_key(symbols: list, period: str, auto_top_n: int, include_mark
     )
     raw = f"hm:{period}:{auto_top_n}:{int(include_market_cap)}:{','.join(sym_keys)}"
     return hashlib.md5(raw.encode()).hexdigest()
+
+
+def _get_cached_heatmap(cache_key: str) -> dict | None:
+    """Read heatmap data from process memory, then the shared Redis cache."""
+    now = time.time()
+    with _heatmap_cache_lock:
+        entry = _heatmap_cache.get(cache_key)
+        if entry:
+            if now - entry["ts"] < _HEATMAP_CACHE_TTL:
+                return dict(entry["data"])
+            del _heatmap_cache[cache_key]
+
+    raw = cache_store.cache_get(_HEATMAP_SHARED_CACHE_PREFIX + cache_key)
+    if not raw:
+        return None
+    try:
+        payload = json.loads(raw)
+        fetched_at = float(payload["ts"])
+        data = payload["data"]
+        if now - fetched_at >= _HEATMAP_CACHE_TTL or not isinstance(data, dict):
+            return None
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return None
+
+    with _heatmap_cache_lock:
+        _heatmap_cache[cache_key] = {"ts": fetched_at, "data": dict(data)}
+    return dict(data)
+
+
+def _set_cached_heatmap(cache_key: str, result: dict) -> None:
+    """Store the computed heatmap in both local and cross-instance caches."""
+    fetched_at = time.time()
+    cached_result = dict(result)
+    with _heatmap_cache_lock:
+        _heatmap_cache[cache_key] = {"ts": fetched_at, "data": cached_result}
+    cache_store.cache_set(
+        _HEATMAP_SHARED_CACHE_PREFIX + cache_key,
+        json.dumps({"ts": fetched_at, "data": cached_result}, separators=(",", ":")),
+        _HEATMAP_CACHE_TTL,
+    )
 
 
 @price_change_bp.route("/heatmap", methods=["POST"])
@@ -327,17 +401,11 @@ def heatmap():
     # Check cache (skip when force=true)
     cache_key = _heatmap_cache_key(symbols, period, auto_top_n, include_market_cap)
     if not force:
-        now = time.time()
-        with _heatmap_cache_lock:
-            entry = _heatmap_cache.get(cache_key)
-            if entry:
-                if now - entry["ts"] < _HEATMAP_CACHE_TTL:
-                    logger.info("Heatmap cache hit for %s", cache_key[:12])
-                    result = dict(entry["data"])
-                    result["cached"] = True
-                    return jsonify(result)
-                # Expired — delete it to free memory
-                del _heatmap_cache[cache_key]
+        cached_result = _get_cached_heatmap(cache_key)
+        if cached_result is not None:
+            logger.info("Heatmap cache hit for %s", cache_key[:12])
+            cached_result["cached"] = True
+            return jsonify(cached_result)
 
     try:
         result = fetch_heatmap_data(symbols, period, auto_top_n=auto_top_n,
@@ -346,9 +414,7 @@ def heatmap():
         logger.exception("Failed to fetch heatmap data: %s", e)
         return jsonify({"error": str(e)}), 500
 
-    # Store in cache
-    with _heatmap_cache_lock:
-        _heatmap_cache[cache_key] = {"ts": time.time(), "data": dict(result)}
+    _set_cached_heatmap(cache_key, result)
 
     return jsonify(result)
 
