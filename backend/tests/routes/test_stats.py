@@ -28,6 +28,24 @@ class TestVisitCounter:
         after = resp.get_json()["count"]
         assert after == before + 1
 
+    def test_anonymous_uuid_counts_unique_daily_users(self, client):
+        import app as app_module
+
+        first_uid = "11111111-1111-4111-8111-111111111111"
+        second_uid = "22222222-2222-4222-8222-222222222222"
+
+        first = client.post("/api/visits/increment", json={"anonymous_id": first_uid}).get_json()
+        duplicate = client.post("/api/visits/increment", json={"anonymous_id": first_uid}).get_json()
+        second = client.post("/api/visits/increment", json={"anonymous_id": second_uid}).get_json()
+
+        assert first["unique_users_today"] == 1
+        assert first["is_new_daily_user"] is True
+        assert duplicate["unique_users_today"] == 1
+        assert duplicate["is_new_daily_user"] is False
+        assert second["unique_users_today"] == 2
+        assert second["is_new_daily_user"] is True
+        assert first_uid not in app_module._UNIQUE_VISITS_PATH.read_text()
+
 
 class TestEventTracking:
     """POST /api/track for tab_view, ad_click, settings_click, settings_action"""
@@ -111,6 +129,9 @@ class TestAdminStatsDashboard:
         assert "广告位点击" in html
         assert "设置面板打开" in html
         assert "设置项操作" in html
+        assert "每日唯一用户" in html
+        assert "匿名 UUID 去重，仅保留最近 30 天" in html
+        assert 'class="uv-chart"' in html
 
     def test_stats_shows_tracked_data(self, client):
         # Track some events first
@@ -125,3 +146,14 @@ class TestAdminStatsDashboard:
         html = resp.get_data(as_text=True)
         # The dashboard should at least render without errors
         assert "<table>" in html
+
+    def test_stats_dashboard_shows_unique_user_count(self, client):
+        client.post("/api/visits/increment", json={"anonymous_id": "11111111-1111-4111-8111-111111111111"})
+        client.post("/api/visits/increment", json={"anonymous_id": "22222222-2222-4222-8222-222222222222"})
+
+        resp = client.get(f"/api/stats?token={self.FAKE_TOKEN}")
+        html = resp.get_data(as_text=True)
+
+        assert resp.status_code == 200
+        assert '<div class="num">2</div><div class="label">今日用户</div>' in html
+        assert "近30日用户天次" in html

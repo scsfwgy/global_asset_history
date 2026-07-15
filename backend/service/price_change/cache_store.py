@@ -118,6 +118,22 @@ def cache_lrem(key: str, count: int, value: str) -> Optional[int]:
         return None
 
 
+def cache_sadd(key: str, value: str) -> Optional[int]:
+    result = _command(["SADD", _KEY_PREFIX + key, value])
+    try:
+        return int(result) if result is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def cache_scard(key: str) -> Optional[int]:
+    result = _command(["SCARD", _KEY_PREFIX + key])
+    try:
+        return int(result) if result is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 def cache_hincrby(key: str, field: str, amount: int = 1) -> Optional[int]:
     """Increment a hash field by amount. Returns the new value or None on failure."""
     result = _command(["HINCRBY", _KEY_PREFIX + key, field, str(int(amount))])

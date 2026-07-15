@@ -4830,8 +4830,24 @@
       //   return String(n);
       // }
       // Visit counter: increment on page load, then read back.
+      var ANONYMOUS_ID_STORAGE_KEY = 'gah_anonymous_id';
+      function _getAnonymousId() {
+        var id = localStorage.getItem(ANONYMOUS_ID_STORAGE_KEY);
+        if (id) return id;
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+          id = window.crypto.randomUUID();
+        } else {
+          id = 'anon-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+        }
+        localStorage.setItem(ANONYMOUS_ID_STORAGE_KEY, id);
+        return id;
+      }
       function _trackVisit() {
-        fetch('/api/visits/increment', { method: 'POST' })
+        fetch('/api/visits/increment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ anonymous_id: _getAnonymousId() })
+        })
           .then(function (r) { return r.json(); })
           .then(function (d) {
             document.getElementById('settingsVisitCount').textContent = __("settings.visitCountPrefix") + String(d.count);

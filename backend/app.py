@@ -9,8 +9,9 @@ import logging
 import os
 import re
 import threading
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from time import perf_counter
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
@@ -26,6 +27,7 @@ from seo_data import QQQM_TOP_HOLDINGS
 app = Flask(__name__, static_folder=None)
 CORS(app)
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app.register_blueprint(price_change_bp)
 app.register_blueprint(wishes_bp)
@@ -486,6 +488,9 @@ def serve_frontend_asset(relative_path: str):
 # file fallback is per-instance and reset on serverless cold start — it is only
 # reliable on a persistent single-process server.
 _VISIT_KEY = "visit_count"
+_UNIQUE_VISIT_KEY_PREFIX = "unique_visits:"
+_UNIQUE_VISIT_DAILY_COUNTS_KEY = "unique_visit_daily_counts"
+_UNIQUE_VISIT_TTL = 31 * 24 * 3600
 _TAB_VISITS_KEY = "tab_visits"       # Redis hash: {tab_id: count}
 _AD_CLICKS_KEY = "ad_clicks"         # Redis hash: {link_name: count}
 _SETTINGS_CLICKS_KEY = "settings_clicks"       # Redis string: settings panel opens
@@ -501,6 +506,10 @@ _VALID_SETTINGS_ACTIONS = {"theme", "colorscheme", "language"}
 _COUNTER_PATH = Path("/tmp/visit_count.json") if os.path.exists("/tmp") else \
     Path(__file__).resolve().parent / "config" / "visit_count.json"
 _counter_lock = threading.Lock()
+_UNIQUE_VISITS_PATH = Path("/tmp/unique_visits.json") if os.path.exists("/tmp") else \
+    Path(__file__).resolve().parent / "config" / "unique_visits.json"
+_unique_visits_lock = threading.Lock()
+_ANONYMOUS_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
 
 
 def _read_counter() -> int:
@@ -517,6 +526,83 @@ def _write_counter(count: int) -> None:
     _COUNTER_PATH.write_text(json.dumps({"count": count}))
 
 
+def _last_days(days: int = 30) -> list[str]:
+    today = date.today()
+    return [(today - timedelta(days=offset)).isoformat() for offset in range(days - 1, -1, -1)]
+
+
+def _unique_visit_key(day: str) -> str:
+    return _UNIQUE_VISIT_KEY_PREFIX + day
+
+
+def _hash_anonymous_id(anonymous_id: str) -> str:
+    anonymous_id = str(anonymous_id or "").strip()
+    if not _ANONYMOUS_ID_RE.match(anonymous_id):
+        return ""
+    return hashlib.sha256(anonymous_id.encode("utf-8")).hexdigest()
+
+
+def _read_unique_visits() -> dict:
+    try:
+        if _UNIQUE_VISITS_PATH.exists():
+            data = json.loads(_UNIQUE_VISITS_PATH.read_text())
+            if isinstance(data, dict):
+                return {str(day): list(values) for day, values in data.items() if isinstance(values, list)}
+    except Exception:
+        pass
+    return {}
+
+
+def _write_unique_visits(data: dict) -> None:
+    _UNIQUE_VISITS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _UNIQUE_VISITS_PATH.write_text(json.dumps(data, ensure_ascii=False, sort_keys=True))
+
+
+def _cleanup_unique_visits(data: dict) -> dict:
+    keep_days = set(_last_days(30))
+    return {
+        day: sorted({str(value) for value in values if isinstance(value, str)})
+        for day, values in data.items()
+        if day in keep_days
+    }
+
+
+def _record_unique_visit(anonymous_id: str) -> dict | None:
+    digest = _hash_anonymous_id(anonymous_id)
+    if not digest:
+        return None
+    day = date.today().isoformat()
+    if cache_store.is_enabled():
+        key = _unique_visit_key(day)
+        added = cache_store.cache_sadd(key, digest)
+        if added == 1:
+            cache_store.cache_expire(key, _UNIQUE_VISIT_TTL)
+            cache_store.cache_hincrby(_UNIQUE_VISIT_DAILY_COUNTS_KEY, day)
+        return {"day": day, "count": None, "new": added == 1}
+    with _unique_visits_lock:
+        data = _cleanup_unique_visits(_read_unique_visits())
+        users = set(data.get(day, []))
+        before = len(users)
+        users.add(digest)
+        data[day] = sorted(users)
+        _write_unique_visits(data)
+    return {"day": day, "count": len(users), "new": len(users) > before}
+
+
+def _unique_visit_series() -> list[dict]:
+    days = _last_days(30)
+    if cache_store.is_enabled():
+        counts = cache_store.cache_hgetall(_UNIQUE_VISIT_DAILY_COUNTS_KEY)
+        return [
+            {"date": day, "users": int(counts.get(day, 0) or 0)}
+            for day in days
+        ]
+    with _unique_visits_lock:
+        data = _cleanup_unique_visits(_read_unique_visits())
+        _write_unique_visits(data)
+    return [{"date": day, "users": len(data.get(day, []))} for day in days]
+
+
 def _check_admin_token() -> bool:
     """Verify admin token from ?token= query param. Uses WISH_ADMIN_TOKEN env var."""
     token = request.args.get("token", "")
@@ -524,6 +610,20 @@ def _check_admin_token() -> bool:
     if not admin or not token:
         return False
     return hmac.compare_digest(token, admin)
+
+
+def _should_log_local_request() -> bool:
+    if app.config.get("TESTING"):
+        return False
+    if os.getenv("VERCEL"):
+        return False
+    return os.getenv("LOCAL_REQUEST_LOG", "1").lower() not in ("0", "false", "no", "off")
+
+
+@app.before_request
+def mark_request_start():
+    if _should_log_local_request():
+        request.environ["gah_request_start"] = perf_counter()
 
 
 @app.after_request
@@ -537,6 +637,11 @@ def add_seo_headers(response):
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
     elif base_path.startswith(ROBOT_BLOCKED_PREFIXES) or base_path in {"/yearly", "/detail", "/download", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", *KNOWLEDGE_LEGACY_PATHS.keys(), "/wishes", "/heatmap"}:
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
+    if _should_log_local_request() and request.path.startswith("/api/"):
+        start = request.environ.get("gah_request_start")
+        if start is not None:
+            duration_ms = (perf_counter() - start) * 1000
+            logger.info("%s %s -> %s %.1fms", request.method, request.path, response.status_code, duration_ms)
     return response
 
 
@@ -742,14 +847,27 @@ def visits():
 @app.route("/api/visits/increment", methods=["POST"])
 def visits_increment():
     """Increment visit count and return new value."""
+    body = request.get_json(silent=True) or {}
     if cache_store.is_enabled():
         count = cache_store.cache_incr(_VISIT_KEY)
         if count is not None:
-            return jsonify({"count": count})
+            payload = {"count": count}
+            unique_visit = _record_unique_visit(body.get("anonymous_id"))
+            if unique_visit:
+                if unique_visit["count"] is not None:
+                    payload["unique_users_today"] = unique_visit["count"]
+                payload["is_new_daily_user"] = unique_visit["new"]
+            return jsonify(payload)
     with _counter_lock:
         count = _read_counter() + 1
         _write_counter(count)
-    return jsonify({"count": count})
+    payload = {"count": count}
+    unique_visit = _record_unique_visit(body.get("anonymous_id"))
+    if unique_visit:
+        if unique_visit["count"] is not None:
+            payload["unique_users_today"] = unique_visit["count"]
+        payload["is_new_daily_user"] = unique_visit["new"]
+    return jsonify(payload)
 
 
 # ─── Event tracking ─────────────────────────────────────────────────────────
@@ -882,6 +1000,22 @@ def stats_dashboard():
     total_tab_views = sum(int(v) for v in tab_stats.values())
     total_ad_clicks = sum(int(v) for v in ad_stats.values())
     total_settings_actions = sum(int(v) for v in settings_actions.values())
+    user_series = _unique_visit_series()
+    today_users = user_series[-1]["users"] if user_series else 0
+    month_user_days = sum(item["users"] for item in user_series)
+    max_users = max([item["users"] for item in user_series] + [1])
+    user_bars = ""
+    for item in user_series:
+        users = item["users"]
+        height = max(3, round(users / max_users * 100)) if users else 3
+        value = users if users else ""
+        user_bars += (
+            f'<div class="uv-bar-item" title="{html.escape(item["date"])}：{users} 个唯一用户">'
+            f'<div class="uv-bar-value">{value}</div>'
+            f'<div class="uv-bar" style="height:{height}%"></div>'
+            f'<div class="uv-bar-label">{html.escape(item["date"][5:])}</div>'
+            f'</div>'
+        )
 
     html_page = f"""<!DOCTYPE html>
 <meta charset="utf-8"><title>站点统计 — GlobalAssetHistory</title>
@@ -895,6 +1029,12 @@ h1{{font-size:1.4rem;margin-bottom:4px}}h2{{font-size:1rem;margin:28px 0 10px;co
 @media(prefers-color-scheme:dark){{.summary-card{{background:#1a1a1a}}}}
 .summary-card .num{{font-size:2rem;font-weight:700;color:#0071e3}}
 .summary-card .label{{font-size:.75rem;color:#86868b;margin-top:2px}}
+.uv-chart{{height:180px;display:grid;grid-template-columns:repeat(30,minmax(12px,1fr));gap:6px;align-items:end;padding:16px 12px 10px;margin:10px 0 22px;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}}
+@media(prefers-color-scheme:dark){{.uv-chart{{background:#1a1a1a}}}}
+.uv-bar-item{{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0}}
+.uv-bar-value{{height:18px;font-size:.68rem;color:#86868b;font-variant-numeric:tabular-nums}}
+.uv-bar{{width:100%;max-width:20px;min-height:3px;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,#0071e3,#5856d6)}}
+.uv-bar-label{{margin-top:6px;font-size:.62rem;color:#86868b;writing-mode:vertical-rl;line-height:1}}
 table{{width:100%;border-collapse:collapse;margin-bottom:8px;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}}
 @media(prefers-color-scheme:dark){{table{{background:#1a1a1a}}}}
 th,td{{padding:8px 12px;text-align:left;border-bottom:1px solid #e5e5e5}}
@@ -908,11 +1048,16 @@ code{{color:#0071e3;font-size:.78rem}}
 <h1>📊 GlobalAssetHistory 站点统计</h1>
 <div class="summary">
 <div class="summary-card"><div class="num">{visit_count}</div><div class="label">总访问次数</div></div>
+<div class="summary-card"><div class="num">{today_users}</div><div class="label">今日用户</div></div>
+<div class="summary-card"><div class="num">{month_user_days}</div><div class="label">近30日用户天次</div></div>
 <div class="summary-card"><div class="num">{total_tab_views}</div><div class="label">Tab 浏览</div></div>
 <div class="summary-card"><div class="num">{total_ad_clicks}</div><div class="label">广告位点击</div></div>
 <div class="summary-card"><div class="num">{settings_count}</div><div class="label">设置面板打开</div></div>
 <div class="summary-card"><div class="num">{total_settings_actions}</div><div class="label">设置项操作</div></div>
 </div>
+
+<h2>👤 每日唯一用户 <span class="sub">（匿名 UUID 去重，仅保留最近 30 天）</span></h2>
+<div class="uv-chart" aria-label="最近 30 天每日唯一用户柱状图">{user_bars}</div>
 
 <h2>📑 Tab 访问排行 <span class="sub">（所有用户累计）</span></h2>
 <table><thead><tr><th>#</th><th>Tab</th><th>ID</th><th>次数</th></tr></thead><tbody>{tab_rows}</tbody></table>
