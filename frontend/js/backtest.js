@@ -38,6 +38,72 @@ function sampleEvenly(items, maxPoints) {
   return sampled;
 }
 
+let _btCashflows = [];
+let _btEquityByDate = {};
+let _btPage = 1;
+let _btPageSize = 20;
+
+function formatBtMoney(value, signed) {
+  const number = Number(value) || 0;
+  const amount = Math.abs(number).toLocaleString(
+    typeof __lang === "function" ? __lang() : undefined,
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+  );
+  const sign = signed ? (number > 0 ? "+" : number < 0 ? "-" : "") : (number < 0 ? "-" : "");
+  return `${sign}$${amount}`;
+}
+
+function formatBtNumber(value, maximumFractionDigits) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "—";
+  return number.toLocaleString(
+    typeof __lang === "function" ? __lang() : undefined,
+    { minimumFractionDigits: 0, maximumFractionDigits }
+  );
+}
+
+function renderBacktestCashflowPage() {
+  const total = _btCashflows.length;
+  const totalPages = Math.max(1, Math.ceil(total / _btPageSize));
+  _btPage = Math.max(1, Math.min(_btPage, totalPages));
+  const start = (_btPage - 1) * _btPageSize;
+  const rows = _btCashflows.slice(start, start + _btPageSize);
+
+  btBody.innerHTML = rows.map((row) => {
+    const point = _btEquityByDate[row.date];
+    const profit = point ? point.value - point.invested : null;
+    const profitClass = profit == null ? "" : profit >= 0 ? "bt-val-positive" : "bt-val-negative";
+    return `
+      <tr>
+        <td>${escapeHtml(row.date)}</td>
+        <td>${__(row.kind === "initial" ? "backtest.kindInitial" : "backtest.kindRecurring")}</td>
+        <td>${formatBtMoney(row.amount)}</td>
+        <td>${formatBtMoney(row.price)}</td>
+        <td>${formatBtNumber(row.units, 6)}</td>
+        <td>${formatBtNumber(row.cum_units, 6)}</td>
+        <td class="${profitClass}">${profit == null ? "—" : formatBtMoney(profit, true)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  const detailCount = $("pcBtDetailCount");
+  const pagination = $("pcBtPagination");
+  const pageInfo = $("pcBtPageInfo");
+  const pageSize = $("pcBtPageSize");
+  const first = $("pcBtFirstPage");
+  const prev = $("pcBtPrevPage");
+  const next = $("pcBtNextPage");
+  const last = $("pcBtLastPage");
+  if (detailCount) detailCount.textContent = __("backtest.recordsCount", { total });
+  if (pagination) pagination.style.display = total ? "flex" : "none";
+  if (pageInfo) pageInfo.textContent = __("backtest.pageInfo", { page: _btPage, pages: totalPages, total });
+  if (pageSize) pageSize.value = String(_btPageSize);
+  if (first) first.disabled = _btPage <= 1;
+  if (prev) prev.disabled = _btPage <= 1;
+  if (next) next.disabled = _btPage >= totalPages;
+  if (last) last.disabled = _btPage >= totalPages;
+}
+
 function updateBacktestFrequencyUI() {
   const mode = btFrequency?.value || "monthly";
   if (!btDayOfMonth || !btWeekday || !btDayOfMonthLabel || !btWeekdayLabel || !btInterval || !btAmount) return;
@@ -391,51 +457,48 @@ function renderBtChart(equityCurve) {
 function renderBacktestResult(symbol, result) {
   const summary = result.summary || {};
   renderBtChart(result.equity_curve || []);
-  const maxPoints = getBacktestSampleSize();
-  const sampledCashflows = sampleEvenly(result.cashflows || [], getBacktestSampleSize());
-  const equityByDate = Object.fromEntries((result.equity_curve || []).map((row) => [row.date, row]));
+  const profit = Number(summary.profit) || 0;
+  const returnPct = Number(summary.return_pct) || 0;
+  const annualizedReturnPct = Number(summary.annualized_return_pct) || 0;
+  _btCashflows = result.cashflows || [];
+  _btEquityByDate = Object.fromEntries((result.equity_curve || []).map((row) => [row.date, row]));
+  _btPage = 1;
 
   btSummary.innerHTML = `
     <div class="pc-bt-summary-item">
-      <div class="pc-bt-summary-label">${symbol}</div>
-      <div class="pc-bt-summary-val ${summary.profit >= 0 ? "bt-val-positive" : "bt-val-negative"}">$${(summary.final_value || 0).toFixed(2)}</div>
+      <div class="pc-bt-summary-label">${__("backtest.finalAssets")}</div>
+      <div class="pc-bt-summary-val ${profit >= 0 ? "bt-val-positive" : "bt-val-negative"}">${formatBtMoney(summary.final_value)}</div>
+      <div class="pc-bt-summary-note">${__("backtest.finalAssetsNote", { symbol: escapeHtml(symbol) })}</div>
     </div>
     <div class="pc-bt-summary-item">
       <div class="pc-bt-summary-label">${__("backtest.totalInvested")}</div>
-      <div class="pc-bt-summary-val">$${(summary.invested || 0).toFixed(2)}</div>
+      <div class="pc-bt-summary-val">${formatBtMoney(summary.invested)}</div>
+      <div class="pc-bt-summary-note">${__("backtest.totalInvestedNote")}</div>
     </div>
     <div class="pc-bt-summary-item">
-      <div class="pc-bt-summary-label">${__("backtest.totalReturn")}</div>
-      <div class="pc-bt-summary-val ${summary.profit >= 0 ? "bt-val-positive" : "bt-val-negative"}">${summary.profit >= 0 ? "+" : ""}$${(summary.profit || 0).toFixed(2)} (${summary.return_pct >= 0 ? "+" : ""}${(summary.return_pct || 0).toFixed(2)}%)</div>
+      <div class="pc-bt-summary-label">${__("backtest.profitAmount")}</div>
+      <div class="pc-bt-summary-val ${profit >= 0 ? "bt-val-positive" : "bt-val-negative"}">${formatBtMoney(profit, true)}</div>
+      <div class="pc-bt-summary-note">${__("backtest.profitAmountNote")}</div>
+    </div>
+    <div class="pc-bt-summary-item">
+      <div class="pc-bt-summary-label">${__("backtest.totalReturnRate")}</div>
+      <div class="pc-bt-summary-val ${returnPct >= 0 ? "bt-val-positive" : "bt-val-negative"}">${returnPct >= 0 ? "+" : ""}${returnPct.toFixed(2)}%</div>
+      <div class="pc-bt-summary-note">${__("backtest.totalReturnRateNote")}</div>
     </div>
     <div class="pc-bt-summary-item">
       <div class="pc-bt-summary-label has-tip" title="${__("backtest.irrTooltip")}">${__("backtest.irrAnnualized")}</div>
-      <div class="pc-bt-summary-val">${summary.annualized_return_pct >= 0 ? "+" : ""}${(summary.annualized_return_pct || 0).toFixed(2)}%</div>
+      <div class="pc-bt-summary-val ${annualizedReturnPct >= 0 ? "bt-val-positive" : "bt-val-negative"}">${annualizedReturnPct >= 0 ? "+" : ""}${annualizedReturnPct.toFixed(2)}%</div>
+      <div class="pc-bt-summary-note">${__("backtest.irrNote")}</div>
     </div>
     <div class="pc-bt-summary-item">
-      <div class="pc-bt-summary-label">${__("backtest.sampleDisplay")}</div>
-      <div class="pc-bt-summary-val">${Math.min((result.equity_curve || []).length, maxPoints)} / ${(result.equity_curve || []).length}</div>
+      <div class="pc-bt-summary-label">${__("backtest.tradeCount")}</div>
+      <div class="pc-bt-summary-val">${formatBtNumber(summary.trade_count, 0)}</div>
+      <div class="pc-bt-summary-note">${__("backtest.tradeCountNote")}</div>
     </div>
   `;
 
-  btHead.innerHTML = "<th>" + __("backtest.colDate") + "</th><th>" + __("backtest.colAmount") + "</th><th>" + __("backtest.colPrice") + "</th><th>" + __("backtest.colShares") + "</th><th>" + __("backtest.colCumShares") + "</th><th>" + __("backtest.colTotalReturn") + "</th>";
-  btBody.innerHTML = sampledCashflows.map((row) => `
-    <tr>
-      <td>${row.date}</td>
-      <td>$${(row.amount || 0).toFixed(2)}</td>
-      <td>${row.price}</td>
-      <td>${row.units}</td>
-      <td>${row.cum_units}</td>
-      <td class="${((equityByDate[row.date]?.value || 0) - (equityByDate[row.date]?.invested || 0)) >= 0 ? "bt-val-positive" : "bt-val-negative"}">
-        ${(() => {
-          const point = equityByDate[row.date];
-          if (!point) return "—";
-          const profit = point.value - point.invested;
-          return `${profit >= 0 ? "+" : ""}$${profit.toFixed(2)}`;
-        })()}
-      </td>
-    </tr>
-  `).join("");
+  btHead.innerHTML = "<th>" + __("backtest.colDate") + "</th><th>" + __("backtest.colKind") + "</th><th>" + __("backtest.colAmount") + "</th><th>" + __("backtest.colPrice") + "</th><th>" + __("backtest.colShares") + "</th><th>" + __("backtest.colCumShares") + "</th><th>" + __("backtest.colTotalReturn") + "</th>";
+  renderBacktestCashflowPage();
 
   if (btResult) btResult.style.display = "";
   if (btWrap) btWrap.style.display = "";
@@ -454,5 +517,35 @@ function renderBacktestResult(symbol, result) {
         el.classList.remove("show");
       }
     });
+  });
+})();
+
+// ─── Detail pagination ───
+(function () {
+  var pageSize = $("pcBtPageSize");
+  var first = $("pcBtFirstPage");
+  var prev = $("pcBtPrevPage");
+  var next = $("pcBtNextPage");
+  var last = $("pcBtLastPage");
+  if (pageSize) pageSize.addEventListener("change", function () {
+    _btPageSize = parseInt(pageSize.value, 10) || 20;
+    _btPage = 1;
+    renderBacktestCashflowPage();
+  });
+  if (first) first.addEventListener("click", function () {
+    _btPage = 1;
+    renderBacktestCashflowPage();
+  });
+  if (prev) prev.addEventListener("click", function () {
+    _btPage -= 1;
+    renderBacktestCashflowPage();
+  });
+  if (next) next.addEventListener("click", function () {
+    _btPage += 1;
+    renderBacktestCashflowPage();
+  });
+  if (last) last.addEventListener("click", function () {
+    _btPage = Math.max(1, Math.ceil(_btCashflows.length / _btPageSize));
+    renderBacktestCashflowPage();
   });
 })();

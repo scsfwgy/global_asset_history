@@ -557,6 +557,33 @@
         .pd-bar-chart-scroll svg {
             display: block;
         }
+        .pd-chart-resize-handle {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            height: 14px;
+            margin-top: 1px;
+            cursor: ns-resize;
+            touch-action: none;
+            user-select: none;
+        }
+        .pd-chart-resize-handle::before {
+            content: "";
+            width: 48px;
+            height: 3px;
+            border-radius: var(--radius-full);
+            background: var(--apple-divider);
+            transition: width var(--transition-fast), background var(--transition-fast);
+        }
+        .pd-chart-resize-handle:hover::before,
+        .pd-chart-resize-handle.is-dragging::before,
+        .pd-chart-resize-handle:focus-visible::before {
+            width: 64px;
+            background: var(--apple-blue);
+        }
+        .pd-chart-resize-handle:focus-visible {
+            outline: none;
+        }
         .download-preview {
             margin-top: 16px;
             border: 1px solid var(--apple-divider);
@@ -748,16 +775,19 @@
         .pc-bt-input:focus { border-color: var(--apple-blue); outline: 2px solid var(--apple-blue); outline-offset: 1px; }
 
         .pc-bt-summary {
-            display: flex;
-            gap: 20px;
-            padding: 12px 16px;
-            background: var(--apple-surface-2);
-            border-radius: var(--radius-md);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
             margin-bottom: 14px;
         }
 
         .pc-bt-summary-item {
             font-size: 13px;
+            min-width: 0;
+            padding: 12px 14px;
+            background: var(--apple-surface-2);
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
         }
 
         .pc-bt-summary-label {
@@ -766,9 +796,37 @@
         }
 
         .pc-bt-summary-val {
-            font-size: 15px;
+            font-size: 17px;
+            font-weight: 700;
+            margin-top: 3px;
+            font-variant-numeric: tabular-nums;
+            overflow-wrap: anywhere;
+        }
+
+        .pc-bt-summary-note {
+            margin-top: 3px;
+            color: var(--apple-text-tertiary);
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .pc-bt-detail-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 2px 0 8px;
+        }
+
+        .pc-bt-detail-title {
+            color: var(--apple-text-primary);
+            font-size: 14px;
             font-weight: 600;
-            margin-top: 2px;
+        }
+
+        .pc-bt-detail-count {
+            color: var(--apple-text-tertiary);
+            font-size: 12px;
         }
 
         .pc-bt-table {
@@ -789,6 +847,7 @@
         }
 
         .pc-bt-table th:first-child { text-align: left; }
+        .pc-bt-table th:nth-child(2) { text-align: left; }
 
         .pc-bt-table td {
             padding: 7px 12px;
@@ -798,10 +857,59 @@
         }
 
         .pc-bt-table td:first-child { text-align: left; color: var(--apple-text-secondary); }
+        .pc-bt-table td:nth-child(2) { text-align: left; }
         .pc-bt-table tr:last-child td { border-bottom: none; }
 
         .pc-bt-table .bt-val-positive { color: var(--data-positive); }
         .pc-bt-table .bt-val-negative { color: var(--data-negative); }
+
+        .pc-bt-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding-top: 12px;
+        }
+
+        .pc-bt-page-info,
+        .pc-bt-page-size {
+            color: var(--apple-text-tertiary);
+            font-size: 12px;
+        }
+
+        .pc-bt-page-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .pc-bt-page-size {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-right: 4px;
+        }
+
+        .pc-bt-page-select {
+            padding: 4px 8px;
+            background: var(--apple-surface-1);
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            color: var(--apple-text-primary);
+            font-size: 12px;
+        }
+
+        @media (max-width: 640px) {
+            .pc-bt-summary {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .pc-bt-pagination {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
 
         /* ─── Advanced toggle ─── */
         .pc-bt-advanced { display: none; }
@@ -2100,6 +2208,10 @@
                                 aria-controls="pdBarChart" aria-expanded="true" data-i18n="detail.collapseChart">收起</button>
                     </div>
                     <div class="pd-bar-chart-scroll" id="pdBarChart"></div>
+                    <div class="pd-chart-resize-handle" id="pdBarChartResizeHandle" role="separator"
+                         tabindex="0" aria-orientation="horizontal" aria-valuemin="180" aria-valuemax="480"
+                         data-i18n-attr="aria-label|detail.resizeChart" data-i18n-attr-alt="title|detail.resizeChart"
+                         aria-label="上下拖动调整图表高度" title="上下拖动调整图表高度"></div>
                 </div>
                 <div class="pd-table-wrap">
                     <table class="pd-table">
@@ -2234,11 +2346,32 @@
             <div id="pcBtResult" style="display:none;">
                 <div id="btChart" style="margin-bottom:20px;"></div>
                 <div class="pc-bt-summary" id="pcBtSummary"></div>
+                <div class="pc-bt-detail-header">
+                    <span class="pc-bt-detail-title" data-i18n="backtest.detailRecords">买入详情</span>
+                    <span class="pc-bt-detail-count" id="pcBtDetailCount"></span>
+                </div>
                 <div style="overflow-x:auto;">
                     <table class="pc-bt-table">
                         <thead><tr id="pcBtHead"></tr></thead>
                         <tbody id="pcBtBody"></tbody>
                     </table>
+                </div>
+                <div class="pc-bt-pagination" id="pcBtPagination" style="display:none;">
+                    <span class="pc-bt-page-info" id="pcBtPageInfo"></span>
+                    <div class="pc-bt-page-controls">
+                        <label class="pc-bt-page-size">
+                            <span data-i18n="backtest.pageSize">每页</span>
+                            <select class="pc-bt-page-select" id="pcBtPageSize">
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </label>
+                        <button class="pc-btn pc-btn-sm" id="pcBtFirstPage" data-i18n="backtest.firstPage">首页</button>
+                        <button class="pc-btn pc-btn-sm" id="pcBtPrevPage" data-i18n="backtest.prevPage">上一页</button>
+                        <button class="pc-btn pc-btn-sm" id="pcBtNextPage" data-i18n="backtest.nextPage">下一页</button>
+                        <button class="pc-btn pc-btn-sm" id="pcBtLastPage" data-i18n="backtest.lastPage">末页</button>
+                    </div>
                 </div>
             </div>
         </div>

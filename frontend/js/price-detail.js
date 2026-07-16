@@ -6,6 +6,9 @@
   const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
   var _barChartCollapsed = false;
   var _paramsCollapsed = false;
+  var _barChartHeight = 220;
+  var _lastBarChartResult = null;
+  var _resizeRenderFrame = null;
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -262,14 +265,33 @@
     var card = $("pdBarChartCard");
     var host = $("pdBarChart");
     var toggle = $("pdBarChartToggle");
+    var resizeHandle = $("pdBarChartResizeHandle");
     _barChartCollapsed = Boolean(collapsed);
     if (card) card.classList.toggle("is-collapsed", _barChartCollapsed);
     if (host) host.style.display = _barChartCollapsed ? "none" : "block";
+    if (resizeHandle) {
+      var canResize = resizeHandle.dataset.enabled === "true";
+      resizeHandle.style.display = !_barChartCollapsed && canResize ? "flex" : "none";
+    }
     if (toggle) {
       toggle.textContent = __(_barChartCollapsed ? "detail.expandChart" : "detail.collapseChart");
       toggle.setAttribute("aria-expanded", String(!_barChartCollapsed));
     }
     if (!_barChartCollapsed) scrollBarChartToLatest();
+  }
+
+  function resizeBarChart(height) {
+    var nextHeight = Math.max(180, Math.min(480, Math.round(height)));
+    if (nextHeight === _barChartHeight) return;
+    _barChartHeight = nextHeight;
+    var handle = $("pdBarChartResizeHandle");
+    if (handle) handle.setAttribute("aria-valuenow", String(nextHeight));
+    if (!_lastBarChartResult) return;
+    if (_resizeRenderFrame) window.cancelAnimationFrame(_resizeRenderFrame);
+    _resizeRenderFrame = window.requestAnimationFrame(function () {
+      _resizeRenderFrame = null;
+      renderBarChart(_lastBarChartResult);
+    });
   }
 
   function setParamsCollapsed(collapsed) {
@@ -290,6 +312,7 @@
     var title = $("pdBarChartTitle");
     var host = $("pdBarChart");
     if (!card || !title || !host) return;
+    _lastBarChartResult = result;
 
     var points = barChartPoints(result);
     var finiteValues = points.filter(function (point) {
@@ -314,7 +337,7 @@
     var intrinsicW = points.length * 34 + 62;
     var spreadsToFill = availableW >= intrinsicW;
     var W = Math.max(470, availableW, intrinsicW);
-    var H = 220;
+    var H = _barChartHeight;
     var pad = { top: 22, right: 10, bottom: 30, left: 48 };
     var plotW = W - pad.left - pad.right;
     var plotH = H - pad.top - pad.bottom;
@@ -333,10 +356,11 @@
       var value = ratio * maxAbs;
       var isZero = ratio === 0;
       parts.push('<line x1="' + pad.left + '" y1="' + y.toFixed(1) + '" x2="' + (W - pad.right) + '" y2="' + y.toFixed(1)
-        + '" stroke="' + (isZero ? 'var(--apple-text-secondary)' : 'var(--apple-divider)')
-        + '" stroke-width="' + (isZero ? '1.5' : '1') + '"' + (isZero ? '' : ' stroke-dasharray="3,3"') + '/>');
+        + '" stroke="' + (isZero ? 'var(--apple-blue)' : 'var(--apple-divider)')
+        + '" stroke-width="1"' + (isZero ? ' stroke-dasharray="6,4" opacity="0.55"' : ' stroke-dasharray="3,3"') + '/>');
       parts.push('<text x="' + (pad.left - 7) + '" y="' + (y + 4).toFixed(1)
-        + '" text-anchor="end" fill="var(--apple-text-tertiary)" font-size="10">' + formatPct(value, 1) + '</text>');
+        + '" text-anchor="end" fill="' + (isZero ? 'var(--apple-blue)' : 'var(--apple-text-tertiary)')
+        + '" opacity="' + (isZero ? '0.8' : '1') + '" font-size="10">' + formatPct(value, 1) + '</text>');
     });
 
     points.forEach(function (point, index) {
@@ -364,6 +388,11 @@
       + escapeHtml(__("detail.chartAriaLabel"))
       + '" style="width:' + W + 'px;height:' + H + 'px;font-family:-apple-system,SF Pro Text,Helvetica,Arial,sans-serif;">'
       + parts.join("") + '</svg>';
+    var resizeHandle = $("pdBarChartResizeHandle");
+    if (resizeHandle) {
+      resizeHandle.dataset.enabled = "true";
+      resizeHandle.setAttribute("aria-valuenow", String(_barChartHeight));
+    }
     card.style.display = "block";
     setBarChartCollapsed(_barChartCollapsed);
   }
@@ -459,6 +488,42 @@
     if (paramsToggle) {
       paramsToggle.addEventListener("click", function () {
         setParamsCollapsed(!_paramsCollapsed);
+      });
+    }
+    var resizeHandle = $("pdBarChartResizeHandle");
+    if (resizeHandle) {
+      var dragStartY = 0;
+      var dragStartHeight = 0;
+      var activePointerId = null;
+      resizeHandle.addEventListener("pointerdown", function (event) {
+        if (resizeHandle.dataset.enabled !== "true") return;
+        activePointerId = event.pointerId;
+        dragStartY = event.clientY;
+        dragStartHeight = _barChartHeight;
+        resizeHandle.classList.add("is-dragging");
+        resizeHandle.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      });
+      resizeHandle.addEventListener("pointermove", function (event) {
+        if (event.pointerId !== activePointerId) return;
+        resizeBarChart(dragStartHeight + event.clientY - dragStartY);
+      });
+      function stopResize(event) {
+        if (event.pointerId !== activePointerId) return;
+        resizeHandle.classList.remove("is-dragging");
+        activePointerId = null;
+      }
+      resizeHandle.addEventListener("pointerup", stopResize);
+      resizeHandle.addEventListener("pointercancel", stopResize);
+      resizeHandle.addEventListener("keydown", function (event) {
+        if (resizeHandle.dataset.enabled !== "true") return;
+        if (event.key === "ArrowUp") {
+          resizeBarChart(_barChartHeight - 20);
+          event.preventDefault();
+        } else if (event.key === "ArrowDown") {
+          resizeBarChart(_barChartHeight + 20);
+          event.preventDefault();
+        }
       });
     }
     input.addEventListener("keydown", function (event) {
