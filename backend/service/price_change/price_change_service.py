@@ -88,6 +88,14 @@ def _get_cached_daily_series(symbol: str, asset_type: str) -> PriceSeries | None
         series = _DAILY_SERIES_CACHE.get(key)
         if series:
             if now - series.fetched_at < _cache_ttl(series):
+                logger.info(
+                    "event=daily_series_cache_hit layer=l1 symbol=%s asset_type=%s source=%s points=%s error=%s",
+                    symbol,
+                    asset_type,
+                    series.source,
+                    len(series.timestamps),
+                    bool(series.error),
+                )
                 return series
             # Expired — delete it to free memory
             del _DAILY_SERIES_CACHE[key]
@@ -99,6 +107,14 @@ def _get_cached_daily_series(symbol: str, asset_type: str) -> PriceSeries | None
         if series and now - series.fetched_at < _cache_ttl(series):
             with _CACHE_LOCK:
                 _DAILY_SERIES_CACHE[key] = series  # warm L1
+            logger.info(
+                "event=daily_series_cache_hit layer=l2 symbol=%s asset_type=%s source=%s points=%s error=%s",
+                symbol,
+                asset_type,
+                series.source,
+                len(series.timestamps),
+                bool(series.error),
+            )
             return series
     return None
 
@@ -155,14 +171,29 @@ def _fetch_daily_series_cached(symbol: str, asset_type: str) -> PriceSeries:
 
     fetcher = _DAILY_SERIES_FETCHERS.get(asset_type)
     if fetcher is None:
+        logger.warning(
+            "event=daily_series_fetch_rejected symbol=%s asset_type=%s reason=unknown_asset_type",
+            symbol,
+            asset_type,
+        )
         return empty_series(None, f"unknown asset type: {asset_type}")
 
-    logger.info("Fetching daily series for %s (%s)", symbol, asset_type)
+    started_at = time.perf_counter()
+    logger.info("event=daily_series_fetch_start symbol=%s asset_type=%s", symbol, asset_type)
     try:
         series = fetcher(symbol)
     except Exception as e:
         logger.exception("Failed to fetch daily series for %s (%s): %s", symbol, asset_type, e)
         series = empty_series(None, str(e))
+    logger.info(
+        "event=daily_series_fetch_complete symbol=%s asset_type=%s source=%s points=%s success=%s duration_ms=%.1f",
+        symbol,
+        asset_type,
+        series.source,
+        len(series.timestamps),
+        not bool(series.error),
+        (time.perf_counter() - started_at) * 1000,
+    )
 
     return _set_cached_daily_series(symbol, asset_type, series)
 

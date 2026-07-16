@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+set -o pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
@@ -19,11 +20,11 @@ LOGFILE="logs/server.log"
 # ─── 工具函数 ───
 
 setup() {
-    echo "[1/2] 安装依赖..."
+    echo "[1/3] 安装依赖..."
     if [ ! -d backend/.venv ]; then
         python3 -m venv backend/.venv
     fi
-    $VENV_PIP install -q -r requirements.txt
+    "$VENV_PIP" install -q -r requirements.txt
     mkdir -p logs
 }
 
@@ -39,28 +40,70 @@ wait_for_url() {
     return 1
 }
 
+validate_args() {
+    if [ "$#" -gt 1 ]; then
+        echo "非法参数: ${*:2}" >&2
+        echo "提示: debug、start 和 restart 都会强制运行完整测试，无需额外参数。" >&2
+        exit 1
+    fi
+}
+
 # ─── 操作函数 ───
 
-start_production() {
+run_test_suite() {
+    echo "[2/3] 运行完整测试套件..."
+    echo ""
+    if PYTHONPATH=backend "$VENV_PYTHON" -m pytest backend/tests/ -v --tb=short --color=yes; then
+        echo ""
+        echo "[test] ✓ 全部测试通过"
+    else
+        local exit_code=$?
+        echo ""
+        echo "[test] ✗ 测试失败 (exit code: $exit_code)，已阻止启动" >&2
+        return "$exit_code"
+    fi
+}
+
+preflight() {
     setup
+    run_test_suite
+}
+
+launch_production() {
+    local port="${PORT:-8730}"
     kill_port_if_needed
-    echo "[2/2] 启动服务 (后台模式)..."
-    PYTHONPATH=backend nohup "$VENV_PYTHON" backend/app.py >> "$LOGFILE" 2>&1 &
+    echo "[3/3] 启动服务 (生产模式，后台运行)..."
+    echo "[log] production 会话开始 $(date '+%Y-%m-%d %H:%M:%S')" >> "$LOGFILE"
+    FLASK_DEBUG=0 PYTHONUNBUFFERED=1 PYTHONPATH=backend \
+        nohup "$VENV_PYTHON" backend/app.py >> "$LOGFILE" 2>&1 &
     echo $! > "$PIDFILE"
-    wait_for_url "http://127.0.0.1:8730/api/health"
-    echo "  服务已启动 PID: $(cat $PIDFILE)"
-    echo "  访问: http://127.0.0.1:8730"
+    wait_for_url "http://127.0.0.1:${port}/api/health"
+    echo "  服务已启动 PID: $(cat "$PIDFILE")"
+    echo "  Flask Debug: off"
+    echo "  访问: http://127.0.0.1:${port}"
     echo "  日志: $LOGFILE"
+    echo ""
+    tail -n 12 "$LOGFILE"
+}
+
+start_production() {
+    preflight
+    launch_production
 }
 
 start_debug() {
-    setup
+    local port="${PORT:-8730}"
+    preflight
     kill_port_if_needed
-    echo "[2/2] 启动服务 (调试模式)..."
-    echo "  访问: http://127.0.0.1:8730"
+    echo "[3/3] 启动服务 (调试模式，前台运行)..."
+    echo "  Flask Debug: on（自动重载，仅监听本机）"
+    echo "  访问: http://127.0.0.1:${port}"
+    echo "  日志: $LOGFILE"
     echo "  按 Ctrl+C 停止"
     echo ""
-    HOST=127.0.0.1 FLASK_DEBUG=1 PYTHONPATH=backend "$VENV_PYTHON" backend/app.py
+    echo "[log] debug 会话开始 $(date '+%Y-%m-%d %H:%M:%S')" | tee -a "$LOGFILE"
+    HOST=127.0.0.1 FLASK_DEBUG=1 PYTHONUNBUFFERED=1 PYTHONPATH=backend \
+        "$VENV_PYTHON" backend/app.py 2>&1 | tee -a "$LOGFILE"
 }
 
 stop() {
@@ -86,12 +129,13 @@ stop() {
 }
 
 status() {
+    local port="${PORT:-8730}"
     if [ -f "$PIDFILE" ]; then
         local pid
         pid=$(cat "$PIDFILE")
         if kill -0 "$pid" 2>/dev/null; then
             echo "运行中 (PID: $pid)"
-            echo "访问: http://127.0.0.1:8730"
+            echo "访问: http://127.0.0.1:${port}"
         else
             echo "已停止 (PID 文件残留)"
             rm -f "$PIDFILE"
@@ -103,17 +147,23 @@ status() {
 
 run_tests() {
     setup
-    echo "[test] 运行测试套件..."
-    echo ""
-    PYTHONPATH=backend "$VENV_PYTHON" -m pytest backend/tests/ -v --tb=short --color=yes
-    local exit_code=$?
-    echo ""
-    if [ $exit_code -eq 0 ]; then
-        echo "[test] ✓ 全部测试通过"
-    else
-        echo "[test] ✗ 测试失败 (exit code: $exit_code)" >&2
+    run_test_suite
+}
+
+restart_production() {
+    preflight
+    stop
+    sleep 1
+    launch_production
+}
+
+show_logs() {
+    local lines="${LOG_LINES:-80}"
+    if [ ! -f "$LOGFILE" ]; then
+        echo "暂无日志: $LOGFILE"
+        return 0
     fi
-    return $exit_code
+    tail -n "$lines" "$LOGFILE"
 }
 
 kill_port_if_needed() {
@@ -171,7 +221,7 @@ interactive_menu() {
     case "$choice" in
         1) choose_mode ;;
         2) stop ;;
-        3) stop; sleep 1; start_production ;;
+        3) restart_production ;;
         4) status ;;
         5) run_tests ;;
         6) echo "已退出" ; exit 0 ;;
@@ -181,17 +231,13 @@ interactive_menu() {
 
 # ─── 入口 ───
 
+validate_args "$@"
+
 case "${1:-}" in
     start|production)
-        if [ "${2:-}" = "--test" ]; then
-            run_tests || exit 1
-        fi
         start_production
         ;;
     debug)
-        if [ "${2:-}" = "--test" ]; then
-            run_tests || exit 1
-        fi
         start_debug
         ;;
     test)
@@ -201,28 +247,30 @@ case "${1:-}" in
         stop
         ;;
     restart)
-        stop
-        sleep 1
-        start_production
+        restart_production
         ;;
     status)
         status
+        ;;
+    logs)
+        show_logs
         ;;
     "")
         interactive_menu
         ;;
     *)
-        echo "用法: ./start.sh [命令] [--test]"
+        echo "用法: ./start.sh [命令]"
         echo ""
         echo "  无参数             交互式菜单"
-        echo "  start               生产模式 (后台)"
-        echo "  debug               调试模式 (前台)"
-        echo "  start --test        先跑测试，通过后再启动 (生产)"
-        echo "  debug --test        先跑测试，通过后再启动 (调试)"
+        echo "  start               完整测试通过后，以生产模式后台启动"
+        echo "  debug               完整测试通过后，以调试模式前台启动"
         echo "  test                仅运行测试套件"
         echo "  stop                停止服务"
-        echo "  restart             重启"
+        echo "  restart             完整测试通过后重启生产服务"
         echo "  status              查看状态"
+        echo "  logs                查看最近服务日志（LOG_LINES 可指定行数）"
+        echo ""
+        echo "启动命令不接受额外参数；测试是不可跳过的启动前置步骤。"
         exit 1
         ;;
 esac

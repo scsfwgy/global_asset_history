@@ -12,6 +12,7 @@ import threading
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from time import perf_counter
+from uuid import uuid4
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
@@ -28,6 +29,9 @@ app = Flask(__name__, static_folder=None)
 CORS(app)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+# Werkzeug's default access log includes the raw query string. The application
+# emits a structured, sanitized API request log below instead.
+logging.getLogger("werkzeug").setLevel(logging.WARNING)
 
 app.register_blueprint(price_change_bp)
 app.register_blueprint(wishes_bp)
@@ -612,23 +616,28 @@ def _check_admin_token() -> bool:
     return hmac.compare_digest(token, admin)
 
 
-def _should_log_local_request() -> bool:
-    if app.config.get("TESTING"):
-        return False
-    if os.getenv("VERCEL"):
-        return False
-    return os.getenv("LOCAL_REQUEST_LOG", "1").lower() not in ("0", "false", "no", "off")
+def _should_log_request() -> bool:
+    return os.getenv("REQUEST_LOG", "1").lower() not in ("0", "false", "no", "off")
+
+
+def _request_log_path(path: str) -> str:
+    """Return a stable path label without query strings or private wish IDs."""
+    return re.sub(r"^/api/wishes/[^/]+", "/api/wishes/:id", path)
 
 
 @app.before_request
 def mark_request_start():
-    if _should_log_local_request():
+    request.environ["gah_request_id"] = uuid4().hex[:12]
+    if _should_log_request():
         request.environ["gah_request_start"] = perf_counter()
 
 
 @app.after_request
 def add_seo_headers(response):
     base_path = _base_request_path()
+    request_id = request.environ.get("gah_request_id")
+    if request_id:
+        response.headers.setdefault("X-Request-ID", request_id)
 
     lang = request_lang()
     if base_path in INDEXABLE_PATHS and _is_indexable_content_path(base_path, lang):
@@ -637,11 +646,27 @@ def add_seo_headers(response):
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
     elif base_path.startswith(ROBOT_BLOCKED_PREFIXES) or base_path in {"/yearly", "/detail", "/download", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", *KNOWLEDGE_LEGACY_PATHS.keys(), "/wishes", "/heatmap"}:
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
-    if _should_log_local_request() and request.path.startswith("/api/"):
+    if _should_log_request() and request.path.startswith("/api/"):
         start = request.environ.get("gah_request_start")
         if start is not None:
             duration_ms = (perf_counter() - start) * 1000
-            logger.info("%s %s -> %s %.1fms", request.method, request.path, response.status_code, duration_ms)
+            log_fields = [
+                "event=http_request",
+                f"request_id={request_id}",
+                f"operation={request.endpoint or 'unknown'}",
+                f"method={request.method}",
+                f"path={_request_log_path(request.path)}",
+                f"status={response.status_code}",
+                f"duration_ms={duration_ms:.1f}",
+                f"response_bytes={response.calculate_content_length() or 0}",
+            ]
+            payload = response.get_json(silent=True) if response.is_json else None
+            if isinstance(payload, dict):
+                if "cache_status" in payload:
+                    log_fields.append(f"cache_status={payload['cache_status']}")
+                elif isinstance(payload.get("cached"), bool):
+                    log_fields.append(f"cached={str(payload['cached']).lower()}")
+            logger.info(" ".join(log_fields))
     return response
 
 
@@ -1154,6 +1179,17 @@ def frontend_files(filename):
     if filename in {"price-change.html", "etf-market.html"}:
         return serve_frontend_html(filename)
     return serve_frontend_asset(filename)
+
+
+logger.info(
+    "event=app_start environment=%s host=%s port=%s flask_debug=%s site_url=%s redis=%s",
+    os.getenv("VERCEL_ENV", "local"),
+    os.getenv("HOST", "0.0.0.0"),
+    os.getenv("PORT", "8730"),
+    os.getenv("FLASK_DEBUG", "").lower() in ("1", "true", "yes", "on"),
+    site_url(),
+    cache_store.is_enabled(),
+)
 
 
 if __name__ == "__main__":
