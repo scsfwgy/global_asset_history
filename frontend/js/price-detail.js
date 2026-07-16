@@ -4,6 +4,8 @@
   const $ = (id) => document.getElementById(id);
   const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+  var _barChartCollapsed = false;
+  var _paramsCollapsed = false;
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -227,6 +229,145 @@
     }).join("");
   }
 
+  function barChartPoints(result) {
+    if (result.mode === "daily") {
+      var monthlyByNumber = {};
+      (result.monthly_returns || []).forEach(function (item) {
+        monthlyByNumber[Number(item.month)] = item.return;
+      });
+      return MONTHS.map(function (month) {
+        return {
+          label: __("yearly.monthLabel", { m: month }),
+          value: monthlyByNumber[month],
+        };
+      });
+    }
+
+    return (result.rows || []).slice().sort(function (a, b) {
+      return Number(a.year) - Number(b.year);
+    }).map(function (row) {
+      return { label: String(row.year), value: row.annual_return };
+    });
+  }
+
+  function scrollBarChartToLatest() {
+    var host = $("pdBarChart");
+    if (!host || _barChartCollapsed) return;
+    window.requestAnimationFrame(function () {
+      host.scrollLeft = host.scrollWidth - host.clientWidth;
+    });
+  }
+
+  function setBarChartCollapsed(collapsed) {
+    var card = $("pdBarChartCard");
+    var host = $("pdBarChart");
+    var toggle = $("pdBarChartToggle");
+    _barChartCollapsed = Boolean(collapsed);
+    if (card) card.classList.toggle("is-collapsed", _barChartCollapsed);
+    if (host) host.style.display = _barChartCollapsed ? "none" : "block";
+    if (toggle) {
+      toggle.textContent = __(_barChartCollapsed ? "detail.expandChart" : "detail.collapseChart");
+      toggle.setAttribute("aria-expanded", String(!_barChartCollapsed));
+    }
+    if (!_barChartCollapsed) scrollBarChartToLatest();
+  }
+
+  function setParamsCollapsed(collapsed) {
+    var panel = $("pdParamsPanel");
+    var toggle = $("pdParamsToggle");
+    _paramsCollapsed = Boolean(collapsed);
+    if (panel) panel.style.display = _paramsCollapsed ? "none" : "block";
+    var summary = $("pdSummary");
+    if (summary) summary.style.display = _paramsCollapsed ? "none" : "";
+    if (toggle) {
+      toggle.textContent = __(_paramsCollapsed ? "detail.expandParams" : "detail.collapseParams");
+      toggle.setAttribute("aria-expanded", String(!_paramsCollapsed));
+    }
+  }
+
+  function renderBarChart(result) {
+    var card = $("pdBarChartCard");
+    var title = $("pdBarChartTitle");
+    var host = $("pdBarChart");
+    if (!card || !title || !host) return;
+
+    var points = barChartPoints(result);
+    var finiteValues = points.filter(function (point) {
+      return point.value != null && Number.isFinite(Number(point.value));
+    }).map(function (point) { return Number(point.value); });
+    if (!points.length || !finiteValues.length) {
+      card.style.display = "none";
+      host.innerHTML = "";
+      return;
+    }
+
+    title.textContent = result.mode === "daily"
+      ? __("detail.chartMonthlyTitle", { year: result.year })
+      : __("detail.chartYearlyTitle");
+
+    var panel = host.closest(".pc-monthly");
+    var panelStyle = panel ? window.getComputedStyle(panel) : null;
+    var panelInnerW = panel ? panel.clientWidth
+      - parseFloat(panelStyle.paddingLeft || 0)
+      - parseFloat(panelStyle.paddingRight || 0) : 0;
+    var availableW = Math.floor(panelInnerW - 22);
+    var intrinsicW = points.length * 34 + 62;
+    var spreadsToFill = availableW >= intrinsicW;
+    var W = Math.max(470, availableW, intrinsicW);
+    var H = 220;
+    var pad = { top: 22, right: 10, bottom: 30, left: 48 };
+    var plotW = W - pad.left - pad.right;
+    var plotH = H - pad.top - pad.bottom;
+    var zeroY = pad.top + plotH / 2;
+    var maxAbs = Math.max.apply(null, finiteValues.map(function (value) { return Math.abs(value); }));
+    maxAbs = maxAbs || 1;
+    var halfPlotH = plotH / 2 - 10;
+    var slotW = plotW / points.length;
+    var barW = spreadsToFill
+      ? Math.max(16, Math.min(42, slotW * 0.55))
+      : Math.max(12, Math.min(28, slotW * 0.78));
+    var parts = [];
+
+    [1, 0.5, 0, -0.5, -1].forEach(function (ratio) {
+      var y = zeroY - ratio * halfPlotH;
+      var value = ratio * maxAbs;
+      var isZero = ratio === 0;
+      parts.push('<line x1="' + pad.left + '" y1="' + y.toFixed(1) + '" x2="' + (W - pad.right) + '" y2="' + y.toFixed(1)
+        + '" stroke="' + (isZero ? 'var(--apple-text-secondary)' : 'var(--apple-divider)')
+        + '" stroke-width="' + (isZero ? '1.5' : '1') + '"' + (isZero ? '' : ' stroke-dasharray="3,3"') + '/>');
+      parts.push('<text x="' + (pad.left - 7) + '" y="' + (y + 4).toFixed(1)
+        + '" text-anchor="end" fill="var(--apple-text-tertiary)" font-size="10">' + formatPct(value, 1) + '</text>');
+    });
+
+    points.forEach(function (point, index) {
+      var value = Number(point.value);
+      var x = pad.left + index * slotW + (slotW - barW) / 2;
+      var centerX = x + barW / 2;
+      var label = escapeHtml(point.label);
+      if (point.value != null && Number.isFinite(value)) {
+        var valueY = zeroY - (value / maxAbs) * halfPlotH;
+        var y = Math.min(valueY, zeroY);
+        var height = Math.max(1, Math.abs(zeroY - valueY));
+        var color = value >= 0 ? "var(--data-positive)" : "var(--data-negative)";
+        var textY = value >= 0 ? y - 6 : y + height + 13;
+        parts.push('<g><title>' + label + ' ' + escapeHtml(formatPct(value)) + '</title>'
+          + '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1)
+          + '" height="' + height.toFixed(1) + '" rx="3" fill="' + color + '" opacity="0.88"/>'
+          + '<text x="' + centerX.toFixed(1) + '" y="' + textY.toFixed(1)
+          + '" text-anchor="middle" fill="' + color + '" font-size="9" font-weight="600">' + escapeHtml(formatPct(value, 1)) + '</text></g>');
+      }
+      parts.push('<text x="' + centerX.toFixed(1) + '" y="' + (H - 14)
+        + '" text-anchor="middle" fill="var(--apple-text-tertiary)" font-size="10">' + label + '</text>');
+    });
+
+    host.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="'
+      + escapeHtml(__("detail.chartAriaLabel"))
+      + '" style="width:' + W + 'px;height:' + H + 'px;font-family:-apple-system,SF Pro Text,Helvetica,Arial,sans-serif;">'
+      + parts.join("") + '</svg>';
+    card.style.display = "block";
+    setBarChartCollapsed(_barChartCollapsed);
+  }
+
   async function queryDetail() {
     var symbolInput = $("pdSymbolInput");
     var typeSelect = $("pdTypeSelect");
@@ -268,6 +409,7 @@
       }
       buildYearSelector(result.years || []);
       renderSummary(result);
+      renderBarChart(result);
       if (result.mode === "daily") {
         renderDailyTable(result);
       } else {
@@ -307,6 +449,18 @@
       if ($("pdTypeSelect") && params.get("type")) $("pdTypeSelect").value = params.get("type");
     }
     btn.addEventListener("click", queryDetail);
+    var chartToggle = $("pdBarChartToggle");
+    if (chartToggle) {
+      chartToggle.addEventListener("click", function () {
+        setBarChartCollapsed(!_barChartCollapsed);
+      });
+    }
+    var paramsToggle = $("pdParamsToggle");
+    if (paramsToggle) {
+      paramsToggle.addEventListener("click", function () {
+        setParamsCollapsed(!_paramsCollapsed);
+      });
+    }
     input.addEventListener("keydown", function (event) {
       if (event.key === "Enter") queryDetail();
     });

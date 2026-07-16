@@ -274,7 +274,7 @@ INDEXABLE_PATHS = {
 # Real last-modified dates per page group. Update these ONLY when the page's
 # HTML/content actually changes — Google discounts <lastmod> if it always shows
 # "today". Knowledge articles use the per-article "updated" field instead.
-INDEX_LASTMOD = "2026-07-14"
+INDEX_LASTMOD = "2026-07-16"
 ETF_MARKET_LASTMOD = "2026-07-08"
 
 

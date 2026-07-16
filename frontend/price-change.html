@@ -511,6 +511,52 @@
             font-weight: 700;
             font-variant-numeric: tabular-nums;
         }
+        .pd-bar-chart-card {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            margin: 0 0 16px;
+            padding: 10px 10px 4px;
+            overflow: hidden;
+            background: var(--apple-surface-2);
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+        }
+        .pd-bar-chart-card.is-collapsed {
+            padding-bottom: 10px;
+        }
+        .pd-bar-chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+        .pd-bar-chart-title {
+            color: var(--apple-text-primary);
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .pd-bar-chart-toggle {
+            padding: 2px 8px;
+            border: 0;
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--apple-text-tertiary);
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .pd-bar-chart-toggle:hover {
+            background: var(--apple-overlay);
+            color: var(--apple-text-primary);
+        }
+        .pd-bar-chart-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .pd-bar-chart-scroll svg {
+            display: block;
+        }
         .download-preview {
             margin-top: 16px;
             border: 1px solid var(--apple-divider);
@@ -2003,7 +2049,10 @@
         <div class="pc-monthly">
             <div class="pc-monthly-header">
                 <span class="pc-chart-title" data-i18n="detail.title">涨跌详情</span>
+                <button class="pd-bar-chart-toggle" id="pdParamsToggle" type="button"
+                        aria-controls="pdParamsPanel" aria-expanded="true" data-i18n="detail.collapseParams">收起参数</button>
             </div>
+            <div id="pdParamsPanel">
             <div class="controls-bar" style="margin-bottom:12px;">
                 <div class="control-group">
                     <span class="control-label" data-i18n="yearly.symbolInput">统计代码</span>
@@ -2024,6 +2073,7 @@
                     <button id="pdQueryBtn" class="pc-btn primary" data-i18n="yearly.query">查询</button>
                 </div>
             </div>
+            </div>
             <div class="pc-error" id="pdError"></div>
             <div class="pc-loading" id="pdLoading" style="display:none;">
                 <div class="spinner"></div>
@@ -2036,6 +2086,14 @@
             </div>
             <div id="pdResult" style="display:none;">
                 <div class="pd-summary" id="pdSummary"></div>
+                <div class="pd-bar-chart-card" id="pdBarChartCard" style="display:none;">
+                    <div class="pd-bar-chart-header">
+                        <div class="pd-bar-chart-title" id="pdBarChartTitle"></div>
+                        <button class="pd-bar-chart-toggle" id="pdBarChartToggle" type="button"
+                                aria-controls="pdBarChart" aria-expanded="true" data-i18n="detail.collapseChart">收起</button>
+                    </div>
+                    <div class="pd-bar-chart-scroll" id="pdBarChart"></div>
+                </div>
                 <div class="pd-table-wrap">
                     <table class="pd-table">
                         <thead id="pdTableHead"></thead>

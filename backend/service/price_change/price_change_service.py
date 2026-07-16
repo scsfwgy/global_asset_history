@@ -730,6 +730,7 @@ def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None
         "source": series.source,
         "meta": _series_meta(clean_sym, clean_type, series),
         "years": years,
+        "monthly_returns": _compute_monthly_returns(series.timestamps, series.closes, year),
         "daily_rows": daily_rows,
         "stats": _build_monthly_stats(month_values),
         "summary": {

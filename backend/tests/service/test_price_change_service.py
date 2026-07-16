@@ -93,6 +93,26 @@ class TestFetchPriceHistory:
             svc.fetch_price_history("BTC", "crypto", "daily", "2024-01-03", "2024-01-02")
 
 
+class TestFetchReturnDetail:
+    """Return-detail chart data uses compounded period returns."""
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_selected_year_includes_monthly_returns(self, mock_fetch):
+        series = make_series(years=2)
+        mock_fetch.return_value = series
+        selected_year = max(int(year) for year in svc._compute_yearly_returns(
+            series.timestamps, series.closes
+        ))
+
+        result = svc.fetch_return_detail("btc", "crypto", selected_year)
+
+        assert result["mode"] == "daily"
+        assert result["monthly_returns"] == svc._compute_monthly_returns(
+            series.timestamps, series.closes, selected_year
+        )
+        assert [item["month"] for item in result["monthly_returns"]] == list(range(1, 13))
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Cache tests
 # ═══════════════════════════════════════════════════════════════════════════
