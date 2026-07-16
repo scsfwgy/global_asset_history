@@ -24,6 +24,18 @@
     var _lastSymbol = "";
     var _lastAssetType = "";
     var _expandedRowIdx = -1;    // currently expanded crash index
+    var _paramsCollapsed = false;
+
+    function setParamsCollapsed(collapsed) {
+        var panel = document.getElementById("crashParamsPanel");
+        var toggle = document.getElementById("crashParamsToggle");
+        _paramsCollapsed = Boolean(collapsed);
+        if (panel) panel.style.display = _paramsCollapsed ? "none" : "block";
+        if (toggle) {
+            toggle.textContent = __(_paramsCollapsed ? "detail.expandParams" : "detail.collapseParams");
+            toggle.setAttribute("aria-expanded", String(!_paramsCollapsed));
+        }
+    }
 
     /* ── Init ── */
     function init() {
@@ -31,6 +43,12 @@
         var defaultStart = new Date(2020, 0, 1); // 2020-01-01
         if (endInput) endInput.value = now.toISOString().slice(0, 10);
         if (startInput) startInput.value = defaultStart.toISOString().slice(0, 10);
+        var paramsToggle = document.getElementById("crashParamsToggle");
+        if (paramsToggle) {
+            paramsToggle.addEventListener("click", function () {
+                setParamsCollapsed(!_paramsCollapsed);
+            });
+        }
     }
 
     /* ── Run query ── */

@@ -20,6 +20,8 @@ let _sortDir = "desc"; // "asc" or "desc"
 let _lastFetchTime = null; // Date.now() of last successful data fetch
 let _lastFetchFn = null; // retry callback for the most recent fetch
 let _initialYearlyFetchDone = false;
+let _yearlyParamsCollapsed = false;
+let _btParamsCollapsed = false;
 const STORAGE_KEY = "gah_state";
 
 // ─── DOM refs ───
@@ -730,6 +732,28 @@ function isYearlyRoute() {
   return path === "/yearly";
 }
 
+function setYearlyParamsCollapsed(collapsed) {
+  var panel = $("pcYearlyParamsPanel");
+  var toggle = $("pcYearlyParamsToggle");
+  _yearlyParamsCollapsed = Boolean(collapsed);
+  if (panel) panel.style.display = _yearlyParamsCollapsed ? "none" : "block";
+  if (toggle) {
+    toggle.textContent = __(_yearlyParamsCollapsed ? "detail.expandParams" : "detail.collapseParams");
+    toggle.setAttribute("aria-expanded", String(!_yearlyParamsCollapsed));
+  }
+}
+
+function setBacktestParamsCollapsed(collapsed) {
+  var panel = $("btParamsPanel");
+  var toggle = $("btParamsToggle");
+  _btParamsCollapsed = Boolean(collapsed);
+  if (panel) panel.style.display = _btParamsCollapsed ? "none" : "block";
+  if (toggle) {
+    toggle.textContent = __(_btParamsCollapsed ? "detail.expandParams" : "detail.collapseParams");
+    toggle.setAttribute("aria-expanded", String(!_btParamsCollapsed));
+  }
+}
+
 async function init() {
   // Load config (presets + color range + color scheme)
   const cfg = await loadConfigFromServer();
@@ -756,6 +780,20 @@ async function init() {
   // CSV export button
   var csvBtn = $("pcExportCsv");
   if (csvBtn) csvBtn.addEventListener("click", exportCSV);
+
+  var paramsToggle = $("pcYearlyParamsToggle");
+  if (paramsToggle) {
+    paramsToggle.addEventListener("click", function () {
+      setYearlyParamsCollapsed(!_yearlyParamsCollapsed);
+    });
+  }
+
+  var btParamsToggle = $("btParamsToggle");
+  if (btParamsToggle) {
+    btParamsToggle.addEventListener("click", function () {
+      setBacktestParamsCollapsed(!_btParamsCollapsed);
+    });
+  }
 
   // Restore the controls immediately, but fetch only when the yearly panel is
   // actually being viewed.  A saved query must not run behind the heatmap home.

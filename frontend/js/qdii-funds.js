@@ -15,6 +15,7 @@
             status: "",
         },
         data: null,
+        paramsCollapsed: false,
     };
     var NUMERIC_SORT_COLUMNS = {
         daily_limit: true,
@@ -430,6 +431,17 @@
     function init() {
         var panel = $("tab-qdii-funds");
         if (!panel) return;
+
+        var paramsToggle = $("qdiiParamsToggle");
+        if (paramsToggle) {
+            paramsToggle.addEventListener("click", function () {
+                STATE.paramsCollapsed = !STATE.paramsCollapsed;
+                var paramsPanel = $("qdiiParamsPanel");
+                if (paramsPanel) paramsPanel.style.display = STATE.paramsCollapsed ? "none" : "block";
+                paramsToggle.textContent = __(STATE.paramsCollapsed ? "detail.expandParams" : "detail.collapseParams");
+                paramsToggle.setAttribute("aria-expanded", String(!STATE.paramsCollapsed));
+            });
+        }
 
         document.querySelectorAll("#qdiiFundsTabs .transfer-tab").forEach(function (btn) {
             btn.addEventListener("click", function () {
