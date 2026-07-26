@@ -420,6 +420,52 @@ class TestReturnDetailEndpoint:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# POST /api/price-change/stock-compare
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TestStockCompareEndpoint:
+    """POST /api/price-change/stock-compare"""
+
+    @patch("routes.price_change.fetch_stock_comparison")
+    def test_valid_request(self, mock_fetch, client):
+        mock_fetch.return_value = {
+            "symbols": ["AAPL", "MSFT"],
+            "years": [2024],
+            "currency": "USD",
+            "tax_rate": 30.0,
+            "metrics": ["combined_annualized"],
+            "data": {"2024": {}},
+            "meta": {},
+        }
+
+        resp = client.post(
+            f"{BASE}/stock-compare",
+            json={"symbols": ["AAPL", "MSFT"], "tax_rate": 30},
+        )
+
+        assert resp.status_code == 200
+        assert resp.get_json()["currency"] == "USD"
+        mock_fetch.assert_called_once_with(["AAPL", "MSFT"], 30)
+        track_coverage(MOD, 3)
+
+    @pytest.mark.parametrize("payload", [{}, {"symbols": "AAPL"}, {"symbols": []}])
+    def test_requires_symbols_list(self, payload, client):
+        resp = client.post(f"{BASE}/stock-compare", json=payload)
+        assert resp.status_code == 400
+        track_coverage(MOD, 1)
+
+    @patch("routes.price_change.fetch_stock_comparison")
+    def test_value_error_returns_400(self, mock_fetch, client):
+        mock_fetch.side_effect = ValueError("tax_rate must be between 0 and 100")
+        resp = client.post(
+            f"{BASE}/stock-compare",
+            json={"symbols": ["AAPL"], "tax_rate": 120},
+        )
+        assert resp.status_code == 400
+        track_coverage(MOD, 1)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # POST /api/price-change/backtest
 # ═══════════════════════════════════════════════════════════════════════════
 

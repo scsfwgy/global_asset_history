@@ -1033,6 +1033,140 @@ def _build_stock_history_tables(series: PriceSeries) -> Dict:
     }
 
 
+MAX_STOCK_COMPARE_SYMBOLS = 8
+STOCK_COMPARE_METRICS = (
+    "combined_annualized",
+    "annual_return",
+    "dividend_yield_after_tax",
+    "max_drawdown",
+)
+
+
+def _normalize_stock_compare_symbols(symbols: List) -> List[str]:
+    normalized = []
+    seen = set()
+    for entry in symbols:
+        value = entry.get("symbol", "") if isinstance(entry, dict) else entry
+        symbol = str(value or "").strip().upper()
+        if not symbol or symbol in seen:
+            continue
+        if len(symbol) > 20:
+            raise ValueError(f"symbol is too long: {symbol}")
+        seen.add(symbol)
+        normalized.append(symbol)
+    if not normalized:
+        raise ValueError("symbols list is required")
+    if len(normalized) > MAX_STOCK_COMPARE_SYMBOLS:
+        raise ValueError(f"at most {MAX_STOCK_COMPARE_SYMBOLS} symbols are allowed")
+    return normalized
+
+
+def _build_stock_comparison_symbol(
+    symbol: str,
+    tax_rate: float,
+) -> Tuple[str, Dict[int, Dict[str, Optional[float]]], Dict]:
+    series = _fetch_daily_series_cached(symbol, "stock")
+    meta = _series_meta(symbol, "stock", series)
+    if series.error:
+        return symbol, {}, meta
+
+    tables = _build_stock_history_tables(series)
+    rows: Dict[int, Dict[str, Optional[float]]] = {}
+    tax_multiplier = 1 - tax_rate / 100
+    for row in tables["rows"]:
+        annual_return = row.get("annual_return")
+        basis = row.get("dividend_yield_basis_price")
+        total_dividend = float(row.get("total_dividend_per_share") or 0)
+        dividend_yield = None
+        if basis is not None and float(basis) > 0:
+            dividend_yield = round(
+                total_dividend * tax_multiplier / float(basis) * 100,
+                4,
+            )
+        combined = None
+        if annual_return is not None and dividend_yield is not None:
+            combined = round(float(annual_return) + dividend_yield, 4)
+        rows[int(row["year"])] = {
+            "combined_annualized": combined,
+            "annual_return": annual_return,
+            "dividend_yield_after_tax": dividend_yield,
+            "max_drawdown": row.get("max_drawdown"),
+        }
+    if not rows and not meta["error"]:
+        meta["error"] = "insufficient data"
+    return symbol, rows, meta
+
+
+def fetch_stock_comparison(symbols: List, tax_rate: float = 30) -> Dict:
+    """Build a compact year × US-stock × metric comparison cube."""
+    normalized_symbols = _normalize_stock_compare_symbols(symbols)
+    try:
+        normalized_tax_rate = float(tax_rate)
+    except (TypeError, ValueError):
+        raise ValueError("tax_rate must be a number")
+    if not math.isfinite(normalized_tax_rate) or not 0 <= normalized_tax_rate <= 100:
+        raise ValueError("tax_rate must be between 0 and 100")
+
+    started_at = time.perf_counter()
+    logger.info(
+        "event=stock_comparison_start symbols=%s tax_rate=%s",
+        ",".join(normalized_symbols),
+        normalized_tax_rate,
+    )
+    fetched: Dict[str, Dict[int, Dict[str, Optional[float]]]] = {}
+    meta: Dict[str, Dict] = {}
+    worker_count = min(MAX_YEARLY_WORKERS, len(normalized_symbols))
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = [
+            executor.submit(_build_stock_comparison_symbol, symbol, normalized_tax_rate)
+            for symbol in normalized_symbols
+        ]
+        for future in as_completed(futures):
+            symbol, rows, symbol_meta = future.result()
+            fetched[symbol] = rows
+            meta[symbol] = symbol_meta
+
+    all_years = sorted(
+        {year for rows in fetched.values() for year in rows},
+        reverse=True,
+    )
+    data = {
+        str(year): {
+            symbol: fetched.get(symbol, {}).get(year, {})
+            for symbol in normalized_symbols
+        }
+        for year in all_years
+    }
+    ordered_meta = {
+        symbol: meta.get(symbol, {
+            "symbol": symbol,
+            "type": "stock",
+            "source": None,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "error": "not fetched",
+            "points": 0,
+        })
+        for symbol in normalized_symbols
+    }
+    error_count = sum(1 for item in ordered_meta.values() if item.get("error"))
+    logger.info(
+        "event=stock_comparison_complete symbols=%s years=%s errors=%s duration_ms=%.1f",
+        len(normalized_symbols),
+        len(all_years),
+        error_count,
+        (time.perf_counter() - started_at) * 1000,
+    )
+    return {
+        "symbols": normalized_symbols,
+        "years": all_years,
+        "currency": "USD",
+        "tax_rate": normalized_tax_rate,
+        "metrics": list(STOCK_COMPARE_METRICS),
+        "data": data,
+        "meta": ordered_meta,
+    }
+
+
 def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None) -> Dict:
     """Fetch single-symbol yearly/monthly return detail, or daily grid for a specific year."""
     clean_sym = symbol.strip().upper()

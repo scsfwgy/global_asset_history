@@ -268,7 +268,13 @@ KNOWLEDGE_LEGACY_PATHS = {
     for path, meta in KNOWLEDGE_ARTICLES.items()
     for legacy in meta.get("legacy_paths", [])
 }
-INDEXABLE_TOOL_PATHS = {"/yearly", "/detail", "/backtest", "/tools/qqq-return-calculator"}
+INDEXABLE_TOOL_PATHS = {
+    "/yearly",
+    "/detail",
+    "/stock-compare",
+    "/backtest",
+    "/tools/qqq-return-calculator",
+}
 INDEXABLE_PATHS = {
     "/", "/etf-market", "/knowledge",
     *INDEXABLE_TOOL_PATHS,
@@ -398,6 +404,7 @@ def serve_frontend_html(filename: str):
         seo_key = {
             "/yearly": "yearly",
             "/detail": "detail",
+            "/stock-compare": "stockCompare",
             "/backtest": "backtest",
             "/tools/qqq-return-calculator": "qqqCalculator",
         }[page_path]
@@ -788,6 +795,7 @@ def etf_market():
 
 @app.route("/yearly")
 @app.route("/detail")
+@app.route("/stock-compare")
 @app.route("/download")
 @app.route("/backtest")
 @app.route("/crash")
@@ -904,7 +912,7 @@ def visits_increment():
 # POST /api/track  body: {"type": "tab_view", "tab": "heatmap"}
 #                        {"type": "ad_click", "link": "value-investing"}
 #                        {"type": "settings_click"}
-_VALID_TABS = {"heatmap", "yearly", "detail", "download", "backtest", "crash",
+_VALID_TABS = {"heatmap", "yearly", "detail", "stock-compare", "download", "backtest", "crash",
                "etf", "qdii-funds", "vix", "knowledge", "wishes"}
 
 
@@ -982,7 +990,8 @@ def stats_dashboard():
     tab_rows = ""
     sorted_tabs = sorted(tab_stats.items(), key=lambda x: int(x[1]), reverse=True)
     tab_labels = {
-        "heatmap": "热力图", "yearly": "历年涨跌幅", "detail": "涨跌详情", "download": "数据下载",
+        "heatmap": "热力图", "yearly": "历年涨跌幅", "detail": "涨跌详情",
+        "stock-compare": "美股对比", "download": "数据下载",
         "backtest": "回测", "crash": "暴跌统计", "etf": "标普纳指ETF追踪（场内）",
         "qdii-funds": "标普纳指基金追踪（场外）", "vix": "VIX恐慌指数",
         "knowledge": "数据科普", "wishes": "心愿墙",

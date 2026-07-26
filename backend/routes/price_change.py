@@ -20,6 +20,7 @@ from service.price_change.price_change_service import (
     fetch_monthly_returns_batch,
     fetch_market_pulse,
     fetch_price_history,
+    fetch_stock_comparison,
     get_presets,
     get_color_range,
     get_color_scheme,
@@ -232,6 +233,23 @@ def get_return_detail():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.exception("Failed to fetch return detail: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@price_change_bp.route("/stock-compare", methods=["POST"])
+def stock_compare():
+    """Return a compact annual comparison cube for multiple US stocks."""
+    body = request.get_json(silent=True) or {}
+    symbols = body.get("symbols", [])
+    tax_rate = body.get("tax_rate", 30)
+    if not isinstance(symbols, list) or not symbols:
+        return jsonify({"error": "symbols list is required"}), 400
+    try:
+        return jsonify(fetch_stock_comparison(symbols, tax_rate))
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.exception("Failed to build stock comparison: %s", e)
         return jsonify({"error": str(e)}), 500
 
 

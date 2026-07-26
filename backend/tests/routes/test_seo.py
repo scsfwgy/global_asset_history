@@ -193,7 +193,7 @@ class TestHtmlMeta:
         assert 'data-kb-tab="nasdaq-etf"' in html
         assert '<link rel="canonical" href="https://test.local/zh/knowledge/nasdaq-etf-guide"' in html
 
-    @pytest.mark.parametrize("path", ["/yearly", "/detail", "/backtest"])
+    @pytest.mark.parametrize("path", ["/yearly", "/detail", "/stock-compare", "/backtest"])
     def test_indexable_tools_have_self_canonical_and_consistent_robots(self, client, path):
         resp = client.get(f"/en{path}")
         html = resp.get_data(as_text=True)
@@ -209,6 +209,43 @@ class TestHtmlMeta:
         assert '<a class="header-quick-link" href="/en/knowledge/value-investing"' in html
         assert '<a class="header-quick-link" href="/en/knowledge/how-to-buy-us-stocks"' in html
         assert "__LANG_PREFIX__" not in html
+
+    def test_stock_compare_has_search_tags_and_metric_tables(self, client):
+        html = client.get("/zh/stock-compare").get_data(as_text=True)
+        assert 'id="scSymbolInput"' in html
+        assert 'id="scSuggestions"' in html
+        assert 'id="scQuickPicks"' in html
+        assert 'id="scTags"' in html
+        assert 'id="scParamsToggle"' in html
+        assert 'id="scParamsPanel"' in html
+        assert 'id="scSummary"' not in html
+        assert 'id="scMetricGrid"' in html
+        table_ids = [
+            'id="scCombinedTable"',
+            'id="scDrawdownTable"',
+            'id="scDividendTable"',
+            'id="scReturnTable"',
+        ]
+        assert all(table_id in html for table_id in table_ids)
+        assert [html.index(table_id) for table_id in table_ids] == sorted(
+            html.index(table_id) for table_id in table_ids
+        )
+        assert 'id="scComboChart"' not in html
+
+        script = client.get("/js/stock-compare.js").get_data(as_text=True)
+        assert '["SPY", "QQQ", "SCHD", "VGT", "SMH", "AAPL", "GOOGL"]' in script
+        quick_symbols = [
+            '"SCHD"', '"SPY"', '"VOO"', '"QQQ"', '"QQQM"', '"VGT"', '"XLK"',
+            '"SMH"', '"SOXX"', '"AAPL"', '"MSFT"', '"GOOGL"', '"AMZN"', '"NVDA"',
+            '"META"', '"TSLA"',
+        ]
+        quick_start = script.index("var QUICK_SYMBOLS")
+        quick_end = script.index("];", quick_start)
+        quick_block = script[quick_start:quick_end]
+        assert [quick_block.index(symbol) for symbol in quick_symbols] == sorted(
+            quick_block.index(symbol) for symbol in quick_symbols
+        )
+        assert "if (!_loaded && !_loading) queryComparison();" not in script
 
     @pytest.mark.parametrize(
         "path,needle",

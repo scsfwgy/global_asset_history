@@ -7,6 +7,7 @@ const MONTHLY_ENDPOINT = `${API_BASE}/api/price-change/monthly`;
 const BATCH_MONTHLY_ENDPOINT = `${API_BASE}/api/price-change/monthly-batch`;
 const DAILY_ENDPOINT = `${API_BASE}/api/price-change/daily`;
 const DETAIL_ENDPOINT = `${API_BASE}/api/price-change/detail`;
+const STOCK_COMPARE_ENDPOINT = `${API_BASE}/api/price-change/stock-compare`;
 const HISTORY_DOWNLOAD_ENDPOINT = `${API_BASE}/api/price-change/history-download`;
 const BACKTEST_ENDPOINT = `${API_BASE}/api/price-change/backtest`;
 const CRASH_STATS_ENDPOINT = `${API_BASE}/api/price-change/crash-stats`;

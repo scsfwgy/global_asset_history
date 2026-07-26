@@ -888,6 +888,217 @@
             color: var(--apple-text-tertiary);
             white-space: nowrap;
         }
+        .sc-intro {
+            margin: 0 0 14px;
+            color: var(--apple-text-secondary);
+            font-size: 13px;
+            line-height: 1.65;
+        }
+        .sc-controls {
+            display: flex;
+            flex: 0 0 100%;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: end;
+        }
+        .sc-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            color: var(--apple-text-tertiary);
+            font-size: 12px;
+        }
+        .sc-symbol-search {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .sc-symbol-search .pc-symbol-input {
+            width: 180px;
+        }
+        .sc-symbol-search .pc-ac-dropdown {
+            left: 0;
+            right: auto;
+            width: min(340px, calc(100vw - 48px));
+        }
+        .sc-symbol-search .pc-ac-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100%;
+            border: 0;
+            color: var(--apple-text-primary);
+            font: inherit;
+            text-align: left;
+        }
+        .sc-tax-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sc-tax-wrap input {
+            width: 76px;
+            box-sizing: border-box;
+            height: 34px;
+            padding: 7px 8px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-sm);
+            background: var(--apple-surface-1);
+            color: var(--apple-text-primary);
+            text-align: right;
+            font: inherit;
+        }
+        .sc-quick-picks {
+            display: flex;
+            flex: 0 0 100%;
+            align-items: center;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 6px;
+            box-sizing: border-box;
+            margin: 12px 0 10px;
+            padding-top: 12px;
+            border-top: 1px solid var(--apple-divider);
+        }
+        .sc-quick-picks button {
+            font: inherit;
+        }
+        .sc-quick-heading {
+            color: var(--apple-text-primary);
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 4px;
+            white-space: nowrap;
+        }
+        .sc-quick-chip.selected {
+            border-color: color-mix(in srgb, var(--apple-blue) 42%, var(--apple-divider));
+            background: var(--apple-blue-soft);
+            color: var(--apple-blue);
+        }
+        .sc-tags {
+            flex: 0 0 100%;
+            margin-bottom: 0;
+        }
+        .sc-tag-name {
+            max-width: 130px;
+            overflow: hidden;
+            color: var(--apple-text-secondary);
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .sc-tag-remove {
+            display: inline-grid;
+            width: 18px;
+            height: 18px;
+            padding: 0;
+            border: 0;
+            border-radius: 50%;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            font: inherit;
+            line-height: 1;
+            place-items: center;
+        }
+        .sc-tag-remove:hover {
+            background: rgba(0, 113, 227, 0.15);
+        }
+        .sc-tags-empty {
+            color: var(--apple-text-tertiary);
+            font-size: 12px;
+        }
+        .sc-metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .sc-metric-card {
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            background: var(--apple-surface-1);
+            overflow: hidden;
+        }
+        .sc-metric-header {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--apple-divider);
+            background: var(--apple-surface-2);
+        }
+        .sc-metric-title {
+            margin: 0;
+            color: var(--apple-text-primary);
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .sc-metric-description {
+            margin: 4px 0 0;
+            color: var(--apple-text-tertiary);
+            font-size: 11px;
+            line-height: 1.5;
+        }
+        .sc-matrix-scroll {
+            max-height: 520px;
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+        .sc-matrix-table {
+            width: 100%;
+            min-width: 460px;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 12px;
+        }
+        .sc-matrix-table th,
+        .sc-matrix-table td {
+            padding: 8px 9px;
+            border-right: 1px solid var(--apple-divider);
+            border-bottom: 1px solid var(--apple-divider);
+            text-align: center;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+        .sc-matrix-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: var(--apple-surface-2);
+            color: var(--apple-text-secondary);
+            font-weight: 600;
+        }
+        .sc-matrix-table thead th:first-child,
+        .sc-matrix-table tbody th {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            background: var(--apple-surface-2);
+            color: var(--apple-text-primary);
+        }
+        .sc-matrix-table thead th:first-child {
+            z-index: 3;
+        }
+        .sc-matrix-table tr:last-child th,
+        .sc-matrix-table tr:last-child td {
+            border-bottom: 0;
+        }
+        .sc-matrix-table th:last-child,
+        .sc-matrix-table td:last-child {
+            border-right: 0;
+        }
+        .sc-matrix-note {
+            margin: 12px 0 0;
+            color: var(--apple-text-tertiary);
+            font-size: 11px;
+            line-height: 1.5;
+        }
+        .sc-warning {
+            margin: 0 0 12px;
+            padding: 9px 11px;
+            border: 1px solid color-mix(in srgb, var(--data-negative) 32%, transparent);
+            border-radius: var(--radius-sm);
+            color: var(--data-negative);
+            font-size: 12px;
+        }
         @media (max-width: 768px) {
             .pd-history-toolbar {
                 align-items: flex-start;
@@ -914,6 +1125,23 @@
             }
             .pd-controls #pdQueryBtn {
                 grid-column: 1 / -1;
+            }
+            .sc-controls {
+                align-items: stretch;
+                flex-direction: column;
+            }
+            .sc-symbol-search {
+                display: grid;
+                grid-template-columns: 1fr auto;
+            }
+            .sc-symbol-search .pc-symbol-input {
+                width: 100%;
+            }
+            .sc-controls > .pc-btn {
+                flex: 1;
+            }
+            .sc-metric-grid {
+                grid-template-columns: 1fr;
             }
             /* ponytail: phones can't hold 12 month columns; keep the heatmap
                table scrollable horizontally with tighter cell metrics instead
@@ -2197,6 +2425,7 @@
             <a class="tab-btn active" href="__LANG_PREFIX__/heatmap" data-tab="heatmap" data-i18n="tab.heatmap">热力图</a>
             <a class="tab-btn" href="__LANG_PREFIX__/yearly" data-tab="yearly" data-i18n="tab.yearlyReturns">历年涨跌幅</a>
             <a class="tab-btn" href="__LANG_PREFIX__/detail" data-tab="detail" data-i18n="tab.returnDetail">涨跌详情</a>
+            <a class="tab-btn" href="__LANG_PREFIX__/stock-compare" data-tab="stock-compare" data-i18n="tab.stockCompare">美股对比</a>
             <a class="tab-btn" href="__LANG_PREFIX__/backtest" data-tab="backtest" data-i18n="tab.backtest">回测</a>
             <a class="tab-btn" href="__LANG_PREFIX__/crash" data-tab="crash" data-i18n="tab.crashStats">暴跌统计</a>
             <a class="tab-btn" href="__LANG_PREFIX__/etf" data-tab="etf" data-i18n="tab.etfTracking">标普纳指ETF追踪（场内）</a>
@@ -2456,6 +2685,97 @@
             </div>
         </div>
         </div><!-- /tab-detail -->
+
+        <div class="tab-panel" id="tab-stock-compare">
+        <div class="pc-monthly">
+            <div class="pc-monthly-header">
+                <span class="pc-chart-title" data-i18n="stockCompare.title">美股对比</span>
+                <button class="pd-bar-chart-toggle" id="scParamsToggle" type="button"
+                        aria-controls="scParamsPanel" aria-expanded="true"
+                        data-i18n="detail.collapseParams">收起参数</button>
+            </div>
+            <p class="sc-intro" data-i18n="stockCompare.intro">将综合年化、涨跌幅、税后分红年化和最大回撤分成四张年度对比表；每张表均按年份和美股代码交叉展示。</p>
+            <div id="scParamsPanel">
+            <div class="controls-bar" style="margin-bottom:12px;">
+                <div class="sc-controls">
+                    <label class="sc-field">
+                        <span data-i18n="stockCompare.symbols">搜索并添加美股（2–8只）</span>
+                        <span class="sc-symbol-search" id="scSymbolSearch">
+                            <input type="text" id="scSymbolInput" class="pc-symbol-input" maxlength="20"
+                                   autocomplete="off" data-i18n-attr="placeholder|stockCompare.symbolsPlaceholder"
+                                   placeholder="代码或公司名称">
+                            <button id="scAddBtn" type="button" class="pc-btn primary" data-i18n="stockCompare.add">添加</button>
+                            <span class="pc-ac-dropdown" id="scSuggestions" style="display:none;"></span>
+                        </span>
+                    </label>
+                    <button id="scClearBtn" type="button" class="pc-btn danger" data-i18n="stockCompare.clear">清空</button>
+                    <label class="sc-field">
+                        <span data-i18n="stockCompare.taxRate">分红税率</span>
+                        <span class="sc-tax-wrap">
+                            <input type="number" id="scTaxRate" value="30" min="0" max="100" step="1" inputmode="decimal">
+                            <span>%</span>
+                        </span>
+                    </label>
+                    <button id="scQueryBtn" class="pc-btn primary" data-i18n="stockCompare.query">开始对比</button>
+                </div>
+                <div class="sc-quick-picks" id="scQuickPicks"></div>
+                <div class="pc-tags sc-tags" id="scTags"></div>
+            </div>
+            </div>
+            <div class="pc-error" id="scError"></div>
+            <div class="pc-loading" id="scLoading" style="display:none;">
+                <div class="spinner"></div>
+                <span data-i18n="stockCompare.fetching">正在获取美股历史数据...</span>
+            </div>
+            <div id="scEmpty" class="pc-empty">
+                <div style="font-size:32px;margin-bottom:8px;">▦</div>
+                <div data-i18n="stockCompare.emptyPrompt">选择至少两只美股后，点击“开始对比”加载历史数据</div>
+                <div class="pc-empty-hint" data-i18n="stockCompare.emptyHint">支持按代码或公司名称搜索，也可以使用快捷添加</div>
+            </div>
+            <div id="scResult" style="display:none;">
+                <div class="sc-warning" id="scWarnings" style="display:none;"></div>
+                <div class="sc-metric-grid" id="scMetricGrid">
+                    <section class="sc-metric-card">
+                        <div class="sc-metric-header">
+                            <h3 class="sc-metric-title" data-i18n="stockCompare.combinedAnnualized">综合年化</h3>
+                            <p class="sc-metric-description" data-i18n="stockCompare.combinedDescription">涨跌幅 + 税后分红年化</p>
+                        </div>
+                        <div class="sc-matrix-scroll">
+                            <table class="sc-matrix-table" id="scCombinedTable"><thead></thead><tbody></tbody></table>
+                        </div>
+                    </section>
+                    <section class="sc-metric-card">
+                        <div class="sc-metric-header">
+                            <h3 class="sc-metric-title" data-i18n="stockCompare.maxDrawdown">最大回撤</h3>
+                            <p class="sc-metric-description" data-i18n="stockCompare.drawdownDescription">每个自然年内从阶段高点到后续低点的最大跌幅</p>
+                        </div>
+                        <div class="sc-matrix-scroll">
+                            <table class="sc-matrix-table" id="scDrawdownTable"><thead></thead><tbody></tbody></table>
+                        </div>
+                    </section>
+                    <section class="sc-metric-card">
+                        <div class="sc-metric-header">
+                            <h3 class="sc-metric-title" data-i18n="stockCompare.dividendYieldAfterTax">分红年化（税后）</h3>
+                            <p class="sc-metric-description" data-i18n="stockCompare.dividendDescription">税后年度每股分红 ÷ 上年末收盘价</p>
+                        </div>
+                        <div class="sc-matrix-scroll">
+                            <table class="sc-matrix-table" id="scDividendTable"><thead></thead><tbody></tbody></table>
+                        </div>
+                    </section>
+                    <section class="sc-metric-card">
+                        <div class="sc-metric-header">
+                            <h3 class="sc-metric-title" data-i18n="stockCompare.annualReturn">涨跌幅</h3>
+                            <p class="sc-metric-description" data-i18n="stockCompare.returnDescription">按上年末至当年末收盘价计算，不含分红</p>
+                        </div>
+                        <div class="sc-matrix-scroll">
+                            <table class="sc-matrix-table" id="scReturnTable"><thead></thead><tbody></tbody></table>
+                        </div>
+                    </section>
+                </div>
+                <p class="sc-matrix-note" data-i18n="stockCompare.matrixNote">每张表的行是年份、列是美股代码；当年数据为年初至今，并非全年预测。</p>
+            </div>
+        </div>
+        </div><!-- /tab-stock-compare -->
 
         <div class="tab-panel" id="tab-download">
         <div class="pc-monthly">
@@ -5294,7 +5614,7 @@
         if (path.indexOf('/knowledge') === 0 || path.indexOf('/us-etf') === 0) return 'knowledge';
         if (path.indexOf('/tools/') === 0 || path === '/backtest') return 'backtest';
         var tab = path.split('/')[1];
-        return ['yearly', 'detail', 'download', 'crash', 'vix', 'wishes'].indexOf(tab) >= 0 ? tab : 'heatmap';
+        return ['yearly', 'detail', 'stock-compare', 'download', 'crash', 'vix', 'wishes'].indexOf(tab) >= 0 ? tab : 'heatmap';
       }
       function _trackVisit() {
         fetch('/api/visits/increment', {
@@ -5332,6 +5652,7 @@
     </script>
     <script src="/js/price-change.js"></script>
     <script src="/js/price-detail.js"></script>
+    <script src="/js/stock-compare.js"></script>
     <script src="/js/data-download.js"></script>
     <script src="/js/charts.js"></script>
     <script src="/js/drilldown.js"></script>
@@ -5564,6 +5885,7 @@
                 '/': 'heatmap',
                 '/yearly': 'yearly',
                 '/detail': 'detail',
+                '/stock-compare': 'stock-compare',
                 '/download': 'download',
                 '/backtest': 'backtest',
                 '/tools/qqq-return-calculator': 'backtest',
@@ -5600,6 +5922,7 @@
                 'heatmap': '/heatmap',
                 'yearly': '/yearly',
                 'detail': '/detail',
+                'stock-compare': '/stock-compare',
                 'download': '/download',
                 'backtest': '/backtest',
                 'crash': '/crash',
@@ -5743,6 +6066,11 @@
                     titleKey: 'seo.detailTitle',
                     descKey: 'seo.detailDescription',
                     canonical: '/detail'
+                },
+                'stock-compare': {
+                    titleKey: 'seo.stockCompareTitle',
+                    descKey: 'seo.stockCompareDescription',
+                    canonical: '/stock-compare'
                 },
                 'download': {
                     titleKey: 'seo.downloadTitle',
@@ -5911,6 +6239,9 @@
                 }
                 if (tabName === 'qdii-funds' && typeof window._qdiiFundsActivate === 'function') {
                     window._qdiiFundsActivate();
+                }
+                if (tabName === 'stock-compare' && typeof window._stockCompareActivate === 'function') {
+                    window._stockCompareActivate();
                 }
 
                 if (updateUrl && !isSameTab) {

@@ -343,6 +343,89 @@ class TestFetchReturnDetail:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Stock comparison
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TestFetchStockComparison:
+    """Compact annual comparison data for multiple US stocks."""
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_builds_year_symbol_metric_cube_with_after_tax_dividends(self, mock_fetch):
+        dates = [
+            datetime(2023, 12, 29, 12, tzinfo=timezone.utc),
+            datetime(2024, 1, 2, 12, tzinfo=timezone.utc),
+            datetime(2024, 2, 1, 12, tzinfo=timezone.utc),
+            datetime(2024, 12, 31, 12, tzinfo=timezone.utc),
+        ]
+        series = PriceSeries(
+            timestamps=[int(item.timestamp()) for item in dates],
+            closes=[100.0, 105.0, 90.0, 110.0],
+            raw_closes=[200.0, 210.0, 180.0, 220.0],
+            source="yahoo",
+            fetched_at=dates[-1].timestamp(),
+            dividends=[
+                {
+                    "timestamp": int(datetime(2024, 3, 1, tzinfo=timezone.utc).timestamp()),
+                    "amount": 0.25,
+                },
+                {
+                    "timestamp": int(datetime(2024, 6, 1, tzinfo=timezone.utc).timestamp()),
+                    "amount": 0.3,
+                },
+            ],
+        )
+        mock_fetch.return_value = series
+
+        result = svc.fetch_stock_comparison(["aapl", "MSFT", "AAPL"], 30)
+
+        assert result["symbols"] == ["AAPL", "MSFT"]
+        assert result["currency"] == "USD"
+        assert result["tax_rate"] == 30.0
+        assert result["metrics"] == [
+            "combined_annualized",
+            "annual_return",
+            "dividend_yield_after_tax",
+            "max_drawdown",
+        ]
+        assert result["years"] == [2024, 2023]
+        assert result["data"]["2024"]["AAPL"] == {
+            "combined_annualized": 10.1925,
+            "annual_return": 10.0,
+            "dividend_yield_after_tax": 0.1925,
+            "max_drawdown": -14.29,
+        }
+        assert result["data"]["2023"]["AAPL"]["combined_annualized"] is None
+        assert result["meta"]["MSFT"]["source"] == "yahoo"
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_keeps_partial_failures_in_meta(self, mock_fetch):
+        good = make_series(years=2)
+        bad = PriceSeries(
+            timestamps=[],
+            closes=[],
+            source="yahoo",
+            fetched_at=time.time(),
+            error="not found",
+        )
+        mock_fetch.side_effect = lambda symbol, _asset_type: bad if symbol == "BAD" else good
+
+        result = svc.fetch_stock_comparison(["AAPL", "BAD"])
+
+        assert result["data"]
+        assert result["meta"]["AAPL"]["error"] is None
+        assert result["meta"]["BAD"]["error"] == "not found"
+
+    @pytest.mark.parametrize("tax_rate", [-1, 101, "abc", float("nan")])
+    def test_rejects_invalid_tax_rate(self, tax_rate):
+        with pytest.raises(ValueError, match="tax_rate"):
+            svc.fetch_stock_comparison(["AAPL"], tax_rate)
+
+    def test_rejects_more_than_eight_symbols(self):
+        with pytest.raises(ValueError, match="at most 8"):
+            svc.fetch_stock_comparison([f"S{i}" for i in range(9)])
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Cache tests
 # ═══════════════════════════════════════════════════════════════════════════
 
