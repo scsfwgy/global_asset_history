@@ -150,6 +150,120 @@ class TestFetchReturnDetail:
         assert february["max_daily_loss"] == {"date": "2024-02-01", "return": -20.0}
 
     @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_stock_detail_includes_combined_history_table(self, mock_fetch):
+        dates = [
+            datetime(2023, 12, 29, 12, tzinfo=timezone.utc),
+            datetime(2024, 1, 2, 12, tzinfo=timezone.utc),
+            datetime(2024, 2, 1, 12, tzinfo=timezone.utc),
+            datetime(2024, 12, 31, 12, tzinfo=timezone.utc),
+        ]
+        mock_fetch.return_value = PriceSeries(
+            timestamps=[int(item.timestamp()) for item in dates],
+            closes=[100.0, 120.0, 90.0, 125.0],
+            source="test",
+            fetched_at=dates[-1].timestamp(),
+            raw_closes=[200.0, 210.0, 180.0, 220.0],
+            dividends=[
+                {
+                    "timestamp": int(datetime(2024, 3, 1, tzinfo=timezone.utc).timestamp()),
+                    "amount": 0.25,
+                },
+                {
+                    "timestamp": int(datetime(2024, 6, 1, tzinfo=timezone.utc).timestamp()),
+                    "amount": 0.3,
+                },
+            ],
+        )
+
+        result = svc.fetch_return_detail("AAPL", "stock")
+
+        row = next(
+            row for row in result["stock_tables"]["rows"] if row["year"] == 2024
+        )
+        assert row == {
+            "year": 2024,
+            "annual_return": 10.0,
+            "max_drawdown": -14.29,
+            "max_runup": 22.22,
+            "payment_count": 2,
+            "dividend_payments": [
+                {"date": "2024-03-01", "amount": 0.25},
+                {"date": "2024-06-01", "amount": 0.3},
+            ],
+            "total_dividend_per_share": 0.55,
+            "dividend_yield_basis_price": 200.0,
+        }
+        assert result["stock_tables"]["return_basis"] == "raw_close"
+        assert result["stock_tables"]["dividend_yield_basis"] == "previous_year_end_close"
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_non_stock_detail_omits_stock_history_tables(self, mock_fetch):
+        mock_fetch.return_value = make_series(years=2)
+
+        result = svc.fetch_return_detail("BTC", "crypto")
+
+        assert result["stock_tables"] is None
+
+    def test_yearly_drawdown_resets_peak_each_calendar_year(self):
+        dates = [
+            datetime(2023, 1, 2, tzinfo=timezone.utc),
+            datetime(2023, 6, 1, tzinfo=timezone.utc),
+            datetime(2023, 12, 29, tzinfo=timezone.utc),
+            datetime(2024, 1, 2, tzinfo=timezone.utc),
+            datetime(2024, 2, 1, tzinfo=timezone.utc),
+        ]
+
+        rows = svc._compute_yearly_drawdowns(
+            [int(item.timestamp()) for item in dates],
+            [200.0, 100.0, 150.0, 120.0, 108.0],
+        )
+
+        assert rows == [
+            {
+                "year": 2024,
+                "max_drawdown": -10.0,
+                "peak_date": "2024-01-02",
+                "trough_date": "2024-02-01",
+            },
+            {
+                "year": 2023,
+                "max_drawdown": -50.0,
+                "peak_date": "2023-01-02",
+                "trough_date": "2023-06-01",
+            },
+        ]
+
+    def test_yearly_runup_resets_trough_each_calendar_year(self):
+        dates = [
+            datetime(2023, 1, 2, tzinfo=timezone.utc),
+            datetime(2023, 6, 1, tzinfo=timezone.utc),
+            datetime(2023, 12, 29, tzinfo=timezone.utc),
+            datetime(2024, 1, 2, tzinfo=timezone.utc),
+            datetime(2024, 2, 1, tzinfo=timezone.utc),
+            datetime(2024, 3, 1, tzinfo=timezone.utc),
+        ]
+
+        rows = svc._compute_yearly_runups(
+            [int(item.timestamp()) for item in dates],
+            [100.0, 80.0, 120.0, 200.0, 150.0, 180.0],
+        )
+
+        assert rows == [
+            {
+                "year": 2024,
+                "max_runup": 20.0,
+                "trough_date": "2024-02-01",
+                "peak_date": "2024-03-01",
+            },
+            {
+                "year": 2023,
+                "max_runup": 50.0,
+                "trough_date": "2023-06-01",
+                "peak_date": "2023-12-29",
+            },
+        ]
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
     def test_daily_extreme_ties_keep_first_occurrence(self, mock_fetch):
         dates = [
             datetime(2023, 12, 29, 12, tzinfo=timezone.utc),
@@ -302,6 +416,18 @@ class TestCache:
         result = svc._deserialize_series(svc._serialize_series(series))
         assert result is not None
         assert result.raw_closes == [100.0]
+
+    def test_serialize_roundtrip_preserves_dividends(self):
+        series = PriceSeries(
+            timestamps=[1],
+            closes=[50.0],
+            source="test",
+            fetched_at=time.time(),
+            dividends=[{"timestamp": 1, "amount": 0.25}],
+        )
+        result = svc._deserialize_series(svc._serialize_series(series))
+        assert result is not None
+        assert result.dividends == [{"timestamp": 1, "amount": 0.25}]
 
     def test_deserialize_bad_data(self):
         """Corrupt serialized data should return None gracefully."""

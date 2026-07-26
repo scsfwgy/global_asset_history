@@ -8,6 +8,7 @@
   var _paramsCollapsed = false;
   var _barChartHeight = 220;
   var _lastBarChartResult = null;
+  var _lastStockHistoryResult = null;
   var _resizeRenderFrame = null;
 
   function escapeHtml(value) {
@@ -40,6 +41,14 @@
       minimumFractionDigits: 0,
       maximumFractionDigits: digits,
     }).format(num);
+  }
+
+  function formatDividend(value) {
+    if (value == null || !Number.isFinite(Number(value))) return "—";
+    return "$" + new Intl.NumberFormat(document.documentElement.lang || undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 6,
+    }).format(Number(value));
   }
 
   function cellColor(value, min, max) {
@@ -246,6 +255,79 @@
     summaryEl.innerHTML = cards.map(function (pair) {
       return '<div class="pd-summary-card"><div class="pd-summary-label">' + escapeHtml(pair[0]) + '</div><div class="pd-summary-value">' + pair[1] + '</div></div>';
     }).join("");
+  }
+
+  function hideStockHistory() {
+    var section = $("pdStockHistory");
+    if (section) section.style.display = "none";
+    _lastStockHistoryResult = null;
+  }
+
+  function getDividendTaxRate() {
+    var input = $("pdDividendTaxRate");
+    var rawValue = input?.value;
+    if (rawValue == null || String(rawValue).trim() === "") return 30;
+    var value = Number(rawValue);
+    if (!Number.isFinite(value)) return 30;
+    return Math.max(0, Math.min(100, value));
+  }
+
+  function renderStockHistory(result) {
+    var section = $("pdStockHistory");
+    var body = $("pdStockHistoryBody");
+    var tables = result && result.stock_tables;
+    if (!section || !body) return;
+    if (result.type !== "stock" || !tables) {
+      hideStockHistory();
+      return;
+    }
+    _lastStockHistoryResult = result;
+
+    var range = getColorRange();
+    var taxRate = getDividendTaxRate();
+    var rows = (tables.rows || []).map(function (row) {
+      var totalDividend = Number(row.total_dividend_per_share) || 0;
+      var afterTaxDividend = totalDividend * (1 - taxRate / 100);
+      var dividendBasis = Number(row.dividend_yield_basis_price);
+      var dividendYieldAfterTax = Number.isFinite(dividendBasis) && dividendBasis > 0
+        ? afterTaxDividend / dividendBasis * 100
+        : null;
+      var combinedAnnualized = row.annual_return != null && dividendYieldAfterTax != null
+        ? Number(row.annual_return) + dividendYieldAfterTax
+        : null;
+      var combinedColor = cellColor(combinedAnnualized, range.min, range.max);
+      var returnColor = cellColor(row.annual_return, range.min, range.max);
+      var dividendYieldColor = cellColor(dividendYieldAfterTax, range.min, range.max);
+      var drawdownColor = cellColor(row.max_drawdown, range.min, range.max);
+      var runupColor = cellColor(row.max_runup, range.min, range.max);
+      var payments = (row.dividend_payments || []).map(function (payment) {
+        return '<div class="pd-dividend-payment">'
+          + escapeHtml(payment.date) + " · " + escapeHtml(formatDividend(payment.amount))
+          + '</div>';
+      }).join("");
+      return '<tr><td>' + escapeHtml(row.year) + '</td><td style="background:'
+        + combinedColor.bg + ';color:' + combinedColor.text + ';font-weight:700;">'
+        + escapeHtml(formatPct(combinedAnnualized)) + '</td><td style="background:'
+        + returnColor.bg + ';color:' + returnColor.text + ';font-weight:600;">'
+        + escapeHtml(formatPct(row.annual_return)) + '</td><td style="background:'
+        + dividendYieldColor.bg + ';color:' + dividendYieldColor.text + ';font-weight:600;">'
+        + escapeHtml(formatPct(dividendYieldAfterTax)) + '</td><td style="background:'
+        + drawdownColor.bg + ';color:' + drawdownColor.text + ';font-weight:600;">'
+        + escapeHtml(formatPct(row.max_drawdown)) + '</td><td style="background:'
+        + runupColor.bg + ';color:' + runupColor.text
+        + ';font-weight:600;">' + escapeHtml(formatPct(row.max_runup))
+        + '</td><td>' + escapeHtml(row.payment_count || 0)
+        + '</td><td>' + (payments || "—")
+        + '</td><td style="font-weight:600;">' + escapeHtml(formatDividend(totalDividend))
+        + '</td><td style="font-weight:600;">' + escapeHtml(formatDividend(afterTaxDividend))
+        + '</td></tr>';
+    });
+    body.innerHTML = rows.length
+      ? rows.join("")
+      : '<tr><td class="pd-history-empty" colspan="10">'
+        + escapeHtml(__("detail.noHistoryData")) + '</td></tr>';
+
+    section.style.display = "block";
   }
 
   function barChartPoints(result) {
@@ -617,6 +699,7 @@
     showError(null);
     setLoading(true);
     setResultVisible(false);
+    hideStockHistory();
 
     try {
       var body = { symbol: symbol, type: type };
@@ -638,6 +721,7 @@
       } else {
         renderYearlyTable(result);
       }
+      renderStockHistory(result);
       setResultVisible(true);
     } catch (err) {
       showError(__("detail.errorRequest") + " " + err.message);
@@ -663,6 +747,8 @@
   function init() {
     var btn = $("pdQueryBtn");
     var input = $("pdSymbolInput");
+    var typeSelect = $("pdTypeSelect");
+    var dividendTaxInput = $("pdDividendTaxRate");
     if (!btn || !input) return;
     restoreState();
     var params = new URLSearchParams(window.location.search);
@@ -672,6 +758,29 @@
       if ($("pdTypeSelect") && params.get("type")) $("pdTypeSelect").value = params.get("type");
     }
     btn.addEventListener("click", queryDetail);
+    if (typeSelect) {
+      typeSelect.addEventListener("change", function () {
+        if (typeSelect.value !== "stock") hideStockHistory();
+      });
+    }
+    if (dividendTaxInput) {
+      try {
+        var savedTaxRate = localStorage.getItem("gah_dividend_tax_rate");
+        if (savedTaxRate != null && savedTaxRate !== "") {
+          dividendTaxInput.value = savedTaxRate;
+        }
+      } catch (_) {}
+      dividendTaxInput.addEventListener("input", function () {
+        var taxRate = getDividendTaxRate();
+        try {
+          localStorage.setItem("gah_dividend_tax_rate", String(taxRate));
+        } catch (_) {}
+        if (_lastStockHistoryResult) renderStockHistory(_lastStockHistoryResult);
+      });
+      dividendTaxInput.addEventListener("change", function () {
+        dividendTaxInput.value = String(getDividendTaxRate());
+      });
+    }
     var chartToggle = $("pdBarChartToggle");
     if (chartToggle) {
       chartToggle.addEventListener("click", function () {

@@ -1,6 +1,7 @@
 """Market data fetchers for stocks, crypto, and China A-share indices."""
 
 import logging
+import math
 import time
 from datetime import date, datetime, timedelta, timezone
 from typing import Dict, List
@@ -22,6 +23,28 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Stock fetcher — Yahoo Finance
 # ---------------------------------------------------------------------------
+
+def _parse_yahoo_dividends(result: Dict) -> List[Dict]:
+    """Normalize Yahoo chart dividend events into timestamp/amount pairs."""
+    raw_events = result.get("events", {}).get("dividends", {})
+    if not isinstance(raw_events, dict):
+        return []
+
+    dividends = []
+    for event_key, event in raw_events.items():
+        if not isinstance(event, dict):
+            continue
+        try:
+            timestamp = int(event.get("date", event_key))
+            amount = float(event["amount"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if timestamp <= 0 or not math.isfinite(amount) or amount <= 0:
+            continue
+        dividends.append({"timestamp": timestamp, "amount": amount})
+    dividends.sort(key=lambda item: item["timestamp"])
+    return dividends
+
 
 def _fetch_stock(symbol: str) -> Dict[str, float]:
     """Fetch yearly returns for a stock symbol.
@@ -113,7 +136,12 @@ def _fetch_daily_series_stock_direct(symbol: str) -> PriceSeries:
     try:
         resp = _session.get(
             f"{YAHOO_BASE}/{symbol}",
-            params={"period1": 0, "period2": int(time.time()), "interval": "1d"},
+            params={
+                "period1": 0,
+                "period2": int(time.time()),
+                "interval": "1d",
+                "events": "div,splits",
+            },
             timeout=REQUEST_TIMEOUT,
         )
         resp.raise_for_status()
@@ -136,6 +164,7 @@ def _fetch_daily_series_stock_direct(symbol: str) -> PriceSeries:
         highs = quote.get("high")
         lows = quote.get("low")
         volumes = quote.get("volume")
+        dividends = _parse_yahoo_dividends(result)
     except (KeyError, IndexError, TypeError) as e:
         logger.error("Unexpected Yahoo response for %s", symbol)
         return empty_series("yahoo", f"unexpected response: {e}")
@@ -151,6 +180,7 @@ def _fetch_daily_series_stock_direct(symbol: str) -> PriceSeries:
         lows=lows,
         volumes=volumes,
         raw_closes=raw_closes,
+        dividends=dividends,
     )
 
 
@@ -172,6 +202,16 @@ def _fetch_daily_series_stock_yfinance(symbol: str) -> PriceSeries:
         highs = hist["High"].tolist() if "High" in hist.columns else None
         lows = hist["Low"].tolist() if "Low" in hist.columns else None
         volumes = hist["Volume"].tolist() if "Volume" in hist.columns else None
+        dividends = []
+        if "Dividends" in hist.columns:
+            for event_date, amount in hist["Dividends"].items():
+                try:
+                    numeric_amount = float(amount)
+                    timestamp = int(event_date.timestamp())
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                if math.isfinite(numeric_amount) and numeric_amount > 0:
+                    dividends.append({"timestamp": timestamp, "amount": numeric_amount})
         return series_from_points(
             timestamps,
             closes,
@@ -181,6 +221,7 @@ def _fetch_daily_series_stock_yfinance(symbol: str) -> PriceSeries:
             lows=lows,
             volumes=volumes,
             raw_closes=raw_closes,
+            dividends=dividends,
         )
     except Exception as e:
         logger.error("yfinance daily fetch failed for %s: %s", symbol, e)

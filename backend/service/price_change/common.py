@@ -59,6 +59,9 @@ class PriceSeries:
     # CoinGecko OHLC does NOT include volume.
     volumes: Optional[List[Optional[float]]] = None
     raw_closes: Optional[List[Optional[float]]] = None
+    # Cash distributions aligned by their own event timestamps rather than the
+    # price arrays. Each item is {"timestamp": int, "amount": float}.
+    dividends: Optional[List[Dict]] = None
 
 
 def empty_series(source: Optional[str] = None, error: Optional[str] = None) -> PriceSeries:
@@ -74,7 +77,8 @@ def series_from_points(
     lows: Optional[List[Optional[float]]] = None,
     volumes: Optional[List[Optional[float]]] = None,
     raw_closes: Optional[List[Optional[float]]] = None,
+    dividends: Optional[List[Dict]] = None,
 ) -> PriceSeries:
     return PriceSeries(timestamps, closes, source, time.time(),
                        opens=opens, highs=highs, lows=lows, volumes=volumes,
-                       raw_closes=raw_closes)
+                       raw_closes=raw_closes, dividends=dividends)

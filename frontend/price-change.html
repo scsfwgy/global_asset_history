@@ -758,6 +758,111 @@
         .pd-stat-col {
             border-left: 2px solid var(--apple-divider) !important;
         }
+        .pd-stock-history {
+            margin-top: 18px;
+        }
+        .pd-stock-history-note {
+            margin: 0 0 10px;
+            color: var(--apple-text-tertiary);
+            font-size: 11px;
+            line-height: 1.5;
+        }
+        .pd-history-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--apple-divider);
+            background: var(--apple-surface-2);
+        }
+        .pd-history-title {
+            color: var(--apple-text-primary);
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .pd-history-tax {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--apple-text-secondary);
+            font-size: 12px;
+        }
+        .pd-history-tax input {
+            width: 68px;
+            box-sizing: border-box;
+            padding: 5px 7px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-sm);
+            background: var(--apple-surface-1);
+            color: var(--apple-text-primary);
+            text-align: right;
+            font: inherit;
+        }
+        .pd-history-card {
+            min-width: 0;
+            overflow: hidden;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            background: var(--apple-surface-1);
+        }
+        .pd-history-scroll {
+            max-height: 560px;
+            overflow: auto;
+        }
+        .pd-history-table {
+            width: 100%;
+            min-width: 1480px;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 12px;
+        }
+        .pd-history-table th,
+        .pd-history-table td {
+            padding: 8px 10px;
+            border-right: 1px solid var(--apple-divider);
+            border-bottom: 1px solid var(--apple-divider);
+            text-align: center;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+        .pd-history-table th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: var(--apple-surface-2);
+            color: var(--apple-text-secondary);
+            font-weight: 600;
+        }
+        .pd-history-table th:first-child,
+        .pd-history-table td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            background: var(--apple-surface-2);
+            color: var(--apple-text-primary);
+            font-weight: 600;
+        }
+        .pd-history-table th:first-child {
+            z-index: 3;
+        }
+        .pd-history-table th:last-child,
+        .pd-history-table td:last-child {
+            border-right: 0;
+        }
+        .pd-history-table tr:last-child td {
+            border-bottom: 0;
+        }
+        .pd-history-empty {
+            color: var(--apple-text-tertiary);
+        }
+        .pd-history-period {
+            color: var(--apple-text-secondary);
+        }
+        .pd-dividend-payment {
+            line-height: 1.55;
+        }
         .pd-legend {
             display: flex;
             gap: 8px;
@@ -784,6 +889,10 @@
             white-space: nowrap;
         }
         @media (max-width: 768px) {
+            .pd-history-toolbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
             .pd-controls {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -2313,6 +2422,36 @@
                         <thead id="pdTableHead"></thead>
                         <tbody id="pdTableBody"></tbody>
                     </table>
+                </div>
+                <div class="pd-stock-history" id="pdStockHistory" style="display:none;">
+                    <p class="pd-stock-history-note" data-i18n="detail.stockHistoryNote">仅美股展示；综合年化 = 涨跌幅 + 税后分红年化，税后分红年化按上年末收盘价计算。</p>
+                    <div class="pd-history-card">
+                        <div class="pd-history-toolbar">
+                            <div class="pd-history-title" data-i18n="detail.stockHistoryTitle">美股年度综合数据</div>
+                            <label class="pd-history-tax">
+                                <span data-i18n="detail.dividendTaxRate">分红税率</span>
+                                <input type="number" id="pdDividendTaxRate" value="30" min="0" max="100" step="1" inputmode="decimal">
+                                <span>%</span>
+                            </label>
+                        </div>
+                        <div class="pd-history-scroll">
+                            <table class="pd-history-table">
+                                <thead><tr>
+                                    <th data-i18n="yearly.colYear">年份</th>
+                                    <th data-i18n="detail.combinedAnnualized">综合年化</th>
+                                    <th data-i18n="detail.annualReturn">涨跌幅</th>
+                                    <th data-i18n="detail.dividendYieldAfterTax">分红年化（税后）</th>
+                                    <th data-i18n="detail.maxDrawdown">最大回撤</th>
+                                    <th data-i18n="detail.maxRunup">最大涨幅</th>
+                                    <th data-i18n="detail.paymentCount">分红次数</th>
+                                    <th data-i18n="detail.dividendPayments">每次分红（日期 / 金额）</th>
+                                    <th data-i18n="detail.totalDividend">年度总分红</th>
+                                    <th data-i18n="detail.afterTaxDividend">年度总分红 / 股（税后）</th>
+                                </tr></thead>
+                                <tbody id="pdStockHistoryBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

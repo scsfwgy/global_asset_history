@@ -61,9 +61,9 @@ def _cache_ttl(series: PriceSeries) -> int:
 
 
 # Bump this whenever the cached PriceSeries shape changes, so old entries (which
-# lack new fields) are abandoned instead of served stale. v4 added raw closes
-# so adjusted stock OHLC candles can use one consistent price basis.
-_CACHE_SCHEMA_VERSION = "v4"
+# lack new fields) are abandoned instead of served stale. v5 adds dividend
+# events used by the stock-only history tables in Return Detail.
+_CACHE_SCHEMA_VERSION = "v5"
 
 
 def _redis_key(symbol: str, asset_type: str) -> str:
@@ -836,6 +836,203 @@ def _with_chart_detail(item: Dict, extremes: Optional[Dict], candle: Optional[Di
     return result
 
 
+def _compute_yearly_drawdowns(
+    timestamps: List[int],
+    closes: List[Optional[float]],
+) -> List[Dict]:
+    """Compute the deepest peak-to-trough decline within each calendar year."""
+    points_by_year: Dict[int, List[Tuple[date, float]]] = {}
+    for timestamp, close in zip(timestamps, closes):
+        if close is None:
+            continue
+        try:
+            numeric_close = float(close)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(numeric_close) or numeric_close <= 0:
+            continue
+        point_date = datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
+        points_by_year.setdefault(point_date.year, []).append((point_date, numeric_close))
+
+    rows = []
+    for year in sorted(points_by_year, reverse=True):
+        points = sorted(points_by_year[year], key=lambda point: point[0])
+        peak_date, peak_close = points[0]
+        max_drawdown = 0.0
+        max_peak_date = None
+        trough_date = None
+
+        for point_date, close in points[1:]:
+            if close > peak_close:
+                peak_date, peak_close = point_date, close
+                continue
+            drawdown = (close / peak_close - 1) * 100
+            if drawdown < max_drawdown:
+                max_drawdown = drawdown
+                max_peak_date = peak_date
+                trough_date = point_date
+
+        rows.append({
+            "year": year,
+            "max_drawdown": round(max_drawdown, 2),
+            "peak_date": max_peak_date.isoformat() if max_peak_date else None,
+            "trough_date": trough_date.isoformat() if trough_date else None,
+        })
+    return rows
+
+
+def _compute_yearly_runups(
+    timestamps: List[int],
+    closes: List[Optional[float]],
+) -> List[Dict]:
+    """Compute the largest trough-to-peak gain within each calendar year."""
+    points_by_year: Dict[int, List[Tuple[date, float]]] = {}
+    for timestamp, close in zip(timestamps, closes):
+        if close is None:
+            continue
+        try:
+            numeric_close = float(close)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(numeric_close) or numeric_close <= 0:
+            continue
+        point_date = datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
+        points_by_year.setdefault(point_date.year, []).append((point_date, numeric_close))
+
+    rows = []
+    for year in sorted(points_by_year, reverse=True):
+        points = sorted(points_by_year[year], key=lambda point: point[0])
+        trough_date, trough_close = points[0]
+        max_runup = 0.0
+        max_trough_date = None
+        peak_date = None
+
+        for point_date, close in points[1:]:
+            if close < trough_close:
+                trough_date, trough_close = point_date, close
+                continue
+            runup = (close / trough_close - 1) * 100
+            if runup > max_runup:
+                max_runup = runup
+                max_trough_date = trough_date
+                peak_date = point_date
+
+        rows.append({
+            "year": year,
+            "max_runup": round(max_runup, 2),
+            "trough_date": max_trough_date.isoformat() if max_trough_date else None,
+            "peak_date": peak_date.isoformat() if peak_date else None,
+        })
+    return rows
+
+
+def _compute_yearly_dividends(dividends: Optional[List[Dict]]) -> List[Dict]:
+    """Group cash distributions by ex-dividend calendar year."""
+    grouped: Dict[int, Dict] = {}
+    for event in dividends or []:
+        try:
+            timestamp = int(event["timestamp"])
+            amount = float(event["amount"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if timestamp <= 0 or not math.isfinite(amount) or amount <= 0:
+            continue
+        event_date = datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
+        year = event_date.year
+        item = grouped.setdefault(
+            year,
+            {"dividend_per_share": 0.0, "payment_count": 0, "payments": []},
+        )
+        item["dividend_per_share"] = float(item["dividend_per_share"]) + amount
+        item["payment_count"] = int(item["payment_count"]) + 1
+        item["payments"].append({
+            "date": event_date.isoformat(),
+            "amount": round(amount, 6),
+        })
+
+    return [
+        {
+            "year": year,
+            "dividend_per_share": round(float(grouped[year]["dividend_per_share"]), 6),
+            "payment_count": int(grouped[year]["payment_count"]),
+            "payments": sorted(grouped[year]["payments"], key=lambda payment: payment["date"]),
+        }
+        for year in sorted(grouped, reverse=True)
+    ]
+
+
+def _build_stock_history_tables(series: PriceSeries) -> Dict:
+    """Build the combined stock-only annual table shown below Return Detail."""
+    price_closes = (
+        series.raw_closes
+        if series.raw_closes and len(series.raw_closes) == len(series.timestamps)
+        else series.closes
+    )
+    returns_by_year = {
+        int(year): value
+        for year, value in _compute_yearly_returns(series.timestamps, price_closes).items()
+    }
+    year_end_closes: Dict[int, float] = {}
+    for timestamp, close in zip(series.timestamps, price_closes):
+        if close is None:
+            continue
+        try:
+            numeric_close = float(close)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(numeric_close) or numeric_close <= 0:
+            continue
+        year = datetime.fromtimestamp(timestamp, tz=timezone.utc).year
+        year_end_closes[year] = numeric_close
+    sorted_price_years = sorted(year_end_closes)
+    dividend_basis_by_year = {
+        year: year_end_closes[sorted_price_years[index - 1]]
+        for index, year in enumerate(sorted_price_years)
+        if index
+    }
+    drawdowns_by_year = {
+        row["year"]: row
+        for row in _compute_yearly_drawdowns(series.timestamps, price_closes)
+    }
+    runups_by_year = {
+        row["year"]: row
+        for row in _compute_yearly_runups(series.timestamps, price_closes)
+    }
+    dividends_by_year = {
+        row["year"]: row
+        for row in _compute_yearly_dividends(series.dividends)
+    }
+    all_years = sorted(
+        set(returns_by_year) | set(drawdowns_by_year) | set(runups_by_year) | set(dividends_by_year),
+        reverse=True,
+    )
+
+    rows = []
+    for year in all_years:
+        drawdown = drawdowns_by_year.get(year, {})
+        runup = runups_by_year.get(year, {})
+        dividend = dividends_by_year.get(year, {})
+        rows.append({
+            "year": year,
+            "annual_return": returns_by_year.get(year),
+            "max_drawdown": drawdown.get("max_drawdown"),
+            "max_runup": runup.get("max_runup"),
+            "payment_count": dividend.get("payment_count", 0),
+            "dividend_payments": dividend.get("payments", []),
+            "total_dividend_per_share": dividend.get("dividend_per_share", 0.0),
+            "dividend_yield_basis_price": round(dividend_basis_by_year[year], 6)
+            if year in dividend_basis_by_year
+            else None,
+        })
+
+    return {
+        "rows": rows,
+        "return_basis": "raw_close",
+        "dividend_yield_basis": "previous_year_end_close",
+        "dividend_unit": "USD/share",
+    }
+
+
 def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None) -> Dict:
     """Fetch single-symbol yearly/monthly return detail, or daily grid for a specific year."""
     clean_sym = symbol.strip().upper()
@@ -856,6 +1053,7 @@ def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None
 
     yearly_extremes, monthly_extremes = _compute_daily_extremes(series)
     yearly_candles, monthly_candles = _compute_return_candles(series)
+    stock_tables = _build_stock_history_tables(series) if clean_type == "stock" else None
 
     # -- yearly mode ---------------------------------------------------------
     if year is None:
@@ -906,6 +1104,7 @@ def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None
             "years": years,
             "rows": monthly_rows,
             "stats": _build_monthly_stats(month_values),
+            "stock_tables": stock_tables,
             "summary": {
                 "year_count": len(years),
                 "avg_yearly_return": _avg(year_values),
@@ -947,6 +1146,7 @@ def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None
         ],
         "daily_rows": daily_rows,
         "stats": _build_monthly_stats(month_values),
+        "stock_tables": stock_tables,
         "summary": {
             "year_count": len(years),
             "selected_year": year,

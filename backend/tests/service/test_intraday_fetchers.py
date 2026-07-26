@@ -29,6 +29,11 @@ def test_yahoo_daily_preserves_raw_close_with_adjusted_close(mock_get):
                 }],
                 "adjclose": [{"adjclose": [50.0]}],
             },
+            "events": {
+                "dividends": {
+                    str(timestamp): {"date": timestamp, "amount": 0.25},
+                },
+            },
         }]},
     })
 
@@ -37,6 +42,26 @@ def test_yahoo_daily_preserves_raw_close_with_adjusted_close(mock_get):
     assert series.closes == [50.0]
     assert series.raw_closes == [100.0]
     assert series.opens == [98.0]
+    assert series.dividends == [{"timestamp": timestamp, "amount": 0.25}]
+    assert mock_get.call_args.kwargs["params"]["events"] == "div,splits"
+
+
+def test_yahoo_dividend_parser_skips_malformed_events():
+    parsed = fetchers._parse_yahoo_dividends({
+        "events": {
+            "dividends": {
+                "3": {"date": 3, "amount": 0.3},
+                "bad": {"amount": "nope"},
+                "2": {"date": 2, "amount": 0},
+                "1": {"date": 1, "amount": 0.1},
+            },
+        },
+    })
+
+    assert parsed == [
+        {"timestamp": 1, "amount": 0.1},
+        {"timestamp": 3, "amount": 0.3},
+    ]
 
 
 @patch.object(fetchers._session, "get")
