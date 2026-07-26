@@ -529,6 +529,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 4px;
         }
@@ -536,6 +537,12 @@
             color: var(--apple-text-primary);
             font-size: 14px;
             font-weight: 600;
+        }
+        .pd-bar-chart-legend {
+            color: var(--apple-text-tertiary);
+            font-size: 11px;
+            font-weight: 400;
+            margin-top: 2px;
         }
         .pd-bar-chart-toggle {
             padding: 2px 8px;
@@ -553,6 +560,91 @@
         .pd-bar-chart-scroll {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
+        }
+        .pd-range-mark {
+            cursor: crosshair;
+            outline: none;
+        }
+        .pd-range-mark:focus-visible > rect:first-of-type {
+            stroke: var(--apple-blue);
+            stroke-width: 1.5;
+        }
+        .pd-chart-tooltip {
+            position: fixed;
+            z-index: 1200;
+            width: min(380px, calc(100vw - 16px));
+            padding: 10px 12px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            background: var(--apple-surface-1);
+            box-shadow: var(--apple-shadow-tooltip);
+            color: var(--apple-text-primary);
+            font-size: 12px;
+            line-height: 1.5;
+            pointer-events: none;
+        }
+        .pd-chart-tooltip[hidden] {
+            display: none;
+        }
+        .pd-chart-tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .pd-chart-tooltip span,
+        .pd-chart-tooltip-section-label {
+            color: var(--apple-text-tertiary);
+        }
+        .pd-chart-tooltip strong {
+            text-align: right;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+        .pd-chart-tooltip .is-positive {
+            color: var(--data-positive);
+        }
+        .pd-chart-tooltip .is-negative {
+            color: var(--data-negative);
+        }
+        .pd-return-dot {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            margin-right: 6px;
+            border-radius: 50%;
+            background: var(--apple-text-tertiary);
+            vertical-align: 1px;
+        }
+        .pd-return-dot.is-positive {
+            background: var(--data-positive);
+        }
+        .pd-return-dot.is-negative {
+            background: var(--data-negative);
+        }
+        .pd-chart-tooltip-section {
+            margin-top: 7px;
+            padding-top: 6px;
+            border-top: 1px solid var(--apple-divider);
+        }
+        .pd-chart-tooltip-section-label {
+            margin-bottom: 3px;
+        }
+        .pd-chart-tooltip-matrix {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 6px;
+        }
+        .pd-chart-tooltip-cell {
+            min-width: 0;
+            text-align: center;
+        }
+        .pd-chart-tooltip-cell span,
+        .pd-chart-tooltip-cell strong {
+            display: block;
+        }
+        .pd-chart-tooltip-cell strong {
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .pd-bar-chart-scroll svg {
             display: block;
@@ -2169,7 +2261,7 @@
             </div>
             <div id="pdParamsPanel">
             <div class="controls-bar" style="margin-bottom:12px;">
-                <div class="control-group">
+                <div class="control-group pd-controls">
                     <span class="control-label" data-i18n="yearly.symbolInput">统计代码</span>
                     <input type="text" id="pdSymbolInput" class="pc-symbol-input" data-i18n-attr="placeholder|yearly.placeholderSymbol" placeholder="BTC" maxlength="20">
                     <select id="pdTypeSelect" class="pc-type-select">
@@ -2203,7 +2295,10 @@
                 <div class="pd-summary" id="pdSummary"></div>
                 <div class="pd-bar-chart-card" id="pdBarChartCard" style="display:none;">
                     <div class="pd-bar-chart-header">
-                        <div class="pd-bar-chart-title" id="pdBarChartTitle"></div>
+                        <div>
+                            <div class="pd-bar-chart-title" id="pdBarChartTitle"></div>
+                            <div class="pd-bar-chart-legend" data-i18n="detail.chartLegend">实体：周期复权开/收 · 影线：周期复权高/低（均相对上一周期收盘）</div>
+                        </div>
                         <button class="pd-bar-chart-toggle" id="pdBarChartToggle" type="button"
                                 aria-controls="pdBarChart" aria-expanded="true" data-i18n="detail.collapseChart">收起</button>
                     </div>

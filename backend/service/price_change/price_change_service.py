@@ -2,6 +2,7 @@
 
 import json
 import logging
+import math
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -60,8 +61,9 @@ def _cache_ttl(series: PriceSeries) -> int:
 
 
 # Bump this whenever the cached PriceSeries shape changes, so old entries (which
-# lack new fields) are abandoned instead of served stale. v3 added volumes.
-_CACHE_SCHEMA_VERSION = "v3"
+# lack new fields) are abandoned instead of served stale. v4 added raw closes
+# so adjusted stock OHLC candles can use one consistent price basis.
+_CACHE_SCHEMA_VERSION = "v4"
 
 
 def _redis_key(symbol: str, asset_type: str) -> str:
@@ -670,6 +672,170 @@ def _compute_daily_grid(series: PriceSeries, year: int) -> List[Dict]:
     return daily_rows
 
 
+def _compute_daily_extremes(series: PriceSeries) -> Tuple[Dict[int, Dict], Dict[Tuple[int, int], Dict]]:
+    """Return the largest positive and negative close-to-close daily moves.
+
+    Results are keyed by year and by (year, month). Ties keep the first
+    occurrence so the tooltip remains deterministic.
+    """
+    yearly: Dict[int, Dict] = {}
+    monthly: Dict[Tuple[int, int], Dict] = {}
+    prev_close: Optional[float] = None
+
+    def update(bucket: Dict, point: Dict) -> None:
+        value = point["return"]
+        if value > 0:
+            current = bucket.get("max_daily_gain")
+            if current is None or value > current["return"]:
+                bucket["max_daily_gain"] = point
+        elif value < 0:
+            current = bucket.get("max_daily_loss")
+            if current is None or value < current["return"]:
+                bucket["max_daily_loss"] = point
+
+    for timestamp, close in zip(series.timestamps, series.closes):
+        if close is None:
+            continue
+        if prev_close not in (None, 0):
+            current_date = datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
+            point = {
+                "date": current_date.isoformat(),
+                "return": round((close / prev_close - 1) * 100, 2),
+            }
+            update(yearly.setdefault(current_date.year, {}), point)
+            update(monthly.setdefault((current_date.year, current_date.month), {}), point)
+        prev_close = close
+
+    return yearly, monthly
+
+
+def _with_daily_extremes(item: Dict, extremes: Optional[Dict]) -> Dict:
+    """Attach a stable daily-extreme shape to a return-detail period."""
+    data = extremes or {}
+    return {
+        **item,
+        "max_daily_gain": data.get("max_daily_gain"),
+        "max_daily_loss": data.get("max_daily_loss"),
+    }
+
+
+def _compute_return_candles(
+    series: PriceSeries,
+) -> Tuple[Dict[int, Dict], Dict[Tuple[int, int], Dict]]:
+    """Aggregate adjusted OHLC candles relative to the previous period close.
+
+    Yahoo returns adjusted closes alongside raw OHLC. Applying each day's
+    adjusted-close/raw-close factor keeps all four prices on the same basis and
+    prevents a candle body from extending beyond its own high/low wick.
+    """
+    yearly_prices: Dict[int, Dict[str, float]] = {}
+    monthly_prices: Dict[Tuple[int, int], Dict[str, float]] = {}
+
+    def number_at(values: Optional[List[Optional[float]]], index: int) -> Optional[float]:
+        if values is None or index >= len(values):
+            return None
+        try:
+            value = float(values[index])
+        except (TypeError, ValueError):
+            return None
+        return value if math.isfinite(value) else None
+
+    def update(bucket: Dict, key, open_price: float, high: float, low: float, close: float) -> None:
+        current = bucket.get(key)
+        if current is None:
+            bucket[key] = {
+                "open": open_price,
+                "high": high,
+                "low": low,
+                "close": close,
+            }
+            return
+        current["high"] = max(current["high"], high)
+        current["low"] = min(current["low"], low)
+        current["close"] = close
+
+    for index, (timestamp, adjusted_close_value) in enumerate(zip(series.timestamps, series.closes)):
+        try:
+            adjusted_close = float(adjusted_close_value)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(adjusted_close):
+            continue
+
+        raw_close = number_at(series.raw_closes, index)
+        adjustment = adjusted_close / raw_close if raw_close not in (None, 0) else 1.0
+
+        raw_open = number_at(series.opens, index)
+        raw_high = number_at(series.highs, index)
+        raw_low = number_at(series.lows, index)
+        adjusted_open = raw_open * adjustment if raw_open is not None else adjusted_close
+        adjusted_high = raw_high * adjustment if raw_high is not None else adjusted_close
+        adjusted_low = raw_low * adjustment if raw_low is not None else adjusted_close
+
+        # Guard against incomplete or slightly inconsistent upstream candles.
+        adjusted_high = max(adjusted_high, adjusted_open, adjusted_close)
+        adjusted_low = min(adjusted_low, adjusted_open, adjusted_close)
+
+        current_date = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+        update(
+            yearly_prices,
+            current_date.year,
+            adjusted_open,
+            adjusted_high,
+            adjusted_low,
+            adjusted_close,
+        )
+        update(
+            monthly_prices,
+            (current_date.year, current_date.month),
+            adjusted_open,
+            adjusted_high,
+            adjusted_low,
+            adjusted_close,
+        )
+
+    def build(prices: Dict, previous_key) -> Dict:
+        candles = {}
+        for key, values in prices.items():
+            prior = prices.get(previous_key(key))
+            baseline = prior["close"] if prior else None
+            low = values["low"]
+            if baseline in (None, 0) or low == 0:
+                continue
+            candles[key] = {
+                "open": round(values["open"], 6),
+                "high": round(values["high"], 6),
+                "low": round(low, 6),
+                "close": round(values["close"], 6),
+                "open_return": round((values["open"] / baseline - 1) * 100, 2),
+                "high_return": round((values["high"] / baseline - 1) * 100, 2),
+                "low_return": round((low / baseline - 1) * 100, 2),
+                "close_return": round((values["close"] / baseline - 1) * 100, 2),
+                "amplitude": round(values["high"] - low, 6),
+                "amplitude_percent": round((values["high"] - low) / low * 100, 2),
+            }
+        return candles
+
+    sorted_years = sorted(yearly_prices)
+    previous_year = {
+        current: sorted_years[index - 1] if index else None
+        for index, current in enumerate(sorted_years)
+    }
+    yearly = build(yearly_prices, lambda key: previous_year.get(key))
+    monthly = build(
+        monthly_prices,
+        lambda key: (key[0] - 1, 12) if key[1] == 1 else (key[0], key[1] - 1),
+    )
+    return yearly, monthly
+
+
+def _with_chart_detail(item: Dict, extremes: Optional[Dict], candle: Optional[Dict]) -> Dict:
+    """Attach tooltip and candlestick data to a return-detail period."""
+    result = _with_daily_extremes(item, extremes)
+    result["candle"] = candle
+    return result
+
+
 def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None) -> Dict:
     """Fetch single-symbol yearly/monthly return detail, or daily grid for a specific year."""
     clean_sym = symbol.strip().upper()
@@ -687,6 +853,9 @@ def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None
     years = sorted((int(y) for y in yearly.keys()), reverse=True)
     if not years:
         raise ValueError("insufficient data")
+
+    yearly_extremes, monthly_extremes = _compute_daily_extremes(series)
+    yearly_candles, monthly_candles = _compute_return_candles(series)
 
     # -- yearly mode ---------------------------------------------------------
     if year is None:
@@ -709,7 +878,11 @@ def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None
                         best_month = point
                     if worst_month is None or point["return"] < worst_month["return"]:
                         worst_month = point
-                clean_months.append({"month": month, "return": value})
+                clean_months.append(_with_chart_detail(
+                    {"month": month, "return": value},
+                    monthly_extremes.get((y, month)),
+                    monthly_candles.get((y, month)),
+                ))
             y_ret = yearly.get(str(y))
             if y_ret is not None:
                 year_values.append(float(y_ret))
@@ -717,6 +890,9 @@ def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None
             monthly_rows.append({
                 "year": y,
                 "annual_return": y_ret,
+                "max_daily_gain": yearly_extremes.get(y, {}).get("max_daily_gain"),
+                "max_daily_loss": yearly_extremes.get(y, {}).get("max_daily_loss"),
+                "candle": yearly_candles.get(y),
                 "months": clean_months,
                 "row_stats": _row_stats(month_vals),
             })
@@ -761,7 +937,14 @@ def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None
         "source": series.source,
         "meta": _series_meta(clean_sym, clean_type, series),
         "years": years,
-        "monthly_returns": _compute_monthly_returns(series.timestamps, series.closes, year),
+        "monthly_returns": [
+            _with_chart_detail(
+                item,
+                monthly_extremes.get((year, int(item["month"]))),
+                monthly_candles.get((year, int(item["month"]))),
+            )
+            for item in _compute_monthly_returns(series.timestamps, series.closes, year)
+        ],
         "daily_rows": daily_rows,
         "stats": _build_monthly_stats(month_values),
         "summary": {

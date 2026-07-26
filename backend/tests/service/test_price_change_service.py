@@ -107,10 +107,125 @@ class TestFetchReturnDetail:
         result = svc.fetch_return_detail("btc", "crypto", selected_year)
 
         assert result["mode"] == "daily"
-        assert result["monthly_returns"] == svc._compute_monthly_returns(
+        expected_returns = svc._compute_monthly_returns(
             series.timestamps, series.closes, selected_year
         )
+        assert [
+            {"month": item["month"], "return": item["return"]}
+            for item in result["monthly_returns"]
+        ] == expected_returns
+        assert all("max_daily_gain" in item for item in result["monthly_returns"])
+        assert all("max_daily_loss" in item for item in result["monthly_returns"])
         assert [item["month"] for item in result["monthly_returns"]] == list(range(1, 13))
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_yearly_and_monthly_periods_include_daily_extremes(self, mock_fetch):
+        dates = [
+            datetime(2023, 12, 29, 12, tzinfo=timezone.utc),
+            datetime(2024, 1, 2, 12, tzinfo=timezone.utc),
+            datetime(2024, 1, 3, 12, tzinfo=timezone.utc),
+            datetime(2024, 1, 4, 12, tzinfo=timezone.utc),
+            datetime(2024, 2, 1, 12, tzinfo=timezone.utc),
+            datetime(2024, 12, 31, 12, tzinfo=timezone.utc),
+        ]
+        mock_fetch.return_value = PriceSeries(
+            timestamps=[int(item.timestamp()) for item in dates],
+            closes=[100.0, 110.0, 99.0, 108.9, 87.12, 120.0],
+            source="test",
+            fetched_at=dates[-1].timestamp(),
+        )
+
+        yearly = svc.fetch_return_detail("BTC", "crypto")
+        row = yearly["rows"][0]
+        assert row["annual_return"] == 20.0
+        assert row["max_daily_gain"] == {"date": "2024-12-31", "return": 37.74}
+        assert row["max_daily_loss"] == {"date": "2024-02-01", "return": -20.0}
+        january = row["months"][0]
+        assert january["max_daily_gain"] == {"date": "2024-01-02", "return": 10.0}
+        assert january["max_daily_loss"] == {"date": "2024-01-03", "return": -10.0}
+
+        selected = svc.fetch_return_detail("BTC", "crypto", 2024)
+        february = selected["monthly_returns"][1]
+        assert february["max_daily_gain"] is None
+        assert february["max_daily_loss"] == {"date": "2024-02-01", "return": -20.0}
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_daily_extreme_ties_keep_first_occurrence(self, mock_fetch):
+        dates = [
+            datetime(2023, 12, 29, 12, tzinfo=timezone.utc),
+            datetime(2024, 1, 2, 12, tzinfo=timezone.utc),
+            datetime(2024, 1, 3, 12, tzinfo=timezone.utc),
+            datetime(2024, 1, 4, 12, tzinfo=timezone.utc),
+        ]
+        mock_fetch.return_value = PriceSeries(
+            timestamps=[int(item.timestamp()) for item in dates],
+            closes=[100.0, 110.0, 99.0, 108.9],
+            source="test",
+            fetched_at=dates[-1].timestamp(),
+        )
+
+        result = svc.fetch_return_detail("BTC", "crypto")
+        january = result["rows"][0]["months"][0]
+        assert january["max_daily_gain"] == {"date": "2024-01-02", "return": 10.0}
+        assert january["max_daily_loss"] == {"date": "2024-01-03", "return": -10.0}
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_candles_use_adjusted_ohlc_and_previous_period_close(self, mock_fetch):
+        dates = [
+            datetime(2023, 12, 29, 12, tzinfo=timezone.utc),
+            datetime(2024, 1, 2, 12, tzinfo=timezone.utc),
+            datetime(2024, 1, 31, 12, tzinfo=timezone.utc),
+            datetime(2024, 2, 1, 12, tzinfo=timezone.utc),
+            datetime(2024, 2, 29, 12, tzinfo=timezone.utc),
+        ]
+        mock_fetch.return_value = PriceSeries(
+            timestamps=[int(item.timestamp()) for item in dates],
+            closes=[50.0, 55.0, 60.0, 57.0, 63.0],
+            raw_closes=[100.0, 110.0, 120.0, 114.0, 126.0],
+            opens=[98.0, 108.0, 114.0, 120.0, 116.0],
+            highs=[102.0, 112.0, 124.0, 120.0, 130.0],
+            lows=[97.0, 106.0, 106.0, 112.0, 110.0],
+            source="test",
+            fetched_at=dates[-1].timestamp(),
+        )
+
+        result = svc.fetch_return_detail("TEST", "stock")
+        yearly_candle = result["rows"][0]["candle"]
+        assert yearly_candle == {
+            "open": 54.0,
+            "high": 65.0,
+            "low": 53.0,
+            "close": 63.0,
+            "open_return": 8.0,
+            "high_return": 30.0,
+            "low_return": 6.0,
+            "close_return": 26.0,
+            "amplitude": 12.0,
+            "amplitude_percent": 22.64,
+        }
+        assert yearly_candle["low_return"] <= min(
+            yearly_candle["open_return"], yearly_candle["close_return"]
+        )
+        assert yearly_candle["high_return"] >= max(
+            yearly_candle["open_return"], yearly_candle["close_return"]
+        )
+
+        january = result["rows"][0]["months"][0]["candle"]
+        assert january["open"] == 54.0
+        assert january["high"] == 62.0
+        assert january["low"] == 53.0
+        assert january["close"] == 60.0
+        assert january["close_return"] == 20.0
+        assert january["amplitude"] == 9.0
+        assert january["amplitude_percent"] == 16.98
+
+        selected = svc.fetch_return_detail("TEST", "stock", 2024)
+        february = selected["monthly_returns"][1]["candle"]
+        assert february["open_return"] == 0.0
+        assert february["high_return"] == 8.33
+        assert february["low_return"] == -8.33
+        assert february["close_return"] == 5.0
+        assert february["amplitude_percent"] == 18.18
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -175,6 +290,18 @@ class TestCache:
         assert result.timestamps == three_year_series.timestamps
         assert result.closes == three_year_series.closes
         track_coverage(MOD, 3)
+
+    def test_serialize_roundtrip_preserves_raw_closes(self):
+        series = PriceSeries(
+            timestamps=[1],
+            closes=[50.0],
+            raw_closes=[100.0],
+            source="test",
+            fetched_at=time.time(),
+        )
+        result = svc._deserialize_series(svc._serialize_series(series))
+        assert result is not None
+        assert result.raw_closes == [100.0]
 
     def test_deserialize_bad_data(self):
         """Corrupt serialized data should return None gracefully."""

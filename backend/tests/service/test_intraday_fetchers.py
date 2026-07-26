@@ -14,6 +14,32 @@ def _response(body):
 
 
 @patch.object(fetchers._session, "get")
+def test_yahoo_daily_preserves_raw_close_with_adjusted_close(mock_get):
+    timestamp = int(datetime(2024, 1, 2, tzinfo=timezone.utc).timestamp())
+    mock_get.return_value = _response({
+        "chart": {"result": [{
+            "timestamp": [timestamp],
+            "indicators": {
+                "quote": [{
+                    "open": [98.0],
+                    "high": [102.0],
+                    "low": [97.0],
+                    "close": [100.0],
+                    "volume": [1000],
+                }],
+                "adjclose": [{"adjclose": [50.0]}],
+            },
+        }]},
+    })
+
+    series = fetchers._fetch_daily_series_stock_direct("TEST")
+
+    assert series.closes == [50.0]
+    assert series.raw_closes == [100.0]
+    assert series.opens == [98.0]
+
+
+@patch.object(fetchers._session, "get")
 def test_binance_intraday_parses_ohlcv(mock_get):
     timestamp_ms = int(datetime(2024, 1, 2, tzinfo=timezone.utc).timestamp() * 1000)
     mock_get.return_value = _response([[

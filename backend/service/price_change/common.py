@@ -49,8 +49,8 @@ class PriceSeries:
     error: Optional[str] = None
     # Optional OHLC, aligned with timestamps. Populated only by fetchers that
     # carry full candles (used for candlestick charts). closes stays the source
-    # of truth for returns; for stocks closes may be adjusted while opens/highs/
-    # lows are raw prices.
+    # of truth for returns; for stocks it may be adjusted for splits/dividends,
+    # while the upstream OHLC and raw_closes remain unadjusted.
     opens: Optional[List[Optional[float]]] = None
     highs: Optional[List[Optional[float]]] = None
     lows: Optional[List[Optional[float]]] = None
@@ -58,6 +58,7 @@ class PriceSeries:
     # data source provides it (Yahoo, Binance, OKX, Tencent, East Money).
     # CoinGecko OHLC does NOT include volume.
     volumes: Optional[List[Optional[float]]] = None
+    raw_closes: Optional[List[Optional[float]]] = None
 
 
 def empty_series(source: Optional[str] = None, error: Optional[str] = None) -> PriceSeries:
@@ -72,6 +73,8 @@ def series_from_points(
     highs: Optional[List[Optional[float]]] = None,
     lows: Optional[List[Optional[float]]] = None,
     volumes: Optional[List[Optional[float]]] = None,
+    raw_closes: Optional[List[Optional[float]]] = None,
 ) -> PriceSeries:
     return PriceSeries(timestamps, closes, source, time.time(),
-                       opens=opens, highs=highs, lows=lows, volumes=volumes)
+                       opens=opens, highs=highs, lows=lows, volumes=volumes,
+                       raw_closes=raw_closes)

@@ -26,6 +26,22 @@
     return sign + num.toFixed(digits == null ? 2 : digits) + "%";
   }
 
+  function formatUnsignedPct(value, digits) {
+    if (value == null || !Number.isFinite(Number(value))) return "—";
+    return Number(value).toFixed(digits == null ? 2 : digits) + "%";
+  }
+
+  function formatPrice(value) {
+    if (value == null || !Number.isFinite(Number(value))) return "—";
+    var num = Number(value);
+    var absolute = Math.abs(num);
+    var digits = absolute < 1 ? 6 : (absolute < 100 ? 4 : 2);
+    return new Intl.NumberFormat(document.documentElement.lang || undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: digits,
+    }).format(num);
+  }
+
   function cellColor(value, min, max) {
     const isRedUp = (typeof window.getColorScheme === "function" && window.getColorScheme() === "red_up");
     const posHue = isRedUp ? 4 : 142;
@@ -236,12 +252,16 @@
     if (result.mode === "daily") {
       var monthlyByNumber = {};
       (result.monthly_returns || []).forEach(function (item) {
-        monthlyByNumber[Number(item.month)] = item.return;
+        monthlyByNumber[Number(item.month)] = item;
       });
       return MONTHS.map(function (month) {
+        var item = monthlyByNumber[month] || {};
         return {
           label: __("yearly.monthLabel", { m: month }),
-          value: monthlyByNumber[month],
+          value: item.return,
+          maxDailyGain: item.max_daily_gain,
+          maxDailyLoss: item.max_daily_loss,
+          candle: item.candle,
         };
       });
     }
@@ -249,8 +269,146 @@
     return (result.rows || []).slice().sort(function (a, b) {
       return Number(a.year) - Number(b.year);
     }).map(function (row) {
-      return { label: String(row.year), value: row.annual_return };
+      return {
+        label: String(row.year),
+        value: row.annual_return,
+        maxDailyGain: row.max_daily_gain,
+        maxDailyLoss: row.max_daily_loss,
+        candle: row.candle,
+      };
     });
+  }
+
+  function chartDetailText(point) {
+    var parts = [
+      point.label,
+      __("detail.chartCloseReturn") + " " + formatPct(point.value),
+    ];
+    if (point.maxDailyGain) {
+      parts.push(__("detail.chartMaxDailyGain") + " " + formatPct(point.maxDailyGain.return)
+        + " · " + point.maxDailyGain.date);
+    }
+    if (point.maxDailyLoss) {
+      parts.push(__("detail.chartMaxDailyLoss") + " " + formatPct(point.maxDailyLoss.return)
+        + " · " + point.maxDailyLoss.date);
+    }
+    if (point.candle) {
+      parts.push(__("detail.chartOhlcReturn") + " "
+        + [
+          point.candle.high_return,
+          point.candle.open_return,
+          point.candle.low_return,
+          point.candle.close_return,
+        ].map(formatPct).join(" / "));
+      parts.push(__("detail.chartOhlcPrice") + " "
+        + [point.candle.high, point.candle.open, point.candle.low, point.candle.close]
+          .map(formatPrice).join(" / "));
+      parts.push(__("detail.chartAmplitude") + " " + formatPrice(point.candle.amplitude));
+      parts.push(__("detail.chartAmplitudePercent") + " "
+        + formatUnsignedPct(point.candle.amplitude_percent));
+    }
+    return parts.join("；");
+  }
+
+  function attachBarChartTooltips(host, points) {
+    var tooltip = host.querySelector(".pd-chart-tooltip");
+    var marks = host.querySelectorAll(".pd-range-mark");
+    if (!tooltip) return;
+
+    function hide() {
+      tooltip.hidden = true;
+    }
+
+    function position(mark) {
+      var markRect = mark.getBoundingClientRect();
+      var tipRect = tooltip.getBoundingClientRect();
+      var left = markRect.left + markRect.width / 2 - tipRect.width / 2;
+      var top = markRect.top - tipRect.height - 8;
+      left = Math.max(8, Math.min(left, window.innerWidth - tipRect.width - 8));
+      if (top < 8) top = markRect.bottom + 8;
+      tooltip.style.left = Math.round(left) + "px";
+      tooltip.style.top = Math.round(top) + "px";
+    }
+
+    function show(mark, point) {
+      var candle = point.candle || {};
+      var closeTone = Number(point.value) > 0
+        ? " is-positive"
+        : (Number(point.value) < 0 ? " is-negative" : "");
+      var ohlcLabels = [
+        __("detail.chartHighShort"),
+        __("detail.chartOpenShort"),
+        __("detail.chartLowShort"),
+        __("detail.chartCloseShort"),
+      ];
+
+      function matrix(label, values, formatter, colorValues) {
+        var cells = ohlcLabels.map(function (item, index) {
+          var tone = "";
+          if (colorValues) {
+            tone = Number(values[index]) > 0
+              ? " is-positive"
+              : (Number(values[index]) < 0 ? " is-negative" : "");
+          }
+          return '<div class="pd-chart-tooltip-cell"><span>' + escapeHtml(item)
+            + '</span><strong class="' + tone.trim() + '">'
+            + escapeHtml(formatter(values[index])) + '</strong></div>';
+        }).join("");
+        return '<div class="pd-chart-tooltip-section"><div class="pd-chart-tooltip-section-label">'
+          + escapeHtml(label) + '</div><div class="pd-chart-tooltip-matrix">'
+          + cells + '</div></div>';
+      }
+
+      var rows = [
+        '<div class="pd-chart-tooltip-row pd-chart-tooltip-close"><span>'
+          + '<i class="pd-return-dot' + closeTone + '" aria-hidden="true"></i>'
+          + escapeHtml(__("detail.chartCloseReturn")) + '</span><strong class="' + closeTone.trim() + '">'
+          + escapeHtml(formatPct(point.value)) + '</strong></div>',
+        '<div class="pd-chart-tooltip-row"><span>' + escapeHtml(__("detail.chartMaxDailyGain")) + '</span><strong>'
+          + escapeHtml(point.maxDailyGain
+            ? formatPct(point.maxDailyGain.return) + " · " + point.maxDailyGain.date
+            : "—") + '</strong></div>',
+        '<div class="pd-chart-tooltip-row"><span>' + escapeHtml(__("detail.chartMaxDailyLoss")) + '</span><strong>'
+          + escapeHtml(point.maxDailyLoss
+            ? formatPct(point.maxDailyLoss.return) + " · " + point.maxDailyLoss.date
+            : "—") + '</strong></div>',
+        '<div class="pd-chart-tooltip-row"><span>' + escapeHtml(__("detail.chartAmplitude")) + '</span><strong>'
+          + escapeHtml(formatPrice(candle.amplitude)) + '</strong></div>',
+        '<div class="pd-chart-tooltip-row"><span>' + escapeHtml(__("detail.chartAmplitudePercent")) + '</span><strong>'
+          + escapeHtml(formatUnsignedPct(candle.amplitude_percent)) + '</strong></div>',
+        matrix(
+          __("detail.chartOhlcReturn"),
+          [candle.high_return, candle.open_return, candle.low_return, candle.close_return],
+          formatPct,
+          true
+        ),
+        matrix(
+          __("detail.chartOhlcPrice"),
+          [candle.high, candle.open, candle.low, candle.close],
+          formatPrice,
+          false
+        ),
+      ];
+      tooltip.innerHTML = rows.join("");
+      tooltip.hidden = false;
+      position(mark);
+    }
+
+    marks.forEach(function (mark) {
+      var point = points[Number(mark.dataset.pointIndex)];
+      if (!point) return;
+      mark.addEventListener("mouseenter", function () { show(mark, point); });
+      mark.addEventListener("mousemove", function () { position(mark); });
+      mark.addEventListener("mouseleave", hide);
+      mark.addEventListener("focus", function () { show(mark, point); });
+      mark.addEventListener("blur", hide);
+      mark.addEventListener("click", function () {
+        mark.focus();
+        show(mark, point);
+      });
+    });
+    host.onpointerleave = hide;
+    host.onscroll = hide;
   }
 
   function scrollBarChartToLatest() {
@@ -315,9 +473,13 @@
     _lastBarChartResult = result;
 
     var points = barChartPoints(result);
-    var finiteValues = points.filter(function (point) {
-      return point.value != null && Number.isFinite(Number(point.value));
-    }).map(function (point) { return Number(point.value); });
+    var finiteValues = [];
+    points.forEach(function (point) {
+      var candle = point.candle || {};
+      [candle.open_return, candle.high_return, candle.low_return, candle.close_return].forEach(function (value) {
+        if (value != null && Number.isFinite(Number(value))) finiteValues.push(Number(value));
+      });
+    });
     if (!points.length || !finiteValues.length) {
       card.style.display = "none";
       host.innerHTML = "";
@@ -365,21 +527,52 @@
 
     points.forEach(function (point, index) {
       var value = Number(point.value);
+      var candle = point.candle || {};
+      var openReturn = Number(candle.open_return);
+      var highReturn = Number(candle.high_return);
+      var lowReturn = Number(candle.low_return);
+      var closeReturn = Number(candle.close_return);
+      var hasCandle = [openReturn, highReturn, lowReturn, closeReturn].every(Number.isFinite);
       var x = pad.left + index * slotW + (slotW - barW) / 2;
       var centerX = x + barW / 2;
       var label = escapeHtml(point.label);
-      if (point.value != null && Number.isFinite(value)) {
-        var valueY = zeroY - (value / maxAbs) * halfPlotH;
-        var y = Math.min(valueY, zeroY);
-        var height = Math.max(1, Math.abs(zeroY - valueY));
-        var color = value >= 0 ? "var(--data-positive)" : "var(--data-negative)";
-        var textY = value >= 0 ? y - 6 : y + height + 13;
-        parts.push('<g><title>' + label + ' ' + escapeHtml(formatPct(value)) + '</title>'
-          + '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1)
-          + '" height="' + height.toFixed(1) + '" rx="3" fill="' + color + '" opacity="0.88"/>'
-          + '<text x="' + centerX.toFixed(1) + '" y="' + textY.toFixed(1)
-          + '" text-anchor="middle" fill="' + color + '" font-size="9" font-weight="600">' + escapeHtml(formatPct(value, 1)) + '</text></g>');
+      var hitX = pad.left + index * slotW;
+      var ariaLabel = escapeHtml(chartDetailText(point));
+      parts.push('<g class="pd-range-mark" data-point-index="' + index + '" tabindex="0" role="img" aria-label="' + ariaLabel + '">');
+      parts.push('<rect x="' + hitX.toFixed(1) + '" y="' + pad.top + '" width="' + slotW.toFixed(1)
+        + '" height="' + plotH.toFixed(1) + '" fill="transparent"/>');
+
+      if (hasCandle) {
+        var yHigh = zeroY - (highReturn / maxAbs) * halfPlotH;
+        var yLow = zeroY - (lowReturn / maxAbs) * halfPlotH;
+        var yOpen = zeroY - (openReturn / maxAbs) * halfPlotH;
+        var yClose = zeroY - (closeReturn / maxAbs) * halfPlotH;
+        var candleUp = closeReturn >= openReturn;
+        var color = candleUp ? "var(--data-positive)" : "var(--data-negative)";
+        var bodyY = Math.min(yOpen, yClose);
+        var bodyHeight = Math.abs(yOpen - yClose);
+        parts.push('<line x1="' + centerX.toFixed(1) + '" y1="' + yHigh.toFixed(1)
+          + '" x2="' + centerX.toFixed(1) + '" y2="' + yLow.toFixed(1)
+          + '" stroke="' + color + '" stroke-width="1.5"/>');
+        if (bodyHeight < 1) {
+          parts.push('<line class="pd-candle-body" x1="' + x.toFixed(1)
+            + '" y1="' + ((yOpen + yClose) / 2).toFixed(1)
+            + '" x2="' + (x + barW).toFixed(1)
+            + '" y2="' + ((yOpen + yClose) / 2).toFixed(1)
+            + '" stroke="' + color + '" stroke-width="1.5"/>');
+        } else {
+          parts.push('<rect class="pd-candle-body" x="' + x.toFixed(1) + '" y="' + bodyY.toFixed(1)
+            + '" width="' + barW.toFixed(1) + '" height="' + bodyHeight.toFixed(1)
+            + '" rx="2" fill="' + color + '" opacity="0.9"/>');
+        }
+        if (point.value != null && Number.isFinite(value)) {
+          var textY = closeReturn >= 0 ? yHigh - 6 : yLow + 13;
+          parts.push('<text x="' + centerX.toFixed(1) + '" y="' + textY.toFixed(1)
+            + '" text-anchor="middle" fill="' + color + '" font-size="9" font-weight="600">'
+            + escapeHtml(formatPct(value, 1)) + '</text>');
+        }
       }
+      parts.push('</g>');
       parts.push('<text x="' + centerX.toFixed(1) + '" y="' + (H - 14)
         + '" text-anchor="middle" fill="var(--apple-text-tertiary)" font-size="10">' + label + '</text>');
     });
@@ -387,7 +580,8 @@
     host.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="'
       + escapeHtml(__("detail.chartAriaLabel"))
       + '" style="width:' + W + 'px;height:' + H + 'px;font-family:-apple-system,SF Pro Text,Helvetica,Arial,sans-serif;">'
-      + parts.join("") + '</svg>';
+      + parts.join("") + '</svg><div class="pd-chart-tooltip" role="tooltip" hidden></div>';
+    attachBarChartTooltips(host, points);
     var resizeHandle = $("pdBarChartResizeHandle");
     if (resizeHandle) {
       resizeHandle.dataset.enabled = "true";

@@ -126,11 +126,12 @@ def _fetch_daily_series_stock_direct(symbol: str) -> PriceSeries:
         result = data["chart"]["result"][0]
         timestamps = result["timestamp"]
         quote = result["indicators"]["quote"][0]
+        raw_closes = quote["close"]
         adjclose = result.get("indicators", {}).get("adjclose")
         if adjclose and adjclose[0].get("adjclose"):
             closes = adjclose[0]["adjclose"]
         else:
-            closes = quote["close"]
+            closes = raw_closes
         opens = quote.get("open")
         highs = quote.get("high")
         lows = quote.get("low")
@@ -141,13 +142,22 @@ def _fetch_daily_series_stock_direct(symbol: str) -> PriceSeries:
 
     if not timestamps:
         return empty_series("yahoo", "empty data")
-    return series_from_points(timestamps, closes, "yahoo", opens=opens, highs=highs, lows=lows, volumes=volumes)
+    return series_from_points(
+        timestamps,
+        closes,
+        "yahoo",
+        opens=opens,
+        highs=highs,
+        lows=lows,
+        volumes=volumes,
+        raw_closes=raw_closes,
+    )
 
 
 def _fetch_daily_series_stock_yfinance(symbol: str) -> PriceSeries:
     try:
         ticker = _yf.Ticker(symbol)
-        hist = ticker.history(period="max")
+        hist = ticker.history(period="max", auto_adjust=False)
         if hist.empty:
             logger.warning("yfinance returned empty for %s", symbol)
             return empty_series("yfinance", "empty data")
@@ -157,11 +167,21 @@ def _fetch_daily_series_stock_yfinance(symbol: str) -> PriceSeries:
             closes = hist["Adj Close"].tolist()
         else:
             closes = hist["Close"].tolist()
+        raw_closes = hist["Close"].tolist() if "Close" in hist.columns else closes
         opens = hist["Open"].tolist() if "Open" in hist.columns else None
         highs = hist["High"].tolist() if "High" in hist.columns else None
         lows = hist["Low"].tolist() if "Low" in hist.columns else None
         volumes = hist["Volume"].tolist() if "Volume" in hist.columns else None
-        return series_from_points(timestamps, closes, "yfinance", opens=opens, highs=highs, lows=lows, volumes=volumes)
+        return series_from_points(
+            timestamps,
+            closes,
+            "yfinance",
+            opens=opens,
+            highs=highs,
+            lows=lows,
+            volumes=volumes,
+            raw_closes=raw_closes,
+        )
     except Exception as e:
         logger.error("yfinance daily fetch failed for %s: %s", symbol, e)
         return empty_series("yfinance", str(e))
