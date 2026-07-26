@@ -210,6 +210,34 @@ class TestHtmlMeta:
         assert '<a class="header-quick-link" href="/en/knowledge/how-to-buy-us-stocks"' in html
         assert "__LANG_PREFIX__" not in html
 
+    def test_yearly_data_waits_for_explicit_query(self, client):
+        script = client.get("/js/price-change.js").get_data(as_text=True)
+        assert "_initialYearlyFetchDone" not in script
+        assert "isYearlyRoute" not in script
+
+        preset_start = script.index("function loadPreset")
+        preset_end = script.index("function renderPresetChips", preset_start)
+        assert "fetchData()" not in script[preset_start:preset_end]
+        assert 'refreshBtn.addEventListener("click", fetchData)' in script
+
+    def test_vix_uses_candles_for_spy_qqq_and_line_for_vix(self, client):
+        script = client.get("/js/vix-chart.js").get_data(as_text=True)
+        assert "normalizeCandleSeries" in script
+        assert "_vixData.spy_candles" in script
+        assert "_vixData.qqq_candles" in script
+        assert 'kind: "candle"' in script
+        assert 'kind: "line"' in script
+        assert 'class="vix-candle-body vix-candle-' in script
+        assert 'class="vix-candle-wick vix-candle-' in script
+        assert "CLR.positive" in script
+        assert "CLR.negative" in script
+        assert 'candleStyle = series.key === "spy" ? "solid" : "hollow"' in script
+        assert "var candleX = dateX[point.date]" in script
+        assert "candleOffset" not in script
+        assert 'candleStyle === "solid" ? directionColor : "none"' in script
+        assert 'data-style="' in script
+        assert "legendHollow" in script
+
     def test_stock_compare_has_search_tags_and_metric_tables(self, client):
         html = client.get("/zh/stock-compare").get_data(as_text=True)
         assert 'id="scSymbolInput"' in html

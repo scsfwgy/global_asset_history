@@ -555,6 +555,8 @@
     "axisCumReturn": "SPY/QQQ Cumulative Return %",
     "axisVix": "VIX",
     "tooltipDate": "Date: ",
+    "tooltipOhlc": "O/H/L/C",
+    "tooltipClosePrice": "Close:",
     "tooltipRightAxis": " (right axis)",
     "percentilePrefix": "Near 1-year ",
     "percentileSuffix": "% percentile",

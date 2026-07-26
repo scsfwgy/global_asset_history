@@ -655,6 +655,50 @@ class TestVixComparisonEndpoint:
         assert "period" in data["error"].lower() or "period" in str(data).lower()
         track_coverage(MOD, 1)
 
+    @patch("routes.price_change._fetch_daily_series_cached")
+    def test_daily_includes_adjusted_spy_qqq_candles(self, mock_fetch, client):
+        """SPY/QQQ expose adjusted OHLC candles on the same basis as returns."""
+        import calendar
+        from datetime import datetime, timezone
+        from types import SimpleNamespace
+
+        base = calendar.timegm(datetime(2024, 1, 1, tzinfo=timezone.utc).timetuple())
+        mock_fetch.return_value = SimpleNamespace(
+            timestamps=[base + index * 86400 for index in range(6)],
+            closes=[50.0, 55.0, 52.0, 60.0, 58.0, 62.0],
+            opens=[98.0, 104.0, 108.0, 116.0, 122.0, 120.0],
+            highs=[102.0, 112.0, 110.0, 124.0, 124.0, 126.0],
+            lows=[96.0, 102.0, 100.0, 114.0, 114.0, 118.0],
+            raw_closes=[100.0, 110.0, 104.0, 120.0, 116.0, 124.0],
+            source="yahoo",
+            error=None,
+        )
+
+        resp = client.post(
+            f"{BASE}/vix-comparison",
+            json={"period": "daily", "count": 6},
+        )
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert len(data["spy_candles"]) == 6
+        assert len(data["qqq_candles"]) == 6
+        first, second = data["spy_candles"][:2]
+        assert first == {
+            "date": "2024-01-01",
+            "open": 49.0,
+            "high": 51.0,
+            "low": 48.0,
+            "close": 50.0,
+            "previous_close": None,
+        }
+        assert second["open"] == 52.0
+        assert second["high"] == 56.0
+        assert second["low"] == 51.0
+        assert second["close"] == 55.0
+        assert second["previous_close"] == 50.0
+        track_coverage(MOD, 4)
+
     def test_valid_period_daily(self, client):
         """Daily period should return 200 (actual data fetch may fail but route handles it)."""
         resp = client.post(

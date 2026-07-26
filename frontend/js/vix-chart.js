@@ -1,7 +1,7 @@
 /**
  * VIX Fear Index tab — embedded in price-change.html.
  *
- * - SPY / QQQ on left Y-axis as % change
+ * - SPY / QQQ candlesticks on left Y-axis as % change
  * - VIX on right Y-axis as absolute index value
  * - Period switching: 1hour / daily / weekly / monthly (default daily)
  * - Manual bar count input (default 30)
@@ -15,6 +15,8 @@
         return {
             spy: "#2997ff",
             qqq: "#e8a43e",
+            positive: s.getPropertyValue('--data-positive').trim() || '#30d158',
+            negative: s.getPropertyValue('--data-negative').trim() || '#ff453a',
             vix: s.getPropertyValue('--data-negative').trim() || '#ff453a',
             grid: s.getPropertyValue('--apple-chart-grid').trim() || 'rgba(255,255,255,0.10)',
             text: s.getPropertyValue('--apple-chart-text').trim() || 'rgba(255,255,255,0.75)',
@@ -193,24 +195,47 @@
         badge.title = vixRuleTip();
     }
 
-    function normalizePriceSeries(points, stepWise) {
+    function normalizeCandleSeries(points, fallbackPoints, stepWise) {
+        if (!points || points.length < 2) {
+            points = (fallbackPoints || []).map(function (p) {
+                return {
+                    date: p.date,
+                    open: p.close,
+                    high: p.close,
+                    low: p.close,
+                    close: p.close,
+                    previous_close: null,
+                };
+            });
+        }
         if (!points || points.length < 2) return [];
+
+        var cumulativeBase = points[0].previous_close || points[0].open || points[0].close;
+        if (!cumulativeBase) return [];
         var result = [];
-        if (stepWise) {
-            for (var i = 0; i < points.length; i++) {
-                var pct = 0;
-                if (i > 0) {
-                    var prev = points[i - 1].close;
-                    pct = prev ? ((points[i].close - prev) / prev) * 100 : 0;
-                }
-                result.push({ date: points[i].date, pct: pct, close: points[i].close });
+        for (var i = 0; i < points.length; i++) {
+            var point = points[i];
+            var base = cumulativeBase;
+            if (stepWise) {
+                base = point.previous_close || (i > 0 ? points[i - 1].close : point.open) || point.close;
             }
-        } else {
-            var base = points[0].close;
-            if (!base) return [];
-            for (var j = 0; j < points.length; j++) {
-                result.push({ date: points[j].date, pct: ((points[j].close - base) / base) * 100, close: points[j].close });
-            }
+            if (!base || !point.close) continue;
+            var open = Number(point.open || point.close);
+            var close = Number(point.close);
+            var high = Math.max(Number(point.high || close), open, close);
+            var low = Math.min(Number(point.low || close), open, close);
+            result.push({
+                date: point.date,
+                openPct: ((open - base) / base) * 100,
+                highPct: ((high - base) / base) * 100,
+                lowPct: ((low - base) / base) * 100,
+                closePct: ((close - base) / base) * 100,
+                pct: ((close - base) / base) * 100,
+                open: open,
+                high: high,
+                low: low,
+                close: close,
+            });
         }
         return result;
     }
@@ -247,9 +272,9 @@
         if (!container || !_vixData) return;
 
         var stepWise = isStepWise(_vixPeriod);
-        var spySeries = { key: "spy", name: "SPY", axis: "left", points: normalizePriceSeries(_vixData.spy || [], stepWise), color: getVixColors().spy };
-        var qqqSeries = { key: "qqq", name: "QQQ", axis: "left", points: normalizePriceSeries(_vixData.qqq || [], stepWise), color: getVixColors().qqq };
-        var vixSeries = { key: "vix", name: "VIX", axis: "right", points: vixValueSeries(_vixData.vix || []), color: getVixColors().vix };
+        var spySeries = { key: "spy", name: "SPY", kind: "candle", axis: "left", points: normalizeCandleSeries(_vixData.spy_candles || [], _vixData.spy || [], stepWise), color: getVixColors().spy };
+        var qqqSeries = { key: "qqq", name: "QQQ", kind: "candle", axis: "left", points: normalizeCandleSeries(_vixData.qqq_candles || [], _vixData.qqq || [], stepWise), color: getVixColors().qqq };
+        var vixSeries = { key: "vix", name: "VIX", kind: "line", axis: "right", points: vixValueSeries(_vixData.vix || []), color: getVixColors().vix };
         var allSeries = [spySeries, qqqSeries, vixSeries];
         var validSeries = allSeries.filter(function (s) { return s.points.length >= 2; });
 
@@ -275,7 +300,11 @@
         var visibleLeft = validSeries.filter(function (s) { return s.axis === "left" && !_vixHidden[s.key]; });
         var visibleRight = validSeries.filter(function (s) { return s.axis === "right" && !_vixHidden[s.key]; });
         var leftVals = [];
-        visibleLeft.forEach(function (s) { s.points.forEach(function (p) { leftVals.push(p.pct); }); });
+        visibleLeft.forEach(function (s) {
+            s.points.forEach(function (p) {
+                leftVals.push(p.openPct, p.highPct, p.lowPct, p.closePct);
+            });
+        });
         var rightVals = [];
         visibleRight.forEach(function (s) { s.points.forEach(function (p) { rightVals.push(p.value); }); });
 
@@ -292,6 +321,8 @@
 
         var dateX = {};
         allDates.forEach(function (d, i) { dateX[d] = xScale(i); });
+        var slotW = plotW / Math.max(allDates.length - 1, 1);
+        var candleWidth = Math.min(8, Math.max(2, slotW * 0.24));
 
         var svg = '<rect width="' + W + '" height="' + H + '" fill="transparent"/>';
         var gridLines = 5;
@@ -313,26 +344,47 @@
 
         validSeries.forEach(function (series) {
             if (_vixHidden[series.key]) return;
-            var yFn = series.axis === "right" ? rightY : leftY;
-            var valKey = series.axis === "right" ? "value" : "pct";
-            var pathD = "";
-            for (var i = 0; i < series.points.length; i++) {
-                var x = dateX[series.points[i].date];
-                var y = yFn(series.points[i][valKey]);
-                if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-                pathD += (pathD ? "L" : "M") + x.toFixed(1) + "," + y.toFixed(1) + " ";
-            }
             svg += '<g id="vs-' + series.key + '">';
-            if (pathD) {
-                var width = series.axis === "right" ? "1.6" : "1.9";
-                var dash = series.axis === "right" ? ' stroke-dasharray="4,3"' : "";
-                svg += '<path d="' + pathD + '" fill="none" stroke="' + series.color + '" stroke-width="' + width + '" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"' + dash + '/>';
-            }
-            for (var j = 0; j < series.points.length; j++) {
-                var dx = dateX[series.points[j].date];
-                var dy = yFn(series.points[j][valKey]);
-                if (!Number.isFinite(dx) || !Number.isFinite(dy)) continue;
-                svg += '<circle cx="' + dx.toFixed(1) + '" cy="' + dy.toFixed(1) + '" r="1.5" fill="' + series.color + '" stroke="var(--apple-bg)" stroke-width="0.5"/>';
+            if (series.kind === "candle") {
+                var candleStyle = series.key === "spy" ? "solid" : "hollow";
+                var seriesCandleWidth = candleStyle === "solid"
+                    ? candleWidth
+                    : Math.max(1.2, candleWidth * 0.58);
+                for (var i = 0; i < series.points.length; i++) {
+                    var point = series.points[i];
+                    var candleX = dateX[point.date];
+                    var highY = leftY(point.highPct);
+                    var lowY = leftY(point.lowPct);
+                    var openY = leftY(point.openPct);
+                    var closeY = leftY(point.closePct);
+                    if (![candleX, highY, lowY, openY, closeY].every(Number.isFinite)) continue;
+                    var rising = point.closePct >= point.openPct;
+                    var directionColor = rising ? CLR.positive : CLR.negative;
+                    var bodyY = Math.min(openY, closeY);
+                    var bodyHeight = Math.max(1.5, Math.abs(closeY - openY));
+                    var wickDash = candleStyle === "hollow" ? ' stroke-dasharray="2,1.5"' : "";
+                    var bodyFill = candleStyle === "solid" ? directionColor : "none";
+                    var bodyOpacity = candleStyle === "solid" ? "0.78" : "1";
+                    svg += '<line class="vix-candle-wick vix-candle-' + candleStyle + '" data-series="' + series.key + '" data-style="' + candleStyle + '" data-direction="' + (rising ? "up" : "down") + '" x1="' + candleX.toFixed(1) + '" y1="' + highY.toFixed(1) + '" x2="' + candleX.toFixed(1) + '" y2="' + lowY.toFixed(1) + '" stroke="' + directionColor + '" stroke-width="1"' + wickDash + '/>';
+                    svg += '<rect class="vix-candle-body vix-candle-' + candleStyle + '" data-series="' + series.key + '" data-style="' + candleStyle + '" data-direction="' + (rising ? "up" : "down") + '" x="' + (candleX - seriesCandleWidth / 2).toFixed(1) + '" y="' + bodyY.toFixed(1) + '" width="' + seriesCandleWidth.toFixed(1) + '" height="' + bodyHeight.toFixed(1) + '" fill="' + bodyFill + '" fill-opacity="' + bodyOpacity + '" stroke="' + directionColor + '" stroke-width="1"/>';
+                }
+            } else {
+                var pathD = "";
+                for (var j = 0; j < series.points.length; j++) {
+                    var x = dateX[series.points[j].date];
+                    var y = rightY(series.points[j].value);
+                    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+                    pathD += (pathD ? "L" : "M") + x.toFixed(1) + "," + y.toFixed(1) + " ";
+                }
+                if (pathD) {
+                    svg += '<path d="' + pathD + '" fill="none" stroke="' + series.color + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" stroke-dasharray="4,3"/>';
+                }
+                for (var k = 0; k < series.points.length; k++) {
+                    var dx = dateX[series.points[k].date];
+                    var dy = rightY(series.points[k].value);
+                    if (!Number.isFinite(dx) || !Number.isFinite(dy)) continue;
+                    svg += '<circle cx="' + dx.toFixed(1) + '" cy="' + dy.toFixed(1) + '" r="1.5" fill="' + series.color + '" stroke="var(--apple-bg)" stroke-width="0.5"/>';
+                }
             }
             svg += '</g>';
         });
@@ -356,8 +408,19 @@
             var lx = 10 + idx * 155;
             svg += '<g data-vix-legend="' + series.key + '" style="cursor:pointer;">';
             svg += '<rect x="' + (lx - 4) + '" y="' + (legendY - 12) + '" width="145" height="20" rx="4" fill="rgba(0,0,0,0.001)"/>';
-            svg += '<rect x="' + lx + '" y="' + (legendY - 5) + '" width="10" height="3" rx="1.5" fill="' + series.color + '" opacity="' + (hidden ? 0.25 : 1) + '"/>';
-            svg += '<text x="' + (lx + 14) + '" y="' + (legendY + 1) + '" fill="var(--apple-text-secondary)" font-size="11" opacity="' + (hidden ? 0.3 : 0.85) + '" text-decoration="' + (hidden ? "line-through" : "none") + '">' + series.name + (series.axis === "right" ? __("vix.tooltipRightAxis") : "") + '</text>';
+            if (series.kind === "candle") {
+                var legendHollow = series.key === "qqq";
+                var legendFillUp = legendHollow ? "none" : CLR.positive;
+                var legendFillDown = legendHollow ? "none" : CLR.negative;
+                var legendDash = legendHollow ? ' stroke-dasharray="2,1.5"' : "";
+                svg += '<line x1="' + (lx + 3) + '" y1="' + (legendY - 8) + '" x2="' + (lx + 3) + '" y2="' + (legendY + 2) + '" stroke="' + CLR.positive + '" opacity="' + (hidden ? 0.25 : 1) + '"' + legendDash + '/>';
+                svg += '<rect x="' + lx + '" y="' + (legendY - 5) + '" width="6" height="5" fill="' + legendFillUp + '" stroke="' + CLR.positive + '" opacity="' + (hidden ? 0.25 : 0.78) + '"/>';
+                svg += '<line x1="' + (lx + 9) + '" y1="' + (legendY - 8) + '" x2="' + (lx + 9) + '" y2="' + (legendY + 2) + '" stroke="' + CLR.negative + '" opacity="' + (hidden ? 0.25 : 1) + '"' + legendDash + '/>';
+                svg += '<rect x="' + (lx + 6) + '" y="' + (legendY - 3) + '" width="6" height="5" fill="' + legendFillDown + '" stroke="' + CLR.negative + '" opacity="' + (hidden ? 0.25 : 0.78) + '"/>';
+            } else {
+                svg += '<rect x="' + lx + '" y="' + (legendY - 5) + '" width="10" height="3" rx="1.5" fill="' + series.color + '" opacity="' + (hidden ? 0.25 : 1) + '"/>';
+            }
+            svg += '<text x="' + (lx + 16) + '" y="' + (legendY + 1) + '" fill="var(--apple-text-secondary)" font-size="11" opacity="' + (hidden ? 0.3 : 0.85) + '" text-decoration="' + (hidden ? "line-through" : "none") + '">' + series.name + (series.axis === "right" ? __("vix.tooltipRightAxis") : "") + '</text>';
             svg += '</g>';
         });
 
@@ -366,7 +429,6 @@
         svg += '<rect id="vixTipRect" x="0" y="0" width="190" height="1" rx="6" fill="' + CLR.tooltipBg + '" style="display:none;pointer-events:none"/>';
         svg += '<text id="vixTipText" x="0" y="0" fill="' + CLR.tooltipText + '" font-size="11" style="display:none;pointer-events:none"></text>';
 
-        var slotW = plotW / Math.max(allDates.length - 1, 1);
         for (var z = 0; z < allDates.length; z++) {
             var sx = dateX[allDates[z]] - slotW / 2;
             svg += '<rect x="' + sx.toFixed(1) + '" y="' + PAD.top + '" width="' + slotW.toFixed(1) + '" height="' + plotH + '" fill="transparent" data-vix-idx="' + z + '" class="vix-hover-zone"/>';
@@ -437,11 +499,19 @@
                 if (series.axis === "right") {
                     lines.push(series.name + "：" + pt.value.toFixed(2));
                 } else {
-                    lines.push(series.name + "：" + (pt.pct >= 0 ? "+" : "") + pt.pct.toFixed(2) + "% ($" + pt.close.toFixed(2) + ")");
+                    var pct = function (value) {
+                        return (value >= 0 ? "+" : "") + value.toFixed(2) + "%";
+                    };
+                    lines.push(
+                        series.name + " " + __("vix.tooltipOhlc") + "：" +
+                        pct(pt.openPct) + " / " + pct(pt.highPct) + " / " +
+                        pct(pt.lowPct) + " / " + pct(pt.closePct)
+                    );
+                    lines.push(series.name + " " + __("vix.tooltipClosePrice") + " $" + pt.close.toFixed(2));
                 }
             });
 
-            var tipW = 185, lineH = 14, tipH = lineH * lines.length + 14;
+            var tipW = 300, lineH = 14, tipH = lineH * lines.length + 14;
             var tipX = cx + 10, tipY = PAD.top + 4;
             if (tipX + tipW > W - PAD.right) tipX = cx - tipW - 10;
             tipRect.setAttribute("x", tipX); tipRect.setAttribute("y", tipY);

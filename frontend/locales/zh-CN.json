@@ -555,6 +555,8 @@
     "axisCumReturn": "SPY/QQQ 累计涨跌幅 %",
     "axisVix": "VIX",
     "tooltipDate": "日期：",
+    "tooltipOhlc": "开/高/低/收",
+    "tooltipClosePrice": "收盘价：",
     "tooltipRightAxis": " (右轴)",
     "percentilePrefix": "当前处于近1年约 ",
     "percentileSuffix": "% 分位",

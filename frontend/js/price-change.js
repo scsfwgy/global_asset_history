@@ -19,7 +19,6 @@ let _sortBy = null; // symbol key currently sorted (null = default year desc)
 let _sortDir = "desc"; // "asc" or "desc"
 let _lastFetchTime = null; // Date.now() of last successful data fetch
 let _lastFetchFn = null; // retry callback for the most recent fetch
-let _initialYearlyFetchDone = false;
 let _yearlyParamsCollapsed = false;
 let _btParamsCollapsed = false;
 const STORAGE_KEY = "gah_state";
@@ -252,7 +251,6 @@ function formatPct(val) {
 // ─── API call ───
 
 async function fetchData() {
-  _initialYearlyFetchDone = true;
   if (symbols.length === 0) {
     showError(__("yearly.errorNoSymbols"));
     return;
@@ -480,7 +478,6 @@ function loadPreset(key) {
   _sortBy = null; _sortDir = "desc";
   renderTags();
   saveState();
-  fetchData();
 }
 
 function renderPresetChips() {
@@ -727,11 +724,6 @@ function exportCSV() {
 
 // ─── Init ───
 
-function isYearlyRoute() {
-  var path = window.location.pathname.replace(/^\/(?:en|zh)(?=\/|$)/, "") || "/";
-  return path === "/yearly";
-}
-
 function setYearlyParamsCollapsed(collapsed) {
   var panel = $("pcYearlyParamsPanel");
   var toggle = $("pcYearlyParamsToggle");
@@ -795,18 +787,11 @@ async function init() {
     });
   }
 
-  // Restore the controls immediately, but fetch only when the yearly panel is
-  // actually being viewed.  A saved query must not run behind the heatmap home.
+  // Restore controls only. Yearly data is fetched exclusively after the user
+  // explicitly queries, never during route activation or state restoration.
   if (hadState) {
     renderTags();
-    if (isYearlyRoute()) fetchData();
   }
-
-  document.querySelectorAll('.tab-btn[data-tab="yearly"]').forEach((btn) => {
-    btn.addEventListener("click", () => {
-      if (hadState && !_initialYearlyFetchDone) fetchData();
-    });
-  });
 
   // Add button
   addBtn.addEventListener("click", () => {

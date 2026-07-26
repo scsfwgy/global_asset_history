@@ -445,7 +445,8 @@ def vix_comparison():
         {"period": "1hour|daily|weekly|monthly", "count": 30}
 
     Returns:
-        {"spy": [...], "qqq": [...], "vix": [...],
+        {"spy": [...], "qqq": [...], "spy_candles": [...],
+         "qqq_candles": [...], "vix": [...],
          "latest_vix": float, "meta": {...}}
     """
     import concurrent.futures
@@ -521,7 +522,14 @@ def vix_comparison():
                     closes = adjclose[0]["adjclose"]
             if not closes:
                 return {"error": "no close data"}
-            return {"timestamps": timestamps, "closes": closes}
+            return {
+                "timestamps": timestamps,
+                "opens": quote.get("open"),
+                "highs": quote.get("high"),
+                "lows": quote.get("low"),
+                "closes": closes,
+                "raw_closes": quote.get("close") or closes,
+            }
         except (KeyError, IndexError, TypeError) as e:
             return {"error": f"parse error: {e}"}
 
@@ -551,6 +559,10 @@ def vix_comparison():
                         series_map[sym] = {
                             "timestamps": s.timestamps,
                             "closes": s.closes,
+                            "opens": getattr(s, "opens", None),
+                            "highs": getattr(s, "highs", None),
+                            "lows": getattr(s, "lows", None),
+                            "raw_closes": getattr(s, "raw_closes", None),
                             "source": s.source,
                         }
                     else:
@@ -632,6 +644,104 @@ def vix_comparison():
 
         return []
 
+    def _aggregate_candles(raw, period_type):
+        """Return adjusted OHLC candles for SPY/QQQ in the requested period.
+
+        Yahoo's daily stock closes are adjusted for distributions and splits,
+        while its OHLC values are raw. Apply the close adjustment factor to
+        every OHLC field so candle returns and the existing return series use
+        the same price basis.
+        """
+        if raw is None or raw.get("error"):
+            return []
+
+        timestamps = raw.get("timestamps", [])
+        closes = raw.get("closes", [])
+        opens = raw.get("opens") or []
+        highs = raw.get("highs") or []
+        lows = raw.get("lows") or []
+        raw_closes = raw.get("raw_closes") or []
+
+        def _number(values, index, fallback):
+            try:
+                value = values[index]
+                return float(value) if value is not None else fallback
+            except (IndexError, TypeError, ValueError):
+                return fallback
+
+        bars = []
+        for index, (ts, adjusted_close) in enumerate(zip(timestamps, closes)):
+            if adjusted_close is None:
+                continue
+            try:
+                close = float(adjusted_close)
+                dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+            except (TypeError, ValueError, OSError, OverflowError):
+                continue
+
+            raw_close = _number(raw_closes, index, close)
+            factor = close / raw_close if raw_close else 1.0
+            open_price = _number(opens, index, raw_close) * factor
+            high_price = _number(highs, index, raw_close) * factor
+            low_price = _number(lows, index, raw_close) * factor
+            high_price = max(high_price, open_price, close)
+            low_price = min(low_price, open_price, close)
+            bars.append({
+                "dt": dt,
+                "open": open_price,
+                "high": high_price,
+                "low": low_price,
+                "close": close,
+            })
+
+        if not bars:
+            return []
+
+        if period_type in ("1hour", "daily"):
+            grouped = bars
+        else:
+            grouped_map = {}
+            for bar in bars:
+                dt = bar["dt"]
+                if period_type == "weekly":
+                    iso = dt.isocalendar()
+                    key = (iso[0], iso[1])
+                else:
+                    key = (dt.year, dt.month)
+                group = grouped_map.get(key)
+                if group is None:
+                    grouped_map[key] = {
+                        "dt": dt,
+                        "open": bar["open"],
+                        "high": bar["high"],
+                        "low": bar["low"],
+                        "close": bar["close"],
+                    }
+                else:
+                    group["dt"] = dt
+                    group["high"] = max(group["high"], bar["high"])
+                    group["low"] = min(group["low"], bar["low"])
+                    group["close"] = bar["close"]
+            grouped = [grouped_map[key] for key in sorted(grouped_map)]
+
+        result = []
+        previous_close = None
+        for bar in grouped:
+            dt = bar["dt"]
+            result.append({
+                "date": dt.strftime("%Y-%m-%dT%H:%M:%S")
+                if period_type == "1hour" else dt.strftime("%Y-%m-%d"),
+                "open": round(bar["open"], 2),
+                "high": round(bar["high"], 2),
+                "low": round(bar["low"], 2),
+                "close": round(bar["close"], 2),
+                "previous_close": round(previous_close, 2)
+                if previous_close is not None else None,
+            })
+            previous_close = bar["close"]
+
+        return result[-count:]
+
     def _valid_closes(raw):
         if not raw or raw.get("error"):
             return []
@@ -683,6 +793,8 @@ def vix_comparison():
     result = {
         "spy": _aggregate(series_map.get("SPY"), period),
         "qqq": _aggregate(series_map.get("QQQ"), period),
+        "spy_candles": _aggregate_candles(series_map.get("SPY"), period),
+        "qqq_candles": _aggregate_candles(series_map.get("QQQ"), period),
         "vix": _aggregate(series_map.get("^VIX"), period),
         "period": period,
         "meta": {},
