@@ -218,9 +218,15 @@ class TestHtmlMeta:
         assert 'id="scTags"' in html
         assert 'id="scParamsToggle"' in html
         assert 'id="scParamsPanel"' in html
+        assert 'id="scMethodologyTitle"' in html
+        assert 'id="scAggregateTable"' in html
+        assert "先用一张聚合表纵览四项指标" not in html
+        assert html.index('id="scParamsPanel"') < html.index('id="scMethodologyTitle"')
+        assert html.index('id="scMethodologyTitle"') < html.index('id="scSymbolInput"')
         assert 'id="scSummary"' not in html
         assert 'id="scMetricGrid"' in html
         table_ids = [
+            'id="scAggregateTable"',
             'id="scCombinedTable"',
             'id="scDrawdownTable"',
             'id="scDividendTable"',
@@ -246,6 +252,16 @@ class TestHtmlMeta:
             quick_block.index(symbol) for symbol in quick_symbols
         )
         assert "if (!_loaded && !_loading) queryComparison();" not in script
+        aggregate_start = script.index("function renderAggregateTable")
+        aggregate_end = script.index("function renderMetricTables", aggregate_start)
+        aggregate_block = script[aggregate_start:aggregate_end]
+        assert 'metricValue(result, year, symbol, "combined_annualized")' in aggregate_block
+        assert 'metricValue(result, year, symbol, "max_drawdown")' in aggregate_block
+        assert "dividend_yield_after_tax" not in aggregate_block
+        assert '"annual_return"' not in aggregate_block
+        assert "sc-aggregate-bg-return" in aggregate_block
+        assert "sc-aggregate-bg-drawdown" in aggregate_block
+        assert "renderAggregateTable(result);" in script
 
     @pytest.mark.parametrize(
         "path,needle",

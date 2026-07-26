@@ -349,6 +349,9 @@ class TestFetchReturnDetail:
 class TestFetchStockComparison:
     """Compact annual comparison data for multiple US stocks."""
 
+    def setup_method(self):
+        svc.clear_price_change_cache()
+
     @patch("service.price_change.price_change_service._fetch_daily_series_cached")
     def test_builds_year_symbol_metric_cube_with_after_tax_dividends(self, mock_fetch):
         dates = [
@@ -414,6 +417,69 @@ class TestFetchStockComparison:
         assert result["data"]
         assert result["meta"]["AAPL"]["error"] is None
         assert result["meta"]["BAD"]["error"] == "not found"
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_reuses_cached_aggregate_response(self, mock_fetch):
+        mock_fetch.return_value = make_series(years=2)
+
+        first = svc.fetch_stock_comparison(["SPY", "QQQ"], 30)
+        second = svc.fetch_stock_comparison(["SPY", "QQQ"], 30)
+
+        assert second == first
+        assert mock_fetch.call_count == 2
+
+    def test_stock_comparison_cache_roundtrips_through_l2(self):
+        payload = {
+            "symbols": ["SPY", "QQQ"],
+            "years": [2024],
+            "meta": {
+                "SPY": {"error": None},
+                "QQQ": {"error": None},
+            },
+        }
+        cache_key = svc._stock_compare_cache_key(["SPY", "QQQ"], 30.0)
+        with patch.object(svc.cache_store, "cache_set") as mock_set:
+            svc._set_cached_stock_comparison(cache_key, payload)
+        raw = mock_set.call_args.args[1]
+        svc._STOCK_COMPARE_CACHE.clear()
+
+        with patch.object(svc.cache_store, "cache_get", return_value=raw):
+            cached = svc._get_cached_stock_comparison(cache_key)
+
+        assert cached == payload
+        assert cache_key in svc._STOCK_COMPARE_CACHE
+
+    def test_partial_failure_uses_short_stock_comparison_cache_ttl(self):
+        payload = {
+            "meta": {
+                "SPY": {"error": None},
+                "BAD": {"error": "not found"},
+            },
+        }
+        cache_key = svc._stock_compare_cache_key(["SPY", "BAD"], 30.0)
+
+        with patch.object(svc.cache_store, "cache_set"):
+            svc._set_cached_stock_comparison(cache_key, payload)
+
+        assert svc._STOCK_COMPARE_CACHE[cache_key][1] == svc.ERROR_CACHE_TTL_SECONDS
+
+    def test_stock_comparison_cache_does_not_outlive_source_series(self):
+        nearly_expired = datetime.fromtimestamp(
+            time.time() - svc.DAILY_SERIES_TTL_SECONDS + 120,
+            tz=timezone.utc,
+        ).isoformat()
+        payload = {
+            "meta": {
+                "SPY": {"error": None, "updated_at": nearly_expired},
+                "QQQ": {"error": None, "updated_at": nearly_expired},
+            },
+        }
+        cache_key = svc._stock_compare_cache_key(["SPY", "QQQ"], 30.0)
+
+        with patch.object(svc.cache_store, "cache_set"):
+            svc._set_cached_stock_comparison(cache_key, payload)
+
+        assert 115 <= svc._STOCK_COMPARE_CACHE[cache_key][1] <= 120
 
     @pytest.mark.parametrize("tax_rate", [-1, 101, "abc", float("nan")])
     def test_rejects_invalid_tax_rate(self, tax_rate):

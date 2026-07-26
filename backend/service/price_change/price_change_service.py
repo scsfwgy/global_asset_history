@@ -1,5 +1,6 @@
 """Public API and orchestration for the price change feature."""
 
+import hashlib
 import json
 import logging
 import math
@@ -42,6 +43,7 @@ logger = logging.getLogger(__name__)
 # L2: shared Upstash Redis (cross-instance, survives cold starts). Falls back to
 # L1-only when Redis is not configured (local dev).
 _DAILY_SERIES_CACHE: Dict[Tuple[str, str], PriceSeries] = {}
+_STOCK_COMPARE_CACHE: Dict[str, Tuple[float, int, Dict]] = {}
 _CACHE_LOCK = threading.RLock()
 
 _FETCHERS: Dict[str, Callable[[str], Dict[str, float]]] = dict(FETCHERS)
@@ -64,6 +66,7 @@ def _cache_ttl(series: PriceSeries) -> int:
 # lack new fields) are abandoned instead of served stale. v5 adds dividend
 # events used by the stock-only history tables in Return Detail.
 _CACHE_SCHEMA_VERSION = "v5"
+_STOCK_COMPARE_CACHE_SCHEMA_VERSION = "v1"
 
 
 def _redis_key(symbol: str, asset_type: str) -> str:
@@ -134,6 +137,7 @@ def clear_price_change_cache() -> None:
     global _market_pulse_quote_cache, _market_pulse_quote_ts
     with _CACHE_LOCK:
         _DAILY_SERIES_CACHE.clear()
+        _STOCK_COMPARE_CACHE.clear()
     with _market_pulse_quote_lock:
         _market_pulse_quote_cache = []
         _market_pulse_quote_ts = 0.0
@@ -1042,6 +1046,85 @@ STOCK_COMPARE_METRICS = (
 )
 
 
+def _stock_compare_cache_key(symbols: List[str], tax_rate: float) -> str:
+    signature = json.dumps(
+        {"symbols": symbols, "tax_rate": tax_rate},
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    digest = hashlib.sha256(signature.encode("utf-8")).hexdigest()
+    return (
+        f"{_CACHE_SCHEMA_VERSION}:stock_compare:"
+        f"{_STOCK_COMPARE_CACHE_SCHEMA_VERSION}:{digest}"
+    )
+
+
+def _get_cached_stock_comparison(cache_key: str) -> Optional[Dict]:
+    now = time.time()
+    with _CACHE_LOCK:
+        cached = _STOCK_COMPARE_CACHE.get(cache_key)
+        if cached:
+            cached_at, ttl, payload = cached
+            if now - cached_at < ttl:
+                logger.info("event=stock_comparison_cache_hit layer=l1")
+                return payload
+            del _STOCK_COMPARE_CACHE[cache_key]
+
+    raw = cache_store.cache_get(cache_key)
+    if not raw:
+        return None
+    try:
+        wrapper = json.loads(raw)
+        cached_at = float(wrapper["cached_at"])
+        ttl = int(wrapper["ttl"])
+        payload = wrapper["payload"]
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict) or now - cached_at >= ttl:
+        return None
+    with _CACHE_LOCK:
+        _STOCK_COMPARE_CACHE[cache_key] = (cached_at, ttl, payload)
+    logger.info("event=stock_comparison_cache_hit layer=l2")
+    return payload
+
+
+def _set_cached_stock_comparison(cache_key: str, payload: Dict) -> None:
+    cached_at = time.time()
+    has_errors = any(
+        item.get("error")
+        for item in payload.get("meta", {}).values()
+        if isinstance(item, dict)
+    )
+    ttl = ERROR_CACHE_TTL_SECONDS if has_errors else DAILY_SERIES_TTL_SECONDS
+    if not has_errors:
+        remaining_ttls = []
+        for item in payload.get("meta", {}).values():
+            if not isinstance(item, dict) or not item.get("updated_at"):
+                continue
+            try:
+                fetched_at = datetime.fromisoformat(item["updated_at"]).timestamp()
+            except (TypeError, ValueError):
+                continue
+            remaining_ttls.append(
+                DAILY_SERIES_TTL_SECONDS - max(0, cached_at - fetched_at)
+            )
+        if remaining_ttls:
+            ttl = max(1, min(ttl, int(min(remaining_ttls))))
+    with _CACHE_LOCK:
+        _STOCK_COMPARE_CACHE[cache_key] = (cached_at, ttl, payload)
+    wrapper = {
+        "cached_at": cached_at,
+        "ttl": ttl,
+        "payload": payload,
+    }
+    cache_store.cache_set(
+        cache_key,
+        json.dumps(wrapper, ensure_ascii=True, separators=(",", ":")),
+        ttl,
+    )
+
+
 def _normalize_stock_compare_symbols(symbols: List) -> List[str]:
     normalized = []
     seen = set()
@@ -1107,6 +1190,11 @@ def fetch_stock_comparison(symbols: List, tax_rate: float = 30) -> Dict:
     if not math.isfinite(normalized_tax_rate) or not 0 <= normalized_tax_rate <= 100:
         raise ValueError("tax_rate must be between 0 and 100")
 
+    cache_key = _stock_compare_cache_key(normalized_symbols, normalized_tax_rate)
+    cached = _get_cached_stock_comparison(cache_key)
+    if cached is not None:
+        return cached
+
     started_at = time.perf_counter()
     logger.info(
         "event=stock_comparison_start symbols=%s tax_rate=%s",
@@ -1156,7 +1244,7 @@ def fetch_stock_comparison(symbols: List, tax_rate: float = 30) -> Dict:
         error_count,
         (time.perf_counter() - started_at) * 1000,
     )
-    return {
+    result = {
         "symbols": normalized_symbols,
         "years": all_years,
         "currency": "USD",
@@ -1165,6 +1253,8 @@ def fetch_stock_comparison(symbols: List, tax_rate: float = 30) -> Dict:
         "data": data,
         "meta": ordered_meta,
     }
+    _set_cached_stock_comparison(cache_key, result)
+    return result
 
 
 def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None) -> Dict:

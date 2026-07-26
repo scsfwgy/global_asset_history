@@ -287,7 +287,45 @@
     }).join("");
   }
 
+  function renderAggregateTable(result) {
+    var table = $("scAggregateTable");
+    if (!table) return;
+    var symbols = result.symbols || [];
+    var years = result.years || [];
+    var head = table.querySelector("thead");
+    var body = table.querySelector("tbody");
+    head.innerHTML = "<tr><th scope=\"col\">" + escapeHtml(__("stockCompare.year")) + "</th>"
+      + symbols.map(function (symbol) {
+        return "<th scope=\"col\">" + escapeHtml(symbol) + "</th>";
+      }).join("") + "</tr>";
+    body.innerHTML = years.map(function (year) {
+      var cells = symbols.map(function (symbol) {
+        var combined = metricValue(result, year, symbol, "combined_annualized");
+        var drawdown = metricValue(result, year, symbol, "max_drawdown");
+        var combinedColor = cellColor(combined);
+        var drawdownColor = cellColor(drawdown);
+        var title = __("stockCompare.combinedAnnualized") + ": " + formatPct(combined)
+          + " · " + __("stockCompare.maxDrawdown") + ": " + formatPct(drawdown);
+        return "<td class=\"sc-aggregate-cell\" title=\"" + escapeHtml(title) + "\">"
+          + "<span class=\"sc-aggregate-bg sc-aggregate-bg-return\" style=\"background:"
+          + combinedColor.bg + ";\"></span>"
+          + "<span class=\"sc-aggregate-bg sc-aggregate-bg-drawdown\" style=\"background:"
+          + drawdownColor.bg + ";\"></span>"
+          + "<span class=\"sc-aggregate-metric sc-aggregate-return\" style=\"color:"
+          + combinedColor.text + ";\"><span class=\"sc-aggregate-label\">"
+          + escapeHtml(__("stockCompare.aggregateCombined")) + "</span><span class=\"sc-aggregate-value\">"
+          + escapeHtml(formatPct(combined)) + "</span></span>"
+          + "<span class=\"sc-aggregate-metric sc-aggregate-drawdown\" style=\"color:"
+          + drawdownColor.text + ";\"><span class=\"sc-aggregate-label\">"
+          + escapeHtml(__("stockCompare.aggregateDrawdown")) + "</span><span class=\"sc-aggregate-value\">"
+          + escapeHtml(formatPct(drawdown)) + "</span></span></td>";
+      }).join("");
+      return "<tr><th scope=\"row\">" + year + "</th>" + cells + "</tr>";
+    }).join("");
+  }
+
   function renderMetricTables(result) {
+    renderAggregateTable(result);
     METRICS.forEach(function (metric) {
       renderMetricTable(result, metric);
     });
