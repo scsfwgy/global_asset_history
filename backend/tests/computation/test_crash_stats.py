@@ -212,3 +212,120 @@ class TestComputeCrashStatistics:
         assert len(result) == 1
         assert result[0]["drop_pct"] == pytest.approx(-10.0, abs=0.1)
         track_coverage(MOD, 1)
+
+    def test_daily_period_uses_previous_close_and_includes_overnight_gap(self):
+        """Daily returns include the gap between the prior close and today's open."""
+        dates = _trading_dates(date(2024, 1, 1), 2)
+        result = compute_crash_statistics(
+            [_to_timestamp(day) for day in dates],
+            [100.0, 95.0],
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 12, 31),
+            threshold_pct=5.0,
+        )
+
+        assert len(result) == 1
+        assert result[0]["pre_crash_date"] == dates[0].isoformat()
+        assert result[0]["pre_crash_close"] == 100.0
+        assert result[0]["drop_pct"] == pytest.approx(-5.0)
+        track_coverage(MOD, 3)
+
+    def test_n_day_period_uses_non_overlapping_candles(self):
+        """N-day mode aggregates consecutive, non-overlapping trading days."""
+        dates = _trading_dates(date(2023, 12, 29), 7)
+        result = compute_crash_statistics(
+            [_to_timestamp(day) for day in dates],
+            [100.0, 97.0, 96.0, 90.0, 90.0, 93.0, 100.0],
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 12, 31),
+            threshold_pct=5.0,
+            period_type="n_days",
+            period_days=3,
+        )
+
+        assert len(result) == 1
+        crash = result[0]
+        assert crash["pre_crash_date"] == dates[0].isoformat()
+        assert crash["period_start_date"] == dates[1].isoformat()
+        assert crash["period_end_date"] == dates[3].isoformat()
+        assert crash["drop_pct"] == pytest.approx(-10.0)
+        assert crash["days_to_bottom"] == 0
+        assert crash["recovery_days"] == 3
+        assert crash["period_type"] == "n_days"
+        assert crash["period_days"] == 3
+        track_coverage(MOD, 6)
+
+    def test_week_period_uses_previous_week_close(self):
+        """Weekly mode compares the prior week close with this week's close."""
+        dates = [
+            date(2024, 1, 5),
+            date(2024, 1, 8),
+            date(2024, 1, 12),
+            date(2024, 1, 15),
+            date(2024, 1, 19),
+        ]
+        result = compute_crash_statistics(
+            [_to_timestamp(day) for day in dates],
+            [100.0, 89.0, 81.0, 82.0, 101.0],
+            start_date=date(2024, 1, 8),
+            end_date=date(2024, 12, 31),
+            threshold_pct=8.0,
+            period_type="week",
+        )
+
+        assert len(result) == 1
+        crash = result[0]
+        assert crash["pre_crash_date"] == "2024-01-05"
+        assert crash["period_start_date"] == "2024-01-08"
+        assert crash["crash_date"] == "2024-01-12"
+        assert crash["pre_crash_close"] == 100.0
+        assert crash["drop_pct"] == pytest.approx(-19.0)
+        assert crash["recovery_days"] == 2
+        track_coverage(MOD, 4)
+
+    def test_month_period_uses_previous_month_close(self):
+        """Monthly mode compares the prior month close with this month's close."""
+        dates = [
+            date(2023, 12, 29),
+            date(2024, 1, 31),
+            date(2024, 2, 29),
+            date(2024, 3, 28),
+        ]
+        result = compute_crash_statistics(
+            [_to_timestamp(day) for day in dates],
+            [99.0, 100.0, 92.0, 101.0],
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 12, 31),
+            threshold_pct=5.0,
+            period_type="month",
+        )
+
+        assert len(result) == 1
+        assert result[0]["pre_crash_date"] == "2024-01-31"
+        assert result[0]["crash_date"] == "2024-02-29"
+        assert result[0]["drop_pct"] == pytest.approx(-8.0)
+        assert result[0]["recovery_date"] == "2024-03-28"
+        track_coverage(MOD, 3)
+
+    @pytest.mark.parametrize(
+        ("period_type", "period_days", "message"),
+        [
+            ("quarter", 1, "period_type"),
+            ("n_days", 1, "period_days"),
+            ("n_days", 251, "period_days"),
+        ],
+    )
+    def test_invalid_period_configuration(self, period_type, period_days, message):
+        """Unsupported periods and out-of-range N-day windows are rejected."""
+        dates = _trading_dates(date(2024, 1, 1), 3)
+        with pytest.raises(ValueError, match=message):
+            compute_crash_statistics(
+                [_to_timestamp(day) for day in dates],
+                [100.0, 99.0, 98.0],
+                start_date=date(2024, 1, 1),
+                end_date=date(2024, 12, 31),
+                threshold_pct=5.0,
+                period_type=period_type,
+                period_days=period_days,
+            )
+        track_coverage(MOD, 1)

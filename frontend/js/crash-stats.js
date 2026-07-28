@@ -8,6 +8,9 @@
     const startInput = document.getElementById("crashStartDate");
     const endInput = document.getElementById("crashEndDate");
     const thresholdInput = document.getElementById("crashThreshold");
+    const periodTypeSelect = document.getElementById("crashPeriodType");
+    const periodDaysInput = document.getElementById("crashPeriodDays");
+    const periodDaysWrap = document.getElementById("crashPeriodDaysWrap");
     const chartDaysInput = document.getElementById("crashChartDays");
     const resultWrap = document.getElementById("crashResult");
     const summaryDiv = document.getElementById("crashSummary");
@@ -26,6 +29,30 @@
     var _expandedRowIdx = -1;    // currently expanded crash index
     var _paramsCollapsed = false;
 
+    function syncPeriodControls() {
+        var isNDays = periodTypeSelect && periodTypeSelect.value === "n_days";
+        if (periodDaysWrap) periodDaysWrap.style.display = isNDays ? "inline-flex" : "none";
+        if (periodDaysInput) periodDaysInput.disabled = !isNDays;
+    }
+
+    function getPeriodLabel(periodType, periodDays) {
+        if (periodType === "n_days") {
+            return __("crash.periodNDaysValue", {days: periodDays});
+        }
+        var keys = {
+            day: "crash.periodDay",
+            week: "crash.periodWeek",
+            month: "crash.periodMonth",
+        };
+        return __(keys[periodType] || keys.day);
+    }
+
+    function formatPeriodRange(crash) {
+        var start = crash.period_start_date || crash.pre_crash_date;
+        var end = crash.period_end_date || crash.crash_date;
+        return start && end && start !== end ? start + " ~ " + end : (end || start || "—");
+    }
+
     function setParamsCollapsed(collapsed) {
         var panel = document.getElementById("crashParamsPanel");
         var toggle = document.getElementById("crashParamsToggle");
@@ -43,6 +70,7 @@
         var defaultStart = new Date(2020, 0, 1); // 2020-01-01
         if (endInput) endInput.value = now.toISOString().slice(0, 10);
         if (startInput) startInput.value = defaultStart.toISOString().slice(0, 10);
+        syncPeriodControls();
         var paramsToggle = document.getElementById("crashParamsToggle");
         if (paramsToggle) {
             paramsToggle.addEventListener("click", function () {
@@ -57,10 +85,16 @@
         var startDate = (startInput.value || "").trim();
         var endDate = (endInput.value || "").trim();
         var threshold = parseFloat(thresholdInput.value || "4.77");
+        var periodType = periodTypeSelect ? periodTypeSelect.value : "day";
+        var periodDays = parseInt(periodDaysInput ? periodDaysInput.value : "5", 10);
 
         if (!symbol) { showError(__("crash.errorNoSymbol"), run); return; }
         if (!startDate || !endDate) { showError(__("crash.errorNoDate"), run); return; }
         if (isNaN(threshold) || threshold <= 0) { showError(__("crash.errorDropPositive"), run); return; }
+        if (periodType === "n_days" && (isNaN(periodDays) || periodDays < 2 || periodDays > 250)) {
+            showError(__("crash.errorPeriodDays"), run);
+            return;
+        }
 
         setLoading(true);
         hideError();
@@ -76,6 +110,8 @@
                 start_date: startDate,
                 end_date: endDate,
                 threshold_pct: threshold,
+                period_type: periodType,
+                period_days: periodDays,
             }),
         })
             .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
@@ -101,7 +137,9 @@
 
         // Summary grid
         var recoveredPct = s.total_crashes > 0 ? Math.round(s.recovered / s.total_crashes * 100) : 0;
-        summaryDiv.innerHTML = '<div class="crash-summary-grid">' +
+        var periodLabel = getPeriodLabel(data.period_type || "day", data.period_days);
+        summaryDiv.innerHTML = '<div class="crash-period-context">' + __("crash.periodSummary", {period: periodLabel, pct: data.threshold_pct}) + '</div>' +
+            '<div class="crash-summary-grid">' +
             '<div class="crash-summary-item"><div class="crash-summary-label">' + __("crash.crashCount") + '</div><div class="crash-summary-val" style="color:' + (s.total_crashes > 0 ? 'var(--data-negative)' : 'var(--data-positive)') + '">' + s.total_crashes + '</div></div>' +
             '<div class="crash-summary-item"><div class="crash-summary-label">' + __("crash.recovered") + '</div><div class="crash-summary-val">' + s.recovered + ' / ' + s.total_crashes + ' (' + recoveredPct + '%)</div></div>' +
             '<div class="crash-summary-item"><div class="crash-summary-label">' + __("crash.avgRecoveryDays") + '</div><div class="crash-summary-val">' + (s.avg_recovery_days != null ? s.avg_recovery_days : "—") + '</div></div>' +
@@ -111,12 +149,12 @@
             '</div>';
 
         // Table header
-        tableHead.innerHTML = '<th>' + __("crash.colDate") + '</th><th>' + __("crash.colPreClose") + '</th><th>' + __("crash.colCrashClose") + '</th><th>' + __("crash.colDrop") + '</th><th>' + __("crash.colBottomDate") + '</th><th>' + __("crash.colBottomPrice") + '</th><th>' + __("crash.colBottomDrop") + '</th><th>' + __("crash.colBottomDays") + '</th><th>' + __("crash.colRecoveryDate") + '</th><th>' + __("crash.colRecoveryClose") + '</th><th>' + __("crash.colRecoveryDays") + '</th><th>' + __("crash.colStatus") + '</th>';
+        tableHead.innerHTML = '<th>' + __("crash.colPeriod") + '</th><th>' + __("crash.colPeriodOpen") + '</th><th>' + __("crash.colPeriodClose") + '</th><th>' + __("crash.colDrop") + '</th><th>' + __("crash.colBottomDate") + '</th><th>' + __("crash.colBottomPrice") + '</th><th>' + __("crash.colBottomDrop") + '</th><th>' + __("crash.colBottomDays") + '</th><th>' + __("crash.colRecoveryDate") + '</th><th>' + __("crash.colRecoveryClose") + '</th><th>' + __("crash.colRecoveryDays") + '</th><th>' + __("crash.colStatus") + '</th>';
 
         if (crashes.length === 0) {
             tableWrap.style.display = "none";
             emptyEl.style.display = "block";
-            emptyEl.innerHTML = '<div style="font-size:24px;margin-bottom:8px;">&#9989;</div><div>' + __("crash.noCrashFound", {pct: data.threshold_pct}) + '</div>';
+            emptyEl.innerHTML = '<div style="font-size:24px;margin-bottom:8px;">&#9989;</div><div>' + __("crash.noCrashFound", {pct: data.threshold_pct, period: periodLabel}) + '</div>';
         } else {
             tableWrap.style.display = "block";
             emptyEl.style.display = "none";
@@ -127,7 +165,7 @@
                     ? '<span class="crash-status recovered">' + __("crash.statusRecovered") + '</span>'
                     : '<span class="crash-status not-recovered">' + __("crash.statusNotRecovered") + '</span>';
                 bodyHtml += '<tr class="crash-row" data-crash-idx="' + idx + '">' +
-                    '<td>' + c.crash_date + '</td>' +
+                    '<td>' + formatPeriodRange(c) + '</td>' +
                     '<td>' + c.pre_crash_close.toFixed(2) + '</td>' +
                     '<td style="color:var(--data-negative);">' + c.crash_close.toFixed(2) + '</td>' +
                     '<td style="color:var(--data-negative);font-weight:600;">' + c.drop_pct.toFixed(2) + '%</td>' +
@@ -247,7 +285,9 @@
             return;
         }
 
-        var preCrashClose = chartData.pre_crash_close;
+        var preCrashClose = crash.pre_crash_close != null
+            ? crash.pre_crash_close
+            : chartData.pre_crash_close;
         var W = 700, H = 320;
         var PAD = { top: 24, right: 60, bottom: 66, left: 64 };
         var cw = W - PAD.left - PAD.right;
@@ -291,8 +331,9 @@
         var yPos = function (v) { return PAD.top + ch - ((v - yMin) / yRange) * ch; };
 
         // Identify key indices in the price array
-        var crashIdx = -1, bottomIdx = -1, recoveryIdx = -1;
+        var periodStartIdx = -1, crashIdx = -1, bottomIdx = -1, recoveryIdx = -1;
         prices.forEach(function (p, i) {
+            if (p.date === crash.period_start_date) periodStartIdx = i;
             if (p.date === crash.crash_date) crashIdx = i;
             if (p.date === crash.bottom_date) bottomIdx = i;
             if (crash.recovery_date && p.date === crash.recovery_date) recoveryIdx = i;
@@ -356,6 +397,9 @@
         // assign each label to the first row where it doesn't overlap the one
         // before it, and draw the guide line down to its own label row.
         var markerDefs = [];
+        if (periodStartIdx >= 0 && periodStartIdx !== crashIdx) {
+            markerDefs.push({ idx: periodStartIdx, color: C.preCrash, label: __("crash.labelPeriodStart") + " " + prices[periodStartIdx].date });
+        }
         if (crashIdx >= 0) markerDefs.push({ idx: crashIdx, color: C.crashDot, label: __("crash.labelCrashDay") + prices[crashIdx].date });
         if (bottomIdx >= 0 && bottomIdx !== crashIdx) markerDefs.push({ idx: bottomIdx, color: C.bottom, label: __("crash.labelBottom") + prices[bottomIdx].date });
         if (recoveryIdx >= 0 && recoveryIdx !== crashIdx && recoveryIdx !== bottomIdx) markerDefs.push({ idx: recoveryIdx, color: C.recovery, label: __("crash.labelRecovery") + prices[recoveryIdx].date });
@@ -389,8 +433,11 @@
         var labelInterval = Math.max(1, Math.floor(prices.length / 10));
         prices.forEach(function (p, i) {
             if (i % labelInterval === 0 || i === prices.length - 1 || i === crashIdx || i === bottomIdx || i === recoveryIdx) {
-                var label = "D" + (i - 1);  // Day 0 = crash day (index 1), Day -1 = pre-crash (index 0)
-                if (i === 0) label = __("crash.labelPreCrash");
+                var relativeDay = crashIdx >= 0 ? i - crashIdx : i - 1;
+                var label = "D" + relativeDay;
+                if (p.date === crash.period_start_date && periodStartIdx !== crashIdx) {
+                    label = __("crash.labelPeriodStart");
+                }
                 var cx = xPos(i);
                 xLabels += '<text x="' + cx + '" y="' + (plotBottom + 14) + '" text-anchor="middle" fill="var(--apple-text-tertiary)" font-size="10">' + label + '</text>';
             }
@@ -513,6 +560,7 @@
     /* ── Bind ── */
     if (btnRun) btnRun.addEventListener("click", run);
     if (closeBtn) closeBtn.addEventListener("click", closeResult);
+    if (periodTypeSelect) periodTypeSelect.addEventListener("change", syncPeriodControls);
     if (symbolInput) {
         symbolInput.addEventListener("keydown", function (e) {
             if (e.key === "Enter") run();

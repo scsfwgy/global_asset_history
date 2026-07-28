@@ -1041,8 +1041,73 @@ class TestRunCrashStats:
             "threshold_pct": 3.0,
         })
         assert result["summary"]["total_crashes"] >= 2
+        assert result["period_type"] == "day"
+        assert result["period_days"] is None
         diagnose("crash summary", result["summary"])
         track_coverage(MOD, 2)
+
+    def test_n_day_period_is_returned_and_applied(self, mock_fetch_daily_series):
+        """Service builds non-overlapping N-day candles."""
+        dates = [
+            datetime(2023, 12, 29, 12, tzinfo=timezone.utc),
+            *[
+                datetime(2024, 1, day, 12, tzinfo=timezone.utc)
+                for day in range(1, 7)
+            ],
+        ]
+        mock_fetch_daily_series.return_value = PriceSeries(
+            [int(day.timestamp()) for day in dates],
+            [100.0, 97.0, 96.0, 90.0, 90.0, 93.0, 100.0],
+            "test-crash",
+            time.time(),
+        )
+
+        result = svc.run_crash_stats({
+            "symbol": "test",
+            "type": "stock",
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-31",
+            "threshold_pct": 5.0,
+            "period_type": "n_days",
+            "period_days": 3,
+        })
+
+        assert result["period_type"] == "n_days"
+        assert result["period_days"] == 3
+        assert result["summary"]["total_crashes"] == 1
+        assert result["crashes"][0]["period_start_date"] == "2024-01-01"
+        track_coverage(MOD, 3)
+
+    def test_daily_period_uses_previous_adjusted_close_not_current_open(
+        self,
+        mock_fetch_daily_series,
+    ):
+        """Daily crash detection includes an overnight gap down."""
+        dates = [
+            datetime(2024, 1, day, 12, tzinfo=timezone.utc)
+            for day in range(1, 3)
+        ]
+        mock_fetch_daily_series.return_value = PriceSeries(
+            [int(day.timestamp()) for day in dates],
+            [50.0, 45.0],
+            "test-crash",
+            time.time(),
+            opens=[50.0, 44.0],
+        )
+
+        result = svc.run_crash_stats({
+            "symbol": "test",
+            "type": "stock",
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-31",
+            "threshold_pct": 5.0,
+        })
+
+        assert result["summary"]["total_crashes"] == 1
+        assert result["crashes"][0]["pre_crash_close"] == 50.0
+        assert result["crashes"][0]["crash_close"] == 45.0
+        assert result["crashes"][0]["drop_pct"] == -10.0
+        track_coverage(MOD, 4)
 
     def test_no_crashes(self, mock_fetch_daily_series, three_year_series):
         """Gentle uptrend → no crashes."""
@@ -1078,6 +1143,21 @@ class TestRunCrashStats:
                 "start_date": "2024-01-01",
                 "end_date": "2024-12-31",
                 "threshold_pct": -5,
+            })
+        with pytest.raises(ValueError, match="period_type"):
+            svc.run_crash_stats({
+                "symbol": "AAPL",
+                "start_date": "2024-01-01",
+                "end_date": "2024-12-31",
+                "period_type": "quarter",
+            })
+        with pytest.raises(ValueError, match="period_days"):
+            svc.run_crash_stats({
+                "symbol": "AAPL",
+                "start_date": "2024-01-01",
+                "end_date": "2024-12-31",
+                "period_type": "n_days",
+                "period_days": 1,
             })
         track_coverage(MOD, 3)
 

@@ -147,6 +147,13 @@ class TestHtmlMeta:
         versioned = client.get(f"/js/i18n.js?v={version}")
         assert versioned.headers["Cache-Control"] == "public, max-age=31536000, immutable"
 
+    def test_crash_controls_use_unambiguous_period_and_chart_row_labels(self, client):
+        html = client.get("/zh/crash").get_data(as_text=True)
+        assert 'data-i18n="crash.periodType">K 线周期<' in html
+        assert 'data-i18n="crash.chartDays">图表详情条数<' in html
+        assert 'data-i18n="crash.detailRowsUnit">条<' in html
+        assert html.index('id="crashEndDate"') < html.index('id="crashChartDays"')
+
     def test_frontend_version_changes_for_uncommitted_file_content(self, tmp_path, monkeypatch):
         asset = tmp_path / "app.js"
         asset.write_text("const value = 1;", encoding="utf-8")

@@ -290,11 +290,12 @@ def backtest():
 
 @price_change_bp.route("/crash-stats", methods=["POST"])
 def crash_stats():
-    """Detect single-day crash events and compute recovery metrics.
+    """Detect crash events over a selected period and compute recovery metrics.
 
     Request body:
         {"symbol": "QQQ", "type": "stock", "start_date": "2020-01-01",
-         "end_date": "2025-12-31", "threshold_pct": 4.77}
+         "end_date": "2025-12-31", "threshold_pct": 4.77,
+         "period_type": "day", "period_days": 5}
     """
     body = request.get_json(silent=True) or {}
     try:

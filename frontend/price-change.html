@@ -1491,6 +1491,12 @@
             padding: 16px 0;
         }
 
+        .crash-period-context {
+            margin-top: 14px;
+            color: var(--apple-text-secondary);
+            font-size: 12px;
+        }
+
         .crash-summary-item {
             text-align: center;
             padding: 12px 8px;
@@ -3034,7 +3040,7 @@
         <div class="tab-panel" id="tab-crash">
         <div id="pcCrashStats" class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title" data-i18n="crash.chartTitle">📉 暴跌统计 — 单日暴跌检测与恢复分析</span>
+                <span class="pc-chart-title" data-i18n="crash.chartTitle">📉 暴跌统计 — 多周期暴跌检测与恢复分析</span>
                 <button class="pd-bar-chart-toggle" id="crashParamsToggle" type="button"
                         aria-controls="crashParamsPanel" aria-expanded="true" data-i18n="detail.collapseParams">收起参数</button>
             </div>
@@ -3049,13 +3055,25 @@
                 <span class="pc-bt-label" data-i18n="crash.dropPct">暴跌幅度</span>
                 <input type="number" id="crashThreshold" class="pc-bt-input" value="4.77" min="0.01" step="0.1" style="width:80px;">
                 <span style="font-size:12px;color:var(--apple-text-tertiary)">%</span>
-                <span class="pc-bt-label" data-i18n="crash.chartDays">图表天数</span>
-                <input type="number" id="crashChartDays" class="pc-bt-input" value="30" min="5" max="250" step="5" style="width:70px;">
-                <span style="font-size:12px;color:var(--apple-text-tertiary)" data-i18n="crash.tradingDays">交易日</span>
+                <span class="pc-bt-label" data-i18n="crash.periodType">K 线周期</span>
+                <select id="crashPeriodType" class="pc-bt-input" style="width:92px;">
+                    <option value="day" selected data-i18n="crash.periodDay">日 K</option>
+                    <option value="n_days" data-i18n="crash.periodNDays">N 日 K</option>
+                    <option value="week" data-i18n="crash.periodWeek">周 K</option>
+                    <option value="month" data-i18n="crash.periodMonth">月 K</option>
+                </select>
+                <span id="crashPeriodDaysWrap" style="display:none;align-items:center;gap:6px;">
+                    <input type="number" id="crashPeriodDays" class="pc-bt-input" value="5" min="2" max="250" step="1"
+                           style="width:70px;" data-i18n-attr="aria-label|crash.periodDaysAria">
+                    <span style="font-size:12px;color:var(--apple-text-tertiary)" data-i18n="crash.tradingDays">交易日</span>
+                </span>
                 <span class="pc-bt-label" data-i18n="crash.startEndDate">起止日期</span>
                 <input type="date" id="crashStartDate" class="pc-bt-input" style="width:150px;">
                 <span style="color:var(--apple-text-tertiary);font-size:12px;">~</span>
                 <input type="date" id="crashEndDate" class="pc-bt-input" style="width:150px;">
+                <span class="pc-bt-label" data-i18n="crash.chartDays">图表详情条数</span>
+                <input type="number" id="crashChartDays" class="pc-bt-input" value="30" min="5" max="250" step="5" style="width:70px;">
+                <span style="font-size:12px;color:var(--apple-text-tertiary)" data-i18n="crash.detailRowsUnit">条</span>
                 <button id="crashRunBtn" class="pc-btn primary" style="padding:7px 14px;" data-i18n="crash.queryCrash">查询暴跌</button>
                 <button id="crashCloseBtn" class="pc-btn" style="padding:7px 14px;" data-i18n="crash.clear">清空</button>
             </div>

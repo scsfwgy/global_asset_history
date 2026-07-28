@@ -557,11 +557,13 @@ class TestCrashStatsEndpoint:
                 "start_date": "2020-01-01",
                 "end_date": "2025-12-31",
                 "threshold_pct": 4.77,
+                "period_type": "week",
             },
         )
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["summary"]["total_crashes"] == 45
+        assert mock_run.call_args.args[0]["period_type"] == "week"
         diagnose("crash-stats summary", data["summary"])
         track_coverage(MOD, 2)
 

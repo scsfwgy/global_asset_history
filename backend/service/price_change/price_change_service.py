@@ -1498,7 +1498,7 @@ def run_dca_backtest(payload: Dict) -> Dict:
 
 
 def run_crash_stats(payload: Dict) -> Dict:
-    """Analyze single-day crash events and recovery for a symbol.
+    """Analyze crash events and recovery for a symbol.
 
     Request payload:
         symbol: str (e.g. "QQQ")
@@ -1506,6 +1506,8 @@ def run_crash_stats(payload: Dict) -> Dict:
         start_date: str (YYYY-MM-DD)
         end_date: str (YYYY-MM-DD)
         threshold_pct: float (e.g. 4.77 = drop >= 4.77%)
+        period_type: str (day, n_days, week, or month; default day)
+        period_days: int (2-250 when period_type is n_days)
 
     Returns:
         dict with crashes list and summary statistics.
@@ -1515,6 +1517,20 @@ def run_crash_stats(payload: Dict) -> Dict:
     start_date = _parse_iso_date(payload.get("start_date"), "start_date")
     end_date = _parse_iso_date(payload.get("end_date"), "end_date")
     threshold_pct = float(payload.get("threshold_pct", 4.77))
+    period_aliases = {
+        "day": "day",
+        "daily": "day",
+        "n_days": "n_days",
+        "n-days": "n_days",
+        "week": "week",
+        "weekly": "week",
+        "month": "month",
+        "monthly": "month",
+    }
+    period_type = period_aliases.get(
+        str(payload.get("period_type", "day")).strip().lower()
+    )
+    period_days = _safe_int(payload.get("period_days"), 5)
 
     if end_date < start_date:
         raise ValueError("end_date must be on or after start_date")
@@ -1522,6 +1538,10 @@ def run_crash_stats(payload: Dict) -> Dict:
         raise ValueError("symbol is required")
     if threshold_pct <= 0:
         raise ValueError("threshold_pct must be positive")
+    if period_type is None:
+        raise ValueError("period_type must be one of day, n_days, week, month")
+    if period_type == "n_days" and not 2 <= period_days <= 250:
+        raise ValueError("period_days must be between 2 and 250")
 
     series = _fetch_daily_series_cached(symbol, asset_type)
     if series.error:
@@ -1533,6 +1553,8 @@ def run_crash_stats(payload: Dict) -> Dict:
         start_date=start_date,
         end_date=end_date,
         threshold_pct=threshold_pct,
+        period_type=period_type,
+        period_days=period_days,
     )
 
     # Summary stats
@@ -1558,6 +1580,8 @@ def run_crash_stats(payload: Dict) -> Dict:
         "start_date": start_date.isoformat(),
         "end_date": end_date.isoformat(),
         "threshold_pct": threshold_pct,
+        "period_type": period_type,
+        "period_days": period_days if period_type == "n_days" else None,
         "summary": {
             "total_crashes": total,
             "recovered": recovered_count,
