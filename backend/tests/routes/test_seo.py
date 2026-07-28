@@ -247,6 +247,8 @@ class TestHtmlMeta:
 
     def test_stock_compare_has_search_tags_and_metric_tables(self, client):
         html = client.get("/zh/stock-compare").get_data(as_text=True)
+        assert "年度综合收益（税后）" in html
+        assert "综合年化" not in html
         assert 'id="scSymbolInput"' in html
         assert 'id="scSuggestions"' in html
         assert 'id="scQuickPicks"' in html
@@ -297,6 +299,13 @@ class TestHtmlMeta:
         assert "sc-aggregate-bg-return" in aggregate_block
         assert "sc-aggregate-bg-drawdown" in aggregate_block
         assert "renderAggregateTable(result);" in script
+
+        zh_locale = client.get("/locales/zh-CN.json").get_json()
+        en_locale = client.get("/locales/en.json").get_json()
+        assert zh_locale["detail"]["combinedAnnualized"] == "年度综合收益（税后）"
+        assert zh_locale["stockCompare"]["combinedAnnualized"] == "年度综合收益（税后）"
+        assert en_locale["detail"]["combinedAnnualized"] == "Annual Combined Return (After Tax)"
+        assert en_locale["stockCompare"]["combinedAnnualized"] == "Annual Combined Return (After Tax)"
 
     @pytest.mark.parametrize(
         "path,needle",

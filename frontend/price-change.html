@@ -2738,7 +2738,7 @@
                     </table>
                 </div>
                 <div class="pd-stock-history" id="pdStockHistory" style="display:none;">
-                    <p class="pd-stock-history-note" data-i18n="detail.stockHistoryNote">仅美股展示；综合年化 = 涨跌幅 + 税后分红年化，税后分红年化按上年末收盘价计算。</p>
+                    <p class="pd-stock-history-note" data-i18n="detail.stockHistoryNote">仅美股展示；年度综合收益（税后）= 涨跌幅 + 税后分红年化，税后分红年化按上年末收盘价计算。</p>
                     <div class="pd-history-card">
                         <div class="pd-history-toolbar">
                             <div class="pd-history-title" data-i18n="detail.stockHistoryTitle">美股年度综合数据</div>
@@ -2752,7 +2752,7 @@
                             <table class="pd-history-table">
                                 <thead><tr>
                                     <th data-i18n="yearly.colYear">年份</th>
-                                    <th data-i18n="detail.combinedAnnualized">综合年化</th>
+                                    <th data-i18n="detail.combinedAnnualized">年度综合收益（税后）</th>
                                     <th data-i18n="detail.annualReturn">涨跌幅</th>
                                     <th data-i18n="detail.dividendYieldAfterTax">分红年化（税后）</th>
                                     <th data-i18n="detail.maxDrawdown">最大回撤</th>
@@ -2785,7 +2785,7 @@
                 <ul class="sc-methodology-list">
                     <li data-i18n="stockCompare.methodologyReturn">涨跌幅：使用未含现金分红的收盘价，按上年末至当年末计算。</li>
                     <li data-i18n="stockCompare.methodologyDividend">分红年化（税后）：当年每股现金分红 ×（1 − 税率）÷ 上年末收盘价。</li>
-                    <li data-i18n="stockCompare.methodologyCombined">综合年化：涨跌幅与税后分红年化直接相加；不假设分红再投资，也不是跨年 CAGR。</li>
+                    <li data-i18n="stockCompare.methodologyCombined">年度综合收益（税后）：涨跌幅与税后分红年化直接相加；不假设分红再投资，也不是跨年 CAGR。</li>
                     <li data-i18n="stockCompare.methodologyDrawdown">最大回撤：自然年内，收盘价从阶段高点到后续低点的最大跌幅。</li>
                     <li data-i18n="stockCompare.methodologyCurrentYear">当年数据均为年初至今（YTD），不进行全年年化外推。</li>
                     <li data-i18n="stockCompare.methodologyCache">数据源为 Yahoo 日线及除息事件；成功结果缓存 6 小时，失败结果缓存 5 分钟。</li>
@@ -2832,7 +2832,7 @@
                 <section class="sc-metric-card sc-aggregate-card">
                     <div class="sc-metric-header">
                         <h3 class="sc-metric-title" data-i18n="stockCompare.aggregateTitle">两维聚合</h3>
-                        <p class="sc-metric-description" data-i18n="stockCompare.aggregateDescription">左上角为综合年化，右下角为最大回撤；两块背景分别按对应指标着色。</p>
+                        <p class="sc-metric-description" data-i18n="stockCompare.aggregateDescription">左上角为年度综合收益（税后），右下角为最大回撤；两块背景分别按对应指标着色。</p>
                     </div>
                     <div class="sc-matrix-scroll">
                         <table class="sc-matrix-table sc-aggregate-table" id="scAggregateTable"><thead></thead><tbody></tbody></table>
@@ -2841,7 +2841,7 @@
                 <div class="sc-metric-grid" id="scMetricGrid">
                     <section class="sc-metric-card">
                         <div class="sc-metric-header">
-                            <h3 class="sc-metric-title" data-i18n="stockCompare.combinedAnnualized">综合年化</h3>
+                            <h3 class="sc-metric-title" data-i18n="stockCompare.combinedAnnualized">年度综合收益（税后）</h3>
                             <p class="sc-metric-description" data-i18n="stockCompare.combinedDescription">涨跌幅 + 税后分红年化</p>
                         </div>
                         <div class="sc-matrix-scroll">
