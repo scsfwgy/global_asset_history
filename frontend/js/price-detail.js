@@ -102,6 +102,42 @@
     }).format(parsed);
   }
 
+  function buildAssetProfileUrl(symbol, assetType) {
+    var cleanSymbol = String(symbol || "").trim().toUpperCase();
+    if (!cleanSymbol) return "";
+
+    if (assetType === "stock") {
+      return "https://finance.yahoo.com/quote/"
+        + encodeURIComponent(cleanSymbol) + "/profile/";
+    }
+
+    if (assetType === "crypto") {
+      var cryptoSymbol = cleanSymbol.endsWith("-USD")
+        ? cleanSymbol
+        : cleanSymbol + "-USD";
+      return "https://finance.yahoo.com/quote/"
+        + encodeURIComponent(cryptoSymbol) + "/";
+    }
+
+    if (assetType === "cn_stock") {
+      var explicitExchange = cleanSymbol.match(/^(SH|SZ|BJ)(\d{6})$/);
+      var code = explicitExchange ? explicitExchange[2] : cleanSymbol;
+      if (!/^\d{6}$/.test(code)) return "";
+      var exchange = explicitExchange ? explicitExchange[1].toLowerCase() : "";
+      if (!exchange) {
+        exchange = code.startsWith("5")
+          || code.startsWith("6")
+          || code.startsWith("9")
+          || code.startsWith("000")
+          ? "sh"
+          : "sz";
+      }
+      return "https://quote.eastmoney.com/" + exchange + code + ".html";
+    }
+
+    return "";
+  }
+
   function valueTone(value, inverse) {
     if (value == null || !Number.isFinite(Number(value)) || Number(value) === 0) return "";
     var positive = Number(value) > 0;
@@ -322,9 +358,22 @@
     var coverage = overview.first_date && overview.latest_date
       ? overview.first_date + " → " + overview.latest_date
       : "—";
+    var profileUrl = buildAssetProfileUrl(
+      result.symbol || overview.symbol,
+      result.type
+    );
+    var profileLink = profileUrl
+      ? '<a class="pd-asset-profile-link" href="' + escapeHtml(profileUrl)
+        + '" target="_blank" rel="noopener noreferrer" aria-label="'
+        + escapeHtml(__("detail.viewProfileAria", {
+          symbol: result.symbol || overview.symbol || "",
+        }))
+        + '">' + escapeHtml(__("detail.viewProfile")) + ' <span aria-hidden="true">↗</span></a>'
+      : "";
     headerEl.innerHTML = '<div><div class="pd-asset-symbol-row"><span class="pd-asset-symbol">'
       + escapeHtml(result.symbol || overview.symbol || "—") + '</span><span class="pd-asset-type">'
-      + escapeHtml(typeLabels[result.type] || result.type || "—") + '</span></div>'
+      + escapeHtml(typeLabels[result.type] || result.type || "—") + '</span>'
+      + profileLink + '</div>'
       + (fundamentals.name
         ? '<div class="pd-asset-name">' + escapeHtml(fundamentals.name) + '</div>'
         : "")

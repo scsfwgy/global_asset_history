@@ -518,6 +518,27 @@
             font-weight: 750;
             letter-spacing: -0.02em;
         }
+        .pd-asset-profile-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 3px 8px;
+            border: 1px solid color-mix(in srgb, var(--apple-blue) 28%, transparent);
+            border-radius: var(--radius-full);
+            color: var(--apple-blue);
+            font-size: 11px;
+            font-weight: 650;
+            text-decoration: none;
+            transition: background var(--transition-fast), border-color var(--transition-fast);
+        }
+        .pd-asset-profile-link:hover {
+            border-color: color-mix(in srgb, var(--apple-blue) 48%, transparent);
+            background: color-mix(in srgb, var(--apple-blue) 10%, transparent);
+        }
+        .pd-asset-profile-link:focus-visible {
+            outline: 2px solid color-mix(in srgb, var(--apple-blue) 65%, transparent);
+            outline-offset: 2px;
+        }
         .pd-asset-name {
             margin-top: 3px;
             color: var(--apple-text-secondary);
@@ -2727,7 +2748,7 @@
         <nav class="tab-bar">
             <a class="tab-btn active" href="__LANG_PREFIX__/heatmap" data-tab="heatmap" data-i18n="tab.heatmap">热力图</a>
             <a class="tab-btn" href="__LANG_PREFIX__/yearly" data-tab="yearly" data-i18n="tab.yearlyReturns">历年涨跌幅</a>
-            <a class="tab-btn" href="__LANG_PREFIX__/detail" data-tab="detail" data-i18n="tab.returnDetail">涨跌详情</a>
+            <a class="tab-btn" href="__LANG_PREFIX__/detail" data-tab="detail" data-i18n="tab.returnDetail">股票详情</a>
             <a class="tab-btn" href="__LANG_PREFIX__/stock-compare" data-tab="stock-compare" data-i18n="tab.stockCompare">美股对比</a>
             <a class="tab-btn" href="__LANG_PREFIX__/backtest" data-tab="backtest" data-i18n="tab.backtest">回测</a>
             <a class="tab-btn" href="__LANG_PREFIX__/crash" data-tab="crash" data-i18n="tab.crashStats">暴跌统计</a>
@@ -2896,7 +2917,7 @@
         <div class="tab-panel" id="tab-detail">
         <div class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title" data-i18n="detail.title">涨跌详情</span>
+                <span class="pc-chart-title" data-i18n="detail.title">股票详情</span>
                 <button class="pd-bar-chart-toggle" id="pdParamsToggle" type="button"
                         aria-controls="pdParamsPanel" aria-expanded="true" data-i18n="detail.collapseParams">收起参数</button>
             </div>
@@ -2925,7 +2946,7 @@
             <div class="pc-error" id="pdError"></div>
             <div class="pc-loading" id="pdLoading" style="display:none;">
                 <div class="spinner"></div>
-                <span data-i18n="detail.fetching">获取涨跌详情中...</span>
+                <span data-i18n="detail.fetching">获取股票详情中...</span>
             </div>
             <div id="pdEmpty" class="pc-empty">
                 <div style="font-size:32px;margin-bottom:8px;">▦</div>

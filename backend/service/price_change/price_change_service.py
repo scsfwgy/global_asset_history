@@ -66,7 +66,7 @@ def _cache_ttl(series: PriceSeries) -> int:
 
 # Bump this whenever the cached PriceSeries shape changes, so old entries (which
 # lack new fields) are abandoned instead of served stale. v5 adds dividend
-# events used by the stock-only history tables in Return Detail.
+# events used by the stock-only history tables in Stock Detail.
 _CACHE_SCHEMA_VERSION = "v5"
 _STOCK_COMPARE_CACHE_SCHEMA_VERSION = "v1"
 
@@ -1446,7 +1446,7 @@ def _compute_yearly_dividends(dividends: Optional[List[Dict]]) -> List[Dict]:
 
 
 def _build_stock_history_tables(series: PriceSeries) -> Dict:
-    """Build the combined stock-only annual table shown below Return Detail."""
+    """Build the combined stock-only annual table shown below Stock Detail."""
     price_closes = (
         series.raw_closes
         if series.raw_closes and len(series.raw_closes) == len(series.timestamps)

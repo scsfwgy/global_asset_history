@@ -328,6 +328,10 @@ class TestHtmlMeta:
         assert '"detail.sortinoRatio1y"' in script
         assert '"detail.trailingPe"' in script
         assert '"detail.marketCap"' in script
+        assert '"detail.viewProfile"' in script
+        assert "https://finance.yahoo.com/quote/" in script
+        assert "https://quote.eastmoney.com/" in script
+        assert 'rel="noopener noreferrer"' in script
         assert "setOverviewCollapsed(!_overviewCollapsed)" in script
         assert '_overviewCollapsed ? "none" : "block"' in script
         assert "_stockHistoryCache" in script
@@ -339,11 +343,17 @@ class TestHtmlMeta:
         assert zh_locale["detail"]["cagr5y"] == "近 5 年 CAGR"
         assert zh_locale["detail"]["winRate"] == "上涨概率"
         assert zh_locale["detail"]["fundamentalsTitle"] == "估值与市场快照"
+        assert zh_locale["tab"]["returnDetail"] == "股票详情"
+        assert zh_locale["detail"]["title"] == "股票详情"
+        assert zh_locale["detail"]["viewProfile"] == "查看资料"
         assert "CAGR（复合年化增长率）" in zh_locale["detail"]["returnBasisStock"]
         assert zh_locale["detail"]["collapseOverview"] == "收起概览"
         assert en_locale["detail"]["cagr5y"] == "5-Year CAGR"
         assert en_locale["detail"]["winRate"] == "Win Rate"
         assert en_locale["detail"]["fundamentalsTitle"] == "Valuation & Market Snapshot"
+        assert en_locale["tab"]["returnDetail"] == "Stock Detail"
+        assert en_locale["detail"]["title"] == "Stock Detail"
+        assert en_locale["detail"]["viewProfile"] == "View Profile"
         assert "compound annual growth rate" in en_locale["detail"]["returnBasisStock"]
         assert en_locale["detail"]["collapseOverview"] == "Collapse overview"
 

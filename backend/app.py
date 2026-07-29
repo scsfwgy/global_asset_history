@@ -990,7 +990,7 @@ def stats_dashboard():
     tab_rows = ""
     sorted_tabs = sorted(tab_stats.items(), key=lambda x: int(x[1]), reverse=True)
     tab_labels = {
-        "heatmap": "热力图", "yearly": "历年涨跌幅", "detail": "涨跌详情",
+        "heatmap": "热力图", "yearly": "历年涨跌幅", "detail": "股票详情",
         "stock-compare": "美股对比", "download": "数据下载",
         "backtest": "回测", "crash": "暴跌统计", "etf": "标普纳指ETF追踪（场内）",
         "qdii-funds": "标普纳指基金追踪（场外）", "vix": "VIX恐慌指数",
