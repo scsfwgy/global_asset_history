@@ -328,9 +328,28 @@ class TestHtmlMeta:
         assert '"detail.sortinoRatio1y"' in script
         assert '"detail.trailingPe"' in script
         assert '"detail.marketCap"' in script
-        assert '"detail.viewProfile"' in script
+        assert '"detail.companyProfile"' in script
+        assert '"detail.financialStatements"' in script
+        assert '"detail.valuationMetrics"' in script
+        assert '"detail.officialFilings"' in script
+        assert '"detail.fundHoldings"' in script
+        assert '"detail.cryptoMarketData"' in script
+        assert '"detail.projectWebsite"' in script
+        assert '"detail.whitepaper"' in script
+        assert '"detail.blockExplorer"' in script
+        assert '"detail.f10Profile"' in script
+        assert '"detail.officialAnnouncements"' in script
         assert "https://finance.yahoo.com/quote/" in script
+        assert "https://stockanalysis.com/stocks/" in script
+        assert "https://stockanalysis.com/etf/" in script
+        assert "https://www.sec.gov/edgar/browse/" in script
+        assert "https://coinmarketcap.com/search/" in script
+        assert "https://coinmarketcap.com/currencies/bitcoin/" in script
+        assert "coingecko.com" not in script
+        assert "https://bitcoin.org/bitcoin.pdf" in script
         assert "https://quote.eastmoney.com/" in script
+        assert "https://f10.eastmoney.com/FinancialAnalysis/" in script
+        assert "https://www.cninfo.com.cn/new/fulltextSearch" in script
         assert 'rel="noopener noreferrer"' in script
         assert "setOverviewCollapsed(!_overviewCollapsed)" in script
         assert '_overviewCollapsed ? "none" : "block"' in script
@@ -345,7 +364,9 @@ class TestHtmlMeta:
         assert zh_locale["detail"]["fundamentalsTitle"] == "估值与市场快照"
         assert zh_locale["tab"]["returnDetail"] == "股票详情"
         assert zh_locale["detail"]["title"] == "股票详情"
-        assert zh_locale["detail"]["viewProfile"] == "查看资料"
+        assert zh_locale["detail"]["companyProfile"] == "公司资料"
+        assert zh_locale["detail"]["cryptoMarketData"] == "市场资料"
+        assert zh_locale["detail"]["officialAnnouncements"] == "官方公告"
         assert "CAGR（复合年化增长率）" in zh_locale["detail"]["returnBasisStock"]
         assert zh_locale["detail"]["collapseOverview"] == "收起概览"
         assert en_locale["detail"]["cagr5y"] == "5-Year CAGR"
@@ -353,7 +374,9 @@ class TestHtmlMeta:
         assert en_locale["detail"]["fundamentalsTitle"] == "Valuation & Market Snapshot"
         assert en_locale["tab"]["returnDetail"] == "Stock Detail"
         assert en_locale["detail"]["title"] == "Stock Detail"
-        assert en_locale["detail"]["viewProfile"] == "View Profile"
+        assert en_locale["detail"]["companyProfile"] == "Company Profile"
+        assert en_locale["detail"]["cryptoMarketData"] == "Market Data"
+        assert en_locale["detail"]["officialAnnouncements"] == "Official Announcements"
         assert "compound annual growth rate" in en_locale["detail"]["returnBasisStock"]
         assert en_locale["detail"]["collapseOverview"] == "Collapse overview"
 

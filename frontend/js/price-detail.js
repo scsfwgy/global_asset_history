@@ -102,27 +102,95 @@
     }).format(parsed);
   }
 
-  function buildAssetProfileUrl(symbol, assetType) {
+  var CRYPTO_PROJECT_RESOURCES = {
+    BTC: {
+      market: "https://coinmarketcap.com/currencies/bitcoin/",
+      website: "https://bitcoin.org/en/",
+      whitepaper: "https://bitcoin.org/bitcoin.pdf",
+      explorer: "https://mempool.space/",
+    },
+    ETH: {
+      market: "https://coinmarketcap.com/currencies/ethereum/",
+      website: "https://ethereum.org/",
+      whitepaper: "https://ethereum.org/whitepaper/",
+      explorer: "https://etherscan.io/",
+    },
+    SOL: {
+      market: "https://coinmarketcap.com/currencies/solana/",
+      website: "https://solana.com/",
+      whitepaper: "https://solana.com/solana-whitepaper.pdf",
+      explorer: "https://explorer.solana.com/",
+    },
+  };
+
+  function buildAssetResourceLinks(symbol, assetType, quoteType) {
     var cleanSymbol = String(symbol || "").trim().toUpperCase();
-    if (!cleanSymbol) return "";
+    if (!cleanSymbol) return [];
 
     if (assetType === "stock") {
-      return "https://finance.yahoo.com/quote/"
-        + encodeURIComponent(cleanSymbol) + "/profile/";
+      var yahooBase = "https://finance.yahoo.com/quote/"
+        + encodeURIComponent(cleanSymbol) + "/";
+      if (cleanSymbol.startsWith("^")) {
+        return [{ labelKey: "detail.assetProfile", url: yahooBase }];
+      }
+
+      var stockSlug = encodeURIComponent(cleanSymbol.toLowerCase());
+      var isEtf = String(quoteType || "").toUpperCase() === "ETF";
+      if (isEtf) {
+        return [
+          { labelKey: "detail.fundProfile", url: yahooBase + "profile/" },
+          {
+            labelKey: "detail.fundData",
+            url: "https://stockanalysis.com/etf/" + stockSlug + "/",
+          },
+          {
+            labelKey: "detail.fundHoldings",
+            url: "https://stockanalysis.com/etf/" + stockSlug + "/holdings/",
+          },
+        ];
+      }
+
+      return [
+        { labelKey: "detail.companyProfile", url: yahooBase + "profile/" },
+        {
+          labelKey: "detail.financialStatements",
+          url: "https://stockanalysis.com/stocks/" + stockSlug + "/financials/",
+        },
+        {
+          labelKey: "detail.valuationMetrics",
+          url: "https://stockanalysis.com/stocks/" + stockSlug + "/statistics/",
+        },
+        {
+          labelKey: "detail.officialFilings",
+          url: "https://www.sec.gov/edgar/browse/?CIK="
+            + encodeURIComponent(cleanSymbol) + "&owner=exclude",
+        },
+      ];
     }
 
     if (assetType === "crypto") {
-      var cryptoSymbol = cleanSymbol.endsWith("-USD")
-        ? cleanSymbol
-        : cleanSymbol + "-USD";
-      return "https://finance.yahoo.com/quote/"
-        + encodeURIComponent(cryptoSymbol) + "/";
+      var cryptoSymbol = cleanSymbol.replace(/-USD$/, "");
+      var projectResources = CRYPTO_PROJECT_RESOURCES[cryptoSymbol];
+      var links = [{
+        labelKey: "detail.cryptoMarketData",
+        url: projectResources
+          ? projectResources.market
+          : "https://coinmarketcap.com/search/?q=" + encodeURIComponent(cryptoSymbol),
+      }];
+      if (projectResources) {
+        links.push(
+          { labelKey: "detail.projectWebsite", url: projectResources.website },
+          { labelKey: "detail.whitepaper", url: projectResources.whitepaper },
+          { labelKey: "detail.blockExplorer", url: projectResources.explorer }
+        );
+      }
+      return links;
     }
 
     if (assetType === "cn_stock") {
       var explicitExchange = cleanSymbol.match(/^(SH|SZ|BJ)(\d{6})$/);
       var code = explicitExchange ? explicitExchange[2] : cleanSymbol;
-      if (!/^\d{6}$/.test(code)) return "";
+      if (!/^\d{6}$/.test(code)) return [];
       var exchange = explicitExchange ? explicitExchange[1].toLowerCase() : "";
       if (!exchange) {
         exchange = code.startsWith("5")
@@ -132,10 +200,37 @@
           ? "sh"
           : "sz";
       }
-      return "https://quote.eastmoney.com/" + exchange + code + ".html";
+      var cnLinks = [{
+        labelKey: "detail.assetProfile",
+        url: "https://quote.eastmoney.com/" + exchange + code + ".html",
+      }];
+      var isCompanyStock = exchange === "sh"
+        ? /^(600|601|603|605|688)/.test(code)
+        : exchange === "sz" && /^(001|002|003|300|301)/.test(code);
+      if (isCompanyStock) {
+        var f10Code = exchange.toUpperCase() + code;
+        cnLinks.push(
+          {
+            labelKey: "detail.f10Profile",
+            url: "https://f10.eastmoney.com/CompanyInfo/Index?code="
+              + encodeURIComponent(f10Code) + "&type=web",
+          },
+          {
+            labelKey: "detail.financialAnalysis",
+            url: "https://f10.eastmoney.com/FinancialAnalysis/Index?code="
+              + encodeURIComponent(f10Code) + "&type=web",
+          },
+          {
+            labelKey: "detail.officialAnnouncements",
+            url: "https://www.cninfo.com.cn/new/fulltextSearch?keyWord="
+              + encodeURIComponent(code),
+          }
+        );
+      }
+      return cnLinks;
     }
 
-    return "";
+    return [];
   }
 
   function valueTone(value, inverse) {
@@ -358,22 +453,29 @@
     var coverage = overview.first_date && overview.latest_date
       ? overview.first_date + " → " + overview.latest_date
       : "—";
-    var profileUrl = buildAssetProfileUrl(
+    var resourceLinks = buildAssetResourceLinks(
       result.symbol || overview.symbol,
-      result.type
+      result.type,
+      fundamentals.quote_type
     );
-    var profileLink = profileUrl
-      ? '<a class="pd-asset-profile-link" href="' + escapeHtml(profileUrl)
-        + '" target="_blank" rel="noopener noreferrer" aria-label="'
-        + escapeHtml(__("detail.viewProfileAria", {
-          symbol: result.symbol || overview.symbol || "",
-        }))
-        + '">' + escapeHtml(__("detail.viewProfile")) + ' <span aria-hidden="true">↗</span></a>'
+    var resourceLinksHtml = resourceLinks.length
+      ? '<span class="pd-asset-resource-links">'
+        + resourceLinks.map(function (link) {
+          var label = __(link.labelKey);
+          return '<a class="pd-asset-profile-link" href="' + escapeHtml(link.url)
+            + '" target="_blank" rel="noopener noreferrer" aria-label="'
+            + escapeHtml(__("detail.resourceLinkAria", {
+              symbol: result.symbol || overview.symbol || "",
+              label: label,
+            }))
+            + '">' + escapeHtml(label) + ' <span aria-hidden="true">↗</span></a>';
+        }).join("")
+        + "</span>"
       : "";
     headerEl.innerHTML = '<div><div class="pd-asset-symbol-row"><span class="pd-asset-symbol">'
       + escapeHtml(result.symbol || overview.symbol || "—") + '</span><span class="pd-asset-type">'
       + escapeHtml(typeLabels[result.type] || result.type || "—") + '</span>'
-      + profileLink + '</div>'
+      + resourceLinksHtml + '</div>'
       + (fundamentals.name
         ? '<div class="pd-asset-name">' + escapeHtml(fundamentals.name) + '</div>'
         : "")
