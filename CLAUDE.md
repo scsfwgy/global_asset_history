@@ -1,8 +1,35 @@
 # CLAUDE.md
 
-本文档供在本仓库中工作的代码助手使用。以实际代码为最终事实来源；修改前先阅读相关模块和测试。
+本文档供在本仓库中工作的代码助手使用。以实际代码为最终事实来源；理解代码时先查询知识图谱，再阅读相关模块和测试确认实现细节。
 
 ## 最高优先级规则
+
+### 知识图谱优先（强制）
+
+阅读、搜索或探索代码前，必须先查询现有知识图谱，用它定位相关社区、节点、调用路径和影响范围，再按查询结果阅读具体源码和测试。默认优先使用噪声更少、包含前后端 API 桥接的架构图：
+
+```bash
+graphify query "<问题>" \
+  --graph graphify-architecture/graphify-out/graph.json
+```
+
+按任务需要使用：
+
+```bash
+graphify explain "<类、函数或概念>" \
+  --graph graphify-architecture/graphify-out/graph.json
+graphify path "<起点>" "<终点>" \
+  --graph graphify-architecture/graphify-out/graph.json
+graphify affected "<被修改节点>" --depth 2 \
+  --graph graphify-architecture/graphify-out/graph.json
+```
+
+- 架构、调用链、功能入口、依赖关系和改动影响问题，禁止跳过知识图谱直接进行全仓库搜索。
+- 图谱用于定位和缩小阅读范围，不能替代源码、测试和运行时验证；修改具体实现前仍必须阅读相关源码与测试。
+- 优先相信 `EXTRACTED` 关系；`INFERRED` 只作为调查线索，必须回到源码确认。
+- 若图谱缺失、明显过期或没有覆盖目标，必须明确说明，再使用 `rg` 等工具补充检索。
+- 需要测试、文档和完整语义关系时，可改查 `graphify-out/graph.json`；日常开发默认使用架构图。
+- 修改代码后，如关系或架构发生变化，按 `graphify-architecture/README.md` 重建架构图，避免后续会话基于过期关系工作。
 
 ### 1. 修改功能必须补测试
 
