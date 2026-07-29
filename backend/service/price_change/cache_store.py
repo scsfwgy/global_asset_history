@@ -134,6 +134,11 @@ def cache_scard(key: str) -> Optional[int]:
         return None
 
 
+def cache_smembers(key: str) -> List[str]:
+    result = _command(["SMEMBERS", _KEY_PREFIX + key])
+    return [value for value in result if isinstance(value, str)] if isinstance(result, list) else []
+
+
 def cache_hincrby(key: str, field: str, amount: int = 1) -> Optional[int]:
     """Increment a hash field by amount. Returns the new value or None on failure."""
     result = _command(["HINCRBY", _KEY_PREFIX + key, field, str(int(amount))])

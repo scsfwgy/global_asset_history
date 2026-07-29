@@ -5,6 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
+from service import visitor_stats
+
 
 class TestVisitCounter:
     """GET /api/visits and POST /api/visits/increment"""
@@ -62,6 +64,23 @@ class TestVisitCounter:
         assert resp.get_json()["count"] == 7
         mock_hincrby.assert_called_once_with(app_module._TAB_VISITS_KEY, "heatmap")
 
+    def test_increment_records_independent_language_dimensions(self, client):
+        uid = "11111111-1111-4111-8111-111111111111"
+        payload = {
+            "anonymous_id": uid,
+            "site_language": "zh-CN",
+            "device_language": "en-US",
+        }
+
+        client.post("/api/visits/increment", json=payload)
+        client.post("/api/visits/increment", json=payload)
+        client.post("/api/visits/increment", json={**payload, "site_language": "en"})
+
+        assert visitor_stats.get_language_stats() == {
+            "site_language": {"zh-CN": 1, "en": 1},
+            "device_language": {"en-US": 1},
+        }
+
 
 class TestEventTracking:
     """POST /api/track for tab_view, ad_click, settings_click, settings_action"""
@@ -117,6 +136,27 @@ class TestEventTracking:
         assert resp.status_code == 400
 
 
+class TestVisitorStatsPages:
+    def test_main_pages_load_visitor_stats(self, client):
+        for path in ("/zh/yearly", "/en/yearly"):
+            html = client.get(path).get_data(as_text=True)
+            assert "/js/visitor-stats.js?v=" in html
+            assert "gahRecordVisit" in html
+
+    def test_etf_page_loads_visitor_stats(self, client):
+        html = client.get("/zh/etf-market").get_data(as_text=True)
+
+        assert "/js/visitor-stats.js?v=" in html
+        assert 'gahRecordVisit("etf")' in html
+
+    def test_excluded_pages_do_not_load_visitor_stats(self):
+        import app as app_module
+
+        for filename in ("landing.html", "health.html"):
+            html = (app_module.FRONTEND_DIR / filename).read_text()
+            assert "visitor-stats.js" not in html
+
+
 class TestAdminStatsDashboard:
     """GET /api/stats — admin-only HTML dashboard"""
 
@@ -148,6 +188,7 @@ class TestAdminStatsDashboard:
         assert "每日唯一用户" in html
         assert "匿名 UUID 去重，仅保留最近 30 天" in html
         assert 'class="uv-chart"' in html
+        assert ".uv-chart{overflow-x:auto" in html
 
     def test_stats_shows_tracked_data(self, client):
         # Track some events first
@@ -173,3 +214,36 @@ class TestAdminStatsDashboard:
         assert resp.status_code == 200
         assert '<div class="num">2</div><div class="label">今日用户</div>' in html
         assert "近30日用户天次" in html
+
+    def test_stats_dashboard_shows_two_independent_language_distributions(self, client):
+        visits = [
+            ("11111111-1111-4111-8111-111111111111", "zh-CN", "en-US"),
+            ("11111111-1111-4111-8111-111111111111", "en", "en-US"),
+            ("22222222-2222-4222-8222-222222222222", "zh-CN", "zh-TW"),
+            ("33333333-3333-4333-8333-333333333333", "fr", "bad language!"),
+        ]
+        for anonymous_id, site_language, device_language in visits:
+            client.post(
+                "/api/visits/increment",
+                json={
+                    "anonymous_id": anonymous_id,
+                    "site_language": site_language,
+                    "device_language": device_language,
+                },
+            )
+
+        resp = client.get(f"/api/stats?token={self.FAKE_TOKEN}")
+        html = resp.get_data(as_text=True)
+
+        assert resp.status_code == 200
+        assert "网站使用语言 · 累计唯一用户" in html
+        assert 'data-language="zh-CN"' in html
+        assert '<div class="num">2</div><div class="label">中文 · 66.7%</div>' in html
+        assert 'data-language="en"' in html
+        assert '<div class="num">1</div><div class="label">English · 33.3%</div>' in html
+        assert "设备本身语言 · 累计唯一用户" in html
+        assert "<code>en-US</code>" in html
+        assert "<code>zh-TW</code>" in html
+        assert "<code>unknown</code>" in html
+        assert "<code>fr</code>" not in html
+        assert "分组可重叠" in html

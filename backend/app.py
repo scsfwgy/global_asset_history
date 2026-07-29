@@ -20,6 +20,7 @@ from flask_cors import CORS
 from routes.price_change import price_change_bp
 from routes.wishes import wishes_bp
 from routes.etf_market import etf_market_bp
+from service import visitor_stats
 from service.price_change.config import get_site_base_url
 from service.price_change import cache_store, diagnostics
 from service.price_change.price_change_service import _fetch_daily_series_cached
@@ -881,6 +882,11 @@ def visits():
 def visits_increment():
     """Increment visit count and return new value."""
     body = request.get_json(silent=True) or {}
+    visitor_stats.record_language_visit(
+        _hash_anonymous_id(body.get("anonymous_id")),
+        body.get("site_language"),
+        body.get("device_language"),
+    )
     initial_tab = str(body.get("tab", "")).strip()
     if initial_tab not in _VALID_TABS:
         initial_tab = ""
@@ -963,6 +969,8 @@ def stats_dashboard():
             "<h1>401 Unauthorized</h1><p>需要 ?token= 鉴权参数</p>",
             status=401,
         )
+
+    language_stats = visitor_stats.get_language_stats()
 
     # Gather all stats from Redis (with file fallback for visit count + links)
     if cache_store.is_enabled():
@@ -1056,6 +1064,37 @@ def stats_dashboard():
             f'</div>'
         )
 
+    def percentage(count: int, total: int) -> str:
+        return f"{count / total * 100:.1f}%" if total else "0.0%"
+
+    site_languages = language_stats["site_language"]
+    site_language_total = sum(site_languages.values())
+    site_language_cards = ""
+    for language, label in (("zh-CN", "中文"), ("en", "English")):
+        count = int(site_languages.get(language, 0))
+        site_language_cards += (
+            f'<div class="summary-card language-card" data-language="{language}">'
+            f'<div class="num">{count}</div>'
+            f'<div class="label">{label} · {percentage(count, site_language_total)}</div>'
+            f'</div>'
+        )
+
+    device_languages = language_stats["device_language"]
+    device_language_total = sum(device_languages.values())
+    sorted_device_languages = sorted(
+        device_languages.items(),
+        key=lambda item: (-int(item[1]), item[0]),
+    )
+    device_language_rows = ""
+    for rank, (language, count) in enumerate(sorted_device_languages, 1):
+        safe_language = html.escape(language)
+        device_language_rows += (
+            f"<tr><td>{rank}</td><td><code>{safe_language}</code></td>"
+            f"<td>{int(count)}</td><td>{percentage(int(count), device_language_total)}</td></tr>"
+        )
+    if not device_language_rows:
+        device_language_rows = '<tr><td colspan="4" style="color:#666">暂无数据</td></tr>'
+
     html_page = f"""<!DOCTYPE html>
 <meta charset="utf-8"><title>站点统计 — GlobalAssetHistory</title>
 <meta name="robots" content="noindex,nofollow">
@@ -1068,7 +1107,7 @@ h1{{font-size:1.4rem;margin-bottom:4px}}h2{{font-size:1rem;margin:28px 0 10px;co
 @media(prefers-color-scheme:dark){{.summary-card{{background:#1a1a1a}}}}
 .summary-card .num{{font-size:2rem;font-weight:700;color:#0071e3}}
 .summary-card .label{{font-size:.75rem;color:#86868b;margin-top:2px}}
-.uv-chart{{height:180px;display:grid;grid-template-columns:repeat(30,minmax(12px,1fr));gap:6px;align-items:end;padding:16px 12px 10px;margin:10px 0 22px;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}}
+.uv-chart{{overflow-x:auto;height:180px;display:grid;grid-template-columns:repeat(30,minmax(12px,1fr));gap:6px;align-items:end;padding:16px 12px 10px;margin:10px 0 22px;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}}
 @media(prefers-color-scheme:dark){{.uv-chart{{background:#1a1a1a}}}}
 .uv-bar-item{{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0}}
 .uv-bar-value{{height:18px;font-size:.68rem;color:#86868b;font-variant-numeric:tabular-nums}}
@@ -1098,6 +1137,14 @@ code{{color:#0071e3;font-size:.78rem}}
 <h2>👤 每日唯一用户 <span class="sub">（匿名 UUID 去重，仅保留最近 30 天）</span></h2>
 <div class="uv-chart" aria-label="最近 30 天每日唯一用户柱状图">{user_bars}</div>
 
+<h2>🌐 网站使用语言 · 累计唯一用户 <span class="sub">（中文与 English 分别去重）</span></h2>
+<div class="summary">{site_language_cards}</div>
+<p class="sub">同一匿名用户使用过两种网站语言时会进入两个分组，分组可重叠。</p>
+
+<h2>🖥️ 设备本身语言 · 累计唯一用户 <span class="sub">（完整 navigator.language）</span></h2>
+<table><thead><tr><th>#</th><th>完整设备语言</th><th>人数</th><th>占比</th></tr></thead><tbody>{device_language_rows}</tbody></table>
+<p class="sub">设备语言变更后同一匿名用户可能进入多个分组，分组可重叠。</p>
+
 <h2>📑 Tab 访问排行 <span class="sub">（所有用户累计）</span></h2>
 <table><thead><tr><th>#</th><th>Tab</th><th>ID</th><th>次数</th></tr></thead><tbody>{tab_rows}</tbody></table>
 
@@ -1107,7 +1154,7 @@ code{{color:#0071e3;font-size:.78rem}}
 <h2>⚙️ 设置项操作排行 <span class="sub">（所有用户累计）</span></h2>
 <table><thead><tr><th>#</th><th>操作</th><th>ID</th><th>次数</th></tr></thead><tbody>{action_rows}</tbody></table>
 
-<p class="sub" style="margin-top:24px">数据来源：Upstash Redis <code>gah:tab_visits</code> / <code>gah:ad_clicks</code> / <code>gah:settings_actions</code> / <code>gah:link_click:*</code></p>"""
+<p class="sub" style="margin-top:24px">数据来源：Upstash Redis <code>gah:tab_visits</code> / <code>gah:site_language_users:*</code> / <code>gah:device_language_users:*</code> / <code>gah:ad_clicks</code> / <code>gah:settings_actions</code> / <code>gah:link_click:*</code></p>"""
     return html_page
 
 
