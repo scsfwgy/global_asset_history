@@ -9,3 +9,4 @@ logs/
 backend/config/visit_count.json
 .env.local
 backend/config/wishes.json
+/docs/
