@@ -370,7 +370,7 @@ class TestReturnDetailEndpoint:
         data = resp.get_json()
         assert data["symbol"] == "BTC"
         assert data["years"] == [2025, 2024]
-        mock_fetch.assert_called_once_with("BTC", "crypto", None)
+        mock_fetch.assert_called_once_with("BTC", "crypto", None, True)
         track_coverage(MOD, 3)
 
     @patch("routes.price_change.fetch_return_detail")
@@ -392,7 +392,7 @@ class TestReturnDetailEndpoint:
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["mode"] == "daily"
-        mock_fetch.assert_called_once_with("BTC", "crypto", 2025)
+        mock_fetch.assert_called_once_with("BTC", "crypto", 2025, True)
         track_coverage(MOD, 3)
 
     def test_missing_symbol(self, client):
@@ -406,6 +406,20 @@ class TestReturnDetailEndpoint:
             json={"symbol": "BTC", "type": "crypto", "year": "abc"},
         )
         assert resp.status_code == 400
+        track_coverage(MOD, 1)
+
+    def test_invalid_include_stock_history(self, client):
+        resp = client.post(
+            f"{BASE}/detail",
+            json={
+                "symbol": "AAPL",
+                "type": "stock",
+                "year": 2025,
+                "include_stock_history": "false",
+            },
+        )
+        assert resp.status_code == 400
+        assert resp.get_json()["error"] == "include_stock_history must be a boolean"
         track_coverage(MOD, 1)
 
     @patch("routes.price_change.fetch_return_detail")

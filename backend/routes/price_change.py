@@ -217,6 +217,7 @@ def get_return_detail():
     symbol = body.get("symbol", "").strip().upper()
     asset_type = body.get("type", "stock").strip().lower()
     year = body.get("year")
+    include_stock_history = body.get("include_stock_history", True)
 
     if not symbol:
         return jsonify({"error": "symbol is required"}), 400
@@ -225,9 +226,16 @@ def get_return_detail():
             year = int(year)
         except (TypeError, ValueError):
             return jsonify({"error": "year must be an integer"}), 400
+    if not isinstance(include_stock_history, bool):
+        return jsonify({"error": "include_stock_history must be a boolean"}), 400
 
     try:
-        result = fetch_return_detail(symbol, asset_type, year)
+        result = fetch_return_detail(
+            symbol,
+            asset_type,
+            year,
+            include_stock_history,
+        )
         return jsonify(result)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400

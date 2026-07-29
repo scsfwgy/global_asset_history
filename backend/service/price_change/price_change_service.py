@@ -6,9 +6,10 @@ import logging
 import math
 import threading
 import time
+from bisect import bisect_left
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Callable, Dict, List, Optional, Tuple
 
 from .calculations import (
@@ -44,6 +45,7 @@ logger = logging.getLogger(__name__)
 # L1-only when Redis is not configured (local dev).
 _DAILY_SERIES_CACHE: Dict[Tuple[str, str], PriceSeries] = {}
 _STOCK_COMPARE_CACHE: Dict[str, Tuple[float, int, Dict]] = {}
+_DETAIL_FUNDAMENTALS_CACHE: Dict[str, Tuple[float, int, Dict]] = {}
 _CACHE_LOCK = threading.RLock()
 
 _FETCHERS: Dict[str, Callable[[str], Dict[str, float]]] = dict(FETCHERS)
@@ -138,6 +140,7 @@ def clear_price_change_cache() -> None:
     with _CACHE_LOCK:
         _DAILY_SERIES_CACHE.clear()
         _STOCK_COMPARE_CACHE.clear()
+        _DETAIL_FUNDAMENTALS_CACHE.clear()
     with _market_pulse_quote_lock:
         _market_pulse_quote_cache = []
         _market_pulse_quote_ts = 0.0
@@ -630,22 +633,499 @@ def _build_monthly_stats(month_values: Dict[int, List[float]]) -> List[Dict]:
             "month": month,
             "avg": _avg(values),
             "median": _median(values),
-            "total": round(sum(values), 2) if values else None,
+            "win_rate": _win_rate(values),
             "count": len(values),
         })
     return stats
 
 
 def _row_stats(month_values: List[Optional[float]]) -> Dict:
-    """Compute avg, median, total across 12 month cells for one row."""
+    """Compute descriptive statistics across the visible period cells."""
     clean = [v for v in month_values if v is not None]
     if not clean:
-        return {"avg": None, "median": None, "total": None}
+        return {
+            "avg": None,
+            "median": None,
+            "win_rate": None,
+            "count": 0,
+        }
     return {
         "avg": _avg(clean),
         "median": _median(clean),
-        "total": round(sum(clean), 2),
+        "win_rate": _win_rate(clean),
+        "count": len(clean),
     }
+
+
+def _detail_price_points(series: PriceSeries) -> List[Tuple[date, float]]:
+    """Return sorted, finite adjusted-close points for detail analytics."""
+    points = []
+    for timestamp, close in zip(series.timestamps, series.closes):
+        try:
+            numeric_close = float(close)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(numeric_close) or numeric_close <= 0:
+            continue
+        points.append((
+            datetime.fromtimestamp(timestamp, tz=timezone.utc).date(),
+            numeric_close,
+        ))
+    return sorted(points, key=lambda point: point[0])
+
+
+def _date_years_before(value: date, years: int) -> date:
+    try:
+        return value.replace(year=value.year - years)
+    except ValueError:
+        return value.replace(year=value.year - years, day=28)
+
+
+def _detail_window_start(
+    points: List[Tuple[date, float]],
+    target: date,
+) -> Optional[Tuple[date, float]]:
+    """Find the first observed close near or after a requested window start."""
+    for point in points:
+        if point[0] >= target:
+            return point if point[0] <= target + timedelta(days=10) else None
+    return None
+
+
+def _detail_period_return(
+    points: List[Tuple[date, float]],
+    years: int,
+    annualized: bool = False,
+) -> Optional[float]:
+    if len(points) < 2:
+        return None
+    end_date, end_close = points[-1]
+    start = _detail_window_start(points, _date_years_before(end_date, years))
+    if start is None or start[1] <= 0:
+        return None
+    elapsed_years = (end_date - start[0]).days / 365.2425
+    if elapsed_years <= 0:
+        return None
+    total_factor = end_close / start[1]
+    if total_factor <= 0:
+        return None
+    value = (
+        (total_factor ** (1 / elapsed_years) - 1) * 100
+        if annualized
+        else (total_factor - 1) * 100
+    )
+    return round(value, 2)
+
+
+def _detail_ytd_return(points: List[Tuple[date, float]]) -> Optional[float]:
+    if len(points) < 2:
+        return None
+    end_date, end_close = points[-1]
+    prior = next(
+        (point for point in reversed(points) if point[0].year < end_date.year),
+        None,
+    )
+    if prior is None or prior[1] <= 0:
+        return None
+    return round((end_close / prior[1] - 1) * 100, 2)
+
+
+def _detail_annualized_volatility(
+    points: List[Tuple[date, float]],
+    asset_type: str,
+) -> Optional[float]:
+    if len(points) < 2:
+        return None
+    cutoff = points[-1][0] - timedelta(days=365)
+    window = [point for point in points if point[0] >= cutoff]
+    returns = [
+        math.log(window[index][1] / window[index - 1][1])
+        for index in range(1, len(window))
+        if window[index - 1][1] > 0 and window[index][1] > 0
+    ]
+    if len(returns) < 20:
+        return None
+    mean_return = sum(returns) / len(returns)
+    variance = sum((value - mean_return) ** 2 for value in returns) / (len(returns) - 1)
+    annual_periods = 365 if asset_type == "crypto" else 252
+    return round(math.sqrt(variance) * math.sqrt(annual_periods) * 100, 2)
+
+
+def _build_detail_quality(
+    series: PriceSeries,
+    asset_type: str,
+) -> Dict:
+    """Build daily and rolling one-year return-quality statistics."""
+    points = _detail_price_points(series)
+    if len(points) < 2:
+        return {}
+
+    daily_returns = []
+    for index in range(1, len(points)):
+        previous_close = points[index - 1][1]
+        close = points[index][1]
+        if previous_close <= 0 or close <= 0:
+            continue
+        daily_returns.append({
+            "date": points[index][0],
+            "return": close / previous_close - 1,
+        })
+
+    cutoff = points[-1][0] - timedelta(days=365)
+    one_year_daily = [item for item in daily_returns if item["date"] >= cutoff]
+    annual_periods = 365 if asset_type == "crypto" else 252
+    downside_volatility = None
+    sortino_ratio = None
+    if len(one_year_daily) >= 20:
+        values = [item["return"] for item in one_year_daily]
+        downside_deviation = math.sqrt(
+            sum(min(value, 0.0) ** 2 for value in values) / len(values)
+        )
+        if downside_deviation > 0:
+            downside_volatility = (
+                downside_deviation * math.sqrt(annual_periods) * 100
+            )
+            sortino_ratio = (
+                (sum(values) / len(values)) * annual_periods
+                / (downside_deviation * math.sqrt(annual_periods))
+            )
+
+    best_day = (
+        max(one_year_daily, key=lambda item: item["return"])
+        if one_year_daily
+        else None
+    )
+    worst_day = (
+        min(one_year_daily, key=lambda item: item["return"])
+        if one_year_daily
+        else None
+    )
+
+    dates = [point[0] for point in points]
+    rolling_returns = []
+    for end_index, (end_date, end_close) in enumerate(points):
+        target = _date_years_before(end_date, 1)
+        start_index = bisect_left(dates, target, 0, end_index)
+        if start_index >= end_index:
+            continue
+        start_date, start_close = points[start_index]
+        if start_date > target + timedelta(days=10) or start_close <= 0:
+            continue
+        rolling_returns.append({
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "return": (end_close / start_close - 1) * 100,
+        })
+
+    rolling_values = [item["return"] for item in rolling_returns]
+    best_rolling = (
+        max(rolling_returns, key=lambda item: item["return"])
+        if rolling_returns
+        else None
+    )
+    worst_rolling = (
+        min(rolling_returns, key=lambda item: item["return"])
+        if rolling_returns
+        else None
+    )
+
+    def format_daily(item: Optional[Dict]) -> Optional[Dict]:
+        if item is None:
+            return None
+        return {
+            "date": item["date"].isoformat(),
+            "return": round(item["return"] * 100, 2),
+        }
+
+    def format_rolling(item: Optional[Dict]) -> Optional[Dict]:
+        if item is None:
+            return None
+        return {
+            "start_date": item["start_date"],
+            "end_date": item["end_date"],
+            "return": round(item["return"], 2),
+        }
+
+    return {
+        "daily_win_rate": _win_rate([
+            item["return"] for item in daily_returns
+        ]),
+        "daily_observations": len(daily_returns),
+        "downside_volatility_1y": (
+            round(downside_volatility, 2)
+            if downside_volatility is not None
+            else None
+        ),
+        "sortino_ratio_1y": (
+            round(sortino_ratio, 2)
+            if sortino_ratio is not None
+            else None
+        ),
+        "best_day_1y": format_daily(best_day),
+        "worst_day_1y": format_daily(worst_day),
+        "rolling_1y_win_rate": _win_rate(rolling_values),
+        "rolling_1y_median": _median(rolling_values),
+        "rolling_1y_best": format_rolling(best_rolling),
+        "rolling_1y_worst": format_rolling(worst_rolling),
+        "rolling_1y_observations": len(rolling_returns),
+        "return_basis": "adjusted_close",
+        "sortino_target_return": 0,
+    }
+
+
+def _detail_drawdown_summary(points: List[Tuple[date, float]]) -> Dict:
+    if not points:
+        return {
+            "current_drawdown": None,
+            "all_time_high_date": None,
+            "max_drawdown": None,
+            "max_drawdown_peak_date": None,
+            "max_drawdown_trough_date": None,
+            "max_drawdown_recovery_date": None,
+            "max_drawdown_recovery_trading_days": None,
+        }
+
+    peak_index = 0
+    peak_close = points[0][1]
+    max_drawdown = 0.0
+    max_peak_index = 0
+    max_trough_index = 0
+    for index, (_, close) in enumerate(points[1:], start=1):
+        if close > peak_close:
+            peak_index = index
+            peak_close = close
+            continue
+        drawdown = close / peak_close - 1
+        if drawdown < max_drawdown:
+            max_drawdown = drawdown
+            max_peak_index = peak_index
+            max_trough_index = index
+
+    recovery_index = (
+        next(
+            (
+                index
+                for index in range(max_trough_index + 1, len(points))
+                if points[index][1] >= points[max_peak_index][1]
+            ),
+            None,
+        )
+        if max_drawdown < 0
+        else max_trough_index
+    )
+    all_time_high_index = max(
+        range(len(points)),
+        key=lambda index: (points[index][1], index),
+    )
+    current_drawdown = (points[-1][1] / points[all_time_high_index][1] - 1) * 100
+    return {
+        "current_drawdown": round(current_drawdown, 2),
+        "all_time_high_date": points[all_time_high_index][0].isoformat(),
+        "max_drawdown": round(max_drawdown * 100, 2),
+        "max_drawdown_peak_date": points[max_peak_index][0].isoformat(),
+        "max_drawdown_trough_date": points[max_trough_index][0].isoformat(),
+        "max_drawdown_recovery_date": (
+            points[recovery_index][0].isoformat()
+            if recovery_index is not None
+            else None
+        ),
+        "max_drawdown_recovery_trading_days": (
+            recovery_index - max_trough_index
+            if recovery_index is not None
+            else None
+        ),
+    }
+
+
+def _build_detail_overview(
+    symbol: str,
+    asset_type: str,
+    series: PriceSeries,
+    yearly: Dict[str, float],
+) -> Dict:
+    """Build the common identity, long-term return, and risk overview."""
+    points = _detail_price_points(series)
+    if not points:
+        return {}
+    latest_date, latest_adjusted_close = points[-1]
+    latest_price = latest_adjusted_close
+    price_basis = "adjusted_close"
+    if (
+        series.raw_closes
+        and len(series.raw_closes) == len(series.timestamps)
+    ):
+        for timestamp, close in reversed(list(zip(series.timestamps, series.raw_closes))):
+            try:
+                numeric_close = float(close)
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(numeric_close) and numeric_close > 0:
+                latest_price = numeric_close
+                latest_date = datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
+                price_basis = "raw_close"
+                break
+
+    current_year_is_ytd = latest_date.month < 12 or latest_date.day < 20
+    complete_years = [
+        (int(year), float(value))
+        for year, value in yearly.items()
+        if value is not None
+        and not (current_year_is_ytd and int(year) == latest_date.year)
+    ]
+    best_year = max(complete_years, key=lambda item: item[1]) if complete_years else None
+    worst_year = min(complete_years, key=lambda item: item[1]) if complete_years else None
+    return {
+        "symbol": symbol,
+        "type": asset_type,
+        "latest_price": round(latest_price, 6),
+        "latest_adjusted_close": round(latest_adjusted_close, 6),
+        "latest_date": latest_date.isoformat(),
+        "first_date": points[0][0].isoformat(),
+        "price_basis": price_basis,
+        "source": series.source,
+        "updated_at": datetime.fromtimestamp(series.fetched_at, tz=timezone.utc).isoformat(),
+        "current_year_is_ytd": current_year_is_ytd,
+        "ytd_return": _detail_ytd_return(points),
+        "one_year_return": _detail_period_return(points, 1),
+        "cagr_3y": _detail_period_return(points, 3, annualized=True),
+        "cagr_5y": _detail_period_return(points, 5, annualized=True),
+        "cagr_10y": _detail_period_return(points, 10, annualized=True),
+        "annualized_volatility_1y": _detail_annualized_volatility(points, asset_type),
+        "best_year": (
+            {"year": best_year[0], "return": round(best_year[1], 2)}
+            if best_year
+            else None
+        ),
+        "worst_year": (
+            {"year": worst_year[0], "return": round(worst_year[1], 2)}
+            if worst_year
+            else None
+        ),
+        **_detail_drawdown_summary(points),
+    }
+
+
+def _enrich_detail_fundamentals_from_series(
+    series: PriceSeries,
+    snapshot: Optional[Dict],
+) -> Dict:
+    """Fill resilient market-snapshot fields from the existing daily series."""
+    result = dict(snapshot or {})
+    snapshot_available = bool(result.get("available"))
+    price_values = (
+        series.raw_closes
+        if series.raw_closes and len(series.raw_closes) == len(series.timestamps)
+        else series.closes
+    )
+    price_points = []
+    for timestamp, close in zip(series.timestamps, price_values):
+        value = _finite_quote_number(close)
+        if value is None or value <= 0:
+            continue
+        price_points.append((
+            datetime.fromtimestamp(timestamp, tz=timezone.utc).date(),
+            value,
+        ))
+    price_points.sort(key=lambda point: point[0])
+    if not price_points:
+        return result
+
+    latest_date, latest_price = price_points[-1]
+    one_year_cutoff = latest_date - timedelta(days=365)
+    one_year_prices = [
+        close for point_date, close in price_points
+        if point_date >= one_year_cutoff
+    ]
+    high = result.get("fifty_two_week_high")
+    low = result.get("fifty_two_week_low")
+    if one_year_prices:
+        if high is None:
+            high = max(one_year_prices)
+            result["fifty_two_week_high"] = round(high, 6)
+        if low is None:
+            low = min(one_year_prices)
+            result["fifty_two_week_low"] = round(low, 6)
+
+    if high is not None and high > 0:
+        result["distance_to_52w_high"] = round(
+            (latest_price / high - 1) * 100,
+            2,
+        )
+    if low is not None and low > 0:
+        result["distance_to_52w_low"] = round(
+            (latest_price / low - 1) * 100,
+            2,
+        )
+    if high is not None and low is not None and high > low:
+        result["position_in_52w_range"] = round(
+            (latest_price - low) / (high - low) * 100,
+            2,
+        )
+
+    trailing_dividend = 0.0
+    for payment in series.dividends or []:
+        try:
+            payment_date = datetime.fromtimestamp(
+                int(payment["timestamp"]),
+                tz=timezone.utc,
+            ).date()
+            amount = float(payment["amount"])
+        except (KeyError, TypeError, ValueError, OSError):
+            continue
+        if (
+            payment_date >= one_year_cutoff
+            and math.isfinite(amount)
+            and amount > 0
+        ):
+            trailing_dividend += amount
+    if trailing_dividend > 0:
+        result["dividend_per_share_ttm"] = round(trailing_dividend, 6)
+        if result.get("dividend_yield") is None:
+            result["dividend_yield"] = round(
+                trailing_dividend / latest_price * 100,
+                4,
+            )
+
+    if series.volumes and len(series.volumes) == len(series.timestamps):
+        volume_cutoff = latest_date - timedelta(days=90)
+        volume_values = []
+        for timestamp, volume in zip(series.timestamps, series.volumes):
+            point_date = datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
+            numeric_volume = _finite_quote_number(volume)
+            if (
+                point_date >= volume_cutoff
+                and numeric_volume is not None
+                and numeric_volume >= 0
+            ):
+                volume_values.append(numeric_volume)
+        if volume_values and result.get("average_volume_3m") is None:
+            result["average_volume_3m"] = round(
+                sum(volume_values) / len(volume_values),
+                2,
+            )
+
+    if not result.get("snapshot_at"):
+        result["snapshot_at"] = datetime.fromtimestamp(
+            series.fetched_at,
+            tz=timezone.utc,
+        ).isoformat()
+    result["currency"] = result.get("currency") or "USD"
+    existing_source = result.get("source") if snapshot_available else None
+    result["source"] = (
+        f"{existing_source},{series.source}"
+        if existing_source and series.source not in existing_source.split(",")
+        else existing_source or series.source
+    )
+    numeric_fields = [
+        value
+        for key, value in result.items()
+        if key not in {"available", "field_count"}
+        and isinstance(value, (int, float))
+        and value is not None
+    ]
+    result["field_count"] = len(numeric_fields)
+    result["available"] = bool(numeric_fields)
+    return result
 
 
 def _compute_daily_grid(series: PriceSeries, year: int) -> List[Dict]:
@@ -1257,7 +1737,12 @@ def fetch_stock_comparison(symbols: List, tax_rate: float = 30) -> Dict:
     return result
 
 
-def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None) -> Dict:
+def fetch_return_detail(
+    symbol: str,
+    asset_type: str,
+    year: Optional[int] = None,
+    include_stock_history: bool = True,
+) -> Dict:
     """Fetch single-symbol yearly/monthly return detail, or daily grid for a specific year."""
     clean_sym = symbol.strip().upper()
     clean_type = asset_type.strip().lower()
@@ -1275,12 +1760,33 @@ def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None
     if not years:
         raise ValueError("insufficient data")
 
+    overview = _build_detail_overview(clean_sym, clean_type, series, yearly)
+    quality = _build_detail_quality(series, clean_type)
+    external_fundamentals = (
+        _fetch_detail_fundamentals(clean_sym)
+        if clean_type == "stock" and series.source.startswith("yahoo")
+        else None
+    )
+    fundamentals = (
+        _enrich_detail_fundamentals_from_series(series, external_fundamentals)
+        if clean_type == "stock"
+        else None
+    )
+    if fundamentals is not None:
+        logger.info(
+            "event=detail_fundamentals_ready symbol=%s source=%s available=%s fields=%s external_snapshot=%s",
+            clean_sym,
+            fundamentals.get("source", "unknown"),
+            bool(fundamentals.get("available")),
+            fundamentals.get("field_count", 0),
+            bool(external_fundamentals and external_fundamentals.get("available")),
+        )
     yearly_extremes, monthly_extremes = _compute_daily_extremes(series)
     yearly_candles, monthly_candles = _compute_return_candles(series)
-    stock_tables = _build_stock_history_tables(series) if clean_type == "stock" else None
 
     # -- yearly mode ---------------------------------------------------------
     if year is None:
+        stock_tables = _build_stock_history_tables(series) if clean_type == "stock" else None
         month_values: Dict[int, List[float]] = {m: [] for m in range(1, 13)}
         year_values: List[float] = []
         best_month = None
@@ -1306,7 +1812,11 @@ def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None
                     monthly_candles.get((y, month)),
                 ))
             y_ret = yearly.get(str(y))
-            if y_ret is not None:
+            is_partial_current_year = (
+                overview.get("current_year_is_ytd")
+                and y == int(str(overview.get("latest_date", "0"))[:4])
+            )
+            if y_ret is not None and not is_partial_current_year:
                 year_values.append(float(y_ret))
             month_vals = [m["return"] for m in clean_months]
             monthly_rows.append({
@@ -1325,6 +1835,9 @@ def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None
             "mode": "yearly",
             "source": series.source,
             "meta": _series_meta(clean_sym, clean_type, series),
+            "overview": overview,
+            "quality": quality,
+            "fundamentals": fundamentals,
             "years": years,
             "rows": monthly_rows,
             "stats": _build_monthly_stats(month_values),
@@ -1359,6 +1872,9 @@ def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None
         "year": year,
         "source": series.source,
         "meta": _series_meta(clean_sym, clean_type, series),
+        "overview": overview,
+        "quality": quality,
+        "fundamentals": fundamentals,
         "years": years,
         "monthly_returns": [
             _with_chart_detail(
@@ -1370,7 +1886,11 @@ def fetch_return_detail(symbol: str, asset_type: str, year: Optional[int] = None
         ],
         "daily_rows": daily_rows,
         "stats": _build_monthly_stats(month_values),
-        "stock_tables": stock_tables,
+        "stock_tables": (
+            _build_stock_history_tables(series)
+            if clean_type == "stock" and include_stock_history
+            else None
+        ),
         "summary": {
             "year_count": len(years),
             "selected_year": year,
@@ -1868,8 +2388,8 @@ def _yahoo_market_caps(symbols: List[str]) -> Dict[str, float]:
 def _yahoo_quote_batch(symbols: List[str]) -> List[dict]:
     """Fetch quote data for multiple US stocks in a single batch request.
 
-    Uses Yahoo v7/quote endpoint. Returns list of dicts with keys:
-    symbol, name, price, change_pct, trade_time, volume, market_cap.
+    Uses Yahoo v7/quote endpoint. The normalized result includes both the
+    market-pulse fields and best-effort valuation/fundamental snapshot fields.
     Returns empty list on failure (crumb unavailable, network error, etc.).
     """
     crumb = _yahoo_crumb()
@@ -1902,11 +2422,196 @@ def _yahoo_quote_batch(symbols: List[str]) -> List[dict]:
                     "trade_time": q.get("regularMarketTime"),
                     "volume": q.get("regularMarketVolume"),
                     "market_cap": q.get("marketCap"),
+                    "quote_type": q.get("quoteType"),
+                    "currency": q.get("currency"),
+                    "exchange": q.get("fullExchangeName") or q.get("exchange"),
+                    "total_assets": q.get("totalAssets"),
+                    "trailing_pe": q.get("trailingPE"),
+                    "forward_pe": q.get("forwardPE"),
+                    "price_to_book": q.get("priceToBook"),
+                    "eps_ttm": q.get("epsTrailingTwelveMonths"),
+                    "eps_forward": q.get("epsForward"),
+                    "dividend_yield": q.get("dividendYield"),
+                    "trailing_dividend_yield": q.get("trailingAnnualDividendYield"),
+                    "beta": q.get("beta"),
+                    "fifty_two_week_high": q.get("fiftyTwoWeekHigh"),
+                    "fifty_two_week_low": q.get("fiftyTwoWeekLow"),
+                    "average_volume_3m": q.get("averageDailyVolume3Month"),
+                    "shares_outstanding": q.get("sharesOutstanding"),
+                    "expense_ratio": q.get("netExpenseRatio"),
+                    "ytd_return": q.get("ytdReturn"),
+                    "three_year_return": q.get("threeYearReturn"),
+                    "five_year_average_return": q.get("fiveYearAverageReturn"),
                 })
         except Exception as e:
             logger.debug("Yahoo quote batch failed: %s", e)
             continue
     return results
+
+
+_DETAIL_FUNDAMENTALS_SUCCESS_TTL = 6 * 60 * 60
+_DETAIL_FUNDAMENTALS_ERROR_TTL = 5 * 60
+
+
+def _finite_quote_number(value) -> Optional[float]:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _fetch_detail_fundamentals(symbol: str) -> Dict:
+    """Fetch and cache a best-effort valuation snapshot for one US symbol."""
+    cache_key = symbol.upper()
+    now = time.time()
+    with _CACHE_LOCK:
+        cached = _DETAIL_FUNDAMENTALS_CACHE.get(cache_key)
+        if cached:
+            cached_at, ttl, payload = cached
+            if now - cached_at < ttl:
+                logger.info(
+                    "event=detail_fundamentals_cache_hit layer=l1 symbol=%s source=%s available=%s fields=%s",
+                    cache_key,
+                    payload.get("source", "unknown"),
+                    bool(payload.get("available")),
+                    payload.get("field_count", 0),
+                )
+                return dict(payload)
+            del _DETAIL_FUNDAMENTALS_CACHE[cache_key]
+
+    started_at = time.perf_counter()
+    logger.info(
+        "event=detail_fundamentals_fetch_start symbol=%s source=yahoo_quote,eastmoney_quote",
+        cache_key,
+    )
+    quotes = _yahoo_quote_batch([cache_key])
+    quote = next(
+        (item for item in quotes if item.get("symbol") == cache_key),
+        None,
+    )
+    source = "yahoo_quote"
+    if quote is None:
+        quote = _eastmoney_detail_quote(cache_key)
+        source = "eastmoney_quote"
+    if quote is None:
+        payload = {
+            "available": False,
+            "source": "yahoo_quote,eastmoney_quote",
+            "field_count": 0,
+        }
+        ttl = _DETAIL_FUNDAMENTALS_ERROR_TTL
+        logger.warning(
+            "event=detail_fundamentals_fetch_complete symbol=%s source=yahoo_quote,eastmoney_quote available=false fields=0 duration_ms=%s error=quote_unavailable",
+            cache_key,
+            round((time.perf_counter() - started_at) * 1000, 1),
+        )
+    else:
+        price = _finite_quote_number(quote.get("price"))
+        high = _finite_quote_number(quote.get("fifty_two_week_high"))
+        low = _finite_quote_number(quote.get("fifty_two_week_low"))
+        trailing_dividend_yield = _finite_quote_number(
+            quote.get("trailing_dividend_yield")
+        )
+        dividend_yield = _finite_quote_number(quote.get("dividend_yield"))
+        if dividend_yield is None and trailing_dividend_yield is not None:
+            dividend_yield = trailing_dividend_yield * 100
+
+        payload = {
+            "available": True,
+            "source": source,
+            "snapshot_at": datetime.now(timezone.utc).isoformat(),
+            "name": quote.get("name"),
+            "quote_type": quote.get("quote_type"),
+            "currency": quote.get("currency"),
+            "exchange": quote.get("exchange"),
+            "market_cap": _finite_quote_number(quote.get("market_cap")),
+            "total_assets": _finite_quote_number(quote.get("total_assets")),
+            "trailing_pe": _finite_quote_number(quote.get("trailing_pe")),
+            "forward_pe": _finite_quote_number(quote.get("forward_pe")),
+            "price_to_book": _finite_quote_number(quote.get("price_to_book")),
+            "eps_ttm": _finite_quote_number(quote.get("eps_ttm")),
+            "eps_forward": _finite_quote_number(quote.get("eps_forward")),
+            "dividend_yield": dividend_yield,
+            "beta": _finite_quote_number(quote.get("beta")),
+            "fifty_two_week_high": high,
+            "fifty_two_week_low": low,
+            "distance_to_52w_high": (
+                (price / high - 1) * 100
+                if price is not None and high is not None and high > 0
+                else None
+            ),
+            "distance_to_52w_low": (
+                (price / low - 1) * 100
+                if price is not None and low is not None and low > 0
+                else None
+            ),
+            "position_in_52w_range": (
+                (price - low) / (high - low) * 100
+                if (
+                    price is not None
+                    and high is not None
+                    and low is not None
+                    and high > low
+                )
+                else None
+            ),
+            "average_volume_3m": _finite_quote_number(
+                quote.get("average_volume_3m")
+            ),
+            "shares_outstanding": _finite_quote_number(
+                quote.get("shares_outstanding")
+            ),
+            "expense_ratio": _finite_quote_number(quote.get("expense_ratio")),
+            "ytd_return": _finite_quote_number(quote.get("ytd_return")),
+            "three_year_return": _finite_quote_number(
+                quote.get("three_year_return")
+            ),
+            "five_year_average_return": _finite_quote_number(
+                quote.get("five_year_average_return")
+            ),
+        }
+        numeric_fields = [
+            key
+            for key, value in payload.items()
+            if key not in {"available", "field_count"}
+            and isinstance(value, (int, float))
+            and value is not None
+        ]
+        payload["field_count"] = len(numeric_fields)
+        payload["distance_to_52w_high"] = (
+            round(payload["distance_to_52w_high"], 2)
+            if payload["distance_to_52w_high"] is not None
+            else None
+        )
+        payload["distance_to_52w_low"] = (
+            round(payload["distance_to_52w_low"], 2)
+            if payload["distance_to_52w_low"] is not None
+            else None
+        )
+        payload["position_in_52w_range"] = (
+            round(payload["position_in_52w_range"], 2)
+            if payload["position_in_52w_range"] is not None
+            else None
+        )
+        payload["available"] = payload["field_count"] > 0
+        ttl = (
+            _DETAIL_FUNDAMENTALS_SUCCESS_TTL
+            if payload["available"]
+            else _DETAIL_FUNDAMENTALS_ERROR_TTL
+        )
+        logger.info(
+            "event=detail_fundamentals_fetch_complete symbol=%s source=%s available=%s fields=%s duration_ms=%s error=none",
+            cache_key,
+            source,
+            str(payload["available"]).lower(),
+            payload["field_count"],
+            round((time.perf_counter() - started_at) * 1000, 1),
+        )
+
+    with _CACHE_LOCK:
+        _DETAIL_FUNDAMENTALS_CACHE[cache_key] = (now, ttl, payload)
+    return dict(payload)
 
 
 _MARKET_PULSE_QUOTE_TTL = 5 * 60
@@ -2027,6 +2732,80 @@ def _build_heatmap_today(
         "period_label": _period_label("today"),
         "data": ordered,
     }
+
+
+def _eastmoney_detail_quote(symbol: str) -> Optional[Dict]:
+    """Return a normalized US quote snapshot from East Money as a fallback."""
+    fields = ",".join((
+        "f43",   # current price
+        "f57",   # symbol
+        "f58",   # name
+        "f59",   # price decimal places
+        "f84",   # total shares
+        "f116",  # total market cap
+        "f152",  # ratio decimal places
+        "f163",  # trailing P/E
+        "f167",  # price/book
+        "f172",  # currency
+        "f174",  # 52-week high
+        "f175",  # 52-week low
+    ))
+
+    def scaled(value, decimal_places) -> Optional[float]:
+        number = _finite_quote_number(value)
+        places = _finite_quote_number(decimal_places)
+        if number is None:
+            return None
+        divisor = 10 ** int(places if places is not None else 0)
+        return number / divisor
+
+    def positive_scaled(value, decimal_places) -> Optional[float]:
+        number = scaled(value, decimal_places)
+        return number if number is not None and number > 0 else None
+
+    for prefix in ("105", "106", "107"):
+        try:
+            response = _em_session.get(
+                _EM_QUOTE_URL,
+                params={
+                    "secid": f"{prefix}.{symbol}",
+                    "fields": fields,
+                    "_": int(time.time()),
+                },
+                timeout=5,
+            )
+            response.raise_for_status()
+            data = response.json().get("data") or {}
+            if str(data.get("f57") or "").upper() != symbol.upper():
+                continue
+            name = data.get("f58")
+            quote_type = (
+                "ETF"
+                if "ETF" in str(name or "").upper()
+                or "TRUST" in str(name or "").upper()
+                else "EQUITY"
+            )
+            return {
+                "symbol": symbol.upper(),
+                "name": name,
+                "price": scaled(data.get("f43"), data.get("f59")),
+                "quote_type": quote_type,
+                "currency": data.get("f172") or "USD",
+                "market_cap": _finite_quote_number(data.get("f116")),
+                "trailing_pe": positive_scaled(data.get("f163"), data.get("f152")),
+                "price_to_book": positive_scaled(data.get("f167"), data.get("f152")),
+                "shares_outstanding": _finite_quote_number(data.get("f84")),
+                "fifty_two_week_high": scaled(data.get("f174"), data.get("f59")),
+                "fifty_two_week_low": scaled(data.get("f175"), data.get("f59")),
+            }
+        except Exception as error:
+            logger.debug(
+                "East Money detail quote failed for %s (prefix %s): %s",
+                symbol,
+                prefix,
+                error,
+            )
+    return None
 
 
 def _em_market_cap(symbol: str) -> Optional[float]:

@@ -5,10 +5,13 @@
   const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
   var _barChartCollapsed = false;
+  var _overviewCollapsed = false;
   var _paramsCollapsed = false;
   var _barChartHeight = 220;
   var _lastBarChartResult = null;
   var _lastStockHistoryResult = null;
+  var _stockHistoryCache = null;
+  var _pendingYear = "";
   var _resizeRenderFrame = null;
 
   function escapeHtml(value) {
@@ -43,12 +46,67 @@
     }).format(num);
   }
 
+  function formatNumber(value, digits) {
+    if (value == null || !Number.isFinite(Number(value))) return "—";
+    return new Intl.NumberFormat(document.documentElement.lang || undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: digits == null ? 2 : digits,
+    }).format(Number(value));
+  }
+
+  function formatCompactNumber(value, currency) {
+    if (value == null || !Number.isFinite(Number(value))) return "—";
+    var options = {
+      notation: "compact",
+      compactDisplay: "short",
+      maximumFractionDigits: 2,
+    };
+    if (currency) {
+      options.style = "currency";
+      options.currency = currency;
+      options.currencyDisplay = "narrowSymbol";
+    }
+    try {
+      return new Intl.NumberFormat(
+        document.documentElement.lang || undefined,
+        options
+      ).format(Number(value));
+    } catch (_) {
+      return formatNumber(value, 0) + (currency ? " " + currency : "");
+    }
+  }
+
+  function formatRatio(value) {
+    if (value == null || !Number.isFinite(Number(value))) return "—";
+    return formatNumber(value, 2) + "×";
+  }
+
   function formatDividend(value) {
     if (value == null || !Number.isFinite(Number(value))) return "—";
     return "$" + new Intl.NumberFormat(document.documentElement.lang || undefined, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 6,
     }).format(Number(value));
+  }
+
+  function formatDateTime(value) {
+    if (!value) return "—";
+    var parsed = new Date(value);
+    if (!Number.isFinite(parsed.getTime())) return String(value);
+    return new Intl.DateTimeFormat(document.documentElement.lang || undefined, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(parsed);
+  }
+
+  function valueTone(value, inverse) {
+    if (value == null || !Number.isFinite(Number(value)) || Number(value) === 0) return "";
+    var positive = Number(value) > 0;
+    if (inverse) positive = !positive;
+    return positive ? " is-positive" : " is-negative";
   }
 
   function cellColor(value, min, max) {
@@ -128,12 +186,14 @@
     var head = $("pdTableHead");
     var body = $("pdTableBody");
     if (!head || !body) return;
+    var tableTitle = $("pdTableTitle");
+    if (tableTitle) tableTitle.textContent = __("detail.returnCalendarTitle");
 
     var range = getColorRange();
     var monthHead = MONTHS.map(function (m) { return "<th>" + __("yearly.monthLabel", { m: m }) + "</th>"; }).join("");
     var statColHead = '<th class="pd-stat-col">' + __("detail.avg") + '</th>'
       + '<th class="pd-stat-col">' + __("detail.median") + '</th>'
-      + '<th class="pd-stat-col">' + __("detail.total") + '</th>';
+      + '<th class="pd-stat-col">' + __("detail.winRate") + '</th>';
     head.innerHTML = '<tr><th>' + __("yearly.colYear") + '</th>' + monthHead + '<th>' + __("yearly.annualTotal") + '</th>' + statColHead + '</tr>';
 
     var rowsHtml = (result.rows || []).map(function (row) {
@@ -150,19 +210,21 @@
         + '<td style="background:' + annualColor.bg + ';color:' + annualColor.text + ';font-weight:700;">' + formatPct(row.annual_return) + '</td>'
         + '<td class="pd-stat-col" style="background:' + cellColor(rs.avg, range.min, range.max).bg + ';color:' + cellColor(rs.avg, range.min, range.max).text + ';">' + formatPct(rs.avg) + '</td>'
         + '<td class="pd-stat-col" style="background:' + cellColor(rs.median, range.min, range.max).bg + ';color:' + cellColor(rs.median, range.min, range.max).text + ';">' + formatPct(rs.median) + '</td>'
-        + '<td class="pd-stat-col" style="background:' + cellColor(rs.total, range.min, range.max).bg + ';color:' + cellColor(rs.total, range.min, range.max).text + ';">' + formatPct(rs.total) + '</td></tr>';
+        + '<td class="pd-stat-col">' + formatUnsignedPct(rs.win_rate, 1) + '</td></tr>';
     });
 
-    // y-axis stat rows (avg / median / total per month)
+    // Aggregate rows across years for each calendar month.
     var stats = result.stats || [];
     var byMonth = {};
     stats.forEach(function (s) { byMonth[s.month] = s; });
 
-    function statRow(label, field, formatter) {
+    function statRow(label, field, formatter, useReturnColor) {
       var cells = MONTHS.map(function (month) {
         var stat = byMonth[month] || {};
         var value = stat[field];
-        var color = cellColor(value, range.min, range.max);
+        var color = useReturnColor === false
+          ? { bg: "transparent", text: "var(--apple-text-secondary)" }
+          : cellColor(value, range.min, range.max);
         return '<td style="background:' + color.bg + ';color:' + color.text + ';">' + formatter(value) + '</td>';
       }).join("");
       return '<tr class="pd-stat-row"><td>' + escapeHtml(label) + '</td>' + cells + '<td>—</td><td>—</td><td>—</td><td>—</td></tr>';
@@ -170,7 +232,12 @@
 
     rowsHtml.push(statRow(__("detail.avg"), "avg", function (v) { return formatPct(v); }));
     rowsHtml.push(statRow(__("detail.median"), "median", function (v) { return formatPct(v); }));
-    rowsHtml.push(statRow(__("detail.total"), "total", function (v) { return formatPct(v); }));
+    rowsHtml.push(statRow(__("detail.winRate"), "win_rate", function (v) {
+      return formatUnsignedPct(v, 1);
+    }, false));
+    rowsHtml.push(statRow(__("detail.sampleCount"), "count", function (v) {
+      return v == null ? "—" : String(v);
+    }, false));
     body.innerHTML = rowsHtml.join("");
   }
 
@@ -178,12 +245,16 @@
     var head = $("pdTableHead");
     var body = $("pdTableBody");
     if (!head || !body) return;
+    var tableTitle = $("pdTableTitle");
+    if (tableTitle) {
+      tableTitle.textContent = __("detail.dailyReturnCalendarTitle", { year: result.year });
+    }
 
     var range = getColorRange();
     var monthHead = MONTHS.map(function (m) { return "<th>" + __("yearly.monthLabel", { m: m }) + "</th>"; }).join("");
     var statColHead = '<th class="pd-stat-col">' + __("detail.avg") + '</th>'
       + '<th class="pd-stat-col">' + __("detail.median") + '</th>'
-      + '<th class="pd-stat-col">' + __("detail.total") + '</th>';
+      + '<th class="pd-stat-col">' + __("detail.winRate") + '</th>';
     head.innerHTML = '<tr><th>' + __("detail.day") + '</th>' + monthHead + statColHead + '</tr>';
 
     var dailyRows = result.daily_rows || [];
@@ -200,19 +271,21 @@
       return '<tr><td>' + row.day + '</td>' + monthCells
         + '<td class="pd-stat-col" style="background:' + cellColor(rs.avg, range.min, range.max).bg + ';color:' + cellColor(rs.avg, range.min, range.max).text + ';">' + formatPct(rs.avg) + '</td>'
         + '<td class="pd-stat-col" style="background:' + cellColor(rs.median, range.min, range.max).bg + ';color:' + cellColor(rs.median, range.min, range.max).text + ';">' + formatPct(rs.median) + '</td>'
-        + '<td class="pd-stat-col" style="background:' + cellColor(rs.total, range.min, range.max).bg + ';color:' + cellColor(rs.total, range.min, range.max).text + ';">' + formatPct(rs.total) + '</td></tr>';
+        + '<td class="pd-stat-col">' + formatUnsignedPct(rs.win_rate, 1) + '</td></tr>';
     });
 
-    // y-axis stat rows (avg / median / total per month)
+    // Aggregate rows across days for each calendar month.
     var stats = result.stats || [];
     var byMonth = {};
     stats.forEach(function (s) { byMonth[s.month] = s; });
 
-    function statRow(label, field, formatter) {
+    function statRow(label, field, formatter, useReturnColor) {
       var cells = MONTHS.map(function (month) {
         var stat = byMonth[month] || {};
         var value = stat[field];
-        var color = cellColor(value, range.min, range.max);
+        var color = useReturnColor === false
+          ? { bg: "transparent", text: "var(--apple-text-secondary)" }
+          : cellColor(value, range.min, range.max);
         return '<td style="background:' + color.bg + ';color:' + color.text + ';">' + formatter(value) + '</td>';
       }).join("");
       return '<tr class="pd-stat-row"><td>' + escapeHtml(label) + '</td>' + cells + '<td>—</td><td>—</td><td>—</td></tr>';
@@ -220,47 +293,382 @@
 
     rowsHtml.push(statRow(__("detail.avg"), "avg", function (v) { return formatPct(v); }));
     rowsHtml.push(statRow(__("detail.median"), "median", function (v) { return formatPct(v); }));
-    rowsHtml.push(statRow(__("detail.total"), "total", function (v) { return formatPct(v); }));
+    rowsHtml.push(statRow(__("detail.winRate"), "win_rate", function (v) {
+      return formatUnsignedPct(v, 1);
+    }, false));
+    rowsHtml.push(statRow(__("detail.sampleCount"), "count", function (v) {
+      return v == null ? "—" : String(v);
+    }, false));
     body.innerHTML = rowsHtml.join("");
   }
 
   function renderSummary(result) {
+    var headerEl = $("pdAssetHeader");
+    var basisNote = $("pdReturnBasisNote");
     var summaryEl = $("pdSummary");
-    if (!summaryEl) return;
+    var historyStatsEl = $("pdHistoryStats");
+    if (!summaryEl || !headerEl || !historyStatsEl) return;
     var summary = result.summary || {};
-
-    if (result.mode === "daily") {
-      var source = result.meta && result.meta.source ? result.meta.source : result.source;
-      var cards = [
-        [__("detail.summaryYears"), result.year],
-        [__("detail.summarySource"), source ? escapeHtml(source) : "—"],
-      ];
-      summaryEl.innerHTML = cards.map(function (pair) {
-        return '<div class="pd-summary-card"><div class="pd-summary-label">' + escapeHtml(pair[0]) + '</div><div class="pd-summary-value">' + pair[1] + '</div></div>';
-      }).join("");
-      return;
-    }
-
+    var overview = result.overview || {};
     var best = summary.best_month;
     var worst = summary.worst_month;
     var source = result.meta && result.meta.source ? result.meta.source : result.source;
+    var fundamentals = result.fundamentals || {};
+    var typeLabels = {
+      stock: __("yearly.assetTypeStock"),
+      crypto: __("yearly.assetTypeCrypto"),
+      cn_stock: __("yearly.assetTypeCnStock"),
+    };
+    var coverage = overview.first_date && overview.latest_date
+      ? overview.first_date + " → " + overview.latest_date
+      : "—";
+    headerEl.innerHTML = '<div><div class="pd-asset-symbol-row"><span class="pd-asset-symbol">'
+      + escapeHtml(result.symbol || overview.symbol || "—") + '</span><span class="pd-asset-type">'
+      + escapeHtml(typeLabels[result.type] || result.type || "—") + '</span></div>'
+      + (fundamentals.name
+        ? '<div class="pd-asset-name">' + escapeHtml(fundamentals.name) + '</div>'
+        : "")
+      + '<div class="pd-asset-meta">' + escapeHtml(__("detail.coverage")) + " · "
+      + escapeHtml(coverage) + "<br>" + escapeHtml(__("detail.summarySource")) + " · "
+      + escapeHtml(source || "—") + " · " + escapeHtml(__("detail.updatedAt")) + " "
+      + escapeHtml(formatDateTime(overview.updated_at)) + '</div></div>'
+      + '<div class="pd-asset-price-wrap"><div class="pd-asset-price-label">'
+      + escapeHtml(__("detail.latestClose")) + " · " + escapeHtml(overview.latest_date || "—")
+      + '</div><div class="pd-asset-price">' + escapeHtml(formatPrice(overview.latest_price))
+      + '</div></div>';
+
+    if (basisNote) {
+      basisNote.textContent = __(
+        result.type === "stock" ? "detail.returnBasisStock" : "detail.returnBasisAdjusted"
+      );
+    }
+
     var cards = [
-      [__("detail.summaryYears"), summary.year_count != null ? summary.year_count : "—"],
-      [__("detail.summaryAvgYear"), formatPct(summary.avg_yearly_return)],
-      [__("detail.summaryWinRate"), formatPct(summary.yearly_win_rate, 1)],
-      [__("detail.summaryBestMonth"), best ? best.year + "-" + String(best.month).padStart(2, "0") + " " + formatPct(best.return) : "—"],
-      [__("detail.summaryWorstMonth"), worst ? worst.year + "-" + String(worst.month).padStart(2, "0") + " " + formatPct(worst.return) : "—"],
-      [__("detail.summarySource"), source ? escapeHtml(source) : "—"],
+      {
+        label: __("detail.ytdReturn"),
+        value: formatPct(overview.ytd_return),
+        tone: valueTone(overview.ytd_return),
+        meta: overview.current_year_is_ytd ? "YTD" : "",
+      },
+      {
+        label: __("detail.oneYearReturn"),
+        value: formatPct(overview.one_year_return),
+        tone: valueTone(overview.one_year_return),
+      },
+      {
+        label: __("detail.cagr3y"),
+        value: formatPct(overview.cagr_3y),
+        tone: valueTone(overview.cagr_3y),
+      },
+      {
+        label: __("detail.cagr5y"),
+        value: formatPct(overview.cagr_5y),
+        tone: valueTone(overview.cagr_5y),
+      },
+      {
+        label: __("detail.cagr10y"),
+        value: formatPct(overview.cagr_10y),
+        tone: valueTone(overview.cagr_10y),
+      },
+      {
+        label: __("detail.volatility1y"),
+        value: formatUnsignedPct(overview.annualized_volatility_1y),
+      },
+      {
+        label: __("detail.currentDrawdown"),
+        value: formatPct(overview.current_drawdown),
+        tone: valueTone(overview.current_drawdown),
+        meta: overview.all_time_high_date
+          ? __("detail.athDate", { date: overview.all_time_high_date })
+          : "",
+      },
+      {
+        label: __("detail.historicalMaxDrawdown"),
+        value: formatPct(overview.max_drawdown),
+        tone: valueTone(overview.max_drawdown),
+        meta: overview.max_drawdown_peak_date && overview.max_drawdown_trough_date
+          ? __("detail.drawdownPeriod", {
+            peak: overview.max_drawdown_peak_date,
+            trough: overview.max_drawdown_trough_date,
+          })
+          : "",
+      },
+      {
+        label: __("detail.maxDrawdownRecovery"),
+        value: overview.max_drawdown_recovery_trading_days != null
+          ? __("detail.tradingDays", { days: overview.max_drawdown_recovery_trading_days })
+          : __("detail.notRecovered"),
+        meta: overview.max_drawdown_recovery_date || "",
+      },
     ];
-    summaryEl.innerHTML = cards.map(function (pair) {
-      return '<div class="pd-summary-card"><div class="pd-summary-label">' + escapeHtml(pair[0]) + '</div><div class="pd-summary-value">' + pair[1] + '</div></div>';
+    summaryEl.innerHTML = cards.map(function (card) {
+      return '<div class="pd-summary-card"><div class="pd-summary-label">'
+        + escapeHtml(card.label) + '</div><div class="pd-summary-value' + (card.tone || "")
+        + '">' + escapeHtml(card.value) + '</div><div class="pd-summary-meta">'
+        + escapeHtml(card.meta || "") + '</div></div>';
+    }).join("");
+
+    var bestYear = overview.best_year;
+    var worstYear = overview.worst_year;
+    var historyStats = result.mode === "daily"
+      ? [
+        [__("detail.summarySelectedYear"), result.year],
+        [__("detail.summaryYears"), (result.years || []).length],
+      ]
+      : [
+        [__("detail.summaryYears"), summary.year_count != null ? summary.year_count : "—"],
+        [__("detail.summaryAvgYear"), formatPct(summary.avg_yearly_return)],
+        [__("detail.summaryMedianYear"), formatPct(summary.median_yearly_return)],
+        [__("detail.summaryWinRate"), formatUnsignedPct(summary.yearly_win_rate, 1)],
+        [
+          __("detail.summaryBestYear"),
+          bestYear ? bestYear.year + " " + formatPct(bestYear.return) : "—",
+        ],
+        [
+          __("detail.summaryWorstYear"),
+          worstYear ? worstYear.year + " " + formatPct(worstYear.return) : "—",
+        ],
+        [
+          __("detail.summaryBestMonth"),
+          best ? best.year + "-" + String(best.month).padStart(2, "0") + " " + formatPct(best.return) : "—",
+        ],
+        [
+          __("detail.summaryWorstMonth"),
+          worst ? worst.year + "-" + String(worst.month).padStart(2, "0") + " " + formatPct(worst.return) : "—",
+        ],
+      ];
+    historyStatsEl.innerHTML = historyStats.map(function (pair) {
+      return '<span class="pd-history-stat"><span>' + escapeHtml(pair[0])
+        + '</span><strong>' + escapeHtml(pair[1]) + '</strong></span>';
     }).join("");
   }
 
-  function hideStockHistory() {
+  function renderAnalysisCards(host, cards) {
+    if (!host) return;
+    host.innerHTML = cards.filter(function (card) {
+      return card.available !== false;
+    }).map(function (card) {
+      return '<div class="pd-analysis-card"><div class="pd-analysis-label">'
+        + escapeHtml(card.label) + '</div><div class="pd-analysis-value'
+        + (card.tone || "") + '">' + escapeHtml(card.value)
+        + '</div><div class="pd-analysis-meta">'
+        + escapeHtml(card.meta || "") + '</div></div>';
+    }).join("");
+  }
+
+  function renderQuality(result) {
+    var section = $("pdQualitySection");
+    var grid = $("pdQualityGrid");
+    var note = $("pdQualityNote");
+    if (!section || !grid || !note) return;
+    var quality = result.quality || {};
+    if (!quality.daily_observations) {
+      section.style.display = "none";
+      return;
+    }
+    var bestDay = quality.best_day_1y;
+    var worstDay = quality.worst_day_1y;
+    var bestRolling = quality.rolling_1y_best;
+    var worstRolling = quality.rolling_1y_worst;
+    var cards = [
+      {
+        label: __("detail.dailyWinRate"),
+        value: formatUnsignedPct(quality.daily_win_rate, 1),
+        meta: __("detail.observationCount", { count: quality.daily_observations }),
+      },
+      {
+        label: __("detail.downsideVolatility1y"),
+        value: formatUnsignedPct(quality.downside_volatility_1y),
+        available: quality.downside_volatility_1y != null,
+      },
+      {
+        label: __("detail.sortinoRatio1y"),
+        value: formatNumber(quality.sortino_ratio_1y, 2),
+        tone: valueTone(quality.sortino_ratio_1y),
+        meta: __("detail.sortinoTarget"),
+        available: quality.sortino_ratio_1y != null,
+      },
+      {
+        label: __("detail.bestDay1y"),
+        value: bestDay ? formatPct(bestDay.return) : "—",
+        tone: bestDay ? valueTone(bestDay.return) : "",
+        meta: bestDay ? bestDay.date : "",
+        available: !!bestDay,
+      },
+      {
+        label: __("detail.worstDay1y"),
+        value: worstDay ? formatPct(worstDay.return) : "—",
+        tone: worstDay ? valueTone(worstDay.return) : "",
+        meta: worstDay ? worstDay.date : "",
+        available: !!worstDay,
+      },
+      {
+        label: __("detail.rolling1yWinRate"),
+        value: formatUnsignedPct(quality.rolling_1y_win_rate, 1),
+        meta: __("detail.rollingObservationCount", {
+          count: quality.rolling_1y_observations,
+        }),
+        available: quality.rolling_1y_win_rate != null,
+      },
+      {
+        label: __("detail.rolling1yMedian"),
+        value: formatPct(quality.rolling_1y_median),
+        tone: valueTone(quality.rolling_1y_median),
+        available: quality.rolling_1y_median != null,
+      },
+      {
+        label: __("detail.rolling1yBest"),
+        value: bestRolling ? formatPct(bestRolling.return) : "—",
+        tone: bestRolling ? valueTone(bestRolling.return) : "",
+        meta: bestRolling
+          ? bestRolling.start_date + " → " + bestRolling.end_date
+          : "",
+        available: !!bestRolling,
+      },
+      {
+        label: __("detail.rolling1yWorst"),
+        value: worstRolling ? formatPct(worstRolling.return) : "—",
+        tone: worstRolling ? valueTone(worstRolling.return) : "",
+        meta: worstRolling
+          ? worstRolling.start_date + " → " + worstRolling.end_date
+          : "",
+        available: !!worstRolling,
+      },
+    ];
+    renderAnalysisCards(grid, cards);
+    note.textContent = __("detail.qualityNote");
+    section.style.display = grid.childElementCount ? "block" : "none";
+  }
+
+  function renderFundamentals(result) {
+    var section = $("pdFundamentalsSection");
+    var grid = $("pdFundamentalsGrid");
+    var note = $("pdFundamentalsNote");
+    if (!section || !grid || !note) return;
+    var data = result.fundamentals || {};
+    if (!data.available) {
+      section.style.display = "none";
+      return;
+    }
+    var currency = data.currency || "USD";
+    var isEtf = String(data.quote_type || "").toUpperCase() === "ETF";
+    var cards = [
+      {
+        label: __(isEtf && data.total_assets != null
+          ? "detail.totalAssets"
+          : "detail.marketCap"),
+        value: formatCompactNumber(
+          isEtf && data.total_assets != null ? data.total_assets : data.market_cap,
+          currency
+        ),
+        available: (isEtf && data.total_assets != null) || data.market_cap != null,
+      },
+      {
+        label: __("detail.trailingPe"),
+        value: formatRatio(data.trailing_pe),
+        available: data.trailing_pe != null,
+      },
+      {
+        label: __("detail.forwardPe"),
+        value: formatRatio(data.forward_pe),
+        available: data.forward_pe != null,
+      },
+      {
+        label: __("detail.priceToBook"),
+        value: formatRatio(data.price_to_book),
+        available: data.price_to_book != null,
+      },
+      {
+        label: __("detail.epsTtm"),
+        value: formatNumber(data.eps_ttm, 3) + " " + currency,
+        available: data.eps_ttm != null,
+      },
+      {
+        label: __("detail.epsForward"),
+        value: formatNumber(data.eps_forward, 3) + " " + currency,
+        available: data.eps_forward != null,
+      },
+      {
+        label: __("detail.dividendYield"),
+        value: formatUnsignedPct(data.dividend_yield),
+        available: data.dividend_yield != null,
+      },
+      {
+        label: __("detail.dividendPerShareTtm"),
+        value: formatNumber(data.dividend_per_share_ttm, 4) + " " + currency,
+        available: data.dividend_per_share_ttm != null,
+      },
+      {
+        label: __("detail.beta"),
+        value: formatNumber(data.beta, 2),
+        available: data.beta != null,
+      },
+      {
+        label: __("detail.fiftyTwoWeekRange"),
+        value: formatPrice(data.fifty_two_week_low) + " – "
+          + formatPrice(data.fifty_two_week_high),
+        meta: data.position_in_52w_range != null
+          ? __("detail.rangePosition", {
+            position: formatUnsignedPct(data.position_in_52w_range, 1),
+          })
+          : "",
+        available: data.fifty_two_week_low != null
+          && data.fifty_two_week_high != null,
+      },
+      {
+        label: __("detail.distanceTo52wHigh"),
+        value: formatPct(data.distance_to_52w_high),
+        tone: valueTone(data.distance_to_52w_high),
+        available: data.distance_to_52w_high != null,
+      },
+      {
+        label: __("detail.averageVolume3m"),
+        value: formatCompactNumber(data.average_volume_3m),
+        available: data.average_volume_3m != null,
+      },
+      {
+        label: __("detail.sharesOutstanding"),
+        value: formatCompactNumber(data.shares_outstanding),
+        available: data.shares_outstanding != null,
+      },
+      {
+        label: __("detail.expenseRatio"),
+        value: formatUnsignedPct(data.expense_ratio),
+        available: data.expense_ratio != null,
+      },
+      {
+        label: __("detail.etfYtdReturn"),
+        value: formatPct(data.ytd_return),
+        tone: valueTone(data.ytd_return),
+        available: data.ytd_return != null,
+      },
+      {
+        label: __("detail.etfThreeYearReturn"),
+        value: formatPct(data.three_year_return),
+        tone: valueTone(data.three_year_return),
+        available: data.three_year_return != null,
+      },
+      {
+        label: __("detail.etfFiveYearReturn"),
+        value: formatPct(data.five_year_average_return),
+        tone: valueTone(data.five_year_average_return),
+        available: data.five_year_average_return != null,
+      },
+    ];
+    renderAnalysisCards(grid, cards);
+    var snapshot = data.snapshot_at ? formatDateTime(data.snapshot_at) : "—";
+    note.textContent = __("detail.fundamentalsNote", {
+      source: data.source || "Yahoo",
+      time: snapshot,
+    });
+    section.style.display = grid.childElementCount ? "block" : "none";
+  }
+
+  function hideStockHistory(clearCache) {
     var section = $("pdStockHistory");
     if (section) section.style.display = "none";
     _lastStockHistoryResult = null;
+    if (clearCache) _stockHistoryCache = null;
   }
 
   function getDividendTaxRate() {
@@ -277,11 +685,28 @@
     var body = $("pdStockHistoryBody");
     var tables = result && result.stock_tables;
     if (!section || !body) return;
-    if (result.type !== "stock" || !tables) {
-      hideStockHistory();
+    if (result.type !== "stock") {
+      hideStockHistory(true);
       return;
     }
-    _lastStockHistoryResult = result;
+    if (tables) {
+      _stockHistoryCache = {
+        symbol: result.symbol,
+        type: result.type,
+        tables: tables,
+      };
+    } else if (
+      _stockHistoryCache
+      && _stockHistoryCache.symbol === result.symbol
+      && _stockHistoryCache.type === result.type
+    ) {
+      tables = _stockHistoryCache.tables;
+    }
+    if (!tables) {
+      hideStockHistory(false);
+      return;
+    }
+    _lastStockHistoryResult = Object.assign({}, result, { stock_tables: tables });
 
     var range = getColorRange();
     var taxRate = getDividendTaxRate();
@@ -539,11 +964,22 @@
     var toggle = $("pdParamsToggle");
     _paramsCollapsed = Boolean(collapsed);
     if (panel) panel.style.display = _paramsCollapsed ? "none" : "block";
-    var summary = $("pdSummary");
-    if (summary) summary.style.display = _paramsCollapsed ? "none" : "";
     if (toggle) {
       toggle.textContent = __(_paramsCollapsed ? "detail.expandParams" : "detail.collapseParams");
       toggle.setAttribute("aria-expanded", String(!_paramsCollapsed));
+    }
+  }
+
+  function setOverviewCollapsed(collapsed) {
+    var panel = $("pdOverviewPanel");
+    var toggle = $("pdOverviewToggle");
+    _overviewCollapsed = Boolean(collapsed);
+    if (panel) panel.style.display = _overviewCollapsed ? "none" : "block";
+    if (toggle) {
+      toggle.textContent = __(
+        _overviewCollapsed ? "detail.expandOverview" : "detail.collapseOverview"
+      );
+      toggle.setAttribute("aria-expanded", String(!_overviewCollapsed));
     }
   }
 
@@ -679,7 +1115,7 @@
     var yearSelect = $("pdYearSelect");
     var symbol = (symbolInput?.value || "").trim().toUpperCase();
     var type = typeSelect?.value || "stock";
-    var year = yearSelect?.value || "";
+    var year = _pendingYear || yearSelect?.value || "";
     if (!symbol) {
       showError(__("detail.errorNoSymbol"));
       setResultVisible(false);
@@ -699,11 +1135,19 @@
     showError(null);
     setLoading(true);
     setResultVisible(false);
-    hideStockHistory();
+    var canReuseStockHistory = (
+      _stockHistoryCache
+      && _stockHistoryCache.symbol === symbol
+      && _stockHistoryCache.type === type
+    );
+    hideStockHistory(!canReuseStockHistory);
 
     try {
       var body = { symbol: symbol, type: type };
       if (year) body.year = parseInt(year, 10);
+      if (year && type === "stock") {
+        body.include_stock_history = !canReuseStockHistory;
+      }
       var resp = await fetch(DETAIL_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -714,7 +1158,13 @@
         throw new Error(result.error || "HTTP " + resp.status);
       }
       buildYearSelector(result.years || []);
+      if (result.year != null && $("pdYearSelect")) {
+        $("pdYearSelect").value = String(result.year);
+      }
+      _pendingYear = "";
       renderSummary(result);
+      renderQuality(result);
+      renderFundamentals(result);
       renderBarChart(result);
       if (result.mode === "daily") {
         renderDailyTable(result);
@@ -723,6 +1173,19 @@
       }
       renderStockHistory(result);
       setResultVisible(true);
+      var nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set("symbol", symbol);
+      nextUrl.searchParams.set("type", type);
+      if (result.year != null) {
+        nextUrl.searchParams.set("year", String(result.year));
+      } else {
+        nextUrl.searchParams.delete("year");
+      }
+      history.replaceState(
+        { tab: "detail", symbol: symbol, type: type, year: result.year || null },
+        "",
+        nextUrl.pathname + nextUrl.search
+      );
     } catch (err) {
       showError(__("detail.errorRequest") + " " + err.message);
       setResultVisible(false);
@@ -740,7 +1203,6 @@
       if (state.type && $("pdTypeSelect")) $("pdTypeSelect").value = state.type;
       if (state.minRange && $("pdMinRange")) $("pdMinRange").value = state.minRange;
       if (state.maxRange && $("pdMaxRange")) $("pdMaxRange").value = state.maxRange;
-      if (state.year && $("pdYearSelect")) $("pdYearSelect").value = state.year;
     } catch (_) {}
   }
 
@@ -756,11 +1218,13 @@
     if (linkedSymbol) {
       input.value = linkedSymbol;
       if ($("pdTypeSelect") && params.get("type")) $("pdTypeSelect").value = params.get("type");
+      var linkedYear = params.get("year");
+      _pendingYear = linkedYear && /^\d{4}$/.test(linkedYear) ? linkedYear : "";
     }
     btn.addEventListener("click", queryDetail);
     if (typeSelect) {
       typeSelect.addEventListener("change", function () {
-        if (typeSelect.value !== "stock") hideStockHistory();
+        if (typeSelect.value !== "stock") hideStockHistory(true);
       });
     }
     if (dividendTaxInput) {
@@ -791,6 +1255,12 @@
     if (paramsToggle) {
       paramsToggle.addEventListener("click", function () {
         setParamsCollapsed(!_paramsCollapsed);
+      });
+    }
+    var overviewToggle = $("pdOverviewToggle");
+    if (overviewToggle) {
+      overviewToggle.addEventListener("click", function () {
+        setOverviewCollapsed(!_overviewCollapsed);
       });
     }
     var resizeHandle = $("pdBarChartResizeHandle");

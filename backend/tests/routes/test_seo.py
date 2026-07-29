@@ -307,6 +307,46 @@ class TestHtmlMeta:
         assert en_locale["detail"]["combinedAnnualized"] == "Annual Combined Return (After Tax)"
         assert en_locale["stockCompare"]["combinedAnnualized"] == "Annual Combined Return (After Tax)"
 
+    def test_return_detail_has_phase_one_overview_and_clear_statistics(self, client):
+        html = client.get("/zh/detail").get_data(as_text=True)
+        assert 'id="pdAssetHeader"' in html
+        assert 'id="pdReturnBasisNote"' in html
+        assert 'id="pdHistoryStats"' in html
+        assert 'id="pdQualitySection"' in html
+        assert 'id="pdFundamentalsSection"' in html
+        assert 'id="pdOverviewPanel"' in html
+        assert 'id="pdOverviewToggle"' in html
+        assert 'aria-controls="pdOverviewPanel" aria-expanded="true"' in html
+        assert 'id="pdTableTitle"' in html
+
+        script = client.get("/js/price-detail.js").get_data(as_text=True)
+        assert '"detail.cagr5y"' in script
+        assert '"detail.volatility1y"' in script
+        assert '"detail.historicalMaxDrawdown"' in script
+        assert '"detail.winRate"' in script
+        assert '"detail.sampleCount"' in script
+        assert '"detail.sortinoRatio1y"' in script
+        assert '"detail.trailingPe"' in script
+        assert '"detail.marketCap"' in script
+        assert "setOverviewCollapsed(!_overviewCollapsed)" in script
+        assert '_overviewCollapsed ? "none" : "block"' in script
+        assert "_stockHistoryCache" in script
+        assert "nextUrl.searchParams.set(\"year\"" in script
+        assert 'summary.style.display = _paramsCollapsed' not in script
+
+        zh_locale = client.get("/locales/zh-CN.json").get_json()
+        en_locale = client.get("/locales/en.json").get_json()
+        assert zh_locale["detail"]["cagr5y"] == "近 5 年 CAGR"
+        assert zh_locale["detail"]["winRate"] == "上涨概率"
+        assert zh_locale["detail"]["fundamentalsTitle"] == "估值与市场快照"
+        assert "CAGR（复合年化增长率）" in zh_locale["detail"]["returnBasisStock"]
+        assert zh_locale["detail"]["collapseOverview"] == "收起概览"
+        assert en_locale["detail"]["cagr5y"] == "5-Year CAGR"
+        assert en_locale["detail"]["winRate"] == "Win Rate"
+        assert en_locale["detail"]["fundamentalsTitle"] == "Valuation & Market Snapshot"
+        assert "compound annual growth rate" in en_locale["detail"]["returnBasisStock"]
+        assert en_locale["detail"]["collapseOverview"] == "Collapse overview"
+
     @pytest.mark.parametrize(
         "path,needle",
         [

@@ -4,7 +4,7 @@ All external data fetching is mocked — no network calls in tests.
 """
 
 import time
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -195,6 +195,115 @@ class TestFetchReturnDetail:
         }
         assert result["stock_tables"]["return_basis"] == "raw_close"
         assert result["stock_tables"]["dividend_yield_basis"] == "previous_year_end_close"
+        assert result["overview"]["latest_price"] == 220.0
+        assert result["overview"]["latest_adjusted_close"] == 125.0
+        assert result["overview"]["latest_date"] == "2024-12-31"
+        assert result["overview"]["price_basis"] == "raw_close"
+        assert result["overview"]["ytd_return"] == 25.0
+        assert result["fundamentals"]["available"] is True
+        assert result["fundamentals"]["fifty_two_week_high"] == 220.0
+        assert result["fundamentals"]["fifty_two_week_low"] == 180.0
+        assert result["fundamentals"]["dividend_per_share_ttm"] == 0.55
+        assert result["fundamentals"]["dividend_yield"] == 0.25
+
+        selected = svc.fetch_return_detail("AAPL", "stock", 2024)
+        assert selected["stock_tables"] is not None
+        selected = svc.fetch_return_detail(
+            "AAPL", "stock", 2024, include_stock_history=False
+        )
+        assert selected["stock_tables"] is None
+
+    def test_detail_period_returns_drawdowns_and_distribution_stats(self):
+        points = [
+            (date(2020, 1, 1), 100.0),
+            (date(2021, 1, 1), 110.0),
+            (date(2022, 1, 1), 121.0),
+            (date(2023, 1, 1), 133.1),
+        ]
+        assert svc._detail_period_return(points, 1) == pytest.approx(10.0, abs=0.02)
+        assert svc._detail_period_return(points, 3, annualized=True) == pytest.approx(
+            10.0, abs=0.02
+        )
+
+        drawdown = svc._detail_drawdown_summary([
+            (date(2024, 1, 2), 100.0),
+            (date(2024, 2, 1), 120.0),
+            (date(2024, 3, 1), 60.0),
+            (date(2024, 4, 1), 90.0),
+            (date(2024, 5, 1), 120.0),
+        ])
+        assert drawdown == {
+            "current_drawdown": 0.0,
+            "all_time_high_date": "2024-05-01",
+            "max_drawdown": -50.0,
+            "max_drawdown_peak_date": "2024-02-01",
+            "max_drawdown_trough_date": "2024-03-01",
+            "max_drawdown_recovery_date": "2024-05-01",
+            "max_drawdown_recovery_trading_days": 2,
+        }
+
+        stats = svc._build_monthly_stats({1: [10.0, -5.0, 0.0]})
+        assert stats[0]["win_rate"] == 33.3
+        assert stats[0]["count"] == 3
+        assert svc._row_stats([10.0, -5.0, None]) == {
+            "avg": 2.5,
+            "median": 2.5,
+            "win_rate": 50.0,
+            "count": 2,
+        }
+
+    def test_detail_quality_includes_downside_and_rolling_distribution(self):
+        start = datetime(2023, 1, 1, 12, tzinfo=timezone.utc)
+        dates = [
+            start + timedelta(days=index)
+            for index in range(426)
+        ]
+        closes = [100.0]
+        for index in range(1, len(dates)):
+            daily_return = 0.01 if index % 2 else -0.005
+            closes.append(closes[-1] * (1 + daily_return))
+        series = PriceSeries(
+            timestamps=[int(item.timestamp()) for item in dates],
+            closes=closes,
+            source="test",
+            fetched_at=dates[-1].timestamp(),
+        )
+
+        quality = svc._build_detail_quality(series, "crypto")
+
+        assert quality["daily_win_rate"] == 50.1
+        assert quality["daily_observations"] == 425
+        assert quality["downside_volatility_1y"] == pytest.approx(6.76, abs=0.02)
+        assert quality["sortino_ratio_1y"] > 2
+        assert quality["best_day_1y"]["return"] == 1.0
+        assert quality["worst_day_1y"]["return"] == -0.5
+        assert quality["rolling_1y_win_rate"] == 100.0
+        assert quality["rolling_1y_median"] > 0
+        assert quality["rolling_1y_observations"] == 71
+        assert quality["rolling_1y_best"]["start_date"] == "2023-01-01"
+        assert quality["return_basis"] == "adjusted_close"
+        assert quality["sortino_target_return"] == 0
+
+    @patch("service.price_change.price_change_service._fetch_detail_fundamentals")
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_stock_detail_includes_quality_and_fundamental_snapshot(
+        self,
+        mock_fetch,
+        mock_fundamentals,
+    ):
+        series = make_series(years=2)
+        series.source = "yahoo/yfinance"
+        mock_fetch.return_value = series
+        mock_fundamentals.return_value = {
+            "available": True,
+            "market_cap": 3_000_000_000_000,
+        }
+
+        result = svc.fetch_return_detail("AAPL", "stock")
+
+        assert result["quality"]["daily_observations"] > 0
+        assert result["fundamentals"]["market_cap"] == 3_000_000_000_000
+        mock_fundamentals.assert_called_once_with("AAPL")
 
     @patch("service.price_change.price_change_service._fetch_daily_series_cached")
     def test_non_stock_detail_omits_stock_history_tables(self, mock_fetch):
@@ -1300,6 +1409,18 @@ class TestYahooQuoteBatch:
                         "regularMarketTime": 1704153600,
                         "regularMarketVolume": 1000000,
                         "marketCap": 3000000000000,
+                        "quoteType": "EQUITY",
+                        "currency": "USD",
+                        "fullExchangeName": "NasdaqGS",
+                        "trailingPE": 31.5,
+                        "forwardPE": 28.2,
+                        "priceToBook": 45.0,
+                        "epsTrailingTwelveMonths": 6.4,
+                        "dividendYield": 0.52,
+                        "beta": 1.2,
+                        "fiftyTwoWeekHigh": 200.0,
+                        "fiftyTwoWeekLow": 120.0,
+                        "averageDailyVolume3Month": 50000000,
                     },
                     {
                         "symbol": "MSFT",
@@ -1323,6 +1444,18 @@ class TestYahooQuoteBatch:
         assert result[0]["trade_time"] == 1704153600
         assert result[0]["volume"] == 1000000
         assert result[0]["market_cap"] == 3000000000000
+        assert result[0]["quote_type"] == "EQUITY"
+        assert result[0]["currency"] == "USD"
+        assert result[0]["exchange"] == "NasdaqGS"
+        assert result[0]["trailing_pe"] == 31.5
+        assert result[0]["forward_pe"] == 28.2
+        assert result[0]["price_to_book"] == 45.0
+        assert result[0]["eps_ttm"] == 6.4
+        assert result[0]["dividend_yield"] == 0.52
+        assert result[0]["beta"] == 1.2
+        assert result[0]["fifty_two_week_high"] == 200.0
+        assert result[0]["fifty_two_week_low"] == 120.0
+        assert result[0]["average_volume_3m"] == 50000000
         assert result[1]["symbol"] == "MSFT"
         assert result[1]["name"] == "Microsoft Corporation"
         track_coverage(MOD, 3)
@@ -1405,6 +1538,143 @@ class TestYahooQuoteBatch:
         assert len(result) == 60
         assert mock_session.get.call_count == 2  # 50 + 10 = 2 batches
         track_coverage(MOD, 2)
+
+
+class TestDetailFundamentals:
+    """Valuation snapshots are normalized and cached independently."""
+
+    def setup_method(self):
+        svc.clear_price_change_cache()
+
+    @patch("service.price_change.price_change_service._yahoo_quote_batch")
+    def test_normalizes_quote_snapshot_and_uses_cache(self, mock_batch):
+        mock_batch.return_value = [{
+            "symbol": "AAPL",
+            "name": "Apple Inc.",
+            "price": 150.0,
+            "quote_type": "EQUITY",
+            "currency": "USD",
+            "exchange": "NasdaqGS",
+            "market_cap": 3_000_000_000_000,
+            "total_assets": None,
+            "trailing_pe": 30.5,
+            "forward_pe": 27.2,
+            "price_to_book": 42.0,
+            "eps_ttm": 6.3,
+            "eps_forward": 7.1,
+            "dividend_yield": 0.52,
+            "trailing_dividend_yield": 0.0052,
+            "beta": 1.2,
+            "fifty_two_week_high": 200.0,
+            "fifty_two_week_low": 100.0,
+            "average_volume_3m": 50_000_000,
+            "shares_outstanding": 15_000_000_000,
+            "expense_ratio": None,
+            "ytd_return": None,
+            "three_year_return": None,
+            "five_year_average_return": None,
+        }]
+
+        first = svc._fetch_detail_fundamentals("AAPL")
+        second = svc._fetch_detail_fundamentals("AAPL")
+
+        assert first["available"] is True
+        assert first["name"] == "Apple Inc."
+        assert first["market_cap"] == 3_000_000_000_000
+        assert first["trailing_pe"] == 30.5
+        assert first["dividend_yield"] == 0.52
+        assert first["distance_to_52w_high"] == -25.0
+        assert first["distance_to_52w_low"] == 50.0
+        assert first["position_in_52w_range"] == 50.0
+        assert first["field_count"] >= 10
+        assert second == first
+        mock_batch.assert_called_once_with(["AAPL"])
+
+    @patch("service.price_change.price_change_service._eastmoney_detail_quote")
+    @patch("service.price_change.price_change_service._yahoo_quote_batch")
+    def test_empty_quote_uses_short_error_cache(self, mock_batch, mock_eastmoney):
+        mock_batch.return_value = []
+        mock_eastmoney.return_value = None
+
+        first = svc._fetch_detail_fundamentals("MISSING")
+        second = svc._fetch_detail_fundamentals("MISSING")
+
+        assert first == {
+            "available": False,
+            "source": "yahoo_quote,eastmoney_quote",
+            "field_count": 0,
+        }
+        assert second == first
+        mock_batch.assert_called_once_with(["MISSING"])
+        mock_eastmoney.assert_called_once_with("MISSING")
+
+    @patch("service.price_change.price_change_service._eastmoney_detail_quote")
+    @patch("service.price_change.price_change_service._yahoo_quote_batch")
+    def test_uses_eastmoney_when_yahoo_quote_is_unavailable(
+        self,
+        mock_batch,
+        mock_eastmoney,
+    ):
+        mock_batch.return_value = []
+        mock_eastmoney.return_value = {
+            "symbol": "AAPL",
+            "name": "Apple",
+            "price": 150.0,
+            "quote_type": "EQUITY",
+            "currency": "USD",
+            "market_cap": 3_000_000_000_000,
+            "trailing_pe": 30.0,
+            "price_to_book": 40.0,
+            "shares_outstanding": 15_000_000_000,
+            "fifty_two_week_high": 200.0,
+            "fifty_two_week_low": 100.0,
+        }
+
+        result = svc._fetch_detail_fundamentals("AAPL")
+
+        assert result["available"] is True
+        assert result["source"] == "eastmoney_quote"
+        assert result["market_cap"] == 3_000_000_000_000
+        assert result["trailing_pe"] == 30.0
+        assert result["position_in_52w_range"] == 50.0
+
+    @patch("service.price_change.price_change_service._em_session")
+    def test_eastmoney_quote_scales_price_and_ratios(self, mock_session):
+        response = MagicMock()
+        response.json.return_value = {
+            "data": {
+                "f43": 339490,
+                "f57": "AAPL",
+                "f58": "Apple",
+                "f59": 3,
+                "f84": 14_687_356_000,
+                "f116": 4_986_210_488_440,
+                "f152": 2,
+                "f163": 4452,
+                "f167": 4682,
+                "f172": "USD",
+                "f174": 342890,
+                "f175": 200625,
+            }
+        }
+        mock_session.get.return_value = response
+
+        result = svc._eastmoney_detail_quote("AAPL")
+
+        assert result == {
+            "symbol": "AAPL",
+            "name": "Apple",
+            "price": 339.49,
+            "quote_type": "EQUITY",
+            "currency": "USD",
+            "market_cap": 4_986_210_488_440,
+            "trailing_pe": 44.52,
+            "price_to_book": 46.82,
+            "shares_outstanding": 14_687_356_000,
+            "fifty_two_week_high": 342.89,
+            "fifty_two_week_low": 200.625,
+        }
+        response.raise_for_status.assert_called_once()
 
 
 class TestBuildHeatmapToday:

@@ -493,7 +493,71 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 10px;
-            margin: 12px 0 16px;
+            margin: 12px 0;
+        }
+        .pd-asset-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+            margin-top: 12px;
+            padding: 16px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            background: linear-gradient(135deg, var(--apple-surface-2), var(--apple-surface-1));
+        }
+        .pd-asset-symbol-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .pd-asset-symbol {
+            color: var(--apple-text-primary);
+            font-size: 24px;
+            font-weight: 750;
+            letter-spacing: -0.02em;
+        }
+        .pd-asset-name {
+            margin-top: 3px;
+            color: var(--apple-text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .pd-asset-type {
+            padding: 3px 8px;
+            border-radius: var(--radius-full);
+            background: color-mix(in srgb, var(--apple-blue) 14%, transparent);
+            color: var(--apple-blue);
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .pd-asset-meta {
+            margin-top: 6px;
+            color: var(--apple-text-tertiary);
+            font-size: 11px;
+            line-height: 1.6;
+        }
+        .pd-asset-price-wrap {
+            min-width: 150px;
+            text-align: right;
+        }
+        .pd-asset-price-label {
+            color: var(--apple-text-tertiary);
+            font-size: 11px;
+        }
+        .pd-asset-price {
+            margin-top: 3px;
+            color: var(--apple-text-primary);
+            font-size: 25px;
+            font-weight: 750;
+            font-variant-numeric: tabular-nums;
+        }
+        .pd-return-basis-note {
+            margin: 9px 2px 0;
+            color: var(--apple-text-tertiary);
+            font-size: 11px;
+            line-height: 1.55;
         }
         .pd-summary-card {
             background: var(--apple-surface-2);
@@ -510,6 +574,132 @@
             font-size: 18px;
             font-weight: 700;
             font-variant-numeric: tabular-nums;
+        }
+        .pd-summary-value.is-positive { color: var(--data-positive); }
+        .pd-summary-value.is-negative { color: var(--data-negative); }
+        .pd-summary-meta {
+            min-height: 16px;
+            margin-top: 4px;
+            color: var(--apple-text-tertiary);
+            font-size: 10px;
+            line-height: 1.45;
+        }
+        .pd-history-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin: 0 0 16px;
+        }
+        .pd-history-stat {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 5px;
+            padding: 6px 9px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-full);
+            background: var(--apple-surface-1);
+            color: var(--apple-text-tertiary);
+            font-size: 11px;
+        }
+        .pd-history-stat strong {
+            color: var(--apple-text-primary);
+            font-weight: 650;
+            font-variant-numeric: tabular-nums;
+        }
+        .pd-analysis-section {
+            margin: 18px 0;
+            padding: 14px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            background: var(--apple-surface-1);
+        }
+        .pd-analysis-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 10px;
+        }
+        .pd-analysis-title {
+            color: var(--apple-text-primary);
+            font-size: 15px;
+            font-weight: 700;
+        }
+        .pd-analysis-description {
+            margin-top: 3px;
+            color: var(--apple-text-tertiary);
+            font-size: 11px;
+            line-height: 1.5;
+        }
+        .pd-analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+            gap: 8px;
+        }
+        .pd-analysis-card {
+            min-width: 0;
+            padding: 10px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-sm);
+            background: var(--apple-surface-2);
+        }
+        .pd-analysis-label {
+            color: var(--apple-text-tertiary);
+            font-size: 11px;
+        }
+        .pd-analysis-value {
+            margin-top: 4px;
+            overflow-wrap: anywhere;
+            color: var(--apple-text-primary);
+            font-size: 17px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .pd-analysis-value.is-positive { color: var(--data-positive); }
+        .pd-analysis-value.is-negative { color: var(--data-negative); }
+        .pd-analysis-meta {
+            min-height: 15px;
+            margin-top: 4px;
+            color: var(--apple-text-tertiary);
+            font-size: 10px;
+            line-height: 1.4;
+        }
+        .pd-analysis-footnote {
+            margin: 9px 1px 0;
+            color: var(--apple-text-tertiary);
+            font-size: 10px;
+            line-height: 1.5;
+        }
+        .pd-section-head {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 16px 2px 8px;
+        }
+        .pd-section-title {
+            color: var(--apple-text-primary);
+            font-size: 14px;
+            font-weight: 650;
+        }
+        .pd-section-note {
+            color: var(--apple-text-tertiary);
+            font-size: 10px;
+        }
+        .pd-overview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 4px 0 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--apple-divider);
+        }
+        .pd-overview-title {
+            color: var(--apple-text-primary);
+            font-size: 14px;
+            font-weight: 650;
         }
         .pd-bar-chart-card {
             width: 100%;
@@ -1175,6 +1365,34 @@
             font-size: 12px;
         }
         @media (max-width: 768px) {
+            .pd-asset-header {
+                align-items: stretch;
+                flex-direction: column;
+                padding: 13px;
+            }
+            .pd-asset-price-wrap {
+                min-width: 0;
+                text-align: left;
+            }
+            .pd-summary {
+                grid-template-columns: 1fr 1fr;
+            }
+            .pd-summary-card {
+                min-width: 0;
+                padding: 10px;
+            }
+            .pd-summary-value {
+                font-size: 16px;
+            }
+            .pd-analysis-section {
+                padding: 11px;
+            }
+            .pd-analysis-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .pd-analysis-value {
+                font-size: 15px;
+            }
             .pd-history-toolbar {
                 align-items: flex-start;
                 flex-direction: column;
@@ -2715,7 +2933,38 @@
                 <div class="pc-empty-hint" data-i18n="detail.emptyHint">适合查看单一股票、ETF 或数字货币的历史季节性表现</div>
             </div>
             <div id="pdResult" style="display:none;">
+                <div class="pd-overview-header">
+                    <div class="pd-overview-title" data-i18n="detail.overviewPanelTitle">概览信息</div>
+                    <button class="pd-bar-chart-toggle" id="pdOverviewToggle" type="button"
+                            aria-controls="pdOverviewPanel" aria-expanded="true"
+                            data-i18n="detail.collapseOverview">收起概览</button>
+                </div>
+                <div id="pdOverviewPanel">
+                <section class="pd-asset-header" id="pdAssetHeader"></section>
+                <p class="pd-return-basis-note" id="pdReturnBasisNote"></p>
                 <div class="pd-summary" id="pdSummary"></div>
+                <div class="pd-history-stats" id="pdHistoryStats"></div>
+                <section class="pd-analysis-section" id="pdQualitySection" style="display:none;">
+                    <div class="pd-analysis-head">
+                        <div>
+                            <div class="pd-analysis-title" data-i18n="detail.qualityTitle">收益质量与风险分布</div>
+                            <div class="pd-analysis-description" data-i18n="detail.qualityDescription">观察日收益胜率、下行风险和滚动一年结果，补充单点 CAGR 与最大回撤。</div>
+                        </div>
+                    </div>
+                    <div class="pd-analysis-grid" id="pdQualityGrid"></div>
+                    <p class="pd-analysis-footnote" id="pdQualityNote"></p>
+                </section>
+                <section class="pd-analysis-section" id="pdFundamentalsSection" style="display:none;">
+                    <div class="pd-analysis-head">
+                        <div>
+                            <div class="pd-analysis-title" data-i18n="detail.fundamentalsTitle">估值与市场快照</div>
+                            <div class="pd-analysis-description" data-i18n="detail.fundamentalsDescription">仅展示当前数据源可取得的股票或 ETF 估值与市场指标。</div>
+                        </div>
+                    </div>
+                    <div class="pd-analysis-grid" id="pdFundamentalsGrid"></div>
+                    <p class="pd-analysis-footnote" id="pdFundamentalsNote"></p>
+                </section>
+                </div>
                 <div class="pd-bar-chart-card" id="pdBarChartCard" style="display:none;">
                     <div class="pd-bar-chart-header">
                         <div>
@@ -2730,6 +2979,10 @@
                          tabindex="0" aria-orientation="horizontal" aria-valuemin="180" aria-valuemax="480"
                          data-i18n-attr="aria-label|detail.resizeChart" data-i18n-attr-alt="title|detail.resizeChart"
                          aria-label="上下拖动调整图表高度" title="上下拖动调整图表高度"></div>
+                </div>
+                <div class="pd-section-head">
+                    <div class="pd-section-title" id="pdTableTitle" data-i18n="detail.returnCalendarTitle">收益日历</div>
+                    <div class="pd-section-note" data-i18n="detail.calendarNote">平均值与中位数用于描述分布；上涨概率不进行收益率直接相加。</div>
                 </div>
                 <div class="pd-table-wrap">
                     <table class="pd-table">
