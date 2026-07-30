@@ -1082,6 +1082,10 @@ button.market-pulse-card:hover {
                 flex: 0 0 136px;
                 scroll-snap-align: start;
             }
+            #hmFilterPanel .control-group {
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
             .hm-treemap-svg { max-height: none; }
             .hm-legend { gap: 6px; font-size: 10px; }
             .hm-legend-cell { width: 14px; height: 14px; }

@@ -641,6 +641,13 @@ def fetch_intraday_series(
 
 _EAST_MONEY_URL = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
 
+_CN_SHANGHAI_INDEX_SYMBOLS = {
+    "000001",  # SSE Composite
+    "000016",  # SSE 50
+    "000300",  # CSI 300
+    "000905",  # CSI 500
+}
+
 
 def _cn_secid(symbol: str) -> str:
     """Map A-share code to East Money secid format."""
@@ -678,7 +685,9 @@ def _cn_tencent_symbol(symbol: str) -> str:
     SZSE (Shenzhen): sz prefix — 002xxx, 300xxx, 301xxx, 399xxx, 1xxxxx ETFs
     """
     s = symbol.strip().upper()
-    if s[:3] in ("000", "600", "601", "603", "605", "688"):
+    if s in _CN_SHANGHAI_INDEX_SYMBOLS:
+        return f"sh{s}"
+    if s[:3] in ("600", "601", "603", "605", "688"):
         return f"sh{s}"
     if s[:3] in ("002", "300", "301", "399"):
         return f"sz{s}"
@@ -890,8 +899,13 @@ def _fetch_daily_series_cn_stock(symbol: str) -> PriceSeries:
 
 
 def _fetch_daily_series_cn_stock_eastmoney(symbol: str) -> PriceSeries:
-    """Fetch daily OHLCV data for A-share indices via East Money API."""
-    secid = _cn_secid(symbol)
+    """Fetch daily OHLCV data for A-share indices and stocks via East Money."""
+    clean_symbol = symbol.strip().upper()
+    secid = (
+        _cn_secid(clean_symbol)
+        if clean_symbol in _CN_SHANGHAI_INDEX_SYMBOLS
+        else _cn_stock_secid(clean_symbol)
+    )
     try:
         resp = _session.get(
             _EAST_MONEY_URL,
@@ -913,7 +927,7 @@ def _fetch_daily_series_cn_stock_eastmoney(symbol: str) -> PriceSeries:
             msg = msg.split(":")[0] if ":" in msg else msg[:60]
         return empty_series("eastmoney", msg)
 
-    klines = body.get("data", {}).get("klines", [])
+    klines = (body.get("data") or {}).get("klines", [])
     if not klines:
         logger.warning("East Money returned no data for %s", symbol)
         return empty_series("eastmoney", "empty data")

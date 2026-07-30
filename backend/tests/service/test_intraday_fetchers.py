@@ -108,3 +108,21 @@ def test_yahoo_four_hour_aggregates_hourly_bars(mock_get):
 def test_a_share_intraday_returns_clear_error():
     series = fetchers.fetch_intraday_series("000001", "cn_stock", "1h", date(2024, 1, 2), date(2024, 1, 3))
     assert series.error == "intraday download is not supported for A-shares"
+
+
+def test_a_share_exchange_mapping_distinguishes_indices_and_shenzhen_stocks():
+    assert fetchers._cn_tencent_symbol("000001") == "sh000001"
+    assert fetchers._cn_tencent_symbol("000333") == "sz000333"
+    assert fetchers._cn_tencent_symbol("600519") == "sh600519"
+
+
+@patch.object(fetchers._session, "get")
+def test_eastmoney_a_share_uses_stock_exchange_mapping_and_handles_empty_data(
+    mock_get,
+):
+    mock_get.return_value = _response({"data": None})
+
+    series = fetchers._fetch_daily_series_cn_stock_eastmoney("000333")
+
+    assert series.error == "empty data"
+    assert mock_get.call_args.kwargs["params"]["secid"] == "0.000333"

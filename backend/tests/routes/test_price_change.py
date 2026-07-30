@@ -139,6 +139,47 @@ class TestHeatmapSharedCache:
         mock_set.assert_called_once()
         assert mock_set.call_args.args[0].startswith("heatmap:v1:")
 
+    @patch("routes.price_change.fetch_heatmap_data")
+    def test_market_type_is_forwarded_to_service(self, mock_fetch, client):
+        mock_fetch.return_value = {
+            "market_type": "crypto",
+            "period": "today",
+            "period_label": "2026-07-15",
+            "data": [],
+        }
+
+        resp = client.post(
+            f"{BASE}/heatmap",
+            json={
+                "symbols": [],
+                "market_type": "crypto",
+                "period": "today",
+                "force": True,
+            },
+        )
+
+        assert resp.status_code == 200
+        mock_fetch.assert_called_once_with(
+            [],
+            "today",
+            auto_top_n=0,
+            include_market_cap=False,
+            market_type="crypto",
+        )
+
+    def test_invalid_market_type_returns_400(self, client):
+        resp = client.post(
+            f"{BASE}/heatmap",
+            json={
+                "symbols": [],
+                "market_type": "forex",
+                "period": "today",
+            },
+        )
+
+        assert resp.status_code == 400
+        assert "market_type must be one of" in resp.get_json()["error"]
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # POST /api/price-change/yearly
@@ -431,6 +472,63 @@ class TestReturnDetailEndpoint:
         )
         assert resp.status_code == 400
         track_coverage(MOD, 1)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# POST /api/price-change/fundamentals-history
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TestFundamentalsHistoryEndpoint:
+    """POST /api/price-change/fundamentals-history"""
+
+    @patch("routes.price_change.fetch_fundamentals_history")
+    def test_valid_symbol_is_normalized(self, mock_fetch, client):
+        mock_fetch.return_value = {
+            "symbol": "AAPL",
+            "available": True,
+            "partial": False,
+            "series": {"pe": [], "pb": [], "roe": []},
+        }
+
+        resp = client.post(
+            f"{BASE}/fundamentals-history",
+            json={"symbol": " aapl "},
+        )
+
+        assert resp.status_code == 200
+        assert resp.get_json()["symbol"] == "AAPL"
+        mock_fetch.assert_called_once_with("AAPL")
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {},
+            {"symbol": ""},
+            {"symbol": 123},
+            {"symbol": "^GSPC"},
+            {"symbol": "AAPL/../../etc"},
+            {"symbol": "A" * 21},
+        ],
+    )
+    def test_rejects_non_company_stock_symbols(self, payload, client):
+        resp = client.post(f"{BASE}/fundamentals-history", json=payload)
+
+        assert resp.status_code == 400
+        assert resp.get_json() == {
+            "error": "valid US stock symbol is required"
+        }
+
+    @patch("routes.price_change.fetch_fundamentals_history")
+    def test_service_error_returns_500(self, mock_fetch, client):
+        mock_fetch.side_effect = RuntimeError("upstream unavailable")
+
+        resp = client.post(
+            f"{BASE}/fundamentals-history",
+            json={"symbol": "AAPL"},
+        )
+
+        assert resp.status_code == 500
+        assert resp.get_json()["error"] == "failed to fetch fundamentals history"
 
 
 # ═══════════════════════════════════════════════════════════════════════════

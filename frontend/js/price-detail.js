@@ -11,6 +11,15 @@
   var _lastBarChartResult = null;
   var _lastStockHistoryResult = null;
   var _stockHistoryCache = null;
+  var _fundamentalsHistoryCache = Object.create(null);
+  var _fundamentalsHistoryData = null;
+  var _fundamentalsHistoryMetric = "pe";
+  var _fundamentalsHistoryYears = 5;
+  var _fundamentalsHistoryGeneration = 0;
+  var _lastFundamentalsResult = null;
+  var _detailAbortController = null;
+  var _fundamentalsHistoryAbortController = null;
+  var _fundamentalsHistoryResizeFrame = null;
   var _pendingYear = "";
   var _resizeRenderFrame = null;
 
@@ -730,6 +739,15 @@
         available: data.price_to_book != null,
       },
       {
+        label: __("detail.roeLatestAnnual"),
+        value: formatPct(data.return_on_equity),
+        tone: valueTone(data.return_on_equity),
+        meta: data.roe_report_date
+          ? __("detail.reportDate", { date: data.roe_report_date })
+          : "",
+        available: data.return_on_equity != null,
+      },
+      {
         label: __("detail.epsTtm"),
         value: formatNumber(data.eps_ttm, 3) + " " + currency,
         available: data.eps_ttm != null,
@@ -813,6 +831,541 @@
       time: snapshot,
     });
     section.style.display = grid.childElementCount ? "block" : "none";
+  }
+
+  function hideFundamentalsHistory() {
+    var container = $("pdFundamentalsHistory");
+    var chart = $("pdFundamentalsHistoryChart");
+    var meta = $("pdFundamentalsHistoryMeta");
+    var status = $("pdFundamentalsHistoryStatus");
+    if (container) container.hidden = true;
+    if (chart) chart.innerHTML = "";
+    if (meta) meta.textContent = "";
+    if (status) status.textContent = "";
+    _fundamentalsHistoryData = null;
+    _lastFundamentalsResult = null;
+  }
+
+  function isCompanyStockResult(result) {
+    if (!result || result.type !== "stock") return false;
+    if (String(result.symbol || "").startsWith("^")) return false;
+    var quoteType = String(
+      (result.fundamentals || {}).quote_type || ""
+    ).toUpperCase();
+    if (quoteType) return quoteType === "EQUITY";
+    return true;
+  }
+
+  function fundamentalsMetricLabel(metric) {
+    if (metric === "pe") return __("detail.trailingPe");
+    if (metric === "pb") return __("detail.priceToBook");
+    return __("detail.returnOnEquity");
+  }
+
+  function fundamentalsValueText(metric, value, digits) {
+    if (metric === "roe") return formatPct(value, digits == null ? 2 : digits);
+    return formatRatio(value);
+  }
+
+  function fundamentalsAxisText(metric, value) {
+    return formatNumber(value, 1) + (metric === "roe" ? "%" : "×");
+  }
+
+  function fundamentalsPointsForRange(payload, metric, years) {
+    var rawPoints = payload
+      && payload.series
+      && Array.isArray(payload.series[metric])
+      ? payload.series[metric]
+      : [];
+    var points = rawPoints.map(function (point) {
+      var timestamp = Date.parse(String(point.date || "") + "T00:00:00Z");
+      var value = Number(point.value);
+      if (!Number.isFinite(timestamp) || !Number.isFinite(value)) return null;
+      return {
+        date: String(point.date),
+        value: value,
+        timestamp: timestamp,
+      };
+    }).filter(Boolean).sort(function (a, b) {
+      return a.timestamp - b.timestamp;
+    });
+    if (!points.length) return [];
+
+    var cutoff = new Date(points[points.length - 1].timestamp);
+    cutoff.setUTCFullYear(cutoff.getUTCFullYear() - years);
+    return points.filter(function (point) {
+      return point.timestamp >= cutoff.getTime();
+    });
+  }
+
+  function historyDateLabel(timestamp, includeMonth) {
+    var parsed = new Date(timestamp);
+    if (!Number.isFinite(parsed.getTime())) return "";
+    try {
+      return new Intl.DateTimeFormat(
+        document.documentElement.lang || undefined,
+        includeMonth
+          ? { year: "numeric", month: "short" }
+          : { year: "numeric" }
+      ).format(parsed);
+    } catch (_) {
+      return parsed.toISOString().slice(0, includeMonth ? 7 : 4);
+    }
+  }
+
+  function attachFundamentalsHistoryTooltips(host, metric) {
+    var tooltip = host.querySelector(".pd-fund-history-tooltip");
+    if (!tooltip) return;
+
+    function showTooltip(node, event) {
+      var hostRect = host.getBoundingClientRect();
+      var nodeRect = node.getBoundingClientRect();
+      var x = event && Number.isFinite(event.clientX)
+        ? event.clientX - hostRect.left
+        : nodeRect.left + nodeRect.width / 2 - hostRect.left;
+      var y = event && Number.isFinite(event.clientY)
+        ? event.clientY - hostRect.top
+        : nodeRect.top - hostRect.top;
+      x = Math.max(72, Math.min(Math.max(72, hostRect.width - 72), x));
+      y = Math.max(36, y);
+      tooltip.textContent = node.dataset.date + " · "
+        + fundamentalsValueText(metric, Number(node.dataset.value));
+      tooltip.style.left = x + "px";
+      tooltip.style.top = y + "px";
+      tooltip.hidden = false;
+    }
+
+    function hideTooltip() {
+      tooltip.hidden = true;
+    }
+
+    host.querySelectorAll("[data-history-point]").forEach(function (node) {
+      node.addEventListener("pointerenter", function (event) {
+        showTooltip(node, event);
+      });
+      node.addEventListener("pointermove", function (event) {
+        showTooltip(node, event);
+      });
+      node.addEventListener("pointerleave", hideTooltip);
+      node.addEventListener("focus", function () {
+        showTooltip(node);
+      });
+      node.addEventListener("blur", hideTooltip);
+    });
+  }
+
+  function fundamentalsHistorySvg(
+    points,
+    metric,
+    median,
+    renderWidth,
+    renderHeight
+  ) {
+    var width = Math.max(250, Math.round(Number(renderWidth) || 760));
+    var height = Math.max(200, Math.round(Number(renderHeight) || 240));
+    var pad = { top: 16, right: 16, bottom: 30, left: 52 };
+    var plotWidth = width - pad.left - pad.right;
+    var plotHeight = height - pad.top - pad.bottom;
+    var values = points.map(function (point) { return point.value; });
+    if (Number.isFinite(Number(median))) values.push(Number(median));
+    if (metric === "roe") values.push(0);
+    var yMin = Math.min.apply(null, values);
+    var yMax = Math.max.apply(null, values);
+    var spread = yMax - yMin;
+    var yPadding = spread > 0
+      ? spread * 0.12
+      : Math.max(Math.abs(yMax) * 0.12, 1);
+    if (metric === "roe") {
+      yMin = Math.min(0, yMin) - yPadding;
+      yMax = Math.max(0, yMax) + yPadding;
+    } else {
+      yMin = Math.max(0, yMin - yPadding);
+      yMax += yPadding;
+    }
+    if (yMin === yMax) yMax = yMin + 1;
+
+    var minTime = points[0].timestamp;
+    var maxTime = points[points.length - 1].timestamp;
+    var timeSpread = Math.max(1, maxTime - minTime);
+    function xScale(timestamp) {
+      if (points.length === 1) return pad.left + plotWidth / 2;
+      return pad.left + (timestamp - minTime) / timeSpread * plotWidth;
+    }
+    function yScale(value) {
+      return pad.top + (yMax - value) / (yMax - yMin) * plotHeight;
+    }
+
+    var parts = [];
+    for (var tickIndex = 0; tickIndex <= 4; tickIndex += 1) {
+      var tickValue = yMax - (yMax - yMin) * tickIndex / 4;
+      var tickY = yScale(tickValue);
+      parts.push(
+        '<line class="pd-fund-history-grid-line" x1="' + pad.left
+        + '" y1="' + tickY.toFixed(1) + '" x2="' + (width - pad.right)
+        + '" y2="' + tickY.toFixed(1) + '"></line>'
+      );
+      parts.push(
+        '<text class="pd-fund-history-axis-label" x="' + (pad.left - 8)
+        + '" y="' + (tickY + 3.5).toFixed(1)
+        + '" text-anchor="end">' + escapeHtml(
+          fundamentalsAxisText(metric, tickValue)
+        ) + "</text>"
+      );
+    }
+
+    var xTickCount = points.length === 1 ? 1 : 5;
+    var includeMonth = timeSpread < 2 * 365 * 24 * 60 * 60 * 1000;
+    for (var xTickIndex = 0; xTickIndex < xTickCount; xTickIndex += 1) {
+      var ratio = xTickCount === 1 ? 0.5 : xTickIndex / (xTickCount - 1);
+      var tickTime = minTime + timeSpread * ratio;
+      var tickX = points.length === 1
+        ? pad.left + plotWidth / 2
+        : xScale(tickTime);
+      parts.push(
+        '<text class="pd-fund-history-axis-label" x="' + tickX.toFixed(1)
+        + '" y="' + (height - 8) + '" text-anchor="middle">'
+        + escapeHtml(historyDateLabel(tickTime, includeMonth)) + "</text>"
+      );
+    }
+
+    if (Number.isFinite(Number(median))) {
+      var medianY = yScale(Number(median));
+      parts.push(
+        '<line class="pd-fund-history-median" x1="' + pad.left
+        + '" y1="' + medianY.toFixed(1) + '" x2="' + (width - pad.right)
+        + '" y2="' + medianY.toFixed(1) + '"></line>'
+      );
+    }
+
+    if (metric === "roe") {
+      var zeroY = yScale(0);
+      var barWidth = Math.min(
+        52,
+        Math.max(14, plotWidth / Math.max(points.length * 1.8, 1))
+      );
+      points.forEach(function (point) {
+        var pointX = xScale(point.timestamp);
+        var pointY = yScale(point.value);
+        var barY = Math.min(pointY, zeroY);
+        var barHeight = Math.max(1.5, Math.abs(zeroY - pointY));
+        var title = point.date + " · " + fundamentalsValueText(metric, point.value);
+        parts.push(
+          '<g data-history-point tabindex="0" role="img" data-date="'
+          + escapeHtml(point.date) + '" data-value="' + point.value
+          + '" aria-label="' + escapeHtml(title) + '"><title>'
+          + escapeHtml(title) + '</title><rect class="pd-fund-history-bar'
+          + (point.value < 0 ? " is-negative" : "") + '" x="'
+          + (pointX - barWidth / 2).toFixed(1) + '" y="' + barY.toFixed(1)
+          + '" width="' + barWidth.toFixed(1) + '" height="'
+          + barHeight.toFixed(1) + '" rx="3"></rect></g>'
+        );
+      });
+    } else {
+      var linePath = points.map(function (point, index) {
+        return (index ? "L" : "M") + xScale(point.timestamp).toFixed(1)
+          + "," + yScale(point.value).toFixed(1);
+      }).join(" ");
+      if (points.length > 1) {
+        var areaPath = linePath + " L"
+          + xScale(points[points.length - 1].timestamp).toFixed(1)
+          + "," + yScale(yMin).toFixed(1) + " L"
+          + xScale(points[0].timestamp).toFixed(1)
+          + "," + yScale(yMin).toFixed(1) + " Z";
+        parts.push(
+          '<path class="pd-fund-history-area" d="' + areaPath + '"></path>'
+        );
+        parts.push(
+          '<path class="pd-fund-history-line" d="' + linePath + '"></path>'
+        );
+      }
+      points.forEach(function (point) {
+        var pointX = xScale(point.timestamp);
+        var pointY = yScale(point.value);
+        var title = point.date + " · " + fundamentalsValueText(metric, point.value);
+        parts.push(
+          '<g data-history-point tabindex="0" role="img" data-date="'
+          + escapeHtml(point.date) + '" data-value="' + point.value
+          + '" aria-label="' + escapeHtml(title) + '"><title>'
+          + escapeHtml(title) + '</title><circle cx="' + pointX.toFixed(1)
+          + '" cy="' + pointY.toFixed(1)
+          + '" r="10" fill="transparent"></circle><circle class="pd-fund-history-point" cx="'
+          + pointX.toFixed(1) + '" cy="' + pointY.toFixed(1)
+          + '" r="3.5"></circle></g>'
+        );
+      });
+    }
+
+    return '<svg viewBox="0 0 ' + width + " " + height
+      + '" role="group" aria-label="'
+      + escapeHtml(fundamentalsMetricLabel(metric)) + '">'
+      + parts.join("") + '</svg><div class="pd-fund-history-tooltip" '
+      + 'role="tooltip" hidden></div>';
+  }
+
+  function renderFundamentalsHistory(payload) {
+    var container = $("pdFundamentalsHistory");
+    var tabs = $("pdFundamentalsHistoryTabs");
+    var meta = $("pdFundamentalsHistoryMeta");
+    var chart = $("pdFundamentalsHistoryChart");
+    var status = $("pdFundamentalsHistoryStatus");
+    if (!container || !tabs || !meta || !chart || !status) return;
+
+    var metrics = ["pe", "pb", "roe"].filter(function (metric) {
+      return payload
+        && payload.series
+        && Array.isArray(payload.series[metric])
+        && payload.series[metric].length;
+    });
+    if (!metrics.length) {
+      hideFundamentalsHistory();
+      return;
+    }
+    _fundamentalsHistoryData = payload;
+    if (metrics.indexOf(_fundamentalsHistoryMetric) === -1) {
+      _fundamentalsHistoryMetric = ["pe", "roe", "pb"].find(function (metric) {
+        return metrics.indexOf(metric) !== -1;
+      }) || metrics[0];
+    }
+
+    tabs.innerHTML = metrics.map(function (metric) {
+      var active = metric === _fundamentalsHistoryMetric;
+      return '<button class="pd-fund-history-tab'
+        + (active ? " is-active" : "") + '" type="button" role="tab" data-metric="'
+        + metric + '" aria-selected="' + (active ? "true" : "false")
+        + '" title="' + escapeHtml(fundamentalsMetricLabel(metric)) + '">'
+        + metric.toUpperCase() + "</button>";
+    }).join("");
+    tabs.querySelectorAll("[data-metric]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        _fundamentalsHistoryMetric = button.dataset.metric;
+        renderFundamentalsHistory(_fundamentalsHistoryData);
+      });
+    });
+
+    $("pdFundamentalsRangeTabs")?.querySelectorAll("[data-years]").forEach(
+      function (button) {
+        var active = Number(button.dataset.years) === _fundamentalsHistoryYears;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", active ? "true" : "false");
+      }
+    );
+
+    var points = fundamentalsPointsForRange(
+      payload,
+      _fundamentalsHistoryMetric,
+      _fundamentalsHistoryYears
+    );
+    if (!points.length) {
+      meta.textContent = "";
+      chart.innerHTML = "";
+      status.textContent = __("detail.fundamentalsHistoryEmpty");
+      container.hidden = false;
+      return;
+    }
+
+    var stats = payload.stats && payload.stats[_fundamentalsHistoryMetric]
+      ? payload.stats[_fundamentalsHistoryMetric]
+      : {};
+    var latest = payload.latest
+      ? payload.latest[_fundamentalsHistoryMetric === "roe"
+        ? "roe"
+        : _fundamentalsHistoryMetric]
+      : null;
+    var hasCurrentValue = latest != null;
+    if (latest == null) latest = points[points.length - 1].value;
+    var valueContext;
+    if (
+      _fundamentalsHistoryMetric === "roe"
+      && payload.latest
+      && payload.latest.roe_report_date
+    ) {
+      valueContext = __("detail.reportDate", {
+        date: payload.latest.roe_report_date,
+      });
+    } else if (hasCurrentValue) {
+      valueContext = __("detail.currentValue");
+    } else {
+      valueContext = points[points.length - 1].date;
+    }
+    var metaParts = [
+      valueContext + " · "
+        + fundamentalsMetricLabel(_fundamentalsHistoryMetric) + " "
+        + fundamentalsValueText(_fundamentalsHistoryMetric, latest),
+    ];
+    if (stats.median_5y != null) {
+      metaParts.push(
+        __("detail.historicalMedian") + " "
+        + fundamentalsValueText(
+          _fundamentalsHistoryMetric,
+          stats.median_5y
+        )
+      );
+    }
+    if (stats.percentile_5y != null) {
+      metaParts.push(
+        __("detail.historicalPercentile") + " "
+        + formatUnsignedPct(stats.percentile_5y, 0)
+      );
+    }
+    meta.textContent = metaParts.join(" · ");
+    chart.innerHTML = fundamentalsHistorySvg(
+      points,
+      _fundamentalsHistoryMetric,
+      stats.median_5y,
+      chart.clientWidth,
+      chart.clientHeight
+    );
+    var sourceName = payload.sources
+      ? payload.sources[_fundamentalsHistoryMetric]
+      : "";
+    var sourceLabel = sourceName === "eastmoney_us_financials"
+      ? "Eastmoney"
+      : sourceName === "yahoo_fundamentals_timeseries"
+        ? "Yahoo"
+        : "";
+    var statusParts = [];
+    if (payload.partial) {
+      statusParts.push(__("detail.fundamentalsHistoryPartial"));
+    }
+    if (sourceLabel) {
+      statusParts.push(__("detail.fundamentalsHistorySource", {
+        source: sourceLabel,
+      }));
+    }
+    status.textContent = statusParts.join(" · ");
+    container.hidden = false;
+    attachFundamentalsHistoryTooltips(
+      chart,
+      _fundamentalsHistoryMetric
+    );
+  }
+
+  function scheduleFundamentalsHistoryResize() {
+    if (!_fundamentalsHistoryData) return;
+    if (_fundamentalsHistoryResizeFrame != null) {
+      cancelAnimationFrame(_fundamentalsHistoryResizeFrame);
+    }
+    _fundamentalsHistoryResizeFrame = requestAnimationFrame(function () {
+      _fundamentalsHistoryResizeFrame = null;
+      var container = $("pdFundamentalsHistory");
+      if (
+        _fundamentalsHistoryData
+        && container
+        && !container.hidden
+      ) {
+        renderFundamentalsHistory(_fundamentalsHistoryData);
+      }
+    });
+  }
+
+  function mergeFundamentalsHistory(result, payload) {
+    var latest = payload && payload.latest ? payload.latest : {};
+    var data = result.fundamentals || (result.fundamentals = {});
+    var usedYahoo = false;
+    if (latest.pe != null && data.trailing_pe == null) {
+      data.trailing_pe = latest.pe;
+      usedYahoo = true;
+    }
+    if (latest.pb != null && data.price_to_book == null) {
+      data.price_to_book = latest.pb;
+      usedYahoo = true;
+    }
+    if (latest.roe != null) {
+      data.return_on_equity = latest.roe;
+      data.roe_report_date = latest.roe_report_date;
+    }
+    var sourceNames = String(data.source || "").split(" / ").filter(Boolean);
+    if (usedYahoo && sourceNames.indexOf("Yahoo") === -1) {
+      sourceNames.push("Yahoo");
+    }
+    if (latest.roe != null && sourceNames.indexOf("Eastmoney") === -1) {
+      sourceNames.push("Eastmoney");
+    }
+    if (sourceNames.length) data.source = sourceNames.join(" / ");
+    if (
+      data.trailing_pe != null
+      || data.price_to_book != null
+      || data.return_on_equity != null
+    ) {
+      data.available = true;
+    }
+  }
+
+  async function loadFundamentalsHistory(symbol, result, generation) {
+    if (generation !== _fundamentalsHistoryGeneration) return;
+    if (_fundamentalsHistoryAbortController) {
+      _fundamentalsHistoryAbortController.abort();
+      _fundamentalsHistoryAbortController = null;
+    }
+    if (!isCompanyStockResult(result)) {
+      hideFundamentalsHistory();
+      return;
+    }
+    _lastFundamentalsResult = result;
+    var container = $("pdFundamentalsHistory");
+    var chart = $("pdFundamentalsHistoryChart");
+    var meta = $("pdFundamentalsHistoryMeta");
+    var status = $("pdFundamentalsHistoryStatus");
+    if (container) container.hidden = false;
+    if (chart) chart.innerHTML = "";
+    if (meta) meta.textContent = "";
+    if (status) status.textContent = __("detail.fundamentalsHistoryLoading");
+
+    var cacheEntry = _fundamentalsHistoryCache[symbol];
+    if (cacheEntry && Date.now() >= cacheEntry.expiresAt) {
+      delete _fundamentalsHistoryCache[symbol];
+      cacheEntry = null;
+    }
+    if (cacheEntry) {
+      var cached = cacheEntry.payload;
+      if (!cached.available) {
+        hideFundamentalsHistory();
+        return;
+      }
+      mergeFundamentalsHistory(result, cached);
+      renderFundamentals(result);
+      renderFundamentalsHistory(cached);
+      return;
+    }
+
+    var requestController = typeof AbortController === "function"
+      ? new AbortController()
+      : null;
+    _fundamentalsHistoryAbortController = requestController;
+    try {
+      var response = await fetch(FUNDAMENTALS_HISTORY_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbol: symbol }),
+        signal: requestController ? requestController.signal : undefined,
+      });
+      var payload = await response.json().catch(function () { return {}; });
+      if (!response.ok) {
+        throw new Error(payload.error || "HTTP " + response.status);
+      }
+      if (generation !== _fundamentalsHistoryGeneration) return;
+      _fundamentalsHistoryCache[symbol] = {
+        payload: payload,
+        expiresAt: Date.now() + (
+          payload.available ? 24 * 60 * 60 * 1000 : 10 * 60 * 1000
+        ),
+      };
+      if (!payload.available) {
+        hideFundamentalsHistory();
+        return;
+      }
+      mergeFundamentalsHistory(result, payload);
+      renderFundamentals(result);
+      renderFundamentalsHistory(payload);
+    } catch (error) {
+      if (generation !== _fundamentalsHistoryGeneration) return;
+      if (error && error.name === "AbortError") return;
+      hideFundamentalsHistory();
+    } finally {
+      if (_fundamentalsHistoryAbortController === requestController) {
+        _fundamentalsHistoryAbortController = null;
+      }
+    }
   }
 
   function hideStockHistory(clearCache) {
@@ -1267,6 +1820,13 @@
     var symbol = (symbolInput?.value || "").trim().toUpperCase();
     var type = typeSelect?.value || "stock";
     var year = _pendingYear || yearSelect?.value || "";
+    var historyGeneration = ++_fundamentalsHistoryGeneration;
+    if (_detailAbortController) _detailAbortController.abort();
+    if (_fundamentalsHistoryAbortController) {
+      _fundamentalsHistoryAbortController.abort();
+      _fundamentalsHistoryAbortController = null;
+    }
+    hideFundamentalsHistory();
     if (!symbol) {
       showError(__("detail.errorNoSymbol"));
       setResultVisible(false);
@@ -1293,6 +1853,10 @@
     );
     hideStockHistory(!canReuseStockHistory);
 
+    var detailController = typeof AbortController === "function"
+      ? new AbortController()
+      : null;
+    _detailAbortController = detailController;
     try {
       var body = { symbol: symbol, type: type };
       if (year) body.year = parseInt(year, 10);
@@ -1303,8 +1867,10 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: detailController ? detailController.signal : undefined,
       });
       var result = await resp.json().catch(function () { return {}; });
+      if (historyGeneration !== _fundamentalsHistoryGeneration) return;
       if (!resp.ok) {
         throw new Error(result.error || "HTTP " + resp.status);
       }
@@ -1324,6 +1890,11 @@
       }
       renderStockHistory(result);
       setResultVisible(true);
+      loadFundamentalsHistory(
+        result.symbol || symbol,
+        result,
+        historyGeneration
+      );
       var nextUrl = new URL(window.location.href);
       nextUrl.searchParams.set("symbol", symbol);
       nextUrl.searchParams.set("type", type);
@@ -1338,10 +1909,17 @@
         nextUrl.pathname + nextUrl.search
       );
     } catch (err) {
+      if (historyGeneration !== _fundamentalsHistoryGeneration) return;
+      if (err && err.name === "AbortError") return;
       showError(__("detail.errorRequest") + " " + err.message);
       setResultVisible(false);
     } finally {
-      setLoading(false);
+      if (_detailAbortController === detailController) {
+        _detailAbortController = null;
+      }
+      if (historyGeneration === _fundamentalsHistoryGeneration) {
+        setLoading(false);
+      }
     }
   }
 
@@ -1375,9 +1953,35 @@
     btn.addEventListener("click", queryDetail);
     if (typeSelect) {
       typeSelect.addEventListener("change", function () {
-        if (typeSelect.value !== "stock") hideStockHistory(true);
+        _fundamentalsHistoryGeneration += 1;
+        if (_detailAbortController) {
+          _detailAbortController.abort();
+          _detailAbortController = null;
+        }
+        if (_fundamentalsHistoryAbortController) {
+          _fundamentalsHistoryAbortController.abort();
+          _fundamentalsHistoryAbortController = null;
+        }
+        setLoading(false);
+        setResultVisible(false);
+        hideStockHistory(true);
+        hideFundamentalsHistory();
       });
     }
+    var fundamentalsRangeTabs = $("pdFundamentalsRangeTabs");
+    if (fundamentalsRangeTabs) {
+      fundamentalsRangeTabs.querySelectorAll("[data-years]").forEach(
+        function (button) {
+          button.addEventListener("click", function () {
+            _fundamentalsHistoryYears = Number(button.dataset.years) || 5;
+            if (_fundamentalsHistoryData) {
+              renderFundamentalsHistory(_fundamentalsHistoryData);
+            }
+          });
+        }
+      );
+    }
+    window.addEventListener("resize", scheduleFundamentalsHistoryResize);
     if (dividendTaxInput) {
       try {
         var savedTaxRate = localStorage.getItem("gah_dividend_tax_rate");

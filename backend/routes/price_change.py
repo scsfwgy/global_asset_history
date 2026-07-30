@@ -4,11 +4,15 @@ Yearly price change API blueprint.
 import hashlib
 import json
 import logging
+import re
 import threading as _threading
 import time
 
 from flask import Blueprint, jsonify, request
 from service.price_change import cache_store
+from service.price_change.fundamentals_history import (
+    fetch_fundamentals_history,
+)
 
 from service.price_change.price_change_service import (
     _fetch_daily_series_cached,
@@ -36,6 +40,7 @@ price_change_bp = Blueprint("price_change", __name__, url_prefix="/api/price-cha
 
 _MARKET_PULSE_SHARED_CACHE_KEY = "market-pulse:v1"
 _MARKET_PULSE_CACHE_TTL = 5 * 60
+_US_COMPANY_SYMBOL_RE = re.compile(r"^[A-Z][A-Z0-9._-]{0,19}$")
 
 
 def _get_cached_market_pulse() -> dict | None:
@@ -244,6 +249,30 @@ def get_return_detail():
         return jsonify({"error": str(e)}), 500
 
 
+@price_change_bp.route("/fundamentals-history", methods=["POST"])
+def get_fundamentals_history():
+    """Return historical PE, PB and annual ROE for a US company stock."""
+    body = request.get_json(silent=True)
+    raw_symbol = body.get("symbol") if isinstance(body, dict) else None
+    symbol = raw_symbol.strip().upper() if isinstance(raw_symbol, str) else ""
+    if not _US_COMPANY_SYMBOL_RE.fullmatch(symbol):
+        return jsonify({
+            "error": "valid US stock symbol is required",
+        }), 400
+
+    try:
+        return jsonify(fetch_fundamentals_history(symbol))
+    except Exception as e:
+        logger.exception(
+            "Failed to fetch fundamentals history for %s: %s",
+            symbol,
+            e,
+        )
+        return jsonify({
+            "error": "failed to fetch fundamentals history",
+        }), 500
+
+
 @price_change_bp.route("/stock-compare", methods=["POST"])
 def stock_compare():
     """Return a compact annual comparison cube for multiple US stocks."""
@@ -343,13 +372,22 @@ _HEATMAP_CACHE_TTL = 4 * 60 * 60  # 4 hours
 _HEATMAP_SHARED_CACHE_PREFIX = "heatmap:v1:"
 
 
-def _heatmap_cache_key(symbols: list, period: str, auto_top_n: int, include_market_cap: bool) -> str:
+def _heatmap_cache_key(
+    symbols: list,
+    period: str,
+    auto_top_n: int,
+    include_market_cap: bool,
+    market_type: str | None = None,
+) -> str:
     """Stable cache key for heatmap results."""
     sym_keys = sorted(
         f"{s.get('symbol','').strip().upper()}|{s.get('type','stock').strip().lower()}"
         for s in symbols
     )
-    raw = f"hm:{period}:{auto_top_n}:{int(include_market_cap)}:{','.join(sym_keys)}"
+    raw = (
+        f"hm:{market_type or 'legacy'}:{period}:{auto_top_n}:"
+        f"{int(include_market_cap)}:{','.join(sym_keys)}"
+    )
     return hashlib.md5(raw.encode()).hexdigest()
 
 
@@ -399,8 +437,9 @@ def heatmap():
 
     Request body:
         {"symbols": [{"symbol": "AAPL", "type": "stock"}, ...],
+         "market_type": "stock|crypto|cn_stock",  # displays the full market pool
          "period": "today|week|month|quarter|year",
-         "auto_top_n": 20,              # optional: auto-include top US stocks
+         "auto_top_n": 20,              # legacy: limit automatic US selection
          "include_market_cap": true,    # optional: attach best-effort market cap
          "force": true}                  # optional: bypass cache
 
@@ -412,21 +451,38 @@ def heatmap():
     """
     body = request.get_json(silent=True) or {}
     symbols = body.get("symbols", [])
+    raw_market_type = body.get("market_type")
+    market_type = (
+        str(raw_market_type).strip().lower()
+        if raw_market_type is not None
+        else None
+    )
     period = str(body.get("period", "week")).strip().lower()
     auto_top_n = int(body.get("auto_top_n", 0) or 0)
     include_market_cap = bool(body.get("include_market_cap", False))
     force = bool(body.get("force", False))
 
-    # auto_top_n allows calling without explicit symbols
-    if not symbols and auto_top_n <= 0:
-        return jsonify({"error": "symbols list is required (or set auto_top_n > 0)"}), 400
+    # A market type displays its complete configured pool. auto_top_n remains
+    # accepted for backwards compatibility with older clients.
+    if not symbols and not market_type and auto_top_n <= 0:
+        return jsonify({
+            "error": "symbols list is required (or set market_type/auto_top_n)"
+        }), 400
 
     valid_periods = {"today", "week", "month", "quarter", "year"}
     if period not in valid_periods:
         return jsonify({"error": f"period must be one of: {', '.join(sorted(valid_periods))}"}), 400
 
+    valid_market_types = {"stock", "crypto", "cn_stock"}
+    if market_type is not None and market_type not in valid_market_types:
+        return jsonify({
+            "error": f"market_type must be one of: {', '.join(sorted(valid_market_types))}"
+        }), 400
+
     # Check cache (skip when force=true)
-    cache_key = _heatmap_cache_key(symbols, period, auto_top_n, include_market_cap)
+    cache_key = _heatmap_cache_key(
+        symbols, period, auto_top_n, include_market_cap, market_type
+    )
     if not force:
         cached_result = _get_cached_heatmap(cache_key)
         if cached_result is not None:
@@ -435,8 +491,13 @@ def heatmap():
             return jsonify(cached_result)
 
     try:
-        result = fetch_heatmap_data(symbols, period, auto_top_n=auto_top_n,
-                                    include_market_cap=include_market_cap)
+        result = fetch_heatmap_data(
+            symbols,
+            period,
+            auto_top_n=auto_top_n,
+            include_market_cap=include_market_cap,
+            market_type=market_type,
+        )
     except Exception as e:
         logger.exception("Failed to fetch heatmap data: %s", e)
         return jsonify({"error": str(e)}), 500

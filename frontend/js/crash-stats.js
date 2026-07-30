@@ -28,6 +28,38 @@
     var _lastAssetType = "";
     var _expandedRowIdx = -1;    // currently expanded crash index
     var _paramsCollapsed = false;
+    const CRASH_SYMBOL_STORAGE_KEY = "gah_crash_symbol";
+
+    function saveSymbolPreference(symbol, type) {
+        try {
+            localStorage.setItem(CRASH_SYMBOL_STORAGE_KEY, JSON.stringify({
+                symbol: symbol,
+                type: type,
+            }));
+        } catch (_) { /* localStorage unavailable — keep the current form value */ }
+    }
+
+    function restoreSymbolPreference() {
+        try {
+            var raw = localStorage.getItem(CRASH_SYMBOL_STORAGE_KEY);
+            if (!raw) return false;
+            var state = JSON.parse(raw);
+            var symbol = String(state && state.symbol || "").trim().toUpperCase();
+            if (!symbol) return false;
+            if (symbolInput) symbolInput.value = symbol;
+            if (typeSelect && ["stock", "crypto", "cn_stock"].indexOf(state.type) !== -1) {
+                typeSelect.value = state.type;
+            }
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function saveCurrentPreference() {
+        var symbol = (symbolInput && symbolInput.value || "").trim().toUpperCase();
+        if (symbol) saveSymbolPreference(symbol, typeSelect ? typeSelect.value : "stock");
+    }
 
     function syncPeriodControls() {
         var isNDays = periodTypeSelect && periodTypeSelect.value === "n_days";
@@ -68,6 +100,7 @@
     function init() {
         var now = new Date();
         var defaultStart = new Date(2020, 0, 1); // 2020-01-01
+        restoreSymbolPreference();
         if (endInput) endInput.value = now.toISOString().slice(0, 10);
         if (startInput) startInput.value = defaultStart.toISOString().slice(0, 10);
         syncPeriodControls();
@@ -95,6 +128,7 @@
             showError(__("crash.errorPeriodDays"), run);
             return;
         }
+        saveSymbolPreference(symbol, typeSelect.value);
 
         setLoading(true);
         hideError();
@@ -562,10 +596,12 @@
     if (closeBtn) closeBtn.addEventListener("click", closeResult);
     if (periodTypeSelect) periodTypeSelect.addEventListener("change", syncPeriodControls);
     if (symbolInput) {
+        symbolInput.addEventListener("input", saveCurrentPreference);
         symbolInput.addEventListener("keydown", function (e) {
             if (e.key === "Enter") run();
         });
     }
+    if (typeSelect) typeSelect.addEventListener("change", saveCurrentPreference);
 
     init();
 })();

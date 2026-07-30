@@ -697,6 +697,147 @@
             font-size: 10px;
             line-height: 1.5;
         }
+        .pd-fund-history {
+            margin-top: 12px;
+            padding: 12px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-sm);
+            background: var(--apple-surface-2);
+        }
+        .pd-fund-history[hidden] {
+            display: none;
+        }
+        .pd-fund-history-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .pd-fund-history-title {
+            color: var(--apple-text-primary);
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .pd-fund-history-description {
+            max-width: 620px;
+            margin-top: 3px;
+            color: var(--apple-text-tertiary);
+            font-size: 10px;
+            line-height: 1.5;
+        }
+        .pd-fund-history-controls {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .pd-fund-history-tabs,
+        .pd-fund-history-ranges {
+            display: inline-flex;
+            gap: 3px;
+            padding: 3px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-full);
+            background: var(--apple-surface-1);
+        }
+        .pd-fund-history-tab {
+            min-height: 28px;
+            padding: 4px 10px;
+            border: 0;
+            border-radius: var(--radius-full);
+            background: transparent;
+            color: var(--apple-text-tertiary);
+            font: inherit;
+            font-size: 11px;
+            font-weight: 650;
+            cursor: pointer;
+        }
+        .pd-fund-history-tab:hover {
+            color: var(--apple-text-primary);
+        }
+        .pd-fund-history-tab.is-active,
+        .pd-fund-history-tab[aria-selected="true"],
+        .pd-fund-history-tab[aria-pressed="true"] {
+            background: var(--apple-blue);
+            color: #fff;
+        }
+        .pd-fund-history-meta {
+            min-height: 18px;
+            margin-top: 10px;
+            color: var(--apple-text-secondary);
+            font-size: 11px;
+            font-variant-numeric: tabular-nums;
+        }
+        .pd-fund-history-chart {
+            position: relative;
+            min-height: 240px;
+            margin-top: 5px;
+            overflow: hidden;
+            border-radius: var(--radius-sm);
+        }
+        .pd-fund-history-chart svg {
+            display: block;
+            width: 100%;
+            height: 240px;
+            overflow: visible;
+        }
+        .pd-fund-history-grid-line {
+            stroke: var(--apple-divider);
+            stroke-width: 1;
+        }
+        .pd-fund-history-axis-label {
+            fill: var(--apple-text-tertiary);
+            font-size: 10px;
+            font-variant-numeric: tabular-nums;
+        }
+        .pd-fund-history-line {
+            fill: none;
+            stroke: var(--apple-blue);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .pd-fund-history-area {
+            fill: color-mix(in srgb, var(--apple-blue) 13%, transparent);
+        }
+        .pd-fund-history-point {
+            fill: var(--apple-surface-1);
+            stroke: var(--apple-blue);
+            stroke-width: 2;
+        }
+        .pd-fund-history-bar {
+            fill: color-mix(in srgb, var(--apple-blue) 72%, transparent);
+        }
+        .pd-fund-history-bar.is-negative {
+            fill: color-mix(in srgb, var(--data-negative) 78%, transparent);
+        }
+        .pd-fund-history-median {
+            stroke: var(--apple-text-tertiary);
+            stroke-width: 1.25;
+            stroke-dasharray: 5 4;
+        }
+        .pd-fund-history-tooltip {
+            position: absolute;
+            z-index: 2;
+            max-width: 180px;
+            padding: 7px 9px;
+            transform: translate(-50%, calc(-100% - 9px));
+            border: 1px solid var(--apple-divider);
+            border-radius: 8px;
+            background: var(--apple-surface-1);
+            box-shadow: var(--shadow-md);
+            color: var(--apple-text-primary);
+            font-size: 11px;
+            line-height: 1.45;
+            pointer-events: none;
+        }
+        .pd-fund-history-status {
+            min-height: 15px;
+            margin-top: 5px;
+            color: var(--apple-text-tertiary);
+            font-size: 10px;
+            line-height: 1.5;
+        }
         .pd-section-head {
             display: flex;
             align-items: flex-end;
@@ -1419,6 +1560,25 @@
             }
             .pd-analysis-value {
                 font-size: 15px;
+            }
+            .pd-fund-history {
+                padding: 10px;
+            }
+            .pd-fund-history-head {
+                align-items: stretch;
+                flex-direction: column;
+            }
+            .pd-fund-history-controls {
+                justify-content: space-between;
+            }
+            .pd-fund-history-chart,
+            .pd-fund-history-chart svg {
+                min-height: 220px;
+                height: 220px;
+            }
+            .pd-fund-history-tab {
+                min-height: 32px;
+                padding-inline: 11px;
             }
             .pd-history-toolbar {
                 align-items: flex-start;
@@ -2792,18 +2952,13 @@
         </div>
         <div class="hm-filter-panel" id="hmFilterPanel" style="display:none;">
             <div class="controls-bar" style="margin-bottom: 12px;">
-                <div class="control-group pd-controls">
-                    <span class="control-label" data-i18n="yearly.symbolInput">统计代码</span>
-                    <input type="text" id="hmSymbolInput" class="pc-symbol-input" data-i18n-attr="placeholder|yearly.placeholderSymbol" placeholder="AAPL" maxlength="10">
-                    <select id="hmTypeSelect" class="pc-type-select">
-                        <option value="stock" data-i18n="yearly.assetTypeStock">美股</option>
-                        <option value="crypto" data-i18n="yearly.assetTypeCrypto">数字货币</option>
-                        <option value="cn_stock" data-i18n="yearly.assetTypeCnStock">A股</option>
-                    </select>
-                    <button id="hmAddBtn" class="pc-btn primary" data-i18n="yearly.add">添加</button>
-                    <button id="hmClearBtn" class="pc-btn danger" data-i18n="yearly.clear">清空</button>
-                </div>
                 <div class="control-group">
+                    <span class="control-label" data-i18n="heatmap.marketType">热力图类型</span>
+                    <select id="hmMarketType" class="pc-type-select">
+                        <option value="stock" selected data-i18n="heatmap.marketUS">美股市场</option>
+                        <option value="crypto" data-i18n="heatmap.marketCrypto">数字货币</option>
+                        <option value="cn_stock" data-i18n="heatmap.marketCN">A股市场</option>
+                    </select>
                     <span class="control-label" data-i18n="heatmap.period">统计周期</span>
                     <select id="hmPeriod" class="pc-type-select">
                         <option value="today" selected data-i18n="heatmap.periodToday">今日</option>
@@ -2818,15 +2973,11 @@
                         <option value="market_cap" data-i18n="heatmap.sizeByMarketCap">市值</option>
                         <option value="return" data-i18n="heatmap.sizeByReturn">涨跌幅</option>
                     </select>
-                    <span class="control-label" data-i18n="heatmap.topN">显示前</span>
-                    <input type="number" id="hmTopN" class="pc-range-input" value="60" min="1" max="100" style="width:55px;">
-                    <span class="control-label" data-i18n="heatmap.topNUnit">名</span>
                     <button id="hmRefreshBtn" class="pc-btn primary" data-i18n="heatmap.query">查询</button>
                     <button id="hmForceBtn" class="pc-btn" data-i18n-attr="title|heatmap.forceRefresh" data-i18n="heatmap.forceRefresh">🔄 强制刷新</button>
                     <span class="pc-freshness" id="hmFreshness" style="display:none;"></span>
                 </div>
             </div>
-            <div class="pc-tags" id="hmTags"></div>
             <div id="hmStats" class="hm-stats" style="display:none;"></div>
             <div id="hmLegend" class="hm-legend" style="display:none;"></div>
         </div>
@@ -2840,7 +2991,7 @@
         </div>
         <div id="hmEmpty" class="pc-empty" style="display:none;">
             <div style="font-size: 32px; margin-bottom: 8px;">📊</div>
-            <div data-i18n="heatmap.emptyPrompt">添加代码并点击「查询」查看热力图</div>
+            <div data-i18n="heatmap.emptyPrompt">点击「查询」查看市场热力图</div>
             <div class="pc-empty-hint" data-i18n="heatmap.emptyHint">块大小反映成交额，颜色深浅反映涨跌幅</div>
         </div>
         </div><!-- /tab-heatmap -->
@@ -2989,6 +3140,36 @@
                         </div>
                     </div>
                     <div class="pd-analysis-grid" id="pdFundamentalsGrid"></div>
+                    <div class="pd-fund-history" id="pdFundamentalsHistory" hidden>
+                        <div class="pd-fund-history-head">
+                            <div>
+                                <div class="pd-fund-history-title" data-i18n="detail.fundamentalsHistoryTitle">历史估值与盈利能力</div>
+                                <div class="pd-fund-history-description" data-i18n="detail.fundamentalsHistoryDescription">PE、PB 为季度估值，ROE 为年度数据；用于观察相对历史位置。</div>
+                            </div>
+                            <div class="pd-fund-history-controls">
+                                <div class="pd-fund-history-tabs" id="pdFundamentalsHistoryTabs"
+                                     role="tablist" data-i18n-attr="aria-label|detail.fundamentalsHistoryAria"
+                                     aria-label="历史估值与 ROE 图表"></div>
+                                <div class="pd-fund-history-ranges" id="pdFundamentalsRangeTabs"
+                                     role="group" data-i18n-attr="aria-label|detail.fundamentalsHistoryAria"
+                                     aria-label="历史估值与 ROE 图表">
+                                    <button class="pd-fund-history-tab is-active" type="button"
+                                            data-years="5" aria-pressed="true"
+                                            data-i18n="detail.fundamentalsHistory5y">近 5 年</button>
+                                    <button class="pd-fund-history-tab" type="button"
+                                            data-years="10" aria-pressed="false"
+                                            data-i18n="detail.fundamentalsHistory10y">近 10 年</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pd-fund-history-meta" id="pdFundamentalsHistoryMeta"
+                             aria-live="polite"></div>
+                        <div class="pd-fund-history-chart" id="pdFundamentalsHistoryChart"
+                             role="group" data-i18n-attr="aria-label|detail.fundamentalsHistoryAria"
+                             aria-label="历史估值与 ROE 图表"></div>
+                        <div class="pd-fund-history-status" id="pdFundamentalsHistoryStatus"
+                             aria-live="polite"></div>
+                    </div>
                     <p class="pd-analysis-footnote" id="pdFundamentalsNote"></p>
                 </section>
                 </div>

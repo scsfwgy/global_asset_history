@@ -8,18 +8,16 @@
  */
 
 // ─── Independent state ───
-var _hmSymbols = [];
 var _hmLastData = null;
 var _hmLastFetchTime = null;
-var _hmLastSymbolKeys = "";
 var _hmInitialFetchDone = false;
 var _hmSizeBy = "turnover";
 var _hmForceRefresh = false;
 var _marketPulseData = null;
-const HM_STORAGE_KEY = "gah_heatmap_state";
+const HM_FILTER_STORAGE_KEY = "gah_heatmap_filters";
 
-// Common Chinese display names for the built-in US heatmap watchlist.
-// Unknown/user-entered symbols fall back to the official English quote name.
+// Common display names for the built-in US, crypto, and A-share market pools.
+// Unknown symbols fall back to the official English quote name.
 var HM_ZH_NAMES = {
   SPY: "标普500ETF", QQQ: "纳指100ETF", IWM: "罗素2000ETF", DIA: "道指ETF",
   TLT: "长期美债ETF", HYG: "高收益债ETF", LQD: "投资级债ETF", EEM: "新兴市场ETF",
@@ -39,7 +37,30 @@ var HM_ZH_NAMES = {
   PEP: "百事", COST: "好市多", NKE: "耐克", MCD: "麦当劳", SBUX: "星巴克",
   LOW: "劳氏", TGT: "塔吉特", XOM: "埃克森美孚", CVX: "雪佛龙", CAT: "卡特彼勒",
   BA: "波音", GE: "通用电气", RTX: "RTX", LMT: "洛克希德马丁", DIS: "迪士尼",
-  VZ: "Verizon", T: "AT&T", CMCSA: "康卡斯特", NEE: "新纪元能源", SPGI: "标普全球"
+  VZ: "Verizon", T: "AT&T", CMCSA: "康卡斯特", NEE: "新纪元能源", SPGI: "标普全球",
+  BTC: "比特币", ETH: "以太坊", BNB: "币安币", SOL: "Solana", XRP: "瑞波币",
+  DOGE: "狗狗币", ADA: "艾达币", TRX: "波场", AVAX: "Avalanche", LINK: "Chainlink",
+  DOT: "波卡", BCH: "比特币现金", LTC: "莱特币", TON: "Toncoin", NEAR: "NEAR",
+  UNI: "Uniswap", AAVE: "Aave", ETC: "以太坊经典", FIL: "Filecoin", ATOM: "Cosmos",
+  SUI: "Sui", HBAR: "Hedera", XLM: "恒星币", SHIB: "柴犬币", ICP: "Internet Computer",
+  APT: "Aptos", ARB: "Arbitrum", OP: "Optimism",
+  "600519": "贵州茅台", "601318": "中国平安", "600036": "招商银行",
+  "000858": "五粮液", "000333": "美的集团", "601166": "兴业银行",
+  "600030": "中信证券", "601398": "工商银行", "601288": "农业银行",
+  "601939": "建设银行", "601988": "中国银行", "601857": "中国石油",
+  "600028": "中国石化", "601088": "中国神华", "600900": "长江电力",
+  "601899": "紫金矿业", "601012": "隆基绿能", "300750": "宁德时代",
+  "002594": "比亚迪", "000651": "格力电器", "002475": "立讯精密",
+  "300059": "东方财富", "600276": "恒瑞医药", "603259": "药明康德",
+  "600309": "万华化学", "000568": "泸州老窖", "002714": "牧原股份",
+  "600887": "伊利股份", "601888": "中国中免", "601668": "中国建筑",
+  "601728": "中国电信", "600941": "中国移动", "601138": "工业富联",
+  "688981": "中芯国际", "688041": "海光信息", "000725": "京东方A",
+  "002415": "海康威视", "000063": "中兴通讯", "600050": "中国联通",
+  "601225": "陕西煤业", "600690": "海尔智家", "600438": "通威股份",
+  "002352": "顺丰控股", "300760": "迈瑞医疗", "601919": "中远海控",
+  "600031": "三一重工", "601600": "中国铝业", "600019": "宝钢股份",
+  "601006": "大秦铁路", "600660": "福耀玻璃"
 };
 
 var HM_EN_NAMES = {
@@ -63,22 +84,40 @@ var HM_EN_NAMES = {
   MCD: "McDonald's", SBUX: "Starbucks", LOW: "Lowe's", TGT: "Target", XOM: "Exxon Mobil",
   CVX: "Chevron", CAT: "Caterpillar", BA: "Boeing", GE: "GE Aerospace", RTX: "RTX",
   LMT: "Lockheed Martin", DIS: "Disney", VZ: "Verizon", T: "AT&T", CMCSA: "Comcast",
-  NEE: "NextEra Energy", SPGI: "S&P Global"
+  NEE: "NextEra Energy", SPGI: "S&P Global",
+  BTC: "Bitcoin", ETH: "Ethereum", BNB: "BNB", SOL: "Solana", XRP: "XRP",
+  DOGE: "Dogecoin", ADA: "Cardano", TRX: "TRON", AVAX: "Avalanche", LINK: "Chainlink",
+  DOT: "Polkadot", BCH: "Bitcoin Cash", LTC: "Litecoin", TON: "Toncoin", NEAR: "NEAR",
+  UNI: "Uniswap", AAVE: "Aave", ETC: "Ethereum Classic", FIL: "Filecoin", ATOM: "Cosmos",
+  SUI: "Sui", HBAR: "Hedera", XLM: "Stellar", SHIB: "Shiba Inu", ICP: "Internet Computer",
+  APT: "Aptos", ARB: "Arbitrum", OP: "Optimism",
+  "600519": "Kweichow Moutai", "601318": "Ping An Insurance", "600036": "China Merchants Bank",
+  "000858": "Wuliangye", "000333": "Midea Group", "601166": "Industrial Bank",
+  "600030": "CITIC Securities", "601398": "ICBC", "601288": "Agricultural Bank of China",
+  "601939": "China Construction Bank", "601988": "Bank of China", "601857": "PetroChina",
+  "600028": "Sinopec", "601088": "China Shenhua Energy", "600900": "China Yangtze Power",
+  "601899": "Zijin Mining", "601012": "LONGi Green Energy", "300750": "CATL",
+  "002594": "BYD", "000651": "Gree Electric", "002475": "Luxshare Precision",
+  "300059": "East Money", "600276": "Hengrui Pharmaceuticals", "603259": "WuXi AppTec",
+  "600309": "Wanhua Chemical", "000568": "Luzhou Laojiao", "002714": "Muyuan Foods",
+  "600887": "Yili", "601888": "China Tourism Group Duty Free", "601668": "China State Construction",
+  "601728": "China Telecom", "600941": "China Mobile", "601138": "Foxconn Industrial Internet",
+  "688981": "SMIC", "688041": "Hygon Information", "000725": "BOE Technology",
+  "002415": "Hikvision", "000063": "ZTE", "600050": "China Unicom",
+  "601225": "Shaanxi Coal", "600690": "Haier Smart Home", "600438": "Tongwei",
+  "002352": "SF Holding", "300760": "Mindray", "601919": "COSCO Shipping Holdings",
+  "600031": "Sany Heavy Industry", "601600": "Aluminum Corp. of China", "600019": "Baoshan Iron & Steel",
+  "601006": "Daqin Railway", "600660": "Fuyao Glass"
 };
 
 // ─── DOM refs ───
 const hmFilterToggle = document.getElementById("hmFilterToggle");
 const hmFilterPanel = document.getElementById("hmFilterPanel");
-const hmSymInput = document.getElementById("hmSymbolInput");
-const hmTypeSelect = document.getElementById("hmTypeSelect");
-const hmAddBtn = document.getElementById("hmAddBtn");
-const hmClearBtn = document.getElementById("hmClearBtn");
+const hmMarketType = document.getElementById("hmMarketType");
 const hmPeriod = document.getElementById("hmPeriod");
 const hmSizeBySel = document.getElementById("hmSizeBy");
 const hmRefreshBtn = document.getElementById("hmRefreshBtn");
 const hmForceBtn = document.getElementById("hmForceBtn");
-const hmTopN = document.getElementById("hmTopN");
-const hmTags = document.getElementById("hmTags");
 const hmError = document.getElementById("hmError");
 const hmLoading = document.getElementById("hmLoading");
 const hmTreemapWrap = document.getElementById("hmTreemapWrap");
@@ -90,6 +129,45 @@ const hmStats = document.getElementById("hmStats");
 const marketPulse = document.getElementById("marketPulse");
 const marketPulseGrid = document.getElementById("marketPulseGrid");
 const marketPulseToggle = document.getElementById("marketPulseToggle");
+
+// ─── Filter persistence ───
+
+function hmSyncMarketControls() {
+  var marketCapOption = hmSizeBySel.querySelector('option[value="market_cap"]');
+  var supportsMarketCap = hmMarketType.value === "stock";
+  if (marketCapOption) marketCapOption.disabled = !supportsMarketCap;
+  if (!supportsMarketCap && hmSizeBySel.value === "market_cap") {
+    hmSizeBySel.value = "turnover";
+  }
+  _hmSizeBy = hmSizeBySel.value;
+}
+
+function saveHmFilters() {
+  try {
+    localStorage.setItem(HM_FILTER_STORAGE_KEY, JSON.stringify({
+      market_type: hmMarketType.value,
+      period: hmPeriod.value,
+      size_by: hmSizeBySel.value
+    }));
+  } catch (_) { /* localStorage unavailable — keep the current selections */ }
+}
+
+function restoreHmFilters() {
+  try {
+    var raw = localStorage.getItem(HM_FILTER_STORAGE_KEY);
+    if (!raw) return;
+    var saved = JSON.parse(raw);
+    if (["stock", "crypto", "cn_stock"].indexOf(saved.market_type) !== -1) {
+      hmMarketType.value = saved.market_type;
+    }
+    if (["today", "week", "month", "quarter", "year"].indexOf(saved.period) !== -1) {
+      hmPeriod.value = saved.period;
+    }
+    if (["turnover", "market_cap", "return"].indexOf(saved.size_by) !== -1) {
+      hmSizeBySel.value = saved.size_by;
+    }
+  } catch (_) { /* ignore malformed or unavailable localStorage */ }
+}
 
 // ─── HTML tooltip overlay ───
 var hmTooltipEl = document.createElement("div");
@@ -125,10 +203,6 @@ function hmUpdateFreshness() {
   hmFreshness.textContent = "· " + text;
   hmFreshness.className = "pc-freshness" + (diffMin > 30 ? " stale" : "");
   hmFreshness.style.display = "";
-}
-
-function hmDisplayName(s) {
-  return s.name ? s.symbol + "(" + s.name + ")" : s.symbol;
 }
 
 function hmLocalizedName(d) {
@@ -227,65 +301,6 @@ async function fetchMarketPulse() {
   } catch (error) {
     marketPulseGrid.innerHTML = '<div class="market-pulse-card"><div class="market-pulse-error">' + __("heatmap.pulseUnavailable") + '</div></div>';
   }
-}
-
-// ─── Tags ───
-
-function renderHmTags() {
-  if (!hmTags) return;
-  if (_hmSymbols.length === 0) {
-    hmTags.innerHTML = '<span style="color:var(--apple-text-tertiary);font-size:12px;">' + __("yearly.noSymbols") + '</span>';
-    return;
-  }
-  hmTags.innerHTML = _hmSymbols
-    .map(function (s, i) {
-      var typeLabel = s.type === "crypto" ? __("yearly.labelCrypto") : s.type === "cn_stock" ? __("yearly.labelA") : __("yearly.labelStock");
-      return '<span class="pc-tag">' +
-        escapeHtml(hmDisplayName(s)) +
-        '<span class="pc-tag-type">' + typeLabel + '</span>' +
-        '<span class="pc-tag-remove" data-index="' + i + '">✕</span>' +
-        '</span>';
-    })
-    .join("");
-
-  hmTags.querySelectorAll(".pc-tag-remove").forEach(function (el) {
-    el.addEventListener("click", function () {
-      var idx = parseInt(el.dataset.index, 10);
-      _hmSymbols.splice(idx, 1);
-      renderHmTags();
-      saveHmState();
-    });
-  });
-}
-
-function hmAddSymbol(symbol, type) {
-  var sym = symbol.trim().toUpperCase();
-  if (!sym) return false;
-  if (_hmSymbols.some(function (s) { return s.symbol === sym && s.type === type; })) return false;
-  _hmSymbols.unshift({ symbol: sym, type: type }); // insert at first position
-  renderHmTags();
-  hmSymInput.value = "";
-  hmSymInput.focus();
-  saveHmState();
-  fetchHeatmap();
-  return true;
-}
-
-// ─── State persistence ───
-//
-// Intentionally NOT persisted. Heatmap filters are session-only: every fresh
-// page load starts from the default filters (今日 / 成交额 / 前60名 / 无自选).
-// In-memory state still survives tab switching within one page session.
-
-function saveHmState() {
-  // No-op stub: kept so existing call sites stay valid without persisting.
-}
-
-function restoreHmState() {
-  // Never restore — always default. Also remove any legacy cached state so a
-  // shared browser doesn't carry a previous user's filters.
-  try { localStorage.removeItem(HM_STORAGE_KEY); } catch (_) { /* ignore */ }
-  return false;
 }
 
 // ─── Responsive dimensions ───
@@ -815,14 +830,6 @@ function hasMarketCapData() {
 }
 
 async function fetchHeatmap() {
-  var autoN = parseInt(hmTopN.value, 10) || 20;
-  if (_hmSymbols.length === 0 && autoN <= 0) {
-    hmShowError(__("heatmap.errorNoSymbols"));
-    hmEmpty.style.display = "block";
-    hmTreemapWrap.style.display = "none";
-    return;
-  }
-
   hmShowError(null);
   hmSetLoading(true);
 
@@ -832,9 +839,9 @@ async function fetchHeatmap() {
     // Market cap can trigger expensive per-symbol fallbacks when the Yahoo
     // batch endpoint is unavailable.  Fetch it only when it drives the layout.
     var body = {
-      symbols: _hmSymbols,
+      symbols: [],
+      market_type: hmMarketType.value,
       period: period,
-      auto_top_n: autoN,
       include_market_cap: _hmSizeBy === "market_cap"
     };
     if (_hmForceRefresh) { body.force = true; _hmForceRefresh = false; }
@@ -852,9 +859,7 @@ async function fetchHeatmap() {
     var result = await resp.json();
     _hmLastData = result;
     _hmLastFetchTime = Date.now();
-    _hmLastSymbolKeys = _hmSymbols.map(function (s) { return s.symbol + "|" + s.type; }).sort().join(",");
     hmUpdateFreshness();
-    saveHmState();
     renderTreemap(result, true);
   } catch (e) {
     hmShowError(__("heatmap.errorRequest") + " " + e.message);
@@ -886,7 +891,7 @@ function isHeatmapRoute() {
 }
 
 async function initHeatmap() {
-  if (!hmRefreshBtn || !hmPeriod) return;
+  if (!hmRefreshBtn || !hmMarketType || !hmPeriod) return;
 
   if (marketPulseToggle && marketPulseGrid) {
     marketPulseToggle.addEventListener("click", function () {
@@ -904,39 +909,31 @@ async function initHeatmap() {
     if (arrow) arrow.textContent = isOpen ? "▸" : "▾";
   });
 
-  restoreHmState();
-  renderHmTags();
+  restoreHmFilters();
   if (!hmPeriod.value) hmPeriod.value = "today";
+  hmSyncMarketControls();
 
-  hmAddBtn.addEventListener("click", function () { hmAddSymbol(hmSymInput.value, hmTypeSelect.value); });
-  hmSymInput.addEventListener("keydown", function (e) {
-    if (e.key === "Enter") hmAddSymbol(hmSymInput.value, hmTypeSelect.value);
-  });
-
-  hmClearBtn.addEventListener("click", function () {
-    _hmSymbols = [];
-    renderHmTags();
-    _hmLastData = null;
-    _hmLastFetchTime = null;
-    _hmLastSymbolKeys = "";
-    _hmInitialFetchDone = true;
-    saveHmState();
-    hmUpdateFreshness();
-    hmEmpty.style.display = "block";
-    hmTreemapWrap.style.display = "none";
+  hmRefreshBtn.addEventListener("click", function () {
+    _hmForceRefresh = false;
+    saveHmFilters();
     fetchHeatmap();
   });
-
-  hmRefreshBtn.addEventListener("click", function () { _hmForceRefresh = false; fetchHeatmap(); });
   hmForceBtn.addEventListener("click", function () { _hmForceRefresh = true; fetchHeatmap(); });
 
-  hmPeriod.addEventListener("change", function () { saveHmState(); fetchHeatmap(); });
-  hmTopN.addEventListener("change", function () { saveHmState(); fetchHeatmap(); });
+  hmMarketType.addEventListener("change", function () {
+    hmSyncMarketControls();
+    saveHmFilters();
+    fetchHeatmap();
+  });
+  hmPeriod.addEventListener("change", function () {
+    saveHmFilters();
+    fetchHeatmap();
+  });
 
   // Size-by: re-render locally when possible, fetch only for market_cap w/o data
   hmSizeBySel.addEventListener("change", function () {
     _hmSizeBy = hmSizeBySel.value;
-    saveHmState();
+    saveHmFilters();
     if (_hmSizeBy === "market_cap" && !hasMarketCapData()) {
       fetchHeatmap();
     } else {
@@ -947,12 +944,8 @@ async function initHeatmap() {
   // Re-render when switching to heatmap tab (dimensions may have changed)
   document.querySelectorAll('.tab-btn[data-tab="heatmap"]').forEach(function (btn) {
     btn.addEventListener("click", function () {
-      renderHmTags();
-      var currentKeys = _hmSymbols.map(function (s) { return s.symbol + "|" + s.type; }).sort().join(",");
       if (!_hmInitialFetchDone) {
         startHeatmapData();
-      } else if (_hmSymbols.length > 0 && currentKeys !== _hmLastSymbolKeys) {
-        fetchHeatmap();
       } else {
         // Just re-layout at current dimensions
         setTimeout(rerender, 0);

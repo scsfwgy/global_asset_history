@@ -380,6 +380,95 @@ class TestHtmlMeta:
         assert "compound annual growth rate" in en_locale["detail"]["returnBasisStock"]
         assert en_locale["detail"]["collapseOverview"] == "Collapse overview"
 
+    def test_stock_detail_has_fundamentals_history_shell_and_locales(self, client):
+        html = client.get("/zh/detail").get_data(as_text=True)
+        required_ids = [
+            'id="pdFundamentalsHistory"',
+            'id="pdFundamentalsHistoryTabs"',
+            'id="pdFundamentalsRangeTabs"',
+            'id="pdFundamentalsHistoryMeta"',
+            'id="pdFundamentalsHistoryChart"',
+            'id="pdFundamentalsHistoryStatus"',
+        ]
+        assert all(element_id in html for element_id in required_ids)
+        assert html.index('id="pdFundamentalsGrid"') < html.index(
+            'id="pdFundamentalsHistory"'
+        )
+        assert html.index('id="pdFundamentalsHistory"') < html.index(
+            'id="pdFundamentalsNote"'
+        )
+        assert 'data-years="5"' in html
+        assert 'data-years="10"' in html
+        assert 'data-i18n="detail.fundamentalsHistoryTitle"' in html
+        assert (
+            'data-i18n-attr="aria-label|detail.fundamentalsHistoryAria"'
+            in html
+        )
+        assert INDEX_LASTMOD == "2026-07-30"
+
+        zh_locale = client.get("/locales/zh-CN.json").get_json()["detail"]
+        en_locale = client.get("/locales/en.json").get_json()["detail"]
+        expected_keys = {
+            "returnOnEquity",
+            "roeLatestAnnual",
+            "fundamentalsHistoryTitle",
+            "fundamentalsHistoryDescription",
+            "fundamentalsHistory5y",
+            "fundamentalsHistory10y",
+            "historicalMedian",
+            "historicalPercentile",
+            "fundamentalsHistoryPartial",
+            "fundamentalsHistoryEmpty",
+            "fundamentalsHistoryLoading",
+            "fundamentalsHistoryAria",
+            "fundamentalsHistorySource",
+            "currentValue",
+            "reportDate",
+        }
+        assert expected_keys <= zh_locale.keys()
+        assert expected_keys <= en_locale.keys()
+        assert zh_locale["returnOnEquity"] == "净资产收益率（ROE）"
+        assert en_locale["returnOnEquity"] == "Return on Equity (ROE)"
+
+    def test_stock_detail_loads_and_renders_fundamentals_history(self, client):
+        api_script = client.get("/js/api.js").get_data(as_text=True)
+        detail_script = client.get("/js/price-detail.js").get_data(as_text=True)
+
+        assert (
+            'const FUNDAMENTALS_HISTORY_ENDPOINT = '
+            '`${API_BASE}/api/price-change/fundamentals-history`;'
+            in api_script
+        )
+        assert "_fundamentalsHistoryCache" in detail_script
+        assert "_fundamentalsHistoryGeneration" in detail_script
+        assert "async function loadFundamentalsHistory" in detail_script
+        assert "fetch(FUNDAMENTALS_HISTORY_ENDPOINT" in detail_script
+        assert "generation !== _fundamentalsHistoryGeneration" in detail_script
+        assert 'quoteType === "EQUITY"' in detail_script
+        assert "expiresAt" in detail_script
+        assert "Date.now()" in detail_script
+        assert "AbortController" in detail_script
+        assert "scheduleFundamentalsHistoryResize" in detail_script
+        assert '__("detail.reportDate"' in detail_script
+        assert "data.return_on_equity" in detail_script
+        assert "data.roe_report_date" in detail_script
+        assert '"detail.roeLatestAnnual"' in detail_script
+        assert '"detail.historicalMedian"' in detail_script
+        assert '"detail.fundamentalsHistorySource"' in detail_script
+        assert '"detail.currentValue"' in detail_script
+        assert "function renderFundamentalsHistory" in detail_script
+        assert "pd-fund-history-line" in detail_script
+        assert "pd-fund-history-bar" in detail_script
+        assert "pd-fund-history-median" in detail_script
+        assert "chart.clientWidth" in detail_script
+        assert "chart.clientHeight" in detail_script
+        assert 'button.dataset.years' in detail_script
+        assert 'metric === "roe"' in detail_script
+
+        chart_html = client.get("/zh/detail").get_data(as_text=True)
+        chart_start = chart_html.index('id="pdFundamentalsHistoryChart"')
+        assert 'role="group"' in chart_html[chart_start:chart_start + 260]
+
     @pytest.mark.parametrize(
         "path,needle",
         [

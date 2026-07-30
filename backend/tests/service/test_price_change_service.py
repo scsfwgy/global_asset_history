@@ -1858,6 +1858,32 @@ class TestFetchHeatmapToday:
         mock_build.assert_called_once()
         track_coverage(MOD, 1)
 
+    @pytest.mark.parametrize(
+        ("market_type", "candidate"),
+        [("stock", "AAPL"), ("crypto", "BTC"), ("cn_stock", "600519")],
+    )
+    @patch("service.price_change.price_change_service._build_heatmap_today")
+    def test_selected_market_uses_complete_pool(
+        self, mock_build, market_type, candidate
+    ):
+        mock_build.return_value = {
+            "period": "today",
+            "period_label": "1d",
+            "data": [],
+        }
+
+        result = svc.fetch_heatmap_data(
+            symbols=[],
+            period="today",
+            auto_top_n=0,
+            market_type=market_type,
+        )
+
+        entries = mock_build.call_args.args[0]
+        assert (candidate, market_type) in entries
+        assert mock_build.call_args.args[3] == len(entries)
+        assert result["market_type"] == market_type
+
     @patch("service.price_change.price_change_service._build_heatmap_today")
     def test_today_fast_path_fallback_to_ohlcv(self, mock_build):
         """When fast path returns None, fall through to per-symbol OHLCV."""

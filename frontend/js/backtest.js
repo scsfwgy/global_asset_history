@@ -1,5 +1,51 @@
 /** Backtest controls, chart, and result table. */
 
+const BACKTEST_SYMBOL_STORAGE_KEY = "gah_backtest_symbol";
+
+function saveBacktestSymbol(symbol, type) {
+  try {
+    localStorage.setItem(BACKTEST_SYMBOL_STORAGE_KEY, JSON.stringify({
+      symbol: symbol,
+      type: type,
+    }));
+  } catch (_) { /* localStorage unavailable — keep the current form value */ }
+}
+
+function restoreBacktestSymbol() {
+  try {
+    var raw = localStorage.getItem(BACKTEST_SYMBOL_STORAGE_KEY);
+    if (!raw) return false;
+    var state = JSON.parse(raw);
+    var symbol = String(state && state.symbol || "").trim().toUpperCase();
+    if (!symbol) return false;
+    if (btSymbolInput) btSymbolInput.value = symbol;
+    if (btTypeSelect && ["stock", "crypto", "cn_stock"].indexOf(state.type) !== -1) {
+      btTypeSelect.value = state.type;
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function initBacktestSymbolPersistence() {
+  restoreBacktestSymbol();
+
+  function saveCurrentPreference() {
+    var symbol = (btSymbolInput?.value || "").trim().toUpperCase();
+    if (symbol) saveBacktestSymbol(symbol, btTypeSelect?.value || "stock");
+  }
+
+  if (btSymbolInput) btSymbolInput.addEventListener("input", saveCurrentPreference);
+  if (btTypeSelect) btTypeSelect.addEventListener("change", saveCurrentPreference);
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initBacktestSymbolPersistence);
+} else {
+  initBacktestSymbolPersistence();
+}
+
 function getChartColors() {
   const s = getComputedStyle(document.documentElement);
   return {
@@ -181,6 +227,7 @@ async function runBacktest() {
     showError(__("backtest.errorNoSymbol"));
     return;
   }
+  saveBacktestSymbol(symbol, assetType);
 
   const payload = {
     symbol,

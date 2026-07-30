@@ -2234,11 +2234,35 @@ _HEATMAP_US_WATCHLIST = [
     "DIS", "VZ", "T", "CMCSA", "NEE", "SPGI",
 ]
 
+# Liquid large-cap A-share pool displayed by the A-share heatmap.
+_HEATMAP_CN_WATCHLIST = [
+    "600519", "601318", "600036", "000858", "000333", "601166", "600030",
+    "601398", "601288", "601939", "601988", "601857", "600028", "601088",
+    "600900", "601899", "601012", "300750", "002594", "000651", "002475",
+    "300059", "600276", "603259", "600309", "000568", "002714", "600887",
+    "601888", "601668", "601728", "600941", "601138", "688981", "688041",
+    "000725", "002415", "000063", "600050", "601225", "600690", "600438",
+    "002352", "300760", "601919", "600031", "601600", "600019", "601006",
+    "600660",
+]
 
-def _fetch_heatmap_watchlist() -> List[str]:
-    """Return the watchlist symbols. Kept as a function for future extensibility
-    (e.g. adding a secondary live source when available)."""
-    return list(_HEATMAP_US_WATCHLIST)
+# High-liquidity non-stablecoin pool supported by the existing crypto fetchers.
+_HEATMAP_CRYPTO_WATCHLIST = [
+    "BTC", "ETH", "BNB", "SOL", "XRP", "DOGE", "ADA", "TRX", "AVAX",
+    "LINK", "DOT", "BCH", "LTC", "TON", "NEAR", "UNI", "AAVE", "ETC",
+    "FIL", "ATOM", "SUI", "HBAR", "XLM", "SHIB", "ICP", "APT", "ARB", "OP",
+]
+
+_HEATMAP_WATCHLISTS = {
+    "stock": _HEATMAP_US_WATCHLIST,
+    "crypto": _HEATMAP_CRYPTO_WATCHLIST,
+    "cn_stock": _HEATMAP_CN_WATCHLIST,
+}
+
+
+def _fetch_heatmap_watchlist(market_type: str = "stock") -> List[str]:
+    """Return candidates for the requested heatmap market."""
+    return list(_HEATMAP_WATCHLISTS.get(market_type, _HEATMAP_US_WATCHLIST))
 
 _PERIOD_LABELS = {
     "today": "1d",
@@ -2878,16 +2902,18 @@ def _get_market_caps(symbols: List[str]) -> Dict[str, float]:
 
 def fetch_heatmap_data(
     symbols: List[Dict[str, str]], period: str, auto_top_n: int = 0,
-    include_market_cap: bool = False,
+    include_market_cap: bool = False, market_type: Optional[str] = None,
 ) -> dict:
     """Compute per-symbol return + turnover for a treemap heatmap.
 
     Args:
         symbols: list of {"symbol": str, "type": str}
         period: one of "today", "week", "month", "quarter", "year"
-        auto_top_n: if > 0, auto-include _TOP_US_STOCKS, fetch all, return
-                    top N by turnover from the auto-list, plus all user symbols.
+        auto_top_n: if > 0, auto-include the selected market's candidate pool,
+                    fetch all, and return top N by turnover plus user symbols.
         include_market_cap: if True, attach market_cap (best-effort) to each item.
+        market_type: when set, include the complete configured pool for stock,
+                     crypto, or cn_stock.
 
     Returns:
         {"period": str, "period_label": str,
@@ -2917,14 +2943,20 @@ def fetch_heatmap_data(
         unique_entries.append((sym, atype))
 
     auto_syms = set()
-    if auto_top_n > 0:
-        top_symbols = _fetch_heatmap_watchlist()
+    if market_type or auto_top_n > 0:
+        auto_asset_type = market_type or "stock"
+        top_symbols = _fetch_heatmap_watchlist(auto_asset_type)
         for sym in top_symbols:
-            key = (sym, "stock")
+            key = (sym, auto_asset_type)
             if key not in seen:
                 seen.add(key)
                 auto_syms.add(sym)
-                unique_entries.append((sym, "stock"))
+                unique_entries.append((sym, auto_asset_type))
+
+    # Selecting a market means showing its entire configured pool. The
+    # historical auto_top_n limit is only applied to legacy requests that do
+    # not provide market_type.
+    result_limit = len(auto_syms) if market_type else auto_top_n
 
     def _compute_one(sym: str, atype: str) -> dict:
         series = _fetch_daily_series_cached(sym, atype)
@@ -2985,9 +3017,10 @@ def fetch_heatmap_data(
     if period == "today":
         result = _build_heatmap_today(
             unique_entries, user_symbols_set, auto_syms,
-            auto_top_n, include_market_cap, _compute_one,
+            result_limit, include_market_cap, _compute_one,
         )
         if result is not None:
+            result["market_type"] = market_type
             logger.info("Heatmap today: batch v7/quote used (%d symbols, 1 request)",
                         len(result["data"]))
             return result
@@ -3011,12 +3044,13 @@ def fetch_heatmap_data(
     auto_results = [r for r in results if r["symbol"] in auto_syms]
     user_results = [r for r in results if r["symbol"] in user_symbols_set]
 
-    # Sort auto results by turnover descending, take top N
+    # Sort the market pool by turnover. Selected markets keep the full pool;
+    # legacy auto_top_n callers still receive only their requested limit.
     auto_results.sort(
         key=lambda r: r["turnover"] if r["turnover"] is not None else 0,
         reverse=True,
     )
-    top_auto = auto_results[:auto_top_n] if auto_top_n > 0 else []
+    top_auto = auto_results[:result_limit] if result_limit > 0 else []
 
     # Merge: top auto first, then user symbols (preserving user order)
     ordered = list(top_auto)
@@ -3053,6 +3087,7 @@ def fetch_heatmap_data(
                 r["market_cap"] = caps.get(r["symbol"]) if r["type"] == "stock" else None
 
     return {
+        "market_type": market_type,
         "period": period,
         "period_label": _period_label(period),
         "data": ordered,
