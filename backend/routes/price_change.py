@@ -10,6 +10,7 @@ import time
 
 from flask import Blueprint, jsonify, request
 from service.price_change import cache_store
+from service.price_change.common import normalize_asset_symbol
 from service.price_change.fundamentals_history import (
     fetch_fundamentals_history,
 )
@@ -136,8 +137,8 @@ def get_monthly_returns():
         {"symbol": "AAPL", "year": 2024, "months": [{"month": 1, "return": 5.2}, ...]}
     """
     body = request.get_json(silent=True) or {}
-    symbol = body.get("symbol", "").strip().upper()
     asset_type = body.get("type", "stock").strip().lower()
+    symbol = normalize_asset_symbol(body.get("symbol", ""), asset_type)
     year = body.get("year")
 
     if not symbol or not year:
@@ -190,8 +191,8 @@ def get_monthly_returns_batch():
 def get_daily_returns():
     """Return daily returns for a symbol in a given year and month."""
     body = request.get_json(silent=True) or {}
-    symbol = body.get("symbol", "").strip().upper()
     asset_type = body.get("type", "stock").strip().lower()
+    symbol = normalize_asset_symbol(body.get("symbol", ""), asset_type)
     year = body.get("year")
     month = body.get("month")
 
@@ -219,8 +220,8 @@ def get_daily_returns():
 def get_return_detail():
     """Return single-symbol yearly/monthly return detail, or daily grid for a specific year."""
     body = request.get_json(silent=True) or {}
-    symbol = body.get("symbol", "").strip().upper()
     asset_type = body.get("type", "stock").strip().lower()
+    symbol = normalize_asset_symbol(body.get("symbol", ""), asset_type)
     year = body.get("year")
     include_stock_history = body.get("include_stock_history", True)
 
@@ -294,8 +295,8 @@ def stock_compare():
 def history_download():
     """Return date-bounded price history as a JSON collection."""
     body = request.get_json(silent=True) or {}
-    symbol = str(body.get("symbol", "")).strip().upper()
     asset_type = str(body.get("type", "crypto")).strip().lower()
+    symbol = normalize_asset_symbol(body.get("symbol", ""), asset_type)
     period = str(body.get("period", "daily")).strip().lower()
     start_date = str(body.get("start_date", "")).strip()
     end_date = str(body.get("end_date", "")).strip()

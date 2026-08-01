@@ -90,9 +90,12 @@
     return formatNumber(value, 2) + "×";
   }
 
-  function formatDividend(value) {
+  function formatDividend(value, currency) {
     if (value == null || !Number.isFinite(Number(value))) return "—";
-    return "$" + new Intl.NumberFormat(document.documentElement.lang || undefined, {
+    return new Intl.NumberFormat(document.documentElement.lang || undefined, {
+      style: "currency",
+      currency: currency || "USD",
+      currencyDisplay: "symbol",
       minimumFractionDigits: 0,
       maximumFractionDigits: 6,
     }).format(Number(value));
@@ -135,6 +138,12 @@
   function buildAssetResourceLinks(symbol, assetType, quoteType) {
     var cleanSymbol = String(symbol || "").trim().toUpperCase();
     if (!cleanSymbol) return [];
+
+    if (assetType === "hk_stock") {
+      var hkYahooBase = "https://finance.yahoo.com/quote/"
+        + encodeURIComponent(cleanSymbol) + "/";
+      return [{ labelKey: "detail.companyProfile", url: hkYahooBase + "profile/" }];
+    }
 
     if (assetType === "stock") {
       var yahooBase = "https://finance.yahoo.com/quote/"
@@ -456,6 +465,7 @@
     var fundamentals = result.fundamentals || {};
     var typeLabels = {
       stock: __("yearly.assetTypeStock"),
+      hk_stock: __("yearly.assetTypeHkStock"),
       crypto: __("yearly.assetTypeCrypto"),
       cn_stock: __("yearly.assetTypeCnStock"),
     };
@@ -499,7 +509,9 @@
 
     if (basisNote) {
       basisNote.textContent = __(
-        result.type === "stock" ? "detail.returnBasisStock" : "detail.returnBasisAdjusted"
+        ["stock", "hk_stock"].indexOf(result.type) !== -1
+          ? "detail.returnBasisStock"
+          : "detail.returnBasisAdjusted"
       );
     }
 
@@ -1389,7 +1401,7 @@
     var body = $("pdStockHistoryBody");
     var tables = result && result.stock_tables;
     if (!section || !body) return;
-    if (result.type !== "stock") {
+    if (["stock", "hk_stock"].indexOf(result.type) === -1) {
       hideStockHistory(true);
       return;
     }
@@ -1414,6 +1426,7 @@
 
     var range = getColorRange();
     var taxRate = getDividendTaxRate();
+    var dividendCurrency = String(tables.dividend_unit || "USD/share").split("/")[0] || "USD";
     var rows = (tables.rows || []).map(function (row) {
       var totalDividend = Number(row.total_dividend_per_share) || 0;
       var afterTaxDividend = totalDividend * (1 - taxRate / 100);
@@ -1431,7 +1444,7 @@
       var runupColor = cellColor(row.max_runup, range.min, range.max);
       var payments = (row.dividend_payments || []).map(function (payment) {
         return '<div class="pd-dividend-payment">'
-          + escapeHtml(payment.date) + " · " + escapeHtml(formatDividend(payment.amount))
+          + escapeHtml(payment.date) + " · " + escapeHtml(formatDividend(payment.amount, dividendCurrency))
           + '</div>';
       }).join("");
       return '<tr><td>' + escapeHtml(row.year) + '</td><td style="background:'
@@ -1447,8 +1460,8 @@
         + ';font-weight:600;">' + escapeHtml(formatPct(row.max_runup))
         + '</td><td>' + escapeHtml(row.payment_count || 0)
         + '</td><td>' + (payments || "—")
-        + '</td><td style="font-weight:600;">' + escapeHtml(formatDividend(totalDividend))
-        + '</td><td style="font-weight:600;">' + escapeHtml(formatDividend(afterTaxDividend))
+        + '</td><td style="font-weight:600;">' + escapeHtml(formatDividend(totalDividend, dividendCurrency))
+        + '</td><td style="font-weight:600;">' + escapeHtml(formatDividend(afterTaxDividend, dividendCurrency))
         + '</td></tr>';
     });
     body.innerHTML = rows.length
@@ -1817,8 +1830,9 @@
     var symbolInput = $("pdSymbolInput");
     var typeSelect = $("pdTypeSelect");
     var yearSelect = $("pdYearSelect");
-    var symbol = (symbolInput?.value || "").trim().toUpperCase();
     var type = typeSelect?.value || "stock";
+    var symbol = normalizeAssetSymbol(symbolInput?.value || "", type);
+    if (symbolInput) symbolInput.value = symbol;
     var year = _pendingYear || yearSelect?.value || "";
     var historyGeneration = ++_fundamentalsHistoryGeneration;
     if (_detailAbortController) _detailAbortController.abort();
@@ -1860,7 +1874,7 @@
     try {
       var body = { symbol: symbol, type: type };
       if (year) body.year = parseInt(year, 10);
-      if (year && type === "stock") {
+      if (year && ["stock", "hk_stock"].indexOf(type) !== -1) {
         body.include_stock_history = !canReuseStockHistory;
       }
       var resp = await fetch(DETAIL_ENDPOINT, {

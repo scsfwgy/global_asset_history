@@ -4,6 +4,7 @@ from datetime import date, datetime, timezone
 from unittest.mock import Mock, patch
 
 from service.price_change import fetchers
+from service.price_change.common import normalize_asset_symbol
 
 
 def _response(body):
@@ -11,6 +12,25 @@ def _response(body):
     response.raise_for_status.return_value = None
     response.json.return_value = body
     return response
+
+
+def test_hk_stock_symbol_normalization_accepts_common_code_variants():
+    assert normalize_asset_symbol("700", "hk_stock") == "0700.HK"
+    assert normalize_asset_symbol("00700", "hk_stock") == "0700.HK"
+    assert normalize_asset_symbol("0700.hk", "hk_stock") == "0700.HK"
+    assert normalize_asset_symbol("09988", "hk_stock") == "9988.HK"
+    assert normalize_asset_symbol("^HSI", "hk_stock") == "^HSI"
+
+
+@patch.object(fetchers, "_fetch_daily_series_stock")
+def test_hk_stock_daily_fetcher_reuses_yahoo_with_canonical_symbol(mock_fetch):
+    expected = Mock()
+    mock_fetch.return_value = expected
+
+    result = fetchers.DAILY_SERIES_FETCHERS["hk_stock"]("00700")
+
+    assert result is expected
+    mock_fetch.assert_called_once_with("0700.HK")
 
 
 @patch.object(fetchers._session, "get")

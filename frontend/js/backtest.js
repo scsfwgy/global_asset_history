@@ -1,6 +1,20 @@
 /** Backtest controls, chart, and result table. */
 
 const BACKTEST_SYMBOL_STORAGE_KEY = "gah_backtest_symbol";
+let _btCurrency = "USD";
+
+function backtestCurrencyForType(type) {
+  return type === "hk_stock" ? "HKD"
+    : type === "cn_stock" ? "CNY"
+      : type === "crypto" ? "USDT"
+        : "USD";
+}
+
+function syncBacktestCurrency(type, currency) {
+  _btCurrency = currency || backtestCurrencyForType(type || btTypeSelect?.value || "stock");
+  var label = document.getElementById("pcBtCurrency");
+  if (label) label.textContent = _btCurrency;
+}
 
 function saveBacktestSymbol(symbol, type) {
   try {
@@ -16,12 +30,14 @@ function restoreBacktestSymbol() {
     var raw = localStorage.getItem(BACKTEST_SYMBOL_STORAGE_KEY);
     if (!raw) return false;
     var state = JSON.parse(raw);
-    var symbol = String(state && state.symbol || "").trim().toUpperCase();
+    var type = state && state.type;
+    var symbol = normalizeAssetSymbol(state && state.symbol || "", type);
     if (!symbol) return false;
     if (btSymbolInput) btSymbolInput.value = symbol;
-    if (btTypeSelect && ["stock", "crypto", "cn_stock"].indexOf(state.type) !== -1) {
-      btTypeSelect.value = state.type;
+    if (btTypeSelect && ["stock", "hk_stock", "crypto", "cn_stock"].indexOf(type) !== -1) {
+      btTypeSelect.value = type;
     }
+    syncBacktestCurrency(type);
     return true;
   } catch (_) {
     return false;
@@ -30,10 +46,13 @@ function restoreBacktestSymbol() {
 
 function initBacktestSymbolPersistence() {
   restoreBacktestSymbol();
+  syncBacktestCurrency(btTypeSelect?.value || "stock");
 
   function saveCurrentPreference() {
-    var symbol = (btSymbolInput?.value || "").trim().toUpperCase();
-    if (symbol) saveBacktestSymbol(symbol, btTypeSelect?.value || "stock");
+    var type = btTypeSelect?.value || "stock";
+    var symbol = normalizeAssetSymbol(btSymbolInput?.value || "", type);
+    if (symbol) saveBacktestSymbol(symbol, type);
+    syncBacktestCurrency(type);
   }
 
   if (btSymbolInput) btSymbolInput.addEventListener("input", saveCurrentPreference);
@@ -91,12 +110,31 @@ let _btPageSize = 20;
 
 function formatBtMoney(value, signed) {
   const number = Number(value) || 0;
-  const amount = Math.abs(number).toLocaleString(
+  const amount = new Intl.NumberFormat(
     typeof __lang === "function" ? __lang() : undefined,
-    { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-  );
+    {
+      style: "currency",
+      currency: _btCurrency,
+      currencyDisplay: "symbol",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  ).format(Math.abs(number));
   const sign = signed ? (number > 0 ? "+" : number < 0 ? "-" : "") : (number < 0 ? "-" : "");
-  return `${sign}$${amount}`;
+  return `${sign}${amount}`;
+}
+
+function formatBtAxisMoney(value) {
+  return new Intl.NumberFormat(
+    typeof __lang === "function" ? __lang() : undefined,
+    {
+      style: "currency",
+      currency: _btCurrency,
+      currencyDisplay: "narrowSymbol",
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }
+  ).format(Number(value) || 0);
 }
 
 function formatBtNumber(value, maximumFractionDigits) {
@@ -221,8 +259,9 @@ function populateBacktestOptions() {
 }
 
 async function runBacktest() {
-  const symbol = (btSymbolInput?.value || "").trim().toUpperCase();
   const assetType = btTypeSelect?.value || "stock";
+  const symbol = normalizeAssetSymbol(btSymbolInput?.value || "", assetType);
+  if (btSymbolInput) btSymbolInput.value = symbol;
   if (!symbol) {
     showError(__("backtest.errorNoSymbol"));
     return;
@@ -291,7 +330,7 @@ function renderBtChart(equityCurve) {
     const v = assetYMin + (assetYRange * i) / yTicks;
     const y = assetYPos(v);
     yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="var(--apple-divider)" stroke-width="1"/>`;
-    const label = v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toFixed(0)}`;
+    const label = formatBtAxisMoney(v);
     yGrid += `<text x="${PAD.left - 6}" y="${y + 4}" text-anchor="end" fill="var(--apple-text-tertiary)" font-size="11">${label}</text>`;
   }
 
@@ -299,7 +338,7 @@ function renderBtChart(equityCurve) {
   for (let i = 0; i <= yTicks; i++) {
     const v = profitYMin + (profitYRange * i) / yTicks;
     const y = profitYPos(v);
-    rightAxis += `<text x="${W - PAD.right + 8}" y="${y + 4}" text-anchor="start" fill="${c.positive}" font-size="11">${v >= 0 ? "+" : ""}$${v.toFixed(0)}</text>`;
+    rightAxis += `<text x="${W - PAD.right + 8}" y="${y + 4}" text-anchor="start" fill="${c.positive}" font-size="11">${v >= 0 ? "+" : ""}${formatBtAxisMoney(v)}</text>`;
   }
 
   const zeroY = assetYPos(0);
@@ -469,11 +508,11 @@ function renderBtChart(equityCurve) {
         tooltipGuide.setAttribute("x2", String(guideX));
       }
       if (tooltipDate) tooltipDate.textContent = zone.dataset.date || "";
-      if (tooltipAsset) tooltipAsset.textContent = __("backtest.totalAssets") + ": $" + value.toFixed(2);
-      if (tooltipInvested) tooltipInvested.textContent = __("backtest.totalInvested") + ": $" + invested.toFixed(2);
+      if (tooltipAsset) tooltipAsset.textContent = __("backtest.totalAssets") + ": " + formatBtMoney(value);
+      if (tooltipInvested) tooltipInvested.textContent = __("backtest.totalInvested") + ": " + formatBtMoney(invested);
       if (tooltipProfit) {
-        tooltipProfit.textContent = __("backtest.totalReturn") + ": " + (profit >= 0 ? "+" : "") + "$" + profit.toFixed(2);
-      tooltipProfit.setAttribute("fill", profit >= 0 ? c.positive : c.negative);
+        tooltipProfit.textContent = __("backtest.totalReturn") + ": " + formatBtMoney(profit, true);
+        tooltipProfit.setAttribute("fill", profit >= 0 ? c.positive : c.negative);
       }
       if (tooltipReturn) tooltipReturn.textContent = __("backtest.returnRate") + " " + (returnPct >= 0 ? "+" : "") + returnPct.toFixed(2) + "%";
       if (tooltipBg) tooltipBg.setAttribute("height", "88");
@@ -502,6 +541,7 @@ function renderBtChart(equityCurve) {
 }
 
 function renderBacktestResult(symbol, result) {
+  syncBacktestCurrency(result.type, result.currency);
   const summary = result.summary || {};
   renderBtChart(result.equity_curve || []);
   const profit = Number(summary.profit) || 0;

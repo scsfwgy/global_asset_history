@@ -213,6 +213,13 @@ class TestFetchReturnDetail:
         )
         assert selected["stock_tables"] is None
 
+        hk_result = svc.fetch_return_detail("700", "hk_stock")
+        assert hk_result["symbol"] == "0700.HK"
+        assert hk_result["type"] == "hk_stock"
+        assert hk_result["fundamentals"]["currency"] == "HKD"
+        assert hk_result["stock_tables"]["dividend_unit"] == "HKD/share"
+        mock_fetch.assert_called_with("0700.HK", "hk_stock")
+
     def test_detail_period_returns_drawdowns_and_distribution_stats(self):
         points = [
             (date(2020, 1, 1), 100.0),
@@ -838,6 +845,15 @@ class TestFetchYearlyReturns:
         diagnose("symbols fetched", list(result["data"].keys()))
         track_coverage(MOD, 2)
 
+    def test_hk_stock_symbol_is_canonicalized(self, mock_fetch_daily_series, three_year_series):
+        mock_fetch_daily_series.return_value = three_year_series
+
+        result = svc.fetch_yearly_returns([{"symbol": "00700", "type": "hk_stock"}])
+
+        assert "0700.HK" in result["data"]
+        assert result["meta"]["0700.HK"]["type"] == "hk_stock"
+        mock_fetch_daily_series.assert_called_once_with("0700.HK", "hk_stock")
+
     def test_unknown_asset_type(self, mock_fetch_daily_series):
         """Unknown asset type returns error meta."""
         mock_fetch_daily_series.return_value = empty_series(None, "unknown asset type: futures")
@@ -1033,6 +1049,23 @@ class TestRunDcaBacktest:
         result = svc.run_dca_backtest(payload)
         assert result["summary"]["trade_count"] == 1  # just initial
         track_coverage(MOD, 1)
+
+    def test_hk_stock_uses_canonical_symbol_and_hkd(self, mock_fetch_daily_series, three_year_series):
+        mock_fetch_daily_series.return_value = three_year_series
+
+        result = svc.run_dca_backtest({
+            "symbol": "700",
+            "type": "hk_stock",
+            "start_date": "2023-01-03",
+            "end_date": "2024-06-28",
+            "frequency": "monthly",
+            "amount": 1000,
+        })
+
+        assert result["symbol"] == "0700.HK"
+        assert result["type"] == "hk_stock"
+        assert result["currency"] == "HKD"
+        mock_fetch_daily_series.assert_called_once_with("0700.HK", "hk_stock")
 
     def test_empty_symbol_raises(self):
         """Empty symbol → ValueError."""
@@ -1230,6 +1263,25 @@ class TestRunCrashStats:
         })
         assert result["summary"]["total_crashes"] == 0
         track_coverage(MOD, 1)
+
+    def test_hk_stock_crash_stats_use_canonical_symbol(
+        self,
+        mock_fetch_daily_series,
+        three_year_series,
+    ):
+        mock_fetch_daily_series.return_value = three_year_series
+
+        result = svc.run_crash_stats({
+            "symbol": "09988",
+            "type": "hk_stock",
+            "start_date": "2023-01-01",
+            "end_date": "2024-12-31",
+            "threshold_pct": 10.0,
+        })
+
+        assert result["symbol"] == "9988.HK"
+        assert result["type"] == "hk_stock"
+        mock_fetch_daily_series.assert_called_once_with("9988.HK", "hk_stock")
 
     def test_validation_errors(self):
         """Various invalid inputs should raise ValueError."""

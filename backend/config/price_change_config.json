@@ -92,6 +92,19 @@
         { "symbol": "ARM", "type": "stock" }
       ]
     },
+    "hot_hk_stocks": {
+      "label": "热门港股（港股）",
+      "symbols": [
+        { "symbol": "0700.HK", "type": "hk_stock", "name": "腾讯控股" },
+        { "symbol": "9988.HK", "type": "hk_stock", "name": "阿里巴巴-W" },
+        { "symbol": "3690.HK", "type": "hk_stock", "name": "美团-W" },
+        { "symbol": "1810.HK", "type": "hk_stock", "name": "小米集团-W" },
+        { "symbol": "9618.HK", "type": "hk_stock", "name": "京东集团-SW" },
+        { "symbol": "0941.HK", "type": "hk_stock", "name": "中国移动" },
+        { "symbol": "0388.HK", "type": "hk_stock", "name": "香港交易所" },
+        { "symbol": "2800.HK", "type": "hk_stock", "name": "盈富基金" }
+      ]
+    },
     "hot_us_etf": {
       "label": "热门美股ETF（美股）",
       "symbols": [

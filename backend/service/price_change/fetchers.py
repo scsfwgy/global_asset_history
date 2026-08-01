@@ -6,7 +6,16 @@ import time
 from datetime import date, datetime, timedelta, timezone
 from typing import Dict, List
 
-from .common import BINANCE_MAX_LIMIT, REQUEST_TIMEOUT, YAHOO_BASE, PriceSeries, ThreadLocalSession, empty_series, series_from_points
+from .common import (
+    BINANCE_MAX_LIMIT,
+    REQUEST_TIMEOUT,
+    YAHOO_BASE,
+    PriceSeries,
+    ThreadLocalSession,
+    empty_series,
+    normalize_asset_symbol,
+    series_from_points,
+)
 from .config import binance_base_url, coingecko_base_url, coingecko_ids, okx_base_url
 from .calculations import _compute_yearly_returns
 
@@ -226,6 +235,19 @@ def _fetch_daily_series_stock_yfinance(symbol: str) -> PriceSeries:
     except Exception as e:
         logger.error("yfinance daily fetch failed for %s: %s", symbol, e)
         return empty_series("yfinance", str(e))
+
+
+def _fetch_hk_stock(symbol: str) -> Dict[str, float]:
+    """Fetch yearly returns for a Hong Kong listing through Yahoo Finance."""
+    series = _fetch_daily_series_hk_stock(symbol)
+    if series.error:
+        return {}
+    return _compute_yearly_returns(series.timestamps, series.closes)
+
+
+def _fetch_daily_series_hk_stock(symbol: str) -> PriceSeries:
+    """Fetch a Hong Kong listing using its canonical Yahoo ``.HK`` symbol."""
+    return _fetch_daily_series_stock(normalize_asset_symbol(symbol, "hk_stock"))
 
 
 # ---------------------------------------------------------------------------
@@ -628,8 +650,9 @@ def fetch_intraday_series(
     """Fetch exact intraday OHLCV bars for supported asset types."""
     if asset_type == "crypto":
         return _fetch_intraday_crypto_binance(symbol, interval, start_date, end_date)
-    if asset_type == "stock":
-        return _fetch_intraday_stock_yahoo(symbol, interval, start_date, end_date)
+    if asset_type in {"stock", "hk_stock"}:
+        clean_symbol = normalize_asset_symbol(symbol, asset_type)
+        return _fetch_intraday_stock_yahoo(clean_symbol, interval, start_date, end_date)
     if asset_type == "cn_stock":
         return empty_series(None, "intraday download is not supported for A-shares")
     return empty_series(None, f"unknown asset type: {asset_type}")
@@ -948,11 +971,13 @@ def _fetch_daily_closes_cn_stock(symbol: str) -> tuple:
 FETCHERS = {
     "crypto": _fetch_crypto,
     "stock": _fetch_stock,
+    "hk_stock": _fetch_hk_stock,
     "cn_stock": _fetch_cn_stock,
 }
 
 DAILY_SERIES_FETCHERS = {
     "crypto": _fetch_daily_series_crypto,
     "stock": _fetch_daily_series_stock,
+    "hk_stock": _fetch_daily_series_hk_stock,
     "cn_stock": _fetch_daily_series_cn_stock,
 }

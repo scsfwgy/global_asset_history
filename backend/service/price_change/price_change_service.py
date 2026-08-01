@@ -33,6 +33,7 @@ from .common import (
     REQUEST_TIMEOUT,
     PriceSeries,
     empty_series,
+    normalize_asset_symbol,
 )
 from .config import get_color_range, get_color_scheme, get_presets, get_site_config
 from .fetchers import DAILY_SERIES_FETCHERS, FETCHERS, fetch_intraday_series
@@ -50,6 +51,14 @@ _CACHE_LOCK = threading.RLock()
 
 _FETCHERS: Dict[str, Callable[[str], Dict[str, float]]] = dict(FETCHERS)
 _DAILY_SERIES_FETCHERS: Dict[str, Callable[[str], PriceSeries]] = dict(DAILY_SERIES_FETCHERS)
+
+_STOCK_ASSET_TYPES = {"stock", "hk_stock"}
+_ASSET_CURRENCIES = {
+    "stock": "USD",
+    "hk_stock": "HKD",
+    "cn_stock": "CNY",
+    "crypto": "USDT",
+}
 
 MARKET_PULSE_TARGETS = (
     {"market": "CN", "symbol": "000001", "type": "cn_stock", "name": "上证指数", "name_en": "SSE Composite"},
@@ -168,12 +177,13 @@ def register_daily_series_fetcher(asset_type: str, fetcher: Callable[[str], Pric
 
 
 def _normalize_symbol_entry(entry: Dict[str, str]) -> Tuple[str, str]:
-    symbol = entry["symbol"].strip().upper()
     asset_type = entry.get("type", "stock").strip().lower()
+    symbol = normalize_asset_symbol(entry["symbol"], asset_type)
     return symbol, asset_type
 
 
 def _fetch_daily_series_cached(symbol: str, asset_type: str) -> PriceSeries:
+    symbol = normalize_asset_symbol(symbol, asset_type)
     cached = _get_cached_daily_series(symbol, asset_type)
     if cached is not None:
         return cached
@@ -318,8 +328,8 @@ def fetch_yearly_returns(symbols: List[Dict[str, str]]) -> dict:
 def fetch_monthly_returns(symbol: str, asset_type: str, year: int) -> list:
     """Fetch monthly returns for a symbol in a given year."""
     logger.info("Fetching monthly returns for %s (%s) year %d", symbol, asset_type, year)
-    clean_sym = symbol.strip().upper()
     clean_type = asset_type.strip().lower()
+    clean_sym = normalize_asset_symbol(symbol, clean_type)
 
     if clean_type not in _DAILY_SERIES_FETCHERS:
         return _compute_monthly_returns([], [], year)
@@ -333,8 +343,8 @@ def fetch_monthly_returns(symbol: str, asset_type: str, year: int) -> list:
 def fetch_daily_returns(symbol: str, asset_type: str, year: int, month: int) -> list:
     """Fetch daily returns for a symbol in a given month."""
     logger.info("Fetching daily returns for %s (%s) %d-%02d", symbol, asset_type, year, month)
-    clean_sym = symbol.strip().upper()
     clean_type = asset_type.strip().lower()
+    clean_sym = normalize_asset_symbol(symbol, clean_type)
 
     if clean_type not in _DAILY_SERIES_FETCHERS:
         return []
@@ -353,8 +363,8 @@ def fetch_price_history(
     end_date: str,
 ) -> Dict:
     """Return a date-bounded OHLCV collection aggregated to the requested period."""
-    clean_symbol = symbol.strip().upper()
     clean_type = asset_type.strip().lower()
+    clean_symbol = normalize_asset_symbol(symbol, clean_type)
     clean_period = period.strip().lower()
     if not clean_symbol:
         raise ValueError("symbol is required")
@@ -596,8 +606,8 @@ def fetch_monthly_returns_batch(symbols: List[Dict[str, str]], year: int) -> Dic
     data: Dict[str, list] = {}
     for entry in symbols:
         try:
-            symbol = entry["symbol"].strip().upper()
             asset_type = entry.get("type", "stock").strip().lower()
+            symbol = normalize_asset_symbol(entry["symbol"], asset_type)
         except (KeyError, AttributeError):
             continue
         if symbol:
@@ -1008,6 +1018,7 @@ def _build_detail_overview(
 def _enrich_detail_fundamentals_from_series(
     series: PriceSeries,
     snapshot: Optional[Dict],
+    fallback_currency: str = "USD",
 ) -> Dict:
     """Fill resilient market-snapshot fields from the existing daily series."""
     result = dict(snapshot or {})
@@ -1109,7 +1120,7 @@ def _enrich_detail_fundamentals_from_series(
             series.fetched_at,
             tz=timezone.utc,
         ).isoformat()
-    result["currency"] = result.get("currency") or "USD"
+    result["currency"] = result.get("currency") or fallback_currency
     existing_source = result.get("source") if snapshot_available else None
     result["source"] = (
         f"{existing_source},{series.source}"
@@ -1445,7 +1456,10 @@ def _compute_yearly_dividends(dividends: Optional[List[Dict]]) -> List[Dict]:
     ]
 
 
-def _build_stock_history_tables(series: PriceSeries) -> Dict:
+def _build_stock_history_tables(
+    series: PriceSeries,
+    currency: str = "USD",
+) -> Dict:
     """Build the combined stock-only annual table shown below Stock Detail."""
     price_closes = (
         series.raw_closes
@@ -1513,7 +1527,7 @@ def _build_stock_history_tables(series: PriceSeries) -> Dict:
         "rows": rows,
         "return_basis": "raw_close",
         "dividend_yield_basis": "previous_year_end_close",
-        "dividend_unit": "USD/share",
+        "dividend_unit": f"{currency}/share",
     }
 
 
@@ -1744,8 +1758,8 @@ def fetch_return_detail(
     include_stock_history: bool = True,
 ) -> Dict:
     """Fetch single-symbol yearly/monthly return detail, or daily grid for a specific year."""
-    clean_sym = symbol.strip().upper()
     clean_type = asset_type.strip().lower()
+    clean_sym = normalize_asset_symbol(symbol, clean_type)
     if not clean_sym:
         raise ValueError("symbol is required")
     if clean_type not in _DAILY_SERIES_FETCHERS:
@@ -1764,12 +1778,16 @@ def fetch_return_detail(
     quality = _build_detail_quality(series, clean_type)
     external_fundamentals = (
         _fetch_detail_fundamentals(clean_sym)
-        if clean_type == "stock" and series.source.startswith("yahoo")
+        if clean_type in _STOCK_ASSET_TYPES and series.source.startswith("yahoo")
         else None
     )
     fundamentals = (
-        _enrich_detail_fundamentals_from_series(series, external_fundamentals)
-        if clean_type == "stock"
+        _enrich_detail_fundamentals_from_series(
+            series,
+            external_fundamentals,
+            fallback_currency=_ASSET_CURRENCIES[clean_type],
+        )
+        if clean_type in _STOCK_ASSET_TYPES
         else None
     )
     if fundamentals is not None:
@@ -1786,7 +1804,11 @@ def fetch_return_detail(
 
     # -- yearly mode ---------------------------------------------------------
     if year is None:
-        stock_tables = _build_stock_history_tables(series) if clean_type == "stock" else None
+        stock_tables = (
+            _build_stock_history_tables(series, _ASSET_CURRENCIES[clean_type])
+            if clean_type in _STOCK_ASSET_TYPES
+            else None
+        )
         month_values: Dict[int, List[float]] = {m: [] for m in range(1, 13)}
         year_values: List[float] = []
         best_month = None
@@ -1887,8 +1909,8 @@ def fetch_return_detail(
         "daily_rows": daily_rows,
         "stats": _build_monthly_stats(month_values),
         "stock_tables": (
-            _build_stock_history_tables(series)
-            if clean_type == "stock" and include_stock_history
+            _build_stock_history_tables(series, _ASSET_CURRENCIES[clean_type])
+            if clean_type in _STOCK_ASSET_TYPES and include_stock_history
             else None
         ),
         "summary": {
@@ -1900,8 +1922,8 @@ def fetch_return_detail(
 
 def run_dca_backtest(payload: Dict) -> Dict:
     """Run a single-symbol DCA backtest using daily price data."""
-    symbol = str(payload.get("symbol", "")).strip().upper()
     asset_type = str(payload.get("type", "stock")).strip().lower()
+    symbol = normalize_asset_symbol(payload.get("symbol", ""), asset_type)
     start_date = _parse_iso_date(payload.get("start_date"), "start_date")
     end_date = _parse_iso_date(payload.get("end_date"), "end_date")
     if end_date < start_date:
@@ -1998,6 +2020,7 @@ def run_dca_backtest(payload: Dict) -> Dict:
     return {
         "symbol": symbol,
         "type": asset_type,
+        "currency": _ASSET_CURRENCIES.get(asset_type, "USD"),
         "source": series.source,
         "frequency": frequency,
         "interval": interval,
@@ -2032,8 +2055,8 @@ def run_crash_stats(payload: Dict) -> Dict:
     Returns:
         dict with crashes list and summary statistics.
     """
-    symbol = str(payload.get("symbol", "")).strip().upper()
     asset_type = str(payload.get("type", "stock")).strip().lower()
+    symbol = normalize_asset_symbol(payload.get("symbol", ""), asset_type)
     start_date = _parse_iso_date(payload.get("start_date"), "start_date")
     end_date = _parse_iso_date(payload.get("end_date"), "end_date")
     threshold_pct = float(payload.get("threshold_pct", 4.77))
@@ -2127,8 +2150,8 @@ def get_crash_chart_data(payload: Dict) -> Dict:
     Returns:
         dict with prices list [{date, close}] for the window.
     """
-    symbol = str(payload.get("symbol", "")).strip().upper()
     asset_type = str(payload.get("type", "stock")).strip().lower()
+    symbol = normalize_asset_symbol(payload.get("symbol", ""), asset_type)
     pre_crash_date = _parse_iso_date(payload.get("pre_crash_date"), "pre_crash_date")
     trading_days = _safe_int(payload.get("trading_days"), 30)
 
@@ -2206,6 +2229,7 @@ def get_crash_chart_data(payload: Dict) -> Dict:
 
 _TURNOVER_CURRENCY = {
     "stock": "USD",
+    "hk_stock": "HKD",
     "crypto": "USDT",
     "cn_stock": "CNY",
 }

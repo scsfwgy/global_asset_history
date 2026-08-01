@@ -15,6 +15,27 @@ ERROR_CACHE_TTL_SECONDS = 5 * 60
 MAX_YEARLY_WORKERS = 6
 
 
+def normalize_asset_symbol(symbol: str, asset_type: str) -> str:
+    """Return the canonical upstream symbol for a supported asset type.
+
+    Yahoo represents Hong Kong listings with a ``.HK`` suffix. Users commonly
+    enter the HKEX display code with different amounts of leading zero padding,
+    so accept those variants while keeping indices such as ``^HSI`` unchanged.
+    """
+    clean_symbol = str(symbol or "").strip().upper()
+    clean_type = str(asset_type or "").strip().lower()
+    if clean_type != "hk_stock" or not clean_symbol or clean_symbol.startswith("^"):
+        return clean_symbol
+
+    code = clean_symbol[:-3] if clean_symbol.endswith(".HK") else clean_symbol
+    if not code.isdigit() or not 1 <= len(code) <= 5:
+        return clean_symbol
+
+    numeric_code = int(code)
+    yahoo_code = str(numeric_code).zfill(4) if numeric_code < 10000 else str(numeric_code)
+    return f"{yahoo_code}.HK"
+
+
 class ThreadLocalSession:
     """Small thread-safe session wrapper for concurrent market-data fetches."""
 

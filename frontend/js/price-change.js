@@ -167,6 +167,16 @@ function displayName(s) {
   return s.name ? `${s.symbol}(${s.name})` : s.symbol;
 }
 
+function normalizeAssetSymbol(symbol, type) {
+  const clean = String(symbol || "").trim().toUpperCase();
+  if (type !== "hk_stock" || !clean || clean.startsWith("^")) return clean;
+  const code = clean.endsWith(".HK") ? clean.slice(0, -3) : clean;
+  if (!/^\d{1,5}$/.test(code)) return clean;
+  const numeric = parseInt(code, 10);
+  const yahooCode = numeric < 10000 ? String(numeric).padStart(4, "0") : String(numeric);
+  return `${yahooCode}.HK`;
+}
+
 // ─── Symbol tags ───
 
 function renderTags() {
@@ -179,7 +189,7 @@ function renderTags() {
       (s, i) =>
         `<span class="pc-tag">
           ${displayName(s)}
-          <span class="pc-tag-type">${s.type === "crypto" ? __("yearly.labelCrypto") : s.type === "cn_stock" ? __("yearly.labelA") : __("yearly.labelStock")}</span>
+          <span class="pc-tag-type">${s.type === "crypto" ? __("yearly.labelCrypto") : s.type === "cn_stock" ? __("yearly.labelA") : s.type === "hk_stock" ? __("yearly.labelHK") : __("yearly.labelStock")}</span>
           <span class="pc-tag-remove" data-index="${i}">✕</span>
         </span>`
     )
@@ -198,7 +208,7 @@ function renderTags() {
 // ─── Add symbol ───
 
 function addSymbol(symbol, type) {
-  const sym = symbol.trim().toUpperCase();
+  const sym = normalizeAssetSymbol(symbol, type);
   if (!sym) return false;
   if (symbols.some((s) => s.symbol === sym && s.type === type)) return false;
   symbols.unshift({ symbol: sym, type }); // insert at first position
@@ -653,7 +663,11 @@ function restoreState() {
     if (!raw) return false;
     var state = JSON.parse(raw);
     if (state.symbols && Array.isArray(state.symbols)) {
-      symbols = state.symbols;
+      symbols = state.symbols.map(function (item) {
+        return Object.assign({}, item, {
+          symbol: normalizeAssetSymbol(item.symbol, item.type),
+        });
+      });
     }
     if (state.minRange != null) minRange.value = state.minRange;
     if (state.maxRange != null) maxRange.value = state.maxRange;

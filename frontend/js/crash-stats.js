@@ -44,11 +44,12 @@
             var raw = localStorage.getItem(CRASH_SYMBOL_STORAGE_KEY);
             if (!raw) return false;
             var state = JSON.parse(raw);
-            var symbol = String(state && state.symbol || "").trim().toUpperCase();
+            var type = state && state.type;
+            var symbol = normalizeAssetSymbol(state && state.symbol || "", type);
             if (!symbol) return false;
             if (symbolInput) symbolInput.value = symbol;
-            if (typeSelect && ["stock", "crypto", "cn_stock"].indexOf(state.type) !== -1) {
-                typeSelect.value = state.type;
+            if (typeSelect && ["stock", "hk_stock", "crypto", "cn_stock"].indexOf(type) !== -1) {
+                typeSelect.value = type;
             }
             return true;
         } catch (_) {
@@ -57,8 +58,9 @@
     }
 
     function saveCurrentPreference() {
-        var symbol = (symbolInput && symbolInput.value || "").trim().toUpperCase();
-        if (symbol) saveSymbolPreference(symbol, typeSelect ? typeSelect.value : "stock");
+        var type = typeSelect ? typeSelect.value : "stock";
+        var symbol = normalizeAssetSymbol(symbolInput && symbolInput.value || "", type);
+        if (symbol) saveSymbolPreference(symbol, type);
     }
 
     function syncPeriodControls() {
@@ -114,7 +116,9 @@
 
     /* ── Run query ── */
     function run() {
-        var symbol = (symbolInput.value || "").trim().toUpperCase();
+        var assetType = typeSelect.value;
+        var symbol = normalizeAssetSymbol(symbolInput.value || "", assetType);
+        symbolInput.value = symbol;
         var startDate = (startInput.value || "").trim();
         var endDate = (endInput.value || "").trim();
         var threshold = parseFloat(thresholdInput.value || "4.77");
@@ -128,7 +132,7 @@
             showError(__("crash.errorPeriodDays"), run);
             return;
         }
-        saveSymbolPreference(symbol, typeSelect.value);
+        saveSymbolPreference(symbol, assetType);
 
         setLoading(true);
         hideError();
@@ -140,7 +144,7 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 symbol: symbol,
-                type: typeSelect.value,
+                type: assetType,
                 start_date: startDate,
                 end_date: endDate,
                 threshold_pct: threshold,

@@ -115,6 +115,16 @@ class TestConfigAccessors:
         diagnose("preset names", sorted(presets.keys())[:5])
         track_coverage(MOD, 1)
 
+    def test_hot_hk_stock_preset(self):
+        preset = get_presets()["hot_hk_stocks"]
+
+        assert preset["label"] == "热门港股（港股）"
+        assert len(preset["symbols"]) >= 5
+        assert all(item["type"] == "hk_stock" for item in preset["symbols"])
+        assert {"0700.HK", "9988.HK", "3690.HK"}.issubset(
+            {item["symbol"] for item in preset["symbols"]}
+        )
+
     def test_get_color_range(self):
         cr = get_color_range()
         assert isinstance(cr, dict)
