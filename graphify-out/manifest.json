@@ -124,20 +124,10 @@
     "ast_hash": "39f29c90a62e80fea2713273c0aae98c",
     "semantic_hash": "39f29c90a62e80fea2713273c0aae98c"
   },
-  "backend/data/etf_nav/159501_2025-10-21_2026-07-16.json": {
-    "mtime": 1785382989.4428325,
-    "ast_hash": "1108a2f5940b96213cae0356531a39f5",
-    "semantic_hash": "1108a2f5940b96213cae0356531a39f5"
-  },
   "backend/data/etf_nav/159509_2025-10-21_2026-07-16.json": {
     "mtime": 1785382989.4430213,
     "ast_hash": "a393e8b4dcf34b696fbe2be64f893179",
     "semantic_hash": "a393e8b4dcf34b696fbe2be64f893179"
-  },
-  "backend/data/etf_nav/159513_2025-10-21_2026-07-16.json": {
-    "mtime": 1784189731.8266602,
-    "ast_hash": "11e34992068e522a2242e464b3b6e9bb",
-    "semantic_hash": "11e34992068e522a2242e464b3b6e9bb"
   },
   "backend/data/etf_nav/159529_2025-10-21_2026-07-16.json": {
     "mtime": 1784189752.1108813,
@@ -154,11 +144,6 @@
     "ast_hash": "ae029eed30143305adecdf26f81a81d5",
     "semantic_hash": "ae029eed30143305adecdf26f81a81d5"
   },
-  "backend/data/etf_nav/159632_2025-10-21_2026-07-16.json": {
-    "mtime": 1784189731.4303856,
-    "ast_hash": "d1a7cf5dadbecb6854ff303cba149368",
-    "semantic_hash": "d1a7cf5dadbecb6854ff303cba149368"
-  },
   "backend/data/etf_nav/159652_2025-10-21_2026-07-16.json": {
     "mtime": 1784189752.2781022,
     "ast_hash": "9406c74c57a812711db8ecb7564c8104",
@@ -173,16 +158,6 @@
     "mtime": 1784189741.2128472,
     "ast_hash": "1320c3e468a2dc32e8dcaa0daa595409",
     "semantic_hash": "1320c3e468a2dc32e8dcaa0daa595409"
-  },
-  "backend/data/etf_nav/159660_2025-10-21_2026-07-16.json": {
-    "mtime": 1784189732.247529,
-    "ast_hash": "9ff9b1abcb620d0526e961411a11f060",
-    "semantic_hash": "9ff9b1abcb620d0526e961411a11f060"
-  },
-  "backend/data/etf_nav/159696_2025-10-21_2026-07-16.json": {
-    "mtime": 1784189731.4615984,
-    "ast_hash": "5be2b3154cbcc12127cc68207737e05e",
-    "semantic_hash": "5be2b3154cbcc12127cc68207737e05e"
   },
   "backend/data/etf_nav/159941_2025-10-21_2026-07-16.json": {
     "mtime": 1784193587.4802864,
@@ -203,21 +178,6 @@
     "mtime": 1785382989.4431524,
     "ast_hash": "b8a18c8567e2bc1a995fb528bc6ca14d",
     "semantic_hash": "b8a18c8567e2bc1a995fb528bc6ca14d"
-  },
-  "backend/data/etf_nav/513100_2025-10-21_2026-07-16.json": {
-    "mtime": 1784193585.6384654,
-    "ast_hash": "a497ea7e6bebabfa6281d8fc13dc6c43",
-    "semantic_hash": "a497ea7e6bebabfa6281d8fc13dc6c43"
-  },
-  "backend/data/etf_nav/513110_2025-10-21_2026-07-16.json": {
-    "mtime": 1784189730.9787152,
-    "ast_hash": "264757270639ecb991ccb53605580436",
-    "semantic_hash": "264757270639ecb991ccb53605580436"
-  },
-  "backend/data/etf_nav/513300_2025-10-21_2026-07-16.json": {
-    "mtime": 1784189731.1406631,
-    "ast_hash": "718788c643459f1187f00025d53efd44",
-    "semantic_hash": "718788c643459f1187f00025d53efd44"
   },
   "backend/data/etf_nav/513310_2025-10-21_2026-07-16.json": {
     "mtime": 1785382989.4432824,
@@ -260,8 +220,8 @@
     "semantic_hash": "5d15c4657cb3e3c87eb720d08107ada8"
   },
   "backend/routes/price_change.py": {
-    "mtime": 1785595591.06428,
-    "ast_hash": "3c9881fdd49701ca351171355ea6a415",
+    "mtime": 1785597417.454982,
+    "ast_hash": "d6b4d7432692ad5a2182869b54655610",
     "semantic_hash": ""
   },
   "backend/routes/wishes.py": {
@@ -315,8 +275,8 @@
     "semantic_hash": ""
   },
   "backend/service/price_change/price_change_service.py": {
-    "mtime": 1785595559.595,
-    "ast_hash": "72b0dbafe6932f8107e782148d42d09f",
+    "mtime": 1785597417.4543533,
+    "ast_hash": "3aa44bbdd82fe032cec0af274017a457",
     "semantic_hash": ""
   },
   "backend/service/visitor_stats.py": {
@@ -400,13 +360,13 @@
     "semantic_hash": "67290848d841281ba5151efcb4f58ee1"
   },
   "backend/tests/routes/test_price_change.py": {
-    "mtime": 1785382470.5036578,
-    "ast_hash": "03ee3dac69b1adea220d00d277416d67",
+    "mtime": 1785597505.8948777,
+    "ast_hash": "b228f7b99f364081e6d25f7a9415f71c",
     "semantic_hash": ""
   },
   "backend/tests/routes/test_seo.py": {
-    "mtime": 1785380330.2791166,
-    "ast_hash": "128d8c1171beee5cc133ac51ff79fa44",
+    "mtime": 1785596179.1602764,
+    "ast_hash": "8ad15eb4b94e02663edba65cf46d02e3",
     "semantic_hash": ""
   },
   "backend/tests/routes/test_stats.py": {
@@ -435,8 +395,8 @@
     "semantic_hash": "48edf8fd5b25841d1bf276f0cb135529"
   },
   "backend/tests/service/test_price_change_service.py": {
-    "mtime": 1785596019.485058,
-    "ast_hash": "e0e7d523c28fcbc908cea7e248781775",
+    "mtime": 1785597505.893828,
+    "ast_hash": "4d29759e8b23d87092c5a852370f90fb",
     "semantic_hash": ""
   },
   "backend/tests/service/test_visitor_stats.py": {
@@ -495,8 +455,8 @@
     "semantic_hash": "2b7bfa7187a2ef1b61ba30778c94e64a"
   },
   "frontend/js/heatmap.js": {
-    "mtime": 1785383174.6506104,
-    "ast_hash": "be61ad9eac8dbee9a9e9dfe0541db917",
+    "mtime": 1785597473.9379222,
+    "ast_hash": "9cea8407264f57137a95a65522df2538",
     "semantic_hash": ""
   },
   "frontend/js/i18n.js": {
@@ -510,8 +470,8 @@
     "semantic_hash": ""
   },
   "frontend/js/price-detail.js": {
-    "mtime": 1785595760.6483827,
-    "ast_hash": "63ee44d5a17f3cb51919f474a4f4bede",
+    "mtime": 1785596783.715608,
+    "ast_hash": "e478cc631f535d656da9746c63389b36",
     "semantic_hash": ""
   },
   "frontend/js/qdii-funds.js": {
@@ -540,13 +500,13 @@
     "semantic_hash": "f332002f362b52a7f3e1bb7fccb334be"
   },
   "frontend/locales/en.json": {
-    "mtime": 1785595940.6912358,
-    "ast_hash": "9a320dd5757503f74d42b9bf4001274b",
+    "mtime": 1785597460.418057,
+    "ast_hash": "4a6286bf01d29310218e70dc5f82de98",
     "semantic_hash": ""
   },
   "frontend/locales/zh-CN.json": {
-    "mtime": 1785595940.690476,
-    "ast_hash": "3096ea5b43fc6996af77c4a954681bf7",
+    "mtime": 1785597460.4175835,
+    "ast_hash": "4ff0a6024e91f17b63327de2e4728fd9",
     "semantic_hash": ""
   },
   "scripts/capture_screenshots.py": {
@@ -600,8 +560,8 @@
     "semantic_hash": "cf7f9641ca47e9d84a55efbb9fc9ac60"
   },
   "frontend/price-change.html": {
-    "mtime": 1785595636.3837924,
-    "ast_hash": "f091c20ee073809b9b38b0bd189a1de1",
+    "mtime": 1785597460.4168994,
+    "ast_hash": "1f1c5f7c21e4a56dd1636604cee839bd",
     "semantic_hash": ""
   },
   "requirements.txt": {
@@ -670,13 +630,53 @@
     "semantic_hash": ""
   },
   "backend/tests/frontend/test_symbol_persistence.py": {
-    "mtime": 1785596019.485953,
-    "ast_hash": "642a1065fad5b9c8505d423e2cd7969f",
+    "mtime": 1785597505.8953433,
+    "ast_hash": "64a7db4b5015b43d97187bd971cd7f81",
     "semantic_hash": ""
   },
   "backend/tests/service/test_fundamentals_history.py": {
     "mtime": 1785380330.2782223,
     "ast_hash": "a3724708e3316ec0cac03af3a4e046a4",
+    "semantic_hash": ""
+  },
+  "backend/data/etf_nav/159501_2025-11-05_2026-07-31.json": {
+    "mtime": 1785597104.6254559,
+    "ast_hash": "eb592f6f5e8ccb1f985f685781fb5ce2",
+    "semantic_hash": ""
+  },
+  "backend/data/etf_nav/159513_2025-11-05_2026-07-31.json": {
+    "mtime": 1785597104.7698736,
+    "ast_hash": "d4148782b2e75146e95098b7809eb7d7",
+    "semantic_hash": ""
+  },
+  "backend/data/etf_nav/159632_2025-11-05_2026-07-31.json": {
+    "mtime": 1785597104.6474633,
+    "ast_hash": "2e8b2448df319d10744681330fddfc9f",
+    "semantic_hash": ""
+  },
+  "backend/data/etf_nav/159660_2025-11-05_2026-07-31.json": {
+    "mtime": 1785597104.58426,
+    "ast_hash": "05851933aa2fcc8161985701414aaedb",
+    "semantic_hash": ""
+  },
+  "backend/data/etf_nav/159696_2025-11-05_2026-07-31.json": {
+    "mtime": 1785597104.6257257,
+    "ast_hash": "c2f5017c8b4a852a7434ead5de42b237",
+    "semantic_hash": ""
+  },
+  "backend/data/etf_nav/513100_2025-11-05_2026-07-31.json": {
+    "mtime": 1785597104.8228984,
+    "ast_hash": "ccf19e5fdff46d5e5368d617b3c977bb",
+    "semantic_hash": ""
+  },
+  "backend/data/etf_nav/513110_2025-11-05_2026-07-31.json": {
+    "mtime": 1785597104.6108575,
+    "ast_hash": "24f21db7dd410f9ef6531f4eebc4ed3e",
+    "semantic_hash": ""
+  },
+  "backend/data/etf_nav/513300_2025-11-05_2026-07-31.json": {
+    "mtime": 1785597104.6560907,
+    "ast_hash": "b02d880246c7bb4e2af08e75ddfdc712",
     "semantic_hash": ""
   }
 }

@@ -438,7 +438,7 @@ def heatmap():
 
     Request body:
         {"symbols": [{"symbol": "AAPL", "type": "stock"}, ...],
-         "market_type": "stock|crypto|cn_stock",  # displays the full market pool
+         "market_type": "stock|hk_stock|crypto|cn_stock",  # full market pool
          "period": "today|week|month|quarter|year",
          "auto_top_n": 20,              # legacy: limit automatic US selection
          "include_market_cap": true,    # optional: attach best-effort market cap
@@ -474,7 +474,7 @@ def heatmap():
     if period not in valid_periods:
         return jsonify({"error": f"period must be one of: {', '.join(sorted(valid_periods))}"}), 400
 
-    valid_market_types = {"stock", "crypto", "cn_stock"}
+    valid_market_types = {"stock", "hk_stock", "crypto", "cn_stock"}
     if market_type is not None and market_type not in valid_market_types:
         return jsonify({
             "error": f"market_type must be one of: {', '.join(sorted(valid_market_types))}"

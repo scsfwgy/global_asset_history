@@ -1774,6 +1774,35 @@ class TestBuildHeatmapToday:
         track_coverage(MOD, 3)
 
     @patch("service.price_change.price_change_service._yahoo_quote_batch")
+    def test_hk_stocks_use_batch_quote_and_hkd(self, mock_batch):
+        mock_batch.return_value = [{
+            "symbol": "0700.HK",
+            "name": "Tencent Holdings Limited",
+            "price": 475.2,
+            "change_pct": 1.25,
+            "volume": 12_000_000,
+            "market_cap": 4.5e12,
+            "currency": "HKD",
+        }]
+
+        result = svc._build_heatmap_today(
+            [("0700.HK", "hk_stock")],
+            set(),
+            {"0700.HK"},
+            auto_top_n=1,
+            include_market_cap=True,
+            compute_fn=self._compute_stub,
+        )
+
+        mock_batch.assert_called_once_with(["0700.HK"])
+        item = result["data"][0]
+        assert item["type"] == "hk_stock"
+        assert item["turnover"] == 5_702_400_000.0
+        assert item["turnover_currency"] == "HKD"
+        assert item["market_cap"] == 4.5e12
+        assert item["market_cap_currency"] == "HKD"
+
+    @patch("service.price_change.price_change_service._yahoo_quote_batch")
     def test_batch_fails_fallback(self, mock_batch):
         """Batch returns empty for non-empty stocks → return None."""
         mock_batch.return_value = []
@@ -1912,7 +1941,12 @@ class TestFetchHeatmapToday:
 
     @pytest.mark.parametrize(
         ("market_type", "candidate"),
-        [("stock", "AAPL"), ("crypto", "BTC"), ("cn_stock", "600519")],
+        [
+            ("stock", "AAPL"),
+            ("hk_stock", "0700.HK"),
+            ("crypto", "BTC"),
+            ("cn_stock", "600519"),
+        ],
     )
     @patch("service.price_change.price_change_service._build_heatmap_today")
     def test_selected_market_uses_complete_pool(

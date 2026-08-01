@@ -828,6 +828,7 @@
     "pulseUnavailable": "暂无数据",
     "marketType": "热力图类型",
     "marketUS": "美股市场",
+    "marketHK": "港股市场",
     "marketCrypto": "数字货币",
     "marketCN": "A股市场",
     "period": "统计周期",

@@ -16,7 +16,7 @@ var _hmForceRefresh = false;
 var _marketPulseData = null;
 const HM_FILTER_STORAGE_KEY = "gah_heatmap_filters";
 
-// Common display names for the built-in US, crypto, and A-share market pools.
+// Common display names for the built-in US, HK, crypto, and A-share pools.
 // Unknown symbols fall back to the official English quote name.
 var HM_ZH_NAMES = {
   SPY: "标普500ETF", QQQ: "纳指100ETF", IWM: "罗素2000ETF", DIA: "道指ETF",
@@ -60,7 +60,17 @@ var HM_ZH_NAMES = {
   "601225": "陕西煤业", "600690": "海尔智家", "600438": "通威股份",
   "002352": "顺丰控股", "300760": "迈瑞医疗", "601919": "中远海控",
   "600031": "三一重工", "601600": "中国铝业", "600019": "宝钢股份",
-  "601006": "大秦铁路", "600660": "福耀玻璃"
+  "601006": "大秦铁路", "600660": "福耀玻璃",
+  "0700.HK": "腾讯控股", "9988.HK": "阿里巴巴-W", "3690.HK": "美团-W",
+  "1810.HK": "小米集团-W", "9618.HK": "京东集团-SW", "0941.HK": "中国移动",
+  "0388.HK": "香港交易所", "2800.HK": "盈富基金", "0005.HK": "汇丰控股",
+  "1299.HK": "友邦保险", "0939.HK": "建设银行", "1398.HK": "工商银行",
+  "3988.HK": "中国银行", "2318.HK": "中国平安", "0883.HK": "中国海洋石油",
+  "0857.HK": "中国石油股份", "1088.HK": "中国神华", "1211.HK": "比亚迪股份",
+  "1024.HK": "快手-W", "9999.HK": "网易-S", "9888.HK": "百度集团-SW",
+  "9866.HK": "蔚来-SW", "2015.HK": "理想汽车-W", "9868.HK": "小鹏汽车-W",
+  "9992.HK": "泡泡玛特", "1876.HK": "百威亚太", "2020.HK": "安踏体育",
+  "6690.HK": "海尔智家", "2269.HK": "药明生物", "1177.HK": "中国生物制药"
 };
 
 var HM_EN_NAMES = {
@@ -107,7 +117,17 @@ var HM_EN_NAMES = {
   "601225": "Shaanxi Coal", "600690": "Haier Smart Home", "600438": "Tongwei",
   "002352": "SF Holding", "300760": "Mindray", "601919": "COSCO Shipping Holdings",
   "600031": "Sany Heavy Industry", "601600": "Aluminum Corp. of China", "600019": "Baoshan Iron & Steel",
-  "601006": "Daqin Railway", "600660": "Fuyao Glass"
+  "601006": "Daqin Railway", "600660": "Fuyao Glass",
+  "0700.HK": "Tencent", "9988.HK": "Alibaba", "3690.HK": "Meituan",
+  "1810.HK": "Xiaomi", "9618.HK": "JD.com", "0941.HK": "China Mobile",
+  "0388.HK": "HKEX", "2800.HK": "Tracker Fund of Hong Kong", "0005.HK": "HSBC",
+  "1299.HK": "AIA", "0939.HK": "China Construction Bank", "1398.HK": "ICBC",
+  "3988.HK": "Bank of China", "2318.HK": "Ping An", "0883.HK": "CNOOC",
+  "0857.HK": "PetroChina", "1088.HK": "China Shenhua", "1211.HK": "BYD",
+  "1024.HK": "Kuaishou", "9999.HK": "NetEase", "9888.HK": "Baidu",
+  "9866.HK": "NIO", "2015.HK": "Li Auto", "9868.HK": "XPeng",
+  "9992.HK": "Pop Mart", "1876.HK": "Budweiser APAC", "2020.HK": "ANTA Sports",
+  "6690.HK": "Haier Smart Home", "2269.HK": "WuXi Biologics", "1177.HK": "Sino Biopharm"
 };
 
 // ─── DOM refs ───
@@ -134,7 +154,7 @@ const marketPulseToggle = document.getElementById("marketPulseToggle");
 
 function hmSyncMarketControls() {
   var marketCapOption = hmSizeBySel.querySelector('option[value="market_cap"]');
-  var supportsMarketCap = hmMarketType.value === "stock";
+  var supportsMarketCap = ["stock", "hk_stock"].indexOf(hmMarketType.value) !== -1;
   if (marketCapOption) marketCapOption.disabled = !supportsMarketCap;
   if (!supportsMarketCap && hmSizeBySel.value === "market_cap") {
     hmSizeBySel.value = "turnover";
@@ -157,7 +177,7 @@ function restoreHmFilters() {
     var raw = localStorage.getItem(HM_FILTER_STORAGE_KEY);
     if (!raw) return;
     var saved = JSON.parse(raw);
-    if (["stock", "crypto", "cn_stock"].indexOf(saved.market_type) !== -1) {
+    if (["stock", "hk_stock", "crypto", "cn_stock"].indexOf(saved.market_type) !== -1) {
       hmMarketType.value = saved.market_type;
     }
     if (["today", "week", "month", "quarter", "year"].indexOf(saved.period) !== -1) {
@@ -707,6 +727,7 @@ function hmJumpToDetail(d) {
   if (typeSelect) {
     if (d.type === 'crypto') typeSelect.value = 'crypto';
     else if (d.type === 'cn_stock') typeSelect.value = 'cn_stock';
+    else if (d.type === 'hk_stock') typeSelect.value = 'hk_stock';
     else typeSelect.value = 'stock';
   }
   var yearSelect = document.getElementById('pdYearSelect');
@@ -728,7 +749,7 @@ function hmShowTooltip(evt, d) {
   rows += '<div class="hm-tt-row"><span class="hm-tt-label">' + __("heatmap.tooltipReturn") + '</span><span class="hm-tt-val ' + retCls + '">' + hmFormatPct(d.return_pct) + '</span></div>';
   rows += '<div class="hm-tt-row"><span class="hm-tt-label">' + __("heatmap.tooltipTurnover") + '</span><span class="hm-tt-val">' + hmFormatBig(d.turnover) + " " + (d.turnover_currency || "") + '</span></div>';
   if (d.market_cap != null) {
-    rows += '<div class="hm-tt-row"><span class="hm-tt-label">' + __("heatmap.tooltipMarketCap") + '</span><span class="hm-tt-val">$' + hmFormatBig(d.market_cap) + '</span></div>';
+    rows += '<div class="hm-tt-row"><span class="hm-tt-label">' + __("heatmap.tooltipMarketCap") + '</span><span class="hm-tt-val">' + hmFormatBig(d.market_cap) + " " + (d.market_cap_currency || d.turnover_currency || "") + '</span></div>';
   }
   hmTooltipEl.innerHTML =
     '<div class="hm-tt-sym">' + escapeHtml(d.symbol) + (nameLine ? ' <span class="hm-tt-name">' + nameLine + '</span>' : '') + '</div>' +

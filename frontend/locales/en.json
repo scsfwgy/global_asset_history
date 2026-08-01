@@ -828,6 +828,7 @@
     "pulseUnavailable": "Unavailable",
     "marketType": "Heatmap Type",
     "marketUS": "US Stock Market",
+    "marketHK": "Hong Kong Market",
     "marketCrypto": "Crypto Market",
     "marketCN": "A-Share Market",
     "period": "Period",

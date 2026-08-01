@@ -2270,6 +2270,16 @@ _HEATMAP_CN_WATCHLIST = [
     "600660",
 ]
 
+# Liquid Hong Kong large caps and actively traded ETFs. Yahoo symbols use the
+# HKEX code plus the ``.HK`` suffix, matching the shared hk_stock fetcher.
+_HEATMAP_HK_WATCHLIST = [
+    "0700.HK", "9988.HK", "3690.HK", "1810.HK", "9618.HK", "0941.HK",
+    "0388.HK", "2800.HK", "0005.HK", "1299.HK", "0939.HK", "1398.HK",
+    "3988.HK", "2318.HK", "0883.HK", "0857.HK", "1088.HK", "1211.HK",
+    "1024.HK", "9999.HK", "9888.HK", "9866.HK", "2015.HK", "9868.HK",
+    "9992.HK", "1876.HK", "2020.HK", "6690.HK", "2269.HK", "1177.HK",
+]
+
 # High-liquidity non-stablecoin pool supported by the existing crypto fetchers.
 _HEATMAP_CRYPTO_WATCHLIST = [
     "BTC", "ETH", "BNB", "SOL", "XRP", "DOGE", "ADA", "TRX", "AVAX",
@@ -2279,6 +2289,7 @@ _HEATMAP_CRYPTO_WATCHLIST = [
 
 _HEATMAP_WATCHLISTS = {
     "stock": _HEATMAP_US_WATCHLIST,
+    "hk_stock": _HEATMAP_HK_WATCHLIST,
     "crypto": _HEATMAP_CRYPTO_WATCHLIST,
     "cn_stock": _HEATMAP_CN_WATCHLIST,
 }
@@ -2694,19 +2705,21 @@ def _build_heatmap_today(
 ) -> Optional[dict]:
     """Build heatmap data for period='today' using batch v7/quote.
 
-    Stocks are fetched in a single batch request (1-2 HTTP calls for
-    up to 92 symbols). Non-stock symbols go through *compute_fn*
+    US and Hong Kong stocks are fetched in a single batch request (1-2 HTTP
+    calls for up to 92 symbols). Other asset types go through *compute_fn*
     (per-symbol OHLCV). Returns None when the batch fails and the
     caller should fall back to the per-symbol path for everything.
     """
     # Split entries
-    stock_syms: List[str] = []
+    stock_entries: List[Tuple[str, str]] = []
     non_stock_entries: List[Tuple[str, str]] = []
     for sym, atype in unique_entries:
-        if atype == "stock":
-            stock_syms.append(sym)
+        if atype in _STOCK_ASSET_TYPES:
+            stock_entries.append((sym, atype))
         else:
             non_stock_entries.append((sym, atype))
+
+    stock_syms = [sym for sym, _ in stock_entries]
 
     # Batch v7/quote — 1 request for all stocks
     quotes = _yahoo_quote_batch(stock_syms) if stock_syms else []
@@ -2719,8 +2732,10 @@ def _build_heatmap_today(
     results: List[dict] = []
 
     # --- stock results from batch quote data ---
-    for sym in stock_syms:
+    for sym, atype in stock_entries:
         q = quote_map.get(sym)
+        currency = q.get("currency") if q else None
+        display_currency = currency or _TURNOVER_CURRENCY.get(atype, "USD")
         if q:
             turnover = None
             if q["volume"] and q["price"]:
@@ -2728,18 +2743,20 @@ def _build_heatmap_today(
             results.append({
                 "symbol": sym,
                 "name": q.get("name"),
-                "type": "stock",
+                "type": atype,
                 "return_pct": round(q["change_pct"], 2) if q["change_pct"] is not None else None,
                 "turnover": turnover,
-                "turnover_currency": "USD",
+                "turnover_currency": display_currency,
                 "market_cap": q.get("market_cap") if include_market_cap else None,
+                "market_cap_currency": display_currency,
             })
         else:
             results.append({
-                "symbol": sym, "name": None, "type": "stock",
+                "symbol": sym, "name": None, "type": atype,
                 "return_pct": None, "turnover": None,
-                "turnover_currency": "USD",
+                "turnover_currency": display_currency,
                 "market_cap": None,
+                "market_cap_currency": display_currency,
             })
 
     # --- non-stock: per-symbol OHLCV (usually 0 entries) ---
@@ -2937,7 +2954,7 @@ def fetch_heatmap_data(
                     fetch all, and return top N by turnover plus user symbols.
         include_market_cap: if True, attach market_cap (best-effort) to each item.
         market_type: when set, include the complete configured pool for stock,
-                     crypto, or cn_stock.
+                     hk_stock, crypto, or cn_stock.
 
     Returns:
         {"period": str, "period_label": str,
@@ -2955,8 +2972,8 @@ def fetch_heatmap_data(
 
     for entry in symbols:
         try:
-            sym = entry["symbol"].strip().upper()
             atype = entry.get("type", "stock").strip().lower()
+            sym = normalize_asset_symbol(entry["symbol"], atype)
         except (KeyError, AttributeError):
             continue
         key = (sym, atype)
@@ -3087,16 +3104,22 @@ def fetch_heatmap_data(
     # Attach display names for every period, not only the "today" fast path.
     # Reuse the same quote response for market caps to avoid another Yahoo call.
     if ordered:
-        stock_syms = [r["symbol"] for r in ordered if r["type"] == "stock"]
+        stock_syms = [
+            r["symbol"] for r in ordered if r["type"] in _STOCK_ASSET_TYPES
+        ]
         quote_map = {
             q["symbol"]: q for q in _yahoo_quote_batch(stock_syms)
         } if stock_syms else {}
 
         for r in ordered:
-            if r["type"] == "stock":
+            if r["type"] in _STOCK_ASSET_TYPES:
                 quote = quote_map.get(r["symbol"])
                 if quote and quote.get("name"):
                     r["name"] = quote["name"]
+                quote_currency = quote.get("currency") if quote else None
+                r["market_cap_currency"] = (
+                    quote_currency or _TURNOVER_CURRENCY.get(r["type"], "USD")
+                )
 
         if include_market_cap:
             caps = {
@@ -3104,11 +3127,18 @@ def fetch_heatmap_data(
                 for sym, quote in quote_map.items()
                 if quote.get("market_cap") and float(quote["market_cap"]) > 0
             }
-            missing_caps = [sym for sym in stock_syms if sym not in caps]
-            if missing_caps:
-                caps.update(_get_market_caps(missing_caps))
+            missing_us_caps = [
+                r["symbol"] for r in ordered
+                if r["type"] == "stock" and r["symbol"] not in caps
+            ]
+            if missing_us_caps:
+                caps.update(_get_market_caps(missing_us_caps))
             for r in ordered:
-                r["market_cap"] = caps.get(r["symbol"]) if r["type"] == "stock" else None
+                r["market_cap"] = (
+                    caps.get(r["symbol"])
+                    if r["type"] in _STOCK_ASSET_TYPES
+                    else None
+                )
 
     return {
         "market_type": market_type,
