@@ -804,6 +804,47 @@ class TestCrashChartEndpoint:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# POST /api/price-change/fear-threshold-stats
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TestFearThresholdStatsEndpoint:
+    """POST /api/price-change/fear-threshold-stats"""
+
+    @patch("routes.price_change.run_fear_threshold_stats")
+    def test_valid_request(self, mock_run, client):
+        mock_run.return_value = {
+            "index": "VIX",
+            "asset": "SPY",
+            "summary": {"event_count": 2, "horizons": {}},
+            "events": [{"date": "2024-01-02"}],
+        }
+        payload = {
+            "index": "VIX",
+            "threshold": 30,
+            "start_date": "2020-01-01",
+            "end_date": "2025-12-31",
+        }
+        resp = client.post(f"{BASE}/fear-threshold-stats", json=payload)
+        assert resp.status_code == 200
+        assert resp.get_json()["summary"]["event_count"] == 2
+        mock_run.assert_called_once_with(payload)
+        track_coverage(MOD, 2)
+
+    @patch("routes.price_change.run_fear_threshold_stats")
+    def test_value_error_returns_400(self, mock_run, client):
+        mock_run.side_effect = ValueError("threshold must be positive")
+        resp = client.post(f"{BASE}/fear-threshold-stats", json={"threshold": 0})
+        assert resp.status_code == 400
+        assert "threshold" in resp.get_json()["error"]
+
+    @patch("routes.price_change.run_fear_threshold_stats")
+    def test_runtime_error_returns_500(self, mock_run, client):
+        mock_run.side_effect = RuntimeError("upstream down")
+        resp = client.post(f"{BASE}/fear-threshold-stats", json={})
+        assert resp.status_code == 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # POST /api/price-change/vix-comparison
 # ═══════════════════════════════════════════════════════════════════════════
 

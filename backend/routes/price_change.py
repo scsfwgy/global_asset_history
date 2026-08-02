@@ -32,6 +32,7 @@ from service.price_change.price_change_service import (
     get_site_config,
     run_dca_backtest,
     run_crash_stats,
+    run_fear_threshold_stats,
     get_crash_chart_data,
 )
 
@@ -893,6 +894,19 @@ def vix_comparison():
         }
 
     return jsonify(result)
+
+
+@price_change_bp.route("/fear-threshold-stats", methods=["POST"])
+def fear_threshold_stats():
+    """Return SPY/QQQ forward returns after VIX/VXN threshold days."""
+    body = request.get_json(silent=True) or {}
+    try:
+        return jsonify(run_fear_threshold_stats(body))
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.exception("Failed to build fear threshold stats: %s", e)
+        return jsonify({"error": str(e)}), 500
 
 
 @price_change_bp.route("/header-trend", methods=["GET"])

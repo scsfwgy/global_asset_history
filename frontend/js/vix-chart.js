@@ -38,6 +38,10 @@
     var _vixPeriod = "daily";
     var _vixHidden = {};
     var _vixLoading = false;
+    var _fearStatsData = null;
+    var _fearStatsPage = 1;
+    var _fearStatsPageSize = 50;
+    var _fearStatsLoading = false;
 
     function $(id) { return document.getElementById(id); }
 
@@ -575,6 +579,265 @@
         });
     }
 
+    function formatFearPercent(value) {
+        if (value == null || !Number.isFinite(Number(value))) return __("vix.thresholdUnavailable");
+        var number = Number(value);
+        return (number > 0 ? "+" : "") + number.toFixed(2) + "%";
+    }
+
+    function renderFearSummaryMetric(elementId, horizon) {
+        var element = $(elementId);
+        if (!element) return;
+        if (!horizon || horizon.average_return_pct == null) {
+            element.textContent = __("vix.thresholdUnavailable");
+            element.style.color = "var(--apple-text-primary)";
+            return;
+        }
+        element.textContent = formatFearPercent(horizon.average_return_pct) + " / " +
+            Number(horizon.positive_rate_pct).toFixed(1) + "%";
+        element.style.color = horizon.average_return_pct >= 0
+            ? "var(--data-positive)" : "var(--data-negative)";
+    }
+
+    function fearForwardCell(item) {
+        if (!item) {
+            return '<span style="color:var(--apple-text-tertiary);">' +
+                __("vix.thresholdUnavailable") + '</span>';
+        }
+        var returnValue = Number(item.return_pct);
+        var returnClass = returnValue >= 0 ? "positive" : "negative";
+        return '<span class="vix-forward-price" title="' + item.date + '">$' +
+            Number(item.price).toFixed(2) + '</span>' +
+            '<span class="vix-forward-return ' + returnClass + '">' +
+            formatFearPercent(returnValue) + '</span>';
+    }
+
+    function renderFearStatsPage() {
+        if (!_fearStatsData) return;
+        var events = _fearStatsData.events || [];
+        var totalPages = Math.max(1, Math.ceil(events.length / _fearStatsPageSize));
+        _fearStatsPage = Math.max(1, Math.min(_fearStatsPage, totalPages));
+        var start = (_fearStatsPage - 1) * _fearStatsPageSize;
+        var rows = events.slice(start, start + _fearStatsPageSize);
+        var body = $("fearStatsBody");
+        if (body) {
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="8" class="vix-threshold-empty">' +
+                    __("vix.thresholdNoEvents") + '</td></tr>';
+            } else {
+                body.innerHTML = rows.map(function (event) {
+                    var forward = event.forward || {};
+                    return '<tr>' +
+                        '<td>' + event.date + '</td>' +
+                        '<td>' + Number(event.fear_value).toFixed(2) + '</td>' +
+                        '<td>$' + Number(event.asset_price).toFixed(2) + '</td>' +
+                        '<td>' + fearForwardCell(forward.day_1) + '</td>' +
+                        '<td>' + fearForwardCell(forward.week_1) + '</td>' +
+                        '<td>' + fearForwardCell(forward.month_1) + '</td>' +
+                        '<td>' + fearForwardCell(forward.half_year) + '</td>' +
+                        '<td>' + fearForwardCell(forward.year_1) + '</td>' +
+                        '</tr>';
+                }).join("");
+            }
+        }
+        var pageInfo = $("fearStatsPageInfo");
+        if (pageInfo) pageInfo.textContent = __("vix.thresholdPageInfo", {
+            page: _fearStatsPage,
+            pages: totalPages,
+            total: events.length,
+        });
+        var prev = $("fearStatsPrevBtn");
+        var next = $("fearStatsNextBtn");
+        if (prev) prev.disabled = _fearStatsPage <= 1;
+        if (next) next.disabled = _fearStatsPage >= totalPages;
+    }
+
+    function renderFearStats(data) {
+        _fearStatsData = data;
+        _fearStatsPage = 1;
+        var summary = data.summary || {};
+        var horizons = summary.horizons || {};
+        var summaryEl = $("fearStatsSummary");
+        var resultsEl = $("fearStatsResults");
+        var emptyEl = $("fearStatsEmpty");
+        if (summaryEl) summaryEl.style.display = "grid";
+        if (resultsEl) resultsEl.style.display = "block";
+        if (emptyEl) emptyEl.style.display = "none";
+        if ($("fearStatsEventCount")) $("fearStatsEventCount").textContent = String(summary.event_count || 0);
+        if ($("fearStatsPair")) $("fearStatsPair").textContent = data.index + " → " + data.asset;
+        renderFearSummaryMetric("fearStatsDaySummary", horizons.day_1);
+        renderFearSummaryMetric("fearStatsMonthSummary", horizons.month_1);
+        renderFearSummaryMetric("fearStatsYearSummary", horizons.year_1);
+        if ($("fearStatsMeta")) {
+            $("fearStatsMeta").textContent = __("vix.thresholdMeta", {
+                index: data.index,
+                threshold: Number(data.threshold).toFixed(2),
+                asset: data.asset,
+                source: (data.meta && data.meta.asset_source) || "--",
+            });
+        }
+        renderFearStatsPage();
+    }
+
+    function fetchFearThresholdStats() {
+        if (_fearStatsLoading) return;
+        var indexInput = $("fearStatsIndex");
+        var thresholdInput = $("fearStatsThreshold");
+        var startInput = $("fearStatsStartDate");
+        var endInput = $("fearStatsEndDate");
+        var threshold = thresholdInput ? Number(thresholdInput.value) : NaN;
+        var startDate = startInput ? startInput.value : "";
+        var endDate = endInput ? endInput.value : "";
+        var errorEl = $("fearStatsError");
+        if (!Number.isFinite(threshold) || threshold <= 0) {
+            if (errorEl) {
+                errorEl.textContent = __("vix.thresholdInvalidValue");
+                errorEl.style.display = "block";
+            }
+            return;
+        }
+        if (!startDate || !endDate || endDate < startDate) {
+            if (errorEl) {
+                errorEl.textContent = __("vix.thresholdInvalidRange");
+                errorEl.style.display = "block";
+            }
+            return;
+        }
+
+        _fearStatsLoading = true;
+        var loadingEl = $("fearStatsLoading");
+        var runBtn = $("fearStatsRunBtn");
+        if (loadingEl) loadingEl.style.display = "flex";
+        if (errorEl) errorEl.style.display = "none";
+        if (runBtn) runBtn.disabled = true;
+        fetch(FEAR_THRESHOLD_STATS_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                index: indexInput ? indexInput.value : "VIX",
+                threshold: threshold,
+                start_date: startDate,
+                end_date: endDate,
+            }),
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    return response.json().then(function (payload) {
+                        throw new Error(payload.error || "HTTP " + response.status);
+                    });
+                }
+                return response.json();
+            })
+            .then(renderFearStats)
+            .catch(function (error) {
+                if (errorEl) {
+                    errorEl.textContent = __("vix.thresholdLoadFailed") + error.message;
+                    errorEl.style.display = "block";
+                }
+            })
+            .finally(function () {
+                _fearStatsLoading = false;
+                if (loadingEl) loadingEl.style.display = "none";
+                if (runBtn) runBtn.disabled = false;
+            });
+    }
+
+    function selectVixView(view, updateUrl) {
+        var target = view === "threshold" || view === "overview" ? view : "chart";
+        var chartView = $("vixChartView");
+        var thresholdView = $("vixThresholdView");
+        var overviewView = $("vixOverviewView");
+        if (chartView) chartView.style.display = target === "chart" ? "block" : "none";
+        if (thresholdView) thresholdView.style.display = target === "threshold" ? "block" : "none";
+        if (overviewView) overviewView.style.display = target === "overview" ? "block" : "none";
+        var zhOverview = $("kb-vix-vxn-study");
+        var enOverview = $("kb-vix-vxn-study-en");
+        var useEnglish = typeof __lang === "function" && __lang() === "en";
+        if (zhOverview) zhOverview.style.display = target === "overview" && !useEnglish ? "block" : "none";
+        if (enOverview) enOverview.style.display = target === "overview" && useEnglish ? "block" : "none";
+        document.querySelectorAll("#vixViewTabs .transfer-tab").forEach(function (button) {
+            var active = button.dataset.vixView === target;
+            button.classList.toggle("active", active);
+            button.setAttribute("aria-selected", active ? "true" : "false");
+        });
+        if (updateUrl && window.history && window.URL) {
+            var url = new URL(window.location.href);
+            var lang = typeof __lang === "function" ? __lang() : "zh-CN";
+            if (target === "overview") {
+                url.pathname = typeof __langPath === "function"
+                    ? __langPath("/knowledge/vix-vxn-investing-signal", lang)
+                    : "/knowledge/vix-vxn-investing-signal";
+                url.search = "";
+            } else {
+                url.pathname = typeof __langPath === "function" ? __langPath("/vix", lang) : "/vix";
+                if (target === "threshold") url.searchParams.set("view", "threshold");
+                else url.searchParams.delete("view");
+            }
+            window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+            if (typeof window.__GAH_UPDATE_SEO__ === "function") window.__GAH_UPDATE_SEO__("vix");
+        }
+        if (target === "chart" && !_vixData) onTabActivated();
+    }
+
+    function initFearThresholdControls() {
+        var overviewView = $("vixOverviewView");
+        [$("kb-vix-vxn-study"), $("kb-vix-vxn-study-en")].forEach(function (panel) {
+            if (overviewView && panel) overviewView.appendChild(panel);
+        });
+        var endInput = $("fearStatsEndDate");
+        var today = new Date().toISOString().slice(0, 10);
+        if (endInput) {
+            endInput.max = today;
+            if (!endInput.value) endInput.value = today;
+        }
+        var startInput = $("fearStatsStartDate");
+        if (startInput) startInput.max = today;
+
+        document.querySelectorAll("#vixViewTabs .transfer-tab").forEach(function (button) {
+            button.addEventListener("click", function () {
+                selectVixView(button.dataset.vixView, true);
+            });
+        });
+        var runBtn = $("fearStatsRunBtn");
+        if (runBtn) runBtn.addEventListener("click", fetchFearThresholdStats);
+        var thresholdInput = $("fearStatsThreshold");
+        if (thresholdInput) thresholdInput.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") fetchFearThresholdStats();
+        });
+        var indexInput = $("fearStatsIndex");
+        if (indexInput) indexInput.addEventListener("change", function () {
+            if (thresholdInput) thresholdInput.value = indexInput.value === "VXN" ? "40" : "30";
+            if (startInput) startInput.value = indexInput.value === "VXN" ? "2001-01-01" : "2000-01-01";
+        });
+        var pageSize = $("fearStatsPageSize");
+        if (pageSize) pageSize.addEventListener("change", function () {
+            _fearStatsPageSize = parseInt(pageSize.value, 10) || 50;
+            _fearStatsPage = 1;
+            renderFearStatsPage();
+        });
+        if ($("fearStatsPrevBtn")) $("fearStatsPrevBtn").addEventListener("click", function () {
+            _fearStatsPage -= 1;
+            renderFearStatsPage();
+        });
+        if ($("fearStatsNextBtn")) $("fearStatsNextBtn").addEventListener("click", function () {
+            _fearStatsPage += 1;
+            renderFearStatsPage();
+        });
+
+        syncVixViewFromLocation();
+    }
+
+    function syncVixViewFromLocation() {
+        var cleanPath = window.location.pathname.replace(/^\/(en|zh)(?=\/|$)/, "") || "/";
+        var initialView = new URLSearchParams(window.location.search).get("view");
+        selectVixView(
+            cleanPath === "/knowledge/vix-vxn-investing-signal"
+                ? "overview"
+                : initialView === "threshold" ? "threshold" : "chart",
+            false
+        );
+    }
+
     function onTabActivated() {
         if (!_vixData) { _vixHidden = {}; fetchVixData(); }
     }
@@ -604,8 +867,13 @@
         initPeriodTabs();
         initReloadControls();
         initDemoControls();
+        initFearThresholdControls();
         var vixTab = document.querySelector('.tab-btn[data-tab="vix"]');
-        if (vixTab) vixTab.addEventListener("click", onTabActivated);
+        if (vixTab) vixTab.addEventListener("click", function () {
+            onTabActivated();
+            setTimeout(syncVixViewFromLocation, 0);
+        });
+        window.addEventListener("popstate", syncVixViewFromLocation);
         if (document.getElementById("tab-vix") && document.getElementById("tab-vix").classList.contains("active")) onTabActivated();
         window._vixRefreshChart = function () { if (_vixData) renderVixChart(); };
         var origRefresh = window._refreshCharts;

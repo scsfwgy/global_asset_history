@@ -3742,6 +3742,12 @@
         <!-- 美股恐慌指数 -->
         <div class="tab-panel" id="tab-vix">
         <div class="pc-monthly">
+            <div class="transfer-tabs vix-view-tabs" id="vixViewTabs" role="tablist" aria-label="Fear index views">
+                <button class="transfer-tab active" type="button" role="tab" aria-selected="true" data-vix-view="chart" data-i18n="vix.viewChart">走势对比</button>
+                <button class="transfer-tab" type="button" role="tab" aria-selected="false" data-vix-view="threshold" data-i18n="vix.viewThreshold">阈值后涨跌统计</button>
+                <button class="transfer-tab" type="button" role="tab" aria-selected="false" data-vix-view="overview" data-i18n="vix.viewOverview">数据概述</button>
+            </div>
+            <div id="vixChartView" role="tabpanel">
             <div class="pc-monthly-header">
                 <span class="pc-chart-title" data-i18n="vix.chartTitle">📊 SPY · QQQ · VIX · VXN 对比走势</span>
                 <div class="transfer-tabs" id="vixPeriodTabs" style="margin-left:auto;">
@@ -3794,6 +3800,100 @@
             </div>
             <div class="pc-error" id="vixError" style="display:none;"></div>
             <div id="vixChartContainer"></div>
+            </div><!-- /vixChartView -->
+
+            <div id="vixThresholdView" role="tabpanel" style="display:none;">
+                <div class="vix-threshold-controls">
+                    <label class="vix-threshold-field">
+                        <span class="pc-bt-label" data-i18n="vix.thresholdIndex">恐慌指数</span>
+                        <select id="fearStatsIndex" class="pc-bt-input">
+                            <option value="VIX">VIX → SPY</option>
+                            <option value="VXN">VXN → QQQ</option>
+                        </select>
+                    </label>
+                    <label class="vix-threshold-field">
+                        <span class="pc-bt-label" data-i18n="vix.thresholdValue">指数阈值（≥）</span>
+                        <input id="fearStatsThreshold" class="pc-bt-input" type="number" value="30" min="1" max="500" step="1">
+                    </label>
+                    <label class="vix-threshold-field">
+                        <span class="pc-bt-label" data-i18n="vix.thresholdStartDate">开始日期</span>
+                        <input id="fearStatsStartDate" class="pc-bt-input" type="date" value="2000-01-01">
+                    </label>
+                    <label class="vix-threshold-field">
+                        <span class="pc-bt-label" data-i18n="vix.thresholdEndDate">结束日期</span>
+                        <input id="fearStatsEndDate" class="pc-bt-input" type="date">
+                    </label>
+                    <button id="fearStatsRunBtn" class="pc-btn vix-threshold-run" type="button" data-i18n="vix.thresholdRun">开始统计</button>
+                </div>
+                <p class="vix-threshold-note" data-i18n="vix.thresholdMethod">
+                    区间内每一个收盘达到阈值的交易日都会单独计数；后续周期按 1、5、21、126、252 个交易日计算，SPY/QQQ 使用复权收盘价。区间尾部尚未走完的周期显示为暂无数据。
+                </p>
+                <div class="pc-loading" id="fearStatsLoading" style="display:none;">
+                    <div class="spinner"></div>
+                    <span data-i18n="vix.thresholdLoading">正在统计历史数据...</span>
+                </div>
+                <div class="pc-error" id="fearStatsError" style="display:none;"></div>
+                <div class="pc-bt-summary" id="fearStatsSummary" style="display:none;">
+                    <div class="pc-bt-summary-item">
+                        <div class="pc-bt-summary-label" data-i18n="vix.thresholdEventCount">达到阈值交易日</div>
+                        <div class="pc-bt-summary-val" id="fearStatsEventCount">--</div>
+                        <div class="pc-bt-summary-note" id="fearStatsPair">VIX → SPY</div>
+                    </div>
+                    <div class="pc-bt-summary-item">
+                        <div class="pc-bt-summary-label" data-i18n="vix.thresholdDaySummary">1日后平均 / 上涨概率</div>
+                        <div class="pc-bt-summary-val" id="fearStatsDaySummary">--</div>
+                    </div>
+                    <div class="pc-bt-summary-item">
+                        <div class="pc-bt-summary-label" data-i18n="vix.thresholdMonthSummary">1月后平均 / 上涨概率</div>
+                        <div class="pc-bt-summary-val" id="fearStatsMonthSummary">--</div>
+                    </div>
+                    <div class="pc-bt-summary-item">
+                        <div class="pc-bt-summary-label" data-i18n="vix.thresholdYearSummary">1年后平均 / 上涨概率</div>
+                        <div class="pc-bt-summary-val" id="fearStatsYearSummary">--</div>
+                    </div>
+                </div>
+                <div id="fearStatsResults" style="display:none;">
+                    <div class="pc-bt-detail-header">
+                        <span class="pc-bt-detail-title" data-i18n="vix.thresholdDetails">逐日明细</span>
+                        <span class="pc-bt-detail-count" id="fearStatsMeta"></span>
+                    </div>
+                    <div class="vix-threshold-table-wrap">
+                        <table class="vix-threshold-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="vix.thresholdDate">触发日期</th>
+                                    <th data-i18n="vix.thresholdIndexClose">指数收盘</th>
+                                    <th data-i18n="vix.thresholdAssetClose">ETF 收盘</th>
+                                    <th data-i18n="vix.thresholdAfterDay">1日后价格 / 涨跌幅</th>
+                                    <th data-i18n="vix.thresholdAfterWeek">1周后价格 / 涨跌幅</th>
+                                    <th data-i18n="vix.thresholdAfterMonth">1月后价格 / 涨跌幅</th>
+                                    <th data-i18n="vix.thresholdAfterHalfYear">半年后价格 / 涨跌幅</th>
+                                    <th data-i18n="vix.thresholdAfterYear">1年后价格 / 涨跌幅</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fearStatsBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pc-bt-pagination" id="fearStatsPagination">
+                        <span class="pc-bt-page-info" id="fearStatsPageInfo"></span>
+                        <div class="pc-bt-page-controls">
+                            <label class="pc-bt-page-size">
+                                <span data-i18n="vix.thresholdPageSize">每页</span>
+                                <select class="pc-bt-page-select" id="fearStatsPageSize">
+                                    <option value="25">25</option>
+                                    <option value="50" selected>50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </label>
+                            <button class="pc-btn pc-btn-sm" id="fearStatsPrevBtn" type="button" data-i18n="vix.thresholdPrevious">上一页</button>
+                            <button class="pc-btn pc-btn-sm" id="fearStatsNextBtn" type="button" data-i18n="vix.thresholdNext">下一页</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="vix-threshold-empty" id="fearStatsEmpty" data-i18n="vix.thresholdEmptyHint">选择指数、阈值和日期区间后开始统计。</div>
+            </div><!-- /vixThresholdView -->
+
+            <div id="vixOverviewView" role="tabpanel" style="display:none;"></div>
         </div>
         </div><!-- /tab-vix -->
 
@@ -3808,7 +3908,6 @@
                     <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/core-etf-guide" data-kb-tab="etf-intro" data-i18n="knowledge.etfIntro">核心ETF介绍</a>
                     <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/nasdaq-etf-guide" data-kb-tab="nasdaq-etf" data-i18n="knowledge.nasdaqEtf">纳指ETF</a>
                     <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/market-data-myths" data-kb-tab="event-myth" data-i18n="knowledge.eventMyth">数据魔咒</a>
-                    <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/vix-vxn-investing-signal" data-kb-tab="vix-vxn-study" data-i18n="knowledge.vixVxnStudy">VIX/VXN研究</a>
                     <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/financial-terms" data-kb-tab="terms" data-i18n="knowledge.terms">专业术语</a>
                     <a class="transfer-tab" href="__LANG_PREFIX__/us-etf/dram" data-kb-tab="dram" data-i18n="knowledge.dramTab">DRAM持仓</a>
                     <a class="transfer-tab" href="__LANG_PREFIX__/us-etf/qqqm" data-kb-tab="qqqm" data-i18n="knowledge.qqqmTab">QQQM持仓</a>
@@ -6563,7 +6662,7 @@
                 '/knowledge/nasdaq-etf-guide': 'knowledge',
                 '/knowledge/event-myth': 'knowledge',
                 '/knowledge/market-data-myths': 'knowledge',
-                '/knowledge/vix-vxn-investing-signal': 'knowledge',
+                '/knowledge/vix-vxn-investing-signal': 'vix',
                 '/knowledge/terms': 'knowledge',
                 '/knowledge/financial-terms': 'knowledge',
                 '/knowledge/svol-volatility-premium-etf': 'knowledge',
@@ -6604,7 +6703,6 @@
                 'etf-intro': '/knowledge/core-etf-guide',
                 'nasdaq-etf': '/knowledge/nasdaq-etf-guide',
                 'event-myth': '/knowledge/market-data-myths',
-                'vix-vxn-study': '/knowledge/vix-vxn-investing-signal',
                 'terms': '/knowledge/financial-terms',
                 'svol': '/knowledge/svol-volatility-premium-etf',
                 'china-sp500': '/knowledge/china-sp-500-equivalent',
@@ -6623,7 +6721,6 @@
                 '/knowledge/nasdaq-etf-guide': 'nasdaq-etf',
                 '/knowledge/event-myth': 'event-myth',
                 '/knowledge/market-data-myths': 'event-myth',
-                '/knowledge/vix-vxn-investing-signal': 'vix-vxn-study',
                 '/knowledge/terms': 'terms',
                 '/knowledge/financial-terms': 'terms',
                 '/knowledge/svol-volatility-premium-etf': 'svol',
@@ -6657,11 +6754,6 @@
                     titleKey: 'seo.knowledgeEventMythTitle',
                     descKey: 'seo.knowledgeEventMythDescription',
                     canonical: '/knowledge/market-data-myths'
-                },
-                'vix-vxn-study': {
-                    titleKey: 'seo.knowledgeVixVxnStudyTitle',
-                    descKey: 'seo.knowledgeVixVxnStudyDescription',
-                    canonical: '/knowledge/vix-vxn-investing-signal'
                 },
                 'terms': {
                     titleKey: 'seo.knowledgeTermsTitle',
@@ -6827,6 +6919,14 @@
                         seo = Object.assign({}, seo, { noindex: true });
                     }
                 }
+                if (tabName === 'vix' && currentPath === '/knowledge/vix-vxn-investing-signal') {
+                    seo = {
+                        titleKey: 'seo.knowledgeVixVxnStudyTitle',
+                        descKey: 'seo.knowledgeVixVxnStudyDescription',
+                        canonical: '/knowledge/vix-vxn-investing-signal',
+                        article: true
+                    };
+                }
                 var path = seo.canonical || TAB_TO_PATH[tabName] || '/';
                 var baseUrl = (window.__GAH_SITE_BASE_URL__ || '').replace(/\/$/, '');
                 var prefix = _langUrlPrefix();
@@ -6839,7 +6939,7 @@
                 setPropertyMeta('og:title', title);
                 setPropertyMeta('og:description', desc);
                 setPropertyMeta('og:url', url);
-                setPropertyMeta('og:type', tabName === 'knowledge' && !seo.noindex ? 'article' : 'website');
+                setPropertyMeta('og:type', (seo.article || (tabName === 'knowledge' && !seo.noindex)) ? 'article' : 'website');
                 setPropertyMeta('og:image', baseUrl + '/doc/screenshot/yearly-heatmap.png');
                 setMeta('twitter:title', title);
                 setMeta('twitter:description', desc);

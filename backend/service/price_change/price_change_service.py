@@ -68,6 +68,18 @@ MARKET_PULSE_TARGETS = (
     {"market": "24/7", "symbol": "BTC", "type": "crypto", "name": "比特币", "name_en": "Bitcoin"},
 )
 
+FEAR_THRESHOLD_CONFIG = {
+    "VIX": {"fear_symbol": "^VIX", "asset_symbol": "SPY"},
+    "VXN": {"fear_symbol": "^VXN", "asset_symbol": "QQQ"},
+}
+FEAR_FORWARD_HORIZONS = (
+    ("day_1", 1),
+    ("week_1", 5),
+    ("month_1", 21),
+    ("half_year", 126),
+    ("year_1", 252),
+)
+
 
 def _cache_ttl(series: PriceSeries) -> int:
     return ERROR_CACHE_TTL_SECONDS if series.error else DAILY_SERIES_TTL_SECONDS
@@ -2136,6 +2148,175 @@ def run_crash_stats(payload: Dict) -> Dict:
         },
         "crashes": crashes,
     }
+
+
+def run_fear_threshold_stats(payload: Dict) -> Dict:
+    """Measure ETF forward returns after VIX or VXN closes above a threshold.
+
+    Every qualifying fear-index trading day in the requested date range is an
+    observation. Forward prices use adjusted ETF closes after 1, 5, 21, 126,
+    and 252 subsequent trading sessions. This intentionally does not collapse
+    consecutive high-volatility days into a single episode.
+    """
+    started_at = time.perf_counter()
+    index = str(payload.get("index", "VIX")).strip().upper()
+    config = FEAR_THRESHOLD_CONFIG.get(index)
+    if config is None:
+        raise ValueError("index must be VIX or VXN")
+
+    try:
+        threshold = float(payload.get("threshold", 30))
+    except (TypeError, ValueError):
+        raise ValueError("threshold must be a number") from None
+    if not math.isfinite(threshold) or threshold <= 0 or threshold > 500:
+        raise ValueError("threshold must be greater than 0 and at most 500")
+
+    start_date = _parse_iso_date(payload.get("start_date"), "start_date")
+    end_date = _parse_iso_date(payload.get("end_date"), "end_date")
+    if end_date < start_date:
+        raise ValueError("end_date must be on or after start_date")
+
+    symbols = (config["fear_symbol"], config["asset_symbol"])
+    series_by_symbol: Dict[str, PriceSeries] = {}
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = {
+            executor.submit(_fetch_daily_series_cached, symbol, "stock"): symbol
+            for symbol in symbols
+        }
+        for future in as_completed(futures):
+            symbol = futures[future]
+            series_by_symbol[symbol] = future.result()
+
+    fear_series = series_by_symbol[config["fear_symbol"]]
+    asset_series = series_by_symbol[config["asset_symbol"]]
+    for symbol, series in series_by_symbol.items():
+        if series.error:
+            raise RuntimeError(f"failed to load {symbol}: {series.error}")
+
+    def _daily_points(series: PriceSeries) -> List[Tuple[date, float]]:
+        # Keep the last valid close if an upstream provider emits duplicate
+        # timestamps for one UTC trading date.
+        by_date: Dict[date, float] = {}
+        for timestamp, raw_close in zip(series.timestamps, series.closes):
+            if raw_close is None:
+                continue
+            try:
+                close = float(raw_close)
+                trading_date = datetime.fromtimestamp(
+                    timestamp, tz=timezone.utc
+                ).date()
+            except (TypeError, ValueError, OSError, OverflowError):
+                continue
+            if math.isfinite(close) and close > 0:
+                by_date[trading_date] = close
+        return sorted(by_date.items())
+
+    fear_points = _daily_points(fear_series)
+    asset_points = _daily_points(asset_series)
+    asset_index_by_date = {
+        trading_date: position
+        for position, (trading_date, _close) in enumerate(asset_points)
+    }
+
+    fear_match_count = 0
+    events = []
+    for event_date, fear_value in fear_points:
+        if event_date < start_date or event_date > end_date or fear_value < threshold:
+            continue
+        fear_match_count += 1
+        asset_position = asset_index_by_date.get(event_date)
+        if asset_position is None:
+            continue
+        asset_price = asset_points[asset_position][1]
+        forward = {}
+        for key, trading_days in FEAR_FORWARD_HORIZONS:
+            future_position = asset_position + trading_days
+            if future_position >= len(asset_points):
+                forward[key] = None
+                continue
+            future_date, future_price = asset_points[future_position]
+            return_pct = (future_price / asset_price - 1) * 100
+            forward[key] = {
+                "date": future_date.isoformat(),
+                "price": round(future_price, 2),
+                "return_pct": round(return_pct, 2),
+            }
+        events.append({
+            "date": event_date.isoformat(),
+            "fear_value": round(fear_value, 2),
+            "asset_price": round(asset_price, 2),
+            "forward": forward,
+        })
+
+    def _median(values: List[float]) -> Optional[float]:
+        if not values:
+            return None
+        ordered = sorted(values)
+        midpoint = len(ordered) // 2
+        if len(ordered) % 2:
+            return ordered[midpoint]
+        return (ordered[midpoint - 1] + ordered[midpoint]) / 2
+
+    horizon_summary = {}
+    for key, trading_days in FEAR_FORWARD_HORIZONS:
+        returns = [
+            event["forward"][key]["return_pct"]
+            for event in events
+            if event["forward"][key] is not None
+        ]
+        horizon_summary[key] = {
+            "trading_days": trading_days,
+            "available": len(returns),
+            "average_return_pct": round(sum(returns) / len(returns), 2)
+            if returns else None,
+            "median_return_pct": round(_median(returns), 2)
+            if returns else None,
+            "positive_rate_pct": round(
+                sum(1 for value in returns if value > 0) / len(returns) * 100,
+                1,
+            ) if returns else None,
+        }
+
+    result = {
+        "index": index,
+        "index_symbol": config["fear_symbol"],
+        "asset": config["asset_symbol"],
+        "threshold": threshold,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "summary": {
+            "event_count": len(events),
+            "fear_match_count": fear_match_count,
+            "unmatched_asset_dates": fear_match_count - len(events),
+            "horizons": horizon_summary,
+        },
+        # Newest first is more useful in the UI; horizon calculation above
+        # still uses the complete ascending ETF session sequence.
+        "events": list(reversed(events)),
+        "meta": {
+            "fear_source": fear_series.source,
+            "asset_source": asset_series.source,
+            "fear_points": len(fear_points),
+            "asset_points": len(asset_points),
+        },
+    }
+    logger.info(
+        "event=fear_threshold_stats index=%s asset=%s threshold=%s start_date=%s "
+        "end_date=%s fear_source=%s asset_source=%s fear_points=%s asset_points=%s "
+        "events=%s duration_ms=%s",
+        index,
+        config["asset_symbol"],
+        threshold,
+        start_date.isoformat(),
+        end_date.isoformat(),
+        fear_series.source,
+        asset_series.source,
+        len(fear_points),
+        len(asset_points),
+        len(events),
+        round((time.perf_counter() - started_at) * 1000, 1),
+    )
+    return result
 
 
 def get_crash_chart_data(payload: Dict) -> Dict:

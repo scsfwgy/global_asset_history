@@ -674,6 +674,113 @@ body {
             color: var(--apple-text-secondary);
             line-height: 1.4;
         }
+.vix-view-tabs {
+            width: fit-content;
+            max-width: 100%;
+            margin-bottom: 16px;
+        }
+.vix-threshold-controls {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(135px, 1fr)) auto;
+            gap: 10px;
+            align-items: end;
+            margin-bottom: 12px;
+        }
+.vix-threshold-field {
+            display: flex;
+            min-width: 0;
+            flex-direction: column;
+            gap: 6px;
+        }
+.vix-threshold-field .pc-bt-input {
+            box-sizing: border-box;
+            width: 100%;
+            min-height: 34px;
+        }
+.vix-threshold-run {
+            min-height: 34px;
+            white-space: nowrap;
+        }
+.vix-threshold-note {
+            margin: 0 0 14px;
+            padding: 10px 12px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            background: var(--apple-surface-2);
+            color: var(--apple-text-secondary);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+.vix-threshold-table-wrap {
+            max-height: 680px;
+            overflow: auto;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+        }
+.vix-threshold-table {
+            width: 100%;
+            min-width: 1160px;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 12px;
+        }
+.vix-threshold-table th,
+.vix-threshold-table td {
+            padding: 9px 10px;
+            border-right: 1px solid var(--apple-divider);
+            border-bottom: 1px solid var(--apple-divider);
+            text-align: right;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+.vix-threshold-table th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: var(--apple-surface-2);
+            color: var(--apple-text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+        }
+.vix-threshold-table th:first-child,
+.vix-threshold-table td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            background: var(--apple-surface-1);
+            text-align: left;
+        }
+.vix-threshold-table th:first-child {
+            z-index: 3;
+            background: var(--apple-surface-2);
+        }
+.vix-threshold-table th:last-child,
+.vix-threshold-table td:last-child { border-right: 0; }
+.vix-threshold-table tr:last-child td { border-bottom: 0; }
+.vix-forward-price {
+            color: var(--apple-text-primary);
+            font-weight: 600;
+        }
+.vix-forward-return {
+            margin-left: 5px;
+            font-weight: 600;
+        }
+.vix-forward-return.positive { color: var(--data-positive); }
+.vix-forward-return.negative { color: var(--data-negative); }
+.vix-threshold-empty {
+            padding: 28px 16px;
+            color: var(--apple-text-tertiary);
+            text-align: center;
+        }
+@media (max-width: 900px) {
+    .vix-threshold-controls {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+    .vix-threshold-run { width: 100%; }
+}
+@media (max-width: 480px) {
+    .vix-threshold-controls { grid-template-columns: 1fr; }
+}
 /* ─── Heatmap (treemap) ─── */
 .market-pulse {
             margin-bottom: 14px;

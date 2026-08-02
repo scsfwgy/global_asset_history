@@ -178,7 +178,8 @@ KNOWLEDGE_ARTICLES = {
     },
     "/knowledge/vix-vxn-investing-signal": {
         "legacy_paths": [],
-        "subtab": "vix-vxn-study",
+        "subtab": "vix-overview",
+        "section": "US Fear Index",
         "en_indexable": True,
         "published": "2026-08-02",
         "updated": "2026-08-02",
@@ -482,7 +483,7 @@ def serve_frontend_html(filename: str):
             "inLanguage": html_lang,
             "datePublished": article.get("published", INDEX_LASTMOD),
             "dateModified": article.get("updated", INDEX_LASTMOD),
-            "articleSection": "Knowledge Base",
+            "articleSection": article.get("section", "Knowledge Base"),
             "keywords": article["keywords"][lang],
         })
     elif filename == "etf-market.html":

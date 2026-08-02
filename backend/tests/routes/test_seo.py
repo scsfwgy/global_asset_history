@@ -205,15 +205,22 @@ class TestHtmlMeta:
         zh_html = client.get("/zh/knowledge/vix-vxn-investing-signal").get_data(as_text=True)
         en_html = client.get("/en/knowledge/vix-vxn-investing-signal").get_data(as_text=True)
 
-        assert 'data-kb-tab="vix-vxn-study"' in zh_html
+        assert 'data-vix-view="overview"' in zh_html
+        assert 'data-i18n="vix.viewOverview">数据概述</button>' in zh_html
+        assert 'data-kb-tab="vix-vxn-study"' not in zh_html
         assert 'id="kb-vix-vxn-study"' in zh_html
         assert "VIX≥40 后1年" in zh_html
         assert "VXN≥50：独立事件" in zh_html
         assert "-54.2%" in zh_html
         assert 'id="kb-vix-vxn-study-en"' in en_html
         assert "One-Year Outcomes After High Readings" in en_html
+        script = client.get("/js/vix-chart.js").get_data(as_text=True)
+        assert 'overviewView.appendChild(panel)' in script
+        assert 'cleanPath === "/knowledge/vix-vxn-investing-signal"' in script
+        assert 'url.pathname = typeof __langPath === "function"' in script
         assert '<link rel="canonical" href="https://test.local/zh/knowledge/vix-vxn-investing-signal"' in zh_html
         assert '<link rel="canonical" href="https://test.local/en/knowledge/vix-vxn-investing-signal"' in en_html
+        assert '"articleSection": "US Fear Index"' in zh_html
 
     @pytest.mark.parametrize("path", ["/yearly", "/detail", "/stock-compare", "/backtest"])
     def test_indexable_tools_have_self_canonical_and_consistent_robots(self, client, path):
@@ -263,6 +270,27 @@ class TestHtmlMeta:
         assert 'candleStyle === "solid" ? directionColor : "none"' in script
         assert 'data-style="' in script
         assert "legendHollow" in script
+
+    def test_vix_threshold_stats_subtab_has_filters_and_result_table(self, client):
+        html = client.get("/zh/vix").get_data(as_text=True)
+        script = client.get("/js/vix-chart.js").get_data(as_text=True)
+        api_script = client.get("/js/api.js").get_data(as_text=True)
+
+        assert 'id="vixViewTabs"' in html
+        assert 'data-vix-view="threshold"' in html
+        assert 'data-vix-view="overview"' in html
+        assert 'id="vixOverviewView"' in html
+        assert 'id="fearStatsIndex"' in html
+        assert '<option value="VIX">VIX → SPY</option>' in html
+        assert '<option value="VXN">VXN → QQQ</option>' in html
+        assert 'id="fearStatsThreshold"' in html
+        assert 'id="fearStatsStartDate"' in html
+        assert 'id="fearStatsEndDate"' in html
+        assert 'id="fearStatsBody"' in html
+        assert "fetchFearThresholdStats" in script
+        assert "forward.half_year" in script
+        assert "FEAR_THRESHOLD_STATS_ENDPOINT" in script
+        assert "/api/price-change/fear-threshold-stats" in api_script
 
     def test_stock_compare_has_search_tags_and_metric_tables(self, client):
         html = client.get("/zh/stock-compare").get_data(as_text=True)

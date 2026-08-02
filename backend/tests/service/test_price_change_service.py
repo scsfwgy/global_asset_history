@@ -1335,6 +1335,105 @@ class TestRunCrashStats:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# run_fear_threshold_stats
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TestRunFearThresholdStats:
+    """VIX/VXN threshold-day forward return analysis."""
+
+    @staticmethod
+    def _series(values, source):
+        timestamps = [
+            int((datetime(2024, 1, 1, 12, tzinfo=timezone.utc) + timedelta(days=i)).timestamp())
+            for i in range(len(values))
+        ]
+        return PriceSeries(timestamps, values, source, time.time())
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_vix_threshold_returns_all_horizons_and_summary(self, mock_fetch):
+        fear_values = [20.0] * 300
+        fear_values[0] = 35.0
+        fear_values[10] = 40.0
+        fear_values[299] = 45.0
+        fear_series = self._series(fear_values, "fear-source")
+        asset_series = self._series([100.0 + i for i in range(300)], "asset-source")
+
+        mock_fetch.side_effect = lambda symbol, _type: (
+            fear_series if symbol == "^VIX" else asset_series
+        )
+        result = svc.run_fear_threshold_stats({
+            "index": "VIX",
+            "threshold": 30,
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+        })
+
+        assert result["asset"] == "SPY"
+        assert result["summary"]["event_count"] == 3
+        assert result["events"][0]["date"] == "2024-10-26"
+        assert result["events"][0]["forward"]["day_1"] is None
+        oldest = result["events"][-1]
+        assert oldest["asset_price"] == 100.0
+        assert oldest["forward"]["day_1"] == {
+            "date": "2024-01-02", "price": 101.0, "return_pct": 1.0,
+        }
+        assert oldest["forward"]["year_1"]["price"] == 352.0
+        assert result["summary"]["horizons"]["year_1"]["available"] == 2
+        assert result["meta"] == {
+            "fear_source": "fear-source",
+            "asset_source": "asset-source",
+            "fear_points": 300,
+            "asset_points": 300,
+        }
+        assert {call.args[0] for call in mock_fetch.call_args_list} == {"^VIX", "SPY"}
+        track_coverage(MOD, 6)
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_vxn_uses_qqq_and_only_counts_dates_in_range(self, mock_fetch):
+        fear_series = self._series([25.0, 45.0, 50.0, 20.0], "yahoo")
+        asset_series = self._series([400.0, 404.0, 408.0, 412.0], "yahoo")
+        mock_fetch.side_effect = lambda symbol, _type: (
+            fear_series if symbol == "^VXN" else asset_series
+        )
+
+        result = svc.run_fear_threshold_stats({
+            "index": "vxn",
+            "threshold": 40,
+            "start_date": "2024-01-02",
+            "end_date": "2024-01-02",
+        })
+
+        assert result["index"] == "VXN"
+        assert result["asset"] == "QQQ"
+        assert result["summary"]["event_count"] == 1
+        assert result["events"][0]["fear_value"] == 45.0
+        assert result["events"][0]["forward"]["day_1"]["return_pct"] == 0.99
+        assert {call.args[0] for call in mock_fetch.call_args_list} == {"^VXN", "QQQ"}
+        track_coverage(MOD, 4)
+
+    @pytest.mark.parametrize("payload,error", [
+        ({"index": "VVIX", "threshold": 30, "start_date": "2024-01-01", "end_date": "2024-01-02"}, "index"),
+        ({"index": "VIX", "threshold": 0, "start_date": "2024-01-01", "end_date": "2024-01-02"}, "threshold"),
+        ({"index": "VIX", "threshold": "bad", "start_date": "2024-01-01", "end_date": "2024-01-02"}, "threshold"),
+        ({"index": "VIX", "threshold": 30, "start_date": "2024-01-03", "end_date": "2024-01-02"}, "end_date"),
+    ])
+    def test_validation_errors(self, payload, error):
+        with pytest.raises(ValueError, match=error):
+            svc.run_fear_threshold_stats(payload)
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_data_source_error_is_runtime_error(self, mock_fetch):
+        mock_fetch.return_value = PriceSeries([], [], "yahoo", time.time(), "upstream down")
+        with pytest.raises(RuntimeError, match="failed to load"):
+            svc.run_fear_threshold_stats({
+                "index": "VIX",
+                "threshold": 30,
+                "start_date": "2024-01-01",
+                "end_date": "2024-12-31",
+            })
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # get_crash_chart_data
 # ═══════════════════════════════════════════════════════════════════════════
 
