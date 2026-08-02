@@ -176,6 +176,25 @@ KNOWLEDGE_ARTICLES = {
             "en": "market data myths,World Cup stock market,midterm elections market,presidential cycle,Olympics market,S&P 500 history",
         },
     },
+    "/knowledge/vix-vxn-investing-signal": {
+        "legacy_paths": [],
+        "subtab": "vix-vxn-study",
+        "en_indexable": True,
+        "published": "2026-08-02",
+        "updated": "2026-08-02",
+        "title": {
+            "zh-CN": "VIX和VXN高位适合买入SPY与QQQ吗？历史相关性研究 - GlobalAssetHistory",
+            "en": "Do High VIX and VXN Levels Signal a Time to Buy SPY and QQQ? — GlobalAssetHistory",
+        },
+        "description": {
+            "zh-CN": "基于2000年至2026年历史数据，研究VIX与SPY、VXN与QQQ的同期相关性，以及恐慌指数高位后的1个月至1年收益和继续回撤风险。",
+            "en": "A 2000–2026 study of VIX versus SPY and VXN versus QQQ, including same-day correlations, forward returns after volatility spikes, and further drawdown risk.",
+        },
+        "keywords": {
+            "zh-CN": "VIX,VXN,SPY,QQQ,恐慌指数,美股择时,纳指择时,高VIX买入,波动率指数,分批加仓",
+            "en": "VIX,VXN,SPY,QQQ,fear index,market timing,high VIX buying,volatility index,staged investing",
+        },
+    },
     "/knowledge/financial-terms": {
         "legacy_paths": ["/knowledge/terms"],
         "subtab": "terms",
@@ -817,6 +836,7 @@ def etf_market():
 @app.route("/knowledge/nasdaq-etf-guide")
 @app.route("/knowledge/event-myth")
 @app.route("/knowledge/market-data-myths")
+@app.route("/knowledge/vix-vxn-investing-signal")
 @app.route("/knowledge/terms")
 @app.route("/knowledge/financial-terms")
 @app.route("/knowledge/svol-volatility-premium-etf")
@@ -1001,7 +1021,7 @@ def stats_dashboard():
         "heatmap": "热力图", "yearly": "历年涨跌幅", "detail": "股票详情",
         "stock-compare": "美股对比", "download": "数据下载",
         "backtest": "回测", "crash": "暴跌统计", "etf": "标普纳指ETF追踪（场内）",
-        "qdii-funds": "标普纳指基金追踪（场外）", "vix": "VIX恐慌指数",
+        "qdii-funds": "标普纳指基金追踪（场外）", "vix": "美股恐慌指数",
         "knowledge": "数据科普", "wishes": "心愿墙",
     }
     for rank, (tab, count) in enumerate(sorted_tabs, 1):

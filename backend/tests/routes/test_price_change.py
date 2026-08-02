@@ -827,7 +827,7 @@ class TestVixComparisonEndpoint:
 
     @patch("routes.price_change._fetch_daily_series_cached")
     def test_daily_includes_adjusted_spy_qqq_candles(self, mock_fetch, client):
-        """SPY/QQQ expose adjusted OHLC candles on the same basis as returns."""
+        """SPY/QQQ expose adjusted candles and both fear indexes are returned."""
         import calendar
         from datetime import datetime, timezone
         from types import SimpleNamespace
@@ -853,6 +853,13 @@ class TestVixComparisonEndpoint:
         data = resp.get_json()
         assert len(data["spy_candles"]) == 6
         assert len(data["qqq_candles"]) == 6
+        assert len(data["vix"]) == 6
+        assert len(data["vxn"]) == 6
+        assert data["meta"]["^VIX"]["points"] == 6
+        assert data["meta"]["^VXN"]["points"] == 6
+        assert {call.args[0] for call in mock_fetch.call_args_list} == {
+            "SPY", "QQQ", "^VIX", "^VXN",
+        }
         first, second = data["spy_candles"][:2]
         assert first == {
             "date": "2024-01-01",

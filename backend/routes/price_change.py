@@ -512,14 +512,14 @@ def heatmap():
 
 @price_change_bp.route("/vix-comparison", methods=["POST"])
 def vix_comparison():
-    """Return SPY, QQQ, VIX data aggregated by period.
+    """Return SPY, QQQ, VIX, and VXN data aggregated by period.
 
     Request body:
         {"period": "1hour|daily|weekly|monthly", "count": 30}
 
     Returns:
         {"spy": [...], "qqq": [...], "spy_candles": [...],
-         "qqq_candles": [...], "vix": [...],
+         "qqq_candles": [...], "vix": [...], "vxn": [...],
          "latest_vix": float, "meta": {...}}
     """
     import concurrent.futures
@@ -556,7 +556,7 @@ def vix_comparison():
     # For intraday periods, fetch directly from Yahoo (bypass daily cache —
     # intraday data changes too fast to cache meaningfully).
     # For daily/weekly/monthly, use the cached daily fetcher.
-    symbols = ["SPY", "QQQ", "^VIX"]
+    symbols = ["SPY", "QQQ", "^VIX", "^VXN"]
     series_map = {}
 
     def _fetch_intraday(symbol: str) -> dict:
@@ -608,7 +608,7 @@ def vix_comparison():
 
     if period == "1hour":
         # Intraday: fetch directly
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(symbols)) as executor:
             futures = {executor.submit(_fetch_intraday, sym): sym for sym in symbols}
             for fut in concurrent.futures.as_completed(futures):
                 sym = futures[fut]
@@ -619,7 +619,7 @@ def vix_comparison():
                     series_map[sym] = {"error": str(e)}
     else:
         # Daily/weekly/monthly: use cached fetcher
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(symbols)) as executor:
             futures = {
                 executor.submit(_fetch_daily_series_cached, sym, "stock"): sym
                 for sym in symbols
@@ -869,6 +869,7 @@ def vix_comparison():
         "spy_candles": _aggregate_candles(series_map.get("SPY"), period),
         "qqq_candles": _aggregate_candles(series_map.get("QQQ"), period),
         "vix": _aggregate(series_map.get("^VIX"), period),
+        "vxn": _aggregate(series_map.get("^VXN"), period),
         "period": period,
         "meta": {},
         "stats": {},
@@ -883,7 +884,7 @@ def vix_comparison():
     }
 
     # Meta: data source and point counts
-    for sym in ("SPY", "QQQ", "^VIX"):
+    for sym in symbols:
         raw = series_map.get(sym, {})
         result["meta"][sym] = {
             "source": raw.get("source", "yahoo"),

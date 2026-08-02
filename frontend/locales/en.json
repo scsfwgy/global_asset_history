@@ -13,7 +13,7 @@
     "dataDownload": "Data Download",
     "etfTracking": "S&P & Nasdaq ETF (Listed)",
     "qdiiFunds": "S&P & Nasdaq Funds (OTC)",
-    "vixIndex": "VIX Fear Index",
+    "vixIndex": "US Fear Index",
     "knowledge": "Knowledge",
     "wishes": "Wishes",
     "heatmap": "Heatmap"
@@ -638,7 +638,7 @@
     "loadingFunds": "Loading QDII fund data..."
   },
   "vix": {
-    "chartTitle": "📊 SPY · QQQ · VIX Comparison",
+    "chartTitle": "📊 SPY · QQQ · VIX · VXN Comparison",
     "period1h": "1 Hour",
     "periodDay": "Daily",
     "periodWeek": "Weekly",
@@ -667,7 +667,7 @@
     "loadFailed": "Load failed: ",
     "axisPeriodReturn": "SPY/QQQ Period Return %",
     "axisCumReturn": "SPY/QQQ Cumulative Return %",
-    "axisVix": "VIX",
+    "axisVix": "VIX / VXN",
     "tooltipDate": "Date: ",
     "tooltipOhlc": "O/H/L/C",
     "tooltipClosePrice": "Close:",
@@ -767,6 +767,7 @@
     "etfIntro": "Core ETF Guide",
     "nasdaqEtf": "Nasdaq ETFs",
     "eventMyth": "Data Myths",
+    "vixVxnStudy": "VIX/VXN Study",
     "terms": "Terminology"
   },
   "seo": {
@@ -790,8 +791,8 @@
     "etfDescription": "Real-time tracking of A-share listed S&P 500 and Nasdaq 100 ETFs: premiums, estimation errors, and return analysis.",
     "qdiiTitle": "QDII Fund Tracker — GlobalAssetHistory",
     "qdiiDescription": "Track OTC QDII fund availability, fee structures, purchase limits, and true tracking errors.",
-    "vixTitle": "VIX Fear Index — GlobalAssetHistory",
-    "vixDescription": "VIX overlay with SPY/QQQ, historical panic zone mapping, and market sentiment reference.",
+    "vixTitle": "US Fear Index — GlobalAssetHistory",
+    "vixDescription": "Overlay VIX and VXN with SPY/QQQ to compare S&P 500 and Nasdaq-100 fear levels, historical panic zones, and market sentiment.",
     "knowledgeTitle": "Knowledge Base — GlobalAssetHistory",
     "knowledgeDescription": "US stock investing guides, ETF basics, macro data interpretation, and financial terminology reference.",
     "knowledgeHowToBuyTitle": "How to Buy US Stocks and ETFs with Stablecoins — GlobalAssetHistory",
@@ -804,6 +805,8 @@
     "knowledgeNasdaqEtfDescription": "Compare QQQ, QQQM, IQQ, and QNDX by price, issuer, fees, size, strengths, and drawbacks, then understand ONEQ, QQEW, QQQJ, TQQQ, QLD, and QYLD.",
     "knowledgeEventMythTitle": "Market Data Myths: World Cup, Elections, Presidential Cycle, Olympics — GlobalAssetHistory",
     "knowledgeEventMythDescription": "Use historical market data to test popular market myths around the World Cup, US elections, presidential cycles, and the Olympics.",
+    "knowledgeVixVxnStudyTitle": "Do High VIX and VXN Levels Signal a Time to Buy SPY and QQQ? — GlobalAssetHistory",
+    "knowledgeVixVxnStudyDescription": "A 2000–2026 study of VIX versus SPY and VXN versus QQQ, including same-day correlations, forward returns after volatility spikes, and further drawdown risk.",
     "knowledgeTermsTitle": "US Stock and ETF Glossary — GlobalAssetHistory",
     "knowledgeTermsDescription": "A glossary for US stocks, ETFs, indexes, fees, holdings, premiums, drawdowns, volatility, and market data terms.",
     "knowledgeSvolTitle": "SVOL Volatility Premium ETF: NAV, Performance and Risk — GlobalAssetHistory",

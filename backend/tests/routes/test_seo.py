@@ -180,6 +180,7 @@ class TestHtmlMeta:
             "/knowledge/how-to-buy-us-stocks",
             "/knowledge/value-investing",
             "/knowledge/nasdaq-etf-guide",
+            "/knowledge/vix-vxn-investing-signal",
         ],
     )
     def test_knowledge_article_jsonld_dates(self, client, path):
@@ -199,6 +200,20 @@ class TestHtmlMeta:
         assert "QNDX" in html
         assert 'data-kb-tab="nasdaq-etf"' in html
         assert '<link rel="canonical" href="https://test.local/zh/knowledge/nasdaq-etf-guide"' in html
+
+    def test_vix_vxn_study_route_content_and_locales(self, client):
+        zh_html = client.get("/zh/knowledge/vix-vxn-investing-signal").get_data(as_text=True)
+        en_html = client.get("/en/knowledge/vix-vxn-investing-signal").get_data(as_text=True)
+
+        assert 'data-kb-tab="vix-vxn-study"' in zh_html
+        assert 'id="kb-vix-vxn-study"' in zh_html
+        assert "VIX≥40 后1年" in zh_html
+        assert "VXN≥50：独立事件" in zh_html
+        assert "-54.2%" in zh_html
+        assert 'id="kb-vix-vxn-study-en"' in en_html
+        assert "One-Year Outcomes After High Readings" in en_html
+        assert '<link rel="canonical" href="https://test.local/zh/knowledge/vix-vxn-investing-signal"' in zh_html
+        assert '<link rel="canonical" href="https://test.local/en/knowledge/vix-vxn-investing-signal"' in en_html
 
     @pytest.mark.parametrize("path", ["/yearly", "/detail", "/stock-compare", "/backtest"])
     def test_indexable_tools_have_self_canonical_and_consistent_robots(self, client, path):
@@ -227,11 +242,15 @@ class TestHtmlMeta:
         assert "fetchData()" not in script[preset_start:preset_end]
         assert 'refreshBtn.addEventListener("click", fetchData)' in script
 
-    def test_vix_uses_candles_for_spy_qqq_and_line_for_vix(self, client):
+    def test_vix_uses_candles_for_spy_qqq_and_lines_for_fear_indexes(self, client):
         script = client.get("/js/vix-chart.js").get_data(as_text=True)
         assert "normalizeCandleSeries" in script
         assert "_vixData.spy_candles" in script
         assert "_vixData.qqq_candles" in script
+        assert "_vixData.vix" in script
+        assert "_vixData.vxn" in script
+        assert 'name: "VIX"' in script
+        assert 'name: "VXN"' in script
         assert 'kind: "candle"' in script
         assert 'kind: "line"' in script
         assert 'class="vix-candle-body vix-candle-' in script

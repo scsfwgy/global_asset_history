@@ -1,8 +1,8 @@
 /**
- * VIX Fear Index tab — embedded in price-change.html.
+ * US Fear Index tab — embedded in price-change.html.
  *
  * - SPY / QQQ candlesticks on left Y-axis as % change
- * - VIX on right Y-axis as absolute index value
+ * - VIX / VXN on right Y-axis as absolute index values
  * - Period switching: 1hour / daily / weekly / monthly (default daily)
  * - Manual bar count input (default 30)
  * - Legend click to toggle series visibility
@@ -18,6 +18,7 @@
             positive: s.getPropertyValue('--data-positive').trim() || '#30d158',
             negative: s.getPropertyValue('--data-negative').trim() || '#ff453a',
             vix: s.getPropertyValue('--data-negative').trim() || '#ff453a',
+            vxn: '#bf5af2',
             grid: s.getPropertyValue('--apple-chart-grid').trim() || 'rgba(255,255,255,0.10)',
             text: s.getPropertyValue('--apple-chart-text').trim() || 'rgba(255,255,255,0.75)',
             textDim: s.getPropertyValue('--apple-chart-text-dim').trim() || 'rgba(255,255,255,0.50)',
@@ -274,8 +275,9 @@
         var stepWise = isStepWise(_vixPeriod);
         var spySeries = { key: "spy", name: "SPY", kind: "candle", axis: "left", points: normalizeCandleSeries(_vixData.spy_candles || [], _vixData.spy || [], stepWise), color: getVixColors().spy };
         var qqqSeries = { key: "qqq", name: "QQQ", kind: "candle", axis: "left", points: normalizeCandleSeries(_vixData.qqq_candles || [], _vixData.qqq || [], stepWise), color: getVixColors().qqq };
-        var vixSeries = { key: "vix", name: "VIX", kind: "line", axis: "right", points: vixValueSeries(_vixData.vix || []), color: getVixColors().vix };
-        var allSeries = [spySeries, qqqSeries, vixSeries];
+        var vixSeries = { key: "vix", name: "VIX", kind: "line", axis: "right", points: vixValueSeries(_vixData.vix || []), color: getVixColors().vix, dash: "4,3" };
+        var vxnSeries = { key: "vxn", name: "VXN", kind: "line", axis: "right", points: vixValueSeries(_vixData.vxn || []), color: getVixColors().vxn, dash: "" };
+        var allSeries = [spySeries, qqqSeries, vixSeries, vxnSeries];
         var validSeries = allSeries.filter(function (s) { return s.points.length >= 2; });
 
         if (validSeries.length === 0) {
@@ -377,7 +379,7 @@
                     pathD += (pathD ? "L" : "M") + x.toFixed(1) + "," + y.toFixed(1) + " ";
                 }
                 if (pathD) {
-                    svg += '<path d="' + pathD + '" fill="none" stroke="' + series.color + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" stroke-dasharray="4,3"/>';
+                    svg += '<path d="' + pathD + '" fill="none" stroke="' + series.color + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"' + (series.dash ? ' stroke-dasharray="' + series.dash + '"' : '') + '/>';
                 }
                 for (var k = 0; k < series.points.length; k++) {
                     var dx = dateX[series.points[k].date];
@@ -392,7 +394,7 @@
         var leftLabel = stepWise ? __("vix.axisPeriodReturn") : __("vix.axisCumReturn");
         svg += '<text x="8" y="14" fill="' + CLR.text + '" font-size="10">' + leftLabel + '</text>';
         if (visibleRight.length) {
-            svg += '<text x="' + (W - PAD.right + 2) + '" y="14" fill="' + getVixColors().vix + '" font-size="10">VIX</text>';
+            svg += '<text x="' + (W - PAD.right + 2) + '" y="14" fill="' + getVixColors().vix + '" font-size="10">' + __("vix.axisVix") + '</text>';
         }
 
         var labelEvery = Math.max(1, Math.floor(allDates.length / 8));

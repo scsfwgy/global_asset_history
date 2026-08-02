@@ -61,7 +61,7 @@
         "美股、ETF、数字货币和A股指数收益查询",
         "年、月、日历史收益钻取",
         "定投回测与资产曲线",
-        "暴跌统计与VIX恐慌指数观察",
+        "暴跌统计与美股恐慌指数（VIX/VXN）观察",
         "Historical asset returns",
         "DCA backtest",
         "ETF historical returns",
@@ -465,6 +465,17 @@
             font-size: 12px;
             font-weight: 600;
             color: var(--apple-text-tertiary);
+        }
+
+        @media (max-width: 768px) {
+            #tab-vix .pc-monthly-header {
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                gap: 10px;
+            }
+            #tab-vix .pc-chart-title { flex: 0 0 100%; }
+            #vixPeriodTabs,
+            #vixPeriodTabs + div { margin-left: 0 !important; }
         }
 
         .pc-monthly-grid {
@@ -2920,7 +2931,7 @@
             <a class="tab-btn" href="__LANG_PREFIX__/crash" data-tab="crash" data-i18n="tab.crashStats">暴跌统计</a>
             <a class="tab-btn" href="__LANG_PREFIX__/etf" data-tab="etf" data-i18n="tab.etfTracking">标普纳指ETF追踪（场内）</a>
             <a class="tab-btn" href="__LANG_PREFIX__/qdii-funds" data-tab="qdii-funds" data-i18n="tab.qdiiFunds">标普纳指基金追踪（场外）</a>
-            <a class="tab-btn" href="__LANG_PREFIX__/vix" data-tab="vix" data-i18n="tab.vixIndex">VIX恐慌指数</a>
+            <a class="tab-btn" href="__LANG_PREFIX__/vix" data-tab="vix" data-i18n="tab.vixIndex">美股恐慌指数</a>
             <a class="tab-btn" href="__LANG_PREFIX__/knowledge" data-tab="knowledge" data-i18n="tab.knowledge">数据科普</a>
             <a class="tab-btn" href="__LANG_PREFIX__/download" data-tab="download" data-i18n="tab.dataDownload">数据下载</a>
             <a class="tab-btn" href="__LANG_PREFIX__/wishes" data-tab="wishes" data-i18n="tab.wishes">心愿墙</a>
@@ -3728,11 +3739,11 @@
         </div>
         </div><!-- /tab-qdii-funds -->
 
-        <!-- VIX恐慌指数 -->
+        <!-- 美股恐慌指数 -->
         <div class="tab-panel" id="tab-vix">
         <div class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title" data-i18n="vix.chartTitle">📊 SPY · QQQ · VIX 对比走势</span>
+                <span class="pc-chart-title" data-i18n="vix.chartTitle">📊 SPY · QQQ · VIX · VXN 对比走势</span>
                 <div class="transfer-tabs" id="vixPeriodTabs" style="margin-left:auto;">
                     <button class="transfer-tab" data-vix-period="1hour" data-i18n="vix.period1h">1小时</button>
                     <button class="transfer-tab active" data-vix-period="daily" data-i18n="vix.periodDay">日</button>
@@ -3797,6 +3808,7 @@
                     <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/core-etf-guide" data-kb-tab="etf-intro" data-i18n="knowledge.etfIntro">核心ETF介绍</a>
                     <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/nasdaq-etf-guide" data-kb-tab="nasdaq-etf" data-i18n="knowledge.nasdaqEtf">纳指ETF</a>
                     <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/market-data-myths" data-kb-tab="event-myth" data-i18n="knowledge.eventMyth">数据魔咒</a>
+                    <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/vix-vxn-investing-signal" data-kb-tab="vix-vxn-study" data-i18n="knowledge.vixVxnStudy">VIX/VXN研究</a>
                     <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/financial-terms" data-kb-tab="terms" data-i18n="knowledge.terms">专业术语</a>
                     <a class="transfer-tab" href="__LANG_PREFIX__/us-etf/dram" data-kb-tab="dram" data-i18n="knowledge.dramTab">DRAM持仓</a>
                     <a class="transfer-tab" href="__LANG_PREFIX__/us-etf/qqqm" data-kb-tab="qqqm" data-i18n="knowledge.qqqmTab">QQQM持仓</a>
@@ -6120,6 +6132,86 @@
             <div class="kb-section"><h3 class="kb-section-title">Choose by Question, Not by Nickname</h3><div class="kb-grid"><div class="kb-grid-col"><h4>China large-cap performance</h4><ul><li>Start with the CSI 300 as the common benchmark</li><li>It spans both Shanghai and Shenzhen</li><li>Linked funds and research are widely available</li></ul></div><div class="kb-grid-col"><h4>Breadth across roughly 500 names</h4><ul><li>Add the CSI A500 to the comparison</li><li>Check sector weights and selection rules</li><li>Equal constituent counts do not imply equal risk or return</li></ul></div></div><div class="kb-callout kb-callout-blue">“China's S&amp;P 500” is an explanatory analogy. It does not mean the indices share the same selection rules, sector structure, earnings quality, or long-run risk and return.</div><div class="kb-inline-actions"><a class="pc-btn primary" href="__LANG_PREFIX__/detail?symbol=000300&amp;type=cn_stock">Explore CSI 300 history</a><a class="pc-btn" href="__LANG_PREFIX__/backtest">Open backtest</a></div></div>
             </div>
 
+            <!-- ====== VIX / VXN 历史研究 ====== -->
+            <div class="kb-sub-panel" id="kb-vix-vxn-study" style="display:none;">
+            <div class="kb-page-hero"><div><h2>VIX、VXN 高位后，适合大幅买入 SPY、QQQ 吗？</h2><p>用 2000—2026 年历史数据区分“同期反向相关”和“未来收益预测”，并把继续下跌的路径风险放回投资决策中。</p></div><span class="kb-page-symbol">VIX / VXN</span></div>
+
+            <div class="kb-stat-grid">
+                <div class="kb-stat-card"><div class="kb-stat-label">VIX变动 vs 标普日收益</div><div class="kb-stat-value">-0.72</div><div class="kb-stat-note">同期皮尔逊相关系数</div></div>
+                <div class="kb-stat-card"><div class="kb-stat-label">VXN变动 vs QQQ日收益</div><div class="kb-stat-value">-0.65</div><div class="kb-stat-note">同期皮尔逊相关系数</div></div>
+                <div class="kb-stat-card"><div class="kb-stat-label">VIX≥40 后1年</div><div class="kb-stat-value">+27.7%</div><div class="kb-stat-note">11次独立事件的中位收益</div></div>
+                <div class="kb-stat-card"><div class="kb-stat-label">VXN≥50 后1年</div><div class="kb-stat-value">62.5%</div><div class="kb-stat-note">8次独立事件的正收益比例</div></div>
+            </div>
+
+            <div class="kb-section"><div class="kb-callout kb-callout-green"><strong>核心结论：</strong>VIX/VXN 是很好的市场压力温度计，但不是精确的底部探测器。高位通常意味着估值和价格已经承受压力，长期预期收益可能改善；它仍不足以单独支持一次性重仓。更合理的用法是把它作为分批加仓的辅助条件，并预留继续下跌 30%—50% 的承受空间。</div></div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">相关性很大，但主要发生在同一天</h3>
+            <div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>组合</th><th>相关口径</th><th>相关系数</th><th>如何理解</th></tr></thead><tbody>
+                <tr><td>VIX–SPY（IVV代理）</td><td>VIX百分比变化 vs ETF日收益</td><td>-0.72</td><td class="kb-text-left">强负相关：股市下跌时，隐含波动率通常同步上升。</td></tr>
+                <tr><td>VXN–QQQ</td><td>VXN百分比变化 vs QQQ日收益</td><td>-0.65</td><td class="kb-text-left">同样明显反向，但弱于 VIX–标普组合。</td></tr>
+                <tr><td>VIX–SPY（IVV代理）</td><td>VIX点数变化 vs ETF日收益</td><td>-0.80</td><td class="kb-text-left">用点数变化衡量时，同期反向关系更强。</td></tr>
+                <tr><td>VXN–QQQ</td><td>VXN点数变化 vs QQQ日收益</td><td>-0.72</td><td class="kb-text-left">说明 VXN 也能有效反映纳指当日压力。</td></tr>
+                <tr><td>VIX / VXN</td><td>指数水平 vs ETF日收益</td><td>-0.14 / -0.10</td><td class="kb-text-left">“现在有多高”与当日收益关系较弱，不能据此推导明天方向。</td></tr>
+            </tbody></table></div>
+            <div class="kb-callout kb-callout-blue">VIX 衡量标普500期权隐含的未来30天预期波动，VXN衡量 Nasdaq-100 的同类预期波动。两者表达的是预期波动幅度，不直接预测上涨或下跌方向。</div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">高位后的1年收益：VIX较有参考性，VXN并非越高越好</h3>
+            <div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>入场条件</th><th>有效样本</th><th>1年平均收益</th><th>1年中位收益</th><th>正收益比例</th><th>最差期末收益</th><th>最差途中回撤</th></tr></thead><tbody>
+                <tr><td>SPY代理：所有交易日</td><td>6,335</td><td>+10.1%</td><td>+13.3%</td><td>78.7%</td><td>-47.4%</td><td>-51.5%</td></tr>
+                <tr><td>VIX≥30：独立事件</td><td>26</td><td>+12.4%</td><td>+17.7%</td><td>76.9%</td><td>-34.3%</td><td>-42.7%</td></tr>
+                <tr><td>VIX≥40：独立事件</td><td>11</td><td>+23.6%</td><td>+27.7%</td><td>81.8%</td><td>-14.9%</td><td>-38.8%</td></tr>
+                <tr><td>QQQ：所有交易日</td><td>6,154</td><td>+14.8%</td><td>+16.8%</td><td>82.2%</td><td>-48.6%</td><td>-54.2%</td></tr>
+                <tr><td>VXN≥40：独立事件</td><td>13</td><td>+20.9%</td><td>+29.2%</td><td>84.6%</td><td>-41.2%</td><td>-54.2%</td></tr>
+                <tr><td>VXN≥50：独立事件</td><td>8</td><td>+12.2%</td><td>+15.8%</td><td>62.5%</td><td>-41.2%</td><td>-54.2%</td></tr>
+            </tbody></table></div>
+            <p class="kb-data-note">“独立事件”指首次跨越阈值后设置63个交易日冷却期，避免把同一次危机中的连续高位日当成大量独立样本。收益使用包含拆股和分红调整的价格。</p>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">为什么不能把高点直接当作底部？</h3>
+            <div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>信号日</th><th>条件</th><th>1个月</th><th>3个月</th><th>1年</th><th>1年内最大不利变动</th></tr></thead><tbody>
+                <tr><td>2008-09-29</td><td>VIX≥40</td><td>-16.2%</td><td>-21.8%</td><td>-3.0%</td><td>-38.8%</td></tr>
+                <tr><td>2020-02-28</td><td>VIX≥40</td><td>-10.8%</td><td>+3.8%</td><td>+34.7%</td><td>-24.1%</td></tr>
+                <tr><td>2001-02-02</td><td>VXN≥50</td><td>-19.7%</td><td>-21.7%</td><td>-41.2%</td><td>-54.2%</td></tr>
+                <tr><td>2008-10-06</td><td>VXN≥50</td><td>-3.2%</td><td>-10.1%</td><td>+20.3%</td><td>-26.7%</td></tr>
+                <tr><td>2020-03-09</td><td>VXN≥50</td><td>+1.7%</td><td>+25.1%</td><td>+62.2%</td><td>-12.5%</td></tr>
+            </tbody></table></div>
+            <div class="kb-callout kb-callout-yellow"><strong>关键风险：</strong>同一个高波动读数，可能出现在危机早期、下跌中段或真正底部附近。科技泡沫时期的 VXN≥50 尤其说明：估值和盈利周期恶化时，恐慌可以持续很久。</div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">更稳健的实际用法</h3>
+            <div class="kb-grid"><div class="kb-grid-col"><h4>可以怎么做</h4><ul><li>维持原有长期定投，不长期空仓等待恐慌</li><li>把战术资金拆成3—5份</li><li>波动率高位且指数已经明显回撤时启动第一份</li><li>其余资金按进一步下跌或2—4周时间间隔投入</li></ul></div><div class="kb-grid-col"><h4>不要怎么做</h4><ul><li>不要只凭 VIX/VXN 数值一次性满仓</li><li>不要假定波动率见顶等于股市见底</li><li>不要使用无法承受追加保证金的杠杆</li><li>不要忽略估值、信用利差、盈利和现金需求</li></ul></div></div>
+            <div class="kb-inline-actions"><a class="pc-btn primary" href="__LANG_PREFIX__/vix">查看 VIX / VXN 实时对比</a><a class="pc-btn" href="__LANG_PREFIX__/backtest">进入历史回测</a></div>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">样本、方法与局限</h3>
+            <ul class="kb-ref-list"><li>VIX–标普样本覆盖 2000-05 至 2026-07，共 6,586 个相关性观测；VXN–QQQ 覆盖 2001-02 至 2026-07，共 6,405 个观测。</li><li>因免费接口未完整返回 SPY 长历史，研究用同样跟踪标普500的 IVV 作为收益代理；最近10年 IVV 与 SPY 日收益相关系数为 0.9969。</li><li>事件研究观察未来21、63、126和252个交易日，并计算从信号日起的最大不利变动。</li><li>另用“高于过去5年90分位数”的动态阈值做稳健性检验，未发现稳定、显著优于普通持有的择时优势。</li><li>极端事件样本很少，结果会受科技泡沫、金融危机和疫情等少数阶段影响；历史关系不保证未来重复。</li></ul>
+            </div>
+
+            <div class="kb-section">
+            <h3 class="kb-section-title">数据来源与延伸阅读</h3>
+            <ul class="kb-ref-list"><li><a href="https://www.cboe.com/tradable_products/vix/vix_historical_data" target="_blank" rel="noopener">Cboe VIX Historical Data</a> · <a href="https://www.cboe.com/tradable_products/vix/faqs" target="_blank" rel="noopener">VIX 官方定义</a></li><li><a href="https://fred.stlouisfed.org/series/VXNCLS" target="_blank" rel="noopener">FRED：CBOE Nasdaq-100 Volatility Index (VXNCLS)</a></li><li><a href="https://twelvedata.com/docs/advanced" target="_blank" rel="noopener">Twelve Data 调整后历史价格说明</a></li><li><a href="https://doi.org/10.3905/jpm.2005.500363" target="_blank" rel="noopener">Giot (2005)：隐含波动率指数与股票指数收益</a></li><li><a href="https://doi.org/10.1016/j.jbankfin.2006.12.007" target="_blank" rel="noopener">Banerjee、Doran 与 Peterson (2007)：隐含波动率与未来组合收益</a></li></ul>
+            <div class="kb-callout kb-callout-yellow">本文为历史数据科普，不构成针对个人财务状况的投资建议、收益承诺或买卖指令。</div>
+            </div>
+            </div><!-- /kb-vix-vxn-study -->
+
+            <div class="kb-sub-panel" id="kb-vix-vxn-study-en" style="display:none;">
+            <div class="kb-page-hero"><div><h2>Should High VIX or VXN Trigger a Large SPY or QQQ Purchase?</h2><p>A 2000–2026 study separating same-day inverse correlation from forward-return predictability, with the path risk after each signal kept visible.</p></div><span class="kb-page-symbol">VIX / VXN</span></div>
+            <div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">VIX change vs S&amp;P daily return</div><div class="kb-stat-value">-0.72</div><div class="kb-stat-note">Same-day Pearson correlation</div></div><div class="kb-stat-card"><div class="kb-stat-label">VXN change vs QQQ daily return</div><div class="kb-stat-value">-0.65</div><div class="kb-stat-note">Same-day Pearson correlation</div></div><div class="kb-stat-card"><div class="kb-stat-label">1 year after VIX≥40</div><div class="kb-stat-value">+27.7%</div><div class="kb-stat-note">Median across 11 independent events</div></div><div class="kb-stat-card"><div class="kb-stat-label">1 year after VXN≥50</div><div class="kb-stat-value">62.5%</div><div class="kb-stat-note">Positive-return rate across 8 events</div></div></div>
+            <div class="kb-section"><div class="kb-callout kb-callout-green"><strong>Bottom line:</strong> VIX and VXN are useful stress gauges, not precise bottom detectors. Extreme readings can improve long-run expected returns because prices are already under pressure, but the signal alone does not justify a lump-sum allocation. A staged plan must be able to survive another 30%–50% decline.</div></div>
+            <div class="kb-section"><h3 class="kb-section-title">The Strong Relationship Is Mostly Contemporaneous</h3><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>Pair</th><th>Measure</th><th>Correlation</th><th>Interpretation</th></tr></thead><tbody><tr><td>VIX–SPY (IVV proxy)</td><td>VIX % change vs ETF daily return</td><td>-0.72</td><td class="kb-text-left">A strong inverse relationship on the same trading day.</td></tr><tr><td>VXN–QQQ</td><td>VXN % change vs QQQ daily return</td><td>-0.65</td><td class="kb-text-left">Also strongly inverse, though weaker than VIX–S&amp;P.</td></tr><tr><td>VIX–SPY (IVV proxy)</td><td>VIX point change vs ETF daily return</td><td>-0.80</td><td class="kb-text-left">The same-day link is even stronger in index points.</td></tr><tr><td>VXN–QQQ</td><td>VXN point change vs QQQ daily return</td><td>-0.72</td><td class="kb-text-left">VXN effectively reflects current Nasdaq stress.</td></tr><tr><td>VIX / VXN</td><td>Index level vs ETF daily return</td><td>-0.14 / -0.10</td><td class="kb-text-left">The level itself says little about the next direction.</td></tr></tbody></table></div><div class="kb-callout kb-callout-blue">VIX and VXN measure option-implied expected volatility over roughly 30 days. They estimate the size of possible movement, not whether the market will rise or fall.</div></div>
+            <div class="kb-section"><h3 class="kb-section-title">One-Year Outcomes After High Readings</h3><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>Entry condition</th><th>Samples</th><th>Mean</th><th>Median</th><th>Positive</th><th>Worst terminal</th><th>Worst path drawdown</th></tr></thead><tbody><tr><td>SPY proxy: all days</td><td>6,335</td><td>+10.1%</td><td>+13.3%</td><td>78.7%</td><td>-47.4%</td><td>-51.5%</td></tr><tr><td>VIX≥30: independent events</td><td>26</td><td>+12.4%</td><td>+17.7%</td><td>76.9%</td><td>-34.3%</td><td>-42.7%</td></tr><tr><td>VIX≥40: independent events</td><td>11</td><td>+23.6%</td><td>+27.7%</td><td>81.8%</td><td>-14.9%</td><td>-38.8%</td></tr><tr><td>QQQ: all days</td><td>6,154</td><td>+14.8%</td><td>+16.8%</td><td>82.2%</td><td>-48.6%</td><td>-54.2%</td></tr><tr><td>VXN≥40: independent events</td><td>13</td><td>+20.9%</td><td>+29.2%</td><td>84.6%</td><td>-41.2%</td><td>-54.2%</td></tr><tr><td>VXN≥50: independent events</td><td>8</td><td>+12.2%</td><td>+15.8%</td><td>62.5%</td><td>-41.2%</td><td>-54.2%</td></tr></tbody></table></div><p class="kb-data-note">Independent events use a 63-trading-day cooldown after the first threshold crossing. Returns use split- and dividend-adjusted prices.</p></div>
+            <div class="kb-section"><h3 class="kb-section-title">The Signal Can Arrive Long Before the Bottom</h3><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>Date</th><th>Signal</th><th>1 month</th><th>3 months</th><th>1 year</th><th>Worst adverse move</th></tr></thead><tbody><tr><td>2008-09-29</td><td>VIX≥40</td><td>-16.2%</td><td>-21.8%</td><td>-3.0%</td><td>-38.8%</td></tr><tr><td>2020-02-28</td><td>VIX≥40</td><td>-10.8%</td><td>+3.8%</td><td>+34.7%</td><td>-24.1%</td></tr><tr><td>2001-02-02</td><td>VXN≥50</td><td>-19.7%</td><td>-21.7%</td><td>-41.2%</td><td>-54.2%</td></tr><tr><td>2008-10-06</td><td>VXN≥50</td><td>-3.2%</td><td>-10.1%</td><td>+20.3%</td><td>-26.7%</td></tr><tr><td>2020-03-09</td><td>VXN≥50</td><td>+1.7%</td><td>+25.1%</td><td>+62.2%</td><td>-12.5%</td></tr></tbody></table></div><div class="kb-callout kb-callout-yellow"><strong>Key risk:</strong> The same high-volatility reading may occur near the start, middle, or end of a crisis. The dot-com episode shows that valuation and earnings deterioration can overwhelm a simple fear-reversal signal.</div></div>
+            <div class="kb-section"><h3 class="kb-section-title">A More Robust Way to Use the Signal</h3><div class="kb-grid"><div class="kb-grid-col"><h4>Reasonable approach</h4><ul><li>Keep the ordinary long-term contribution plan</li><li>Split tactical cash into three to five tranches</li><li>Start only when high volatility coincides with a meaningful index drawdown</li><li>Deploy later tranches after further declines or two-to-four-week intervals</li></ul></div><div class="kb-grid-col"><h4>Avoid</h4><ul><li>Do not go all-in on one VIX or VXN reading</li><li>Do not equate peak volatility with the exact market bottom</li><li>Do not use leverage that cannot survive margin pressure</li><li>Do not ignore valuation, credit, earnings, and liquidity needs</li></ul></div></div><div class="kb-inline-actions"><a class="pc-btn primary" href="__LANG_PREFIX__/vix">Open VIX / VXN comparison</a><a class="pc-btn" href="__LANG_PREFIX__/backtest">Open backtest</a></div></div>
+            <div class="kb-section"><h3 class="kb-section-title">Scope, Method, and Limitations</h3><ul class="kb-ref-list"><li>VIX–S&amp;P covers May 2000 through July 2026 with 6,586 correlation observations; VXN–QQQ covers February 2001 through July 2026 with 6,405.</li><li>IVV is used as the long-history SPY return proxy; their daily-return correlation over the recent ten-year overlap is 0.9969.</li><li>Forward windows are 21, 63, 126, and 252 trading days, with maximum adverse movement measured from each signal date.</li><li>A prior-five-year 90th-percentile signal did not show a stable timing advantage over ordinary holding.</li><li>Extreme-event samples are small and dominated by a few regimes. Historical relationships do not guarantee future outcomes.</li></ul></div>
+            <div class="kb-section"><h3 class="kb-section-title">Sources and Further Reading</h3><ul class="kb-ref-list"><li><a href="https://www.cboe.com/tradable_products/vix/vix_historical_data" target="_blank" rel="noopener">Cboe VIX Historical Data</a> · <a href="https://www.cboe.com/tradable_products/vix/faqs" target="_blank" rel="noopener">Cboe VIX FAQ</a></li><li><a href="https://fred.stlouisfed.org/series/VXNCLS" target="_blank" rel="noopener">FRED: CBOE Nasdaq-100 Volatility Index</a></li><li><a href="https://twelvedata.com/docs/advanced" target="_blank" rel="noopener">Twelve Data adjusted historical prices</a></li><li><a href="https://doi.org/10.3905/jpm.2005.500363" target="_blank" rel="noopener">Giot (2005)</a></li><li><a href="https://doi.org/10.1016/j.jbankfin.2006.12.007" target="_blank" rel="noopener">Banerjee, Doran &amp; Peterson (2007)</a></li></ul><div class="kb-callout kb-callout-yellow">This historical research is educational only. It is not personalized investment advice, a return promise, or a buy/sell instruction.</div></div>
+            </div><!-- /kb-vix-vxn-study-en -->
+
 
         </div>
         </div><!-- /tab-knowledge -->
@@ -6471,6 +6563,7 @@
                 '/knowledge/nasdaq-etf-guide': 'knowledge',
                 '/knowledge/event-myth': 'knowledge',
                 '/knowledge/market-data-myths': 'knowledge',
+                '/knowledge/vix-vxn-investing-signal': 'knowledge',
                 '/knowledge/terms': 'knowledge',
                 '/knowledge/financial-terms': 'knowledge',
                 '/knowledge/svol-volatility-premium-etf': 'knowledge',
@@ -6511,6 +6604,7 @@
                 'etf-intro': '/knowledge/core-etf-guide',
                 'nasdaq-etf': '/knowledge/nasdaq-etf-guide',
                 'event-myth': '/knowledge/market-data-myths',
+                'vix-vxn-study': '/knowledge/vix-vxn-investing-signal',
                 'terms': '/knowledge/financial-terms',
                 'svol': '/knowledge/svol-volatility-premium-etf',
                 'china-sp500': '/knowledge/china-sp-500-equivalent',
@@ -6529,6 +6623,7 @@
                 '/knowledge/nasdaq-etf-guide': 'nasdaq-etf',
                 '/knowledge/event-myth': 'event-myth',
                 '/knowledge/market-data-myths': 'event-myth',
+                '/knowledge/vix-vxn-investing-signal': 'vix-vxn-study',
                 '/knowledge/terms': 'terms',
                 '/knowledge/financial-terms': 'terms',
                 '/knowledge/svol-volatility-premium-etf': 'svol',
@@ -6562,6 +6657,11 @@
                     titleKey: 'seo.knowledgeEventMythTitle',
                     descKey: 'seo.knowledgeEventMythDescription',
                     canonical: '/knowledge/market-data-myths'
+                },
+                'vix-vxn-study': {
+                    titleKey: 'seo.knowledgeVixVxnStudyTitle',
+                    descKey: 'seo.knowledgeVixVxnStudyDescription',
+                    canonical: '/knowledge/vix-vxn-investing-signal'
                 },
                 'terms': {
                     titleKey: 'seo.knowledgeTermsTitle',

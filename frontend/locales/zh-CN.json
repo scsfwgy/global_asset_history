@@ -13,7 +13,7 @@
     "dataDownload": "数据下载",
     "etfTracking": "标普纳指ETF追踪（场内）",
     "qdiiFunds": "标普纳指基金追踪（场外）",
-    "vixIndex": "VIX恐慌指数",
+    "vixIndex": "美股恐慌指数",
     "knowledge": "数据科普",
     "wishes": "心愿墙",
     "heatmap": "热力图"
@@ -638,7 +638,7 @@
     "loadingFunds": "获取 QDII 基金数据中..."
   },
   "vix": {
-    "chartTitle": "📊 SPY · QQQ · VIX 对比走势",
+    "chartTitle": "📊 SPY · QQQ · VIX · VXN 对比走势",
     "period1h": "1小时",
     "periodDay": "日",
     "periodWeek": "周",
@@ -667,7 +667,7 @@
     "loadFailed": "加载失败: ",
     "axisPeriodReturn": "SPY/QQQ 逐期涨跌幅 %",
     "axisCumReturn": "SPY/QQQ 累计涨跌幅 %",
-    "axisVix": "VIX",
+    "axisVix": "VIX / VXN",
     "tooltipDate": "日期：",
     "tooltipOhlc": "开/高/低/收",
     "tooltipClosePrice": "收盘价：",
@@ -767,6 +767,7 @@
     "etfIntro": "核心ETF介绍",
     "nasdaqEtf": "纳指ETF",
     "eventMyth": "数据魔咒",
+    "vixVxnStudy": "VIX/VXN研究",
     "terms": "专业术语"
   },
   "seo": {
@@ -790,8 +791,8 @@
     "etfDescription": "实时追踪A股场内标普500和纳斯达克100ETF行情，包含溢价率、估值误差和收益率分析。",
     "qdiiTitle": "QDII基金追踪 - GlobalAssetHistory",
     "qdiiDescription": "追踪场外QDII基金开放状态、费率、限额与真实追踪误差。",
-    "vixTitle": "VIX恐慌指数 - GlobalAssetHistory",
-    "vixDescription": "VIX与SPY/QQQ叠加分析，历史恐慌区间定位与市场情绪参考。",
+    "vixTitle": "美股恐慌指数 - GlobalAssetHistory",
+    "vixDescription": "VIX、VXN与SPY/QQQ叠加分析，观察标普500和纳斯达克100的历史恐慌区间与市场情绪。",
     "knowledgeTitle": "数据科普 - GlobalAssetHistory",
     "knowledgeDescription": "美股投资科普、ETF入门、宏观数据解读与金融术语参考。",
     "knowledgeHowToBuyTitle": "如何用稳定币购买美股和ETF - GlobalAssetHistory",
@@ -804,6 +805,8 @@
     "knowledgeNasdaqEtfDescription": "对比 QQQ、QQQM、IQQ、QNDX 的价格、发行商、费率、规模、优缺点，并介绍 ONEQ、QQEW、QQQJ、TQQQ、QLD、QYLD 等纳指衍生 ETF。",
     "knowledgeEventMythTitle": "美股数据魔咒统计：世界杯、选举、总统周期和奥运会 - GlobalAssetHistory",
     "knowledgeEventMythDescription": "用历史数据检验世界杯、美国中期选举、总统四年周期、奥运会等市场魔咒，区分统计现象与交易信号。",
+    "knowledgeVixVxnStudyTitle": "VIX和VXN高位适合买入SPY与QQQ吗？历史相关性研究 - GlobalAssetHistory",
+    "knowledgeVixVxnStudyDescription": "基于2000年至2026年历史数据，研究VIX与SPY、VXN与QQQ的同期相关性，以及恐慌指数高位后的收益和继续回撤风险。",
     "knowledgeTermsTitle": "美股、A股ETF和基金专业术语表 - GlobalAssetHistory",
     "knowledgeTermsDescription": "整理 LOF、ETF、A类/C类、场内场外、折溢价、溢价率、跟踪误差、指数、费率、持仓、回撤和波动率等术语，方便快速查阅。",
     "knowledgeSvolTitle": "Simplify波动率溢价ETF：SVOL净值、走势与表现 - GlobalAssetHistory",
