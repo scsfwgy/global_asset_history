@@ -1803,6 +1803,32 @@ class TestBuildHeatmapToday:
         assert item["market_cap_currency"] == "HKD"
 
     @patch("service.price_change.price_change_service._yahoo_quote_batch")
+    def test_global_stock_uses_suffix_currency_and_market(self, mock_batch):
+        mock_batch.return_value = [{
+            "symbol": "7203.T",
+            "name": "Toyota Motor Corporation",
+            "price": 2823.0,
+            "change_pct": -0.04,
+            "volume": 26_000_000,
+            "market_cap": 33.4e12,
+        }]
+
+        result = svc._build_heatmap_today(
+            [("7203.T", "stock")],
+            set(),
+            {"7203.T"},
+            auto_top_n=1,
+            include_market_cap=False,
+            compute_fn=self._compute_stub,
+        )
+
+        item = result["data"][0]
+        assert item["type"] == "stock"
+        assert item["market"] == "JP"
+        assert item["turnover_currency"] == "JPY"
+        assert item["market_cap_currency"] == "JPY"
+
+    @patch("service.price_change.price_change_service._yahoo_quote_batch")
     def test_batch_fails_fallback(self, mock_batch):
         """Batch returns empty for non-empty stocks → return None."""
         mock_batch.return_value = []
@@ -1940,17 +1966,18 @@ class TestFetchHeatmapToday:
         track_coverage(MOD, 1)
 
     @pytest.mark.parametrize(
-        ("market_type", "candidate"),
+        ("market_type", "candidate", "asset_type"),
         [
-            ("stock", "AAPL"),
-            ("hk_stock", "0700.HK"),
-            ("crypto", "BTC"),
-            ("cn_stock", "600519"),
+            ("stock", "AAPL", "stock"),
+            ("hk_stock", "0700.HK", "hk_stock"),
+            ("global_stock", "7203.T", "stock"),
+            ("crypto", "BTC", "crypto"),
+            ("cn_stock", "600519", "cn_stock"),
         ],
     )
     @patch("service.price_change.price_change_service._build_heatmap_today")
     def test_selected_market_uses_complete_pool(
-        self, mock_build, market_type, candidate
+        self, mock_build, market_type, candidate, asset_type
     ):
         mock_build.return_value = {
             "period": "today",
@@ -1966,7 +1993,7 @@ class TestFetchHeatmapToday:
         )
 
         entries = mock_build.call_args.args[0]
-        assert (candidate, market_type) in entries
+        assert (candidate, asset_type) in entries
         assert mock_build.call_args.args[3] == len(entries)
         assert result["market_type"] == market_type
 

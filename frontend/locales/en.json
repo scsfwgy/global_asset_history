@@ -829,6 +829,7 @@
     "marketType": "Heatmap Type",
     "marketUS": "US Stock Market",
     "marketHK": "Hong Kong Market",
+    "marketGlobal": "Global Stocks",
     "marketCrypto": "Crypto Market",
     "marketCN": "A-Share Market",
     "period": "Period",

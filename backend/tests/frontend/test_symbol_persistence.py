@@ -45,13 +45,19 @@ def test_heatmap_uses_market_types_without_symbol_or_top_n_controls():
     assert "auto_top_n" not in script
     assert "#hmFilterPanel .control-group" in styles
     assert "flex-wrap: wrap;" in styles
-    for market_type in ("stock", "hk_stock", "crypto", "cn_stock"):
+    for market_type in ("stock", "hk_stock", "global_stock", "crypto", "cn_stock"):
         assert f'value="{market_type}"' in page
-    assert '["stock", "hk_stock", "crypto", "cn_stock"]' in script
+    assert '["stock", "hk_stock", "global_stock", "crypto", "cn_stock"]' in script
     assert "d.type === 'hk_stock'" in script
     assert 'd.market_cap_currency || d.turnover_currency' in script
+    assert 'hmMarketType.value === "global_stock"' in script
+    assert 'result.market_type === "global_stock"' in script
+    assert 'hmSizeBySel.value = "return"' in script
+    assert 'data-market="' in script
     assert zh_locale["heatmap"]["marketHK"] == "港股市场"
     assert en_locale["heatmap"]["marketHK"] == "Hong Kong Market"
+    assert zh_locale["heatmap"]["marketGlobal"] == "全球热门股票"
+    assert en_locale["heatmap"]["marketGlobal"] == "Global Stocks"
     assert zh_locale["heatmap"]["emptyPrompt"] == "点击「查询」查看市场热力图"
     assert (
         en_locale["heatmap"]["emptyPrompt"]

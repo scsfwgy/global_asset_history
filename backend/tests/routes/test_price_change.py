@@ -195,6 +195,34 @@ class TestHeatmapSharedCache:
             market_type="hk_stock",
         )
 
+    @patch("routes.price_change.fetch_heatmap_data")
+    def test_global_stock_market_type_is_accepted(self, mock_fetch, client):
+        mock_fetch.return_value = {
+            "market_type": "global_stock",
+            "period": "today",
+            "period_label": "2026-08-02",
+            "data": [],
+        }
+
+        resp = client.post(
+            f"{BASE}/heatmap",
+            json={
+                "symbols": [],
+                "market_type": "global_stock",
+                "period": "today",
+                "force": True,
+            },
+        )
+
+        assert resp.status_code == 200
+        mock_fetch.assert_called_once_with(
+            [],
+            "today",
+            auto_top_n=0,
+            include_market_cap=False,
+            market_type="global_stock",
+        )
+
     def test_invalid_market_type_returns_400(self, client):
         resp = client.post(
             f"{BASE}/heatmap",

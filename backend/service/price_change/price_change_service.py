@@ -2234,6 +2234,56 @@ _TURNOVER_CURRENCY = {
     "cn_stock": "CNY",
 }
 
+# Yahoo exchange suffixes used by the global-stock heatmap.  Values are the
+# quote currency/unit returned by Yahoo and a compact market label for tiles.
+# Keep minor units such as GBp intact: converting prices without also converting
+# volume/market cap would make the displayed turnover internally inconsistent.
+_HEATMAP_STOCK_SUFFIX_META = (
+    (".TWO", "TWD", "TW"),
+    (".KS", "KRW", "KR"),
+    (".KQ", "KRW", "KR"),
+    (".TW", "TWD", "TW"),
+    (".NS", "INR", "IN"),
+    (".BO", "INR", "IN"),
+    (".SI", "SGD", "SG"),
+    (".AX", "AUD", "AU"),
+    (".TO", "CAD", "CA"),
+    (".V", "CAD", "CA"),
+    (".L", "GBp", "GB"),
+    (".DE", "EUR", "DE"),
+    (".AS", "EUR", "NL"),
+    (".PA", "EUR", "FR"),
+    (".SW", "CHF", "CH"),
+    (".CO", "DKK", "DK"),
+    (".SA", "BRL", "BR"),
+    (".SR", "SAR", "SA"),
+    (".T", "JPY", "JP"),
+)
+
+
+def _heatmap_stock_meta(symbol: str, asset_type: str) -> Tuple[str, Optional[str]]:
+    """Return the best-effort quote currency and market code for a tile."""
+    if asset_type == "hk_stock":
+        return "HKD", "HK"
+    if asset_type == "cn_stock":
+        return "CNY", "CN"
+    if asset_type == "crypto":
+        return "USDT", "24/7"
+    if asset_type == "stock":
+        upper_symbol = symbol.upper()
+        for suffix, currency, market in _HEATMAP_STOCK_SUFFIX_META:
+            if upper_symbol.endswith(suffix):
+                return currency, market
+        return "USD", "US"
+    return _TURNOVER_CURRENCY.get(asset_type, "USD"), None
+
+
+def _heatmap_currency(
+    symbol: str, asset_type: str, quote_currency: Optional[str] = None
+) -> str:
+    """Prefer the upstream currency, with suffix metadata as the fallback."""
+    return quote_currency or _heatmap_stock_meta(symbol, asset_type)[0]
+
 # Comprehensive watchlist of high-volume US stocks & ETFs.
 # The ranking is computed dynamically from actual turnover in the selected
 # period — the list below just ensures we have broad coverage of candidates.
@@ -2280,6 +2330,33 @@ _HEATMAP_HK_WATCHLIST = [
     "9992.HK", "1876.HK", "2020.HK", "6690.HK", "2269.HK", "1177.HK",
 ]
 
+# Cross-region preview pool.  It intentionally uses the shared ``stock``
+# fetcher: ``global_stock`` is a heatmap market selector, not a new asset type.
+# Since native-currency turnover is not comparable across markets, the frontend
+# forces this view to size blocks by absolute return.
+_HEATMAP_GLOBAL_WATCHLIST = [
+    # Japan
+    "7203.T", "6758.T", "9984.T", "8306.T",
+    # South Korea
+    "005930.KS", "000660.KS", "035420.KS",
+    # Taiwan
+    "2330.TW", "2317.TW", "2454.TW",
+    # India
+    "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS",
+    # Singapore
+    "D05.SI", "O39.SI",
+    # Australia
+    "CBA.AX", "BHP.AX", "CSL.AX",
+    # Canada
+    "SHOP.TO", "RY.TO",
+    # United Kingdom
+    "HSBA.L", "AZN.L", "SHEL.L",
+    # Continental Europe
+    "SAP.DE", "ASML.AS", "MC.PA", "NESN.SW", "NOVO-B.CO",
+    # Latin America and Middle East
+    "PETR4.SA", "2222.SR",
+]
+
 # High-liquidity non-stablecoin pool supported by the existing crypto fetchers.
 _HEATMAP_CRYPTO_WATCHLIST = [
     "BTC", "ETH", "BNB", "SOL", "XRP", "DOGE", "ADA", "TRX", "AVAX",
@@ -2290,8 +2367,13 @@ _HEATMAP_CRYPTO_WATCHLIST = [
 _HEATMAP_WATCHLISTS = {
     "stock": _HEATMAP_US_WATCHLIST,
     "hk_stock": _HEATMAP_HK_WATCHLIST,
+    "global_stock": _HEATMAP_GLOBAL_WATCHLIST,
     "crypto": _HEATMAP_CRYPTO_WATCHLIST,
     "cn_stock": _HEATMAP_CN_WATCHLIST,
+}
+
+_HEATMAP_MARKET_ASSET_TYPES = {
+    "global_stock": "stock",
 }
 
 
@@ -2705,8 +2787,8 @@ def _build_heatmap_today(
 ) -> Optional[dict]:
     """Build heatmap data for period='today' using batch v7/quote.
 
-    US and Hong Kong stocks are fetched in a single batch request (1-2 HTTP
-    calls for up to 92 symbols). Other asset types go through *compute_fn*
+    Yahoo-backed stocks are fetched in a single batch request (1-2 HTTP calls
+    per chunk). Other asset types go through *compute_fn*
     (per-symbol OHLCV). Returns None when the batch fails and the
     caller should fall back to the per-symbol path for everything.
     """
@@ -2735,7 +2817,8 @@ def _build_heatmap_today(
     for sym, atype in stock_entries:
         q = quote_map.get(sym)
         currency = q.get("currency") if q else None
-        display_currency = currency or _TURNOVER_CURRENCY.get(atype, "USD")
+        display_currency = _heatmap_currency(sym, atype, currency)
+        market = _heatmap_stock_meta(sym, atype)[1]
         if q:
             turnover = None
             if q["volume"] and q["price"]:
@@ -2747,6 +2830,7 @@ def _build_heatmap_today(
                 "return_pct": round(q["change_pct"], 2) if q["change_pct"] is not None else None,
                 "turnover": turnover,
                 "turnover_currency": display_currency,
+                "market": market,
                 "market_cap": q.get("market_cap") if include_market_cap else None,
                 "market_cap_currency": display_currency,
             })
@@ -2755,6 +2839,7 @@ def _build_heatmap_today(
                 "symbol": sym, "name": None, "type": atype,
                 "return_pct": None, "turnover": None,
                 "turnover_currency": display_currency,
+                "market": market,
                 "market_cap": None,
                 "market_cap_currency": display_currency,
             })
@@ -2954,7 +3039,7 @@ def fetch_heatmap_data(
                     fetch all, and return top N by turnover plus user symbols.
         include_market_cap: if True, attach market_cap (best-effort) to each item.
         market_type: when set, include the complete configured pool for stock,
-                     hk_stock, crypto, or cn_stock.
+                     hk_stock, global_stock, crypto, or cn_stock.
 
     Returns:
         {"period": str, "period_label": str,
@@ -2985,8 +3070,11 @@ def fetch_heatmap_data(
 
     auto_syms = set()
     if market_type or auto_top_n > 0:
-        auto_asset_type = market_type or "stock"
-        top_symbols = _fetch_heatmap_watchlist(auto_asset_type)
+        selected_market = market_type or "stock"
+        auto_asset_type = _HEATMAP_MARKET_ASSET_TYPES.get(
+            selected_market, selected_market
+        )
+        top_symbols = _fetch_heatmap_watchlist(selected_market)
         for sym in top_symbols:
             key = (sym, auto_asset_type)
             if key not in seen:
@@ -3002,13 +3090,15 @@ def fetch_heatmap_data(
     def _compute_one(sym: str, atype: str) -> dict:
         series = _fetch_daily_series_cached(sym, atype)
 
+        currency, market = _heatmap_stock_meta(sym, atype)
         result = {
             "symbol": sym,
             "name": None,
             "type": atype,
             "return_pct": None,
             "turnover": None,
-            "turnover_currency": _TURNOVER_CURRENCY.get(atype, "USD"),
+            "turnover_currency": currency,
+            "market": market,
         }
 
         if series.error or not series.timestamps:
@@ -3117,8 +3207,8 @@ def fetch_heatmap_data(
                 if quote and quote.get("name"):
                     r["name"] = quote["name"]
                 quote_currency = quote.get("currency") if quote else None
-                r["market_cap_currency"] = (
-                    quote_currency or _TURNOVER_CURRENCY.get(r["type"], "USD")
+                r["market_cap_currency"] = _heatmap_currency(
+                    r["symbol"], r["type"], quote_currency
                 )
 
         if include_market_cap:

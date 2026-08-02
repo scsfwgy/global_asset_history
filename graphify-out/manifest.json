@@ -5,8 +5,8 @@
     "semantic_hash": "d1cebc5895965dca2158fcb7bbf0c8af"
   },
   "backend/app.py": {
-    "mtime": 1785595940.691722,
-    "ast_hash": "149fef7478acb6d6afcffad431baa36b",
+    "mtime": 1785648740.2806888,
+    "ast_hash": "5d9c5e198176d1b271831765baebd3b1",
     "semantic_hash": ""
   },
   "backend/config/price_change_config.json": {
@@ -220,8 +220,8 @@
     "semantic_hash": "5d15c4657cb3e3c87eb720d08107ada8"
   },
   "backend/routes/price_change.py": {
-    "mtime": 1785597417.454982,
-    "ast_hash": "d6b4d7432692ad5a2182869b54655610",
+    "mtime": 1785648740.2799277,
+    "ast_hash": "d2a5aedd59a5c6f430f61a1b19d0ee5b",
     "semantic_hash": ""
   },
   "backend/routes/wishes.py": {
@@ -275,8 +275,8 @@
     "semantic_hash": ""
   },
   "backend/service/price_change/price_change_service.py": {
-    "mtime": 1785597417.4543533,
-    "ast_hash": "3aa44bbdd82fe032cec0af274017a457",
+    "mtime": 1785648740.2792141,
+    "ast_hash": "87292559a60406e58bd85836cb435a1d",
     "semantic_hash": ""
   },
   "backend/service/visitor_stats.py": {
@@ -360,13 +360,13 @@
     "semantic_hash": "67290848d841281ba5151efcb4f58ee1"
   },
   "backend/tests/routes/test_price_change.py": {
-    "mtime": 1785597505.8948777,
-    "ast_hash": "b228f7b99f364081e6d25f7a9415f71c",
+    "mtime": 1785648864.6185467,
+    "ast_hash": "2d97fb5f8b83d4da5729a14cdf838c59",
     "semantic_hash": ""
   },
   "backend/tests/routes/test_seo.py": {
-    "mtime": 1785596179.1602764,
-    "ast_hash": "8ad15eb4b94e02663edba65cf46d02e3",
+    "mtime": 1785648740.2811797,
+    "ast_hash": "e95aacb7c7792bd7c33f49cc1ffc0591",
     "semantic_hash": ""
   },
   "backend/tests/routes/test_stats.py": {
@@ -395,8 +395,8 @@
     "semantic_hash": "48edf8fd5b25841d1bf276f0cb135529"
   },
   "backend/tests/service/test_price_change_service.py": {
-    "mtime": 1785597505.893828,
-    "ast_hash": "4d29759e8b23d87092c5a852370f90fb",
+    "mtime": 1785648864.6178923,
+    "ast_hash": "eb64b7f917add2a0a7c78f5a91ac7308",
     "semantic_hash": ""
   },
   "backend/tests/service/test_visitor_stats.py": {
@@ -455,8 +455,8 @@
     "semantic_hash": "2b7bfa7187a2ef1b61ba30778c94e64a"
   },
   "frontend/js/heatmap.js": {
-    "mtime": 1785597473.9379222,
-    "ast_hash": "9cea8407264f57137a95a65522df2538",
+    "mtime": 1785649001.8428807,
+    "ast_hash": "ab30b20541f2159f050ad17c9e043b85",
     "semantic_hash": ""
   },
   "frontend/js/i18n.js": {
@@ -500,13 +500,13 @@
     "semantic_hash": "f332002f362b52a7f3e1bb7fccb334be"
   },
   "frontend/locales/en.json": {
-    "mtime": 1785597460.418057,
-    "ast_hash": "4a6286bf01d29310218e70dc5f82de98",
+    "mtime": 1785648810.8397565,
+    "ast_hash": "4e78c5e5501b41e258d6954e9e00b22c",
     "semantic_hash": ""
   },
   "frontend/locales/zh-CN.json": {
-    "mtime": 1785597460.4175835,
-    "ast_hash": "4ff0a6024e91f17b63327de2e4728fd9",
+    "mtime": 1785648810.8391306,
+    "ast_hash": "ad9c834cc062622765e3c073e134cb6b",
     "semantic_hash": ""
   },
   "scripts/capture_screenshots.py": {
@@ -560,8 +560,8 @@
     "semantic_hash": "cf7f9641ca47e9d84a55efbb9fc9ac60"
   },
   "frontend/price-change.html": {
-    "mtime": 1785597460.4168994,
-    "ast_hash": "1f1c5f7c21e4a56dd1636604cee839bd",
+    "mtime": 1785648810.8382454,
+    "ast_hash": "6679511ae13b54763f3a7696171d54ef",
     "semantic_hash": ""
   },
   "requirements.txt": {
@@ -630,8 +630,8 @@
     "semantic_hash": ""
   },
   "backend/tests/frontend/test_symbol_persistence.py": {
-    "mtime": 1785597505.8953433,
-    "ast_hash": "64a7db4b5015b43d97187bd971cd7f81",
+    "mtime": 1785649001.8438184,
+    "ast_hash": "1fbfae7ecec56f04a57e58f98982da14",
     "semantic_hash": ""
   },
   "backend/tests/service/test_fundamentals_history.py": {
