@@ -2181,6 +2181,113 @@
             flex-shrink: 0;
         }
 
+        /* ─── Versioned feature updates ─── */
+        .feature-update-dialog {
+            width: min(520px, calc(100vw - 32px));
+            max-height: min(82vh, 680px);
+            margin: auto;
+            padding: 0;
+            overflow: hidden;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-lg);
+            background: var(--apple-surface-1);
+            color: var(--apple-text-primary);
+            box-shadow: var(--apple-shadow-popover);
+            outline: none;
+        }
+        .feature-update-dialog::backdrop {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+        }
+        .feature-update-shell {
+            display: flex;
+            flex-direction: column;
+            max-height: min(82vh, 680px);
+        }
+        .feature-update-header {
+            padding: 22px 24px 10px;
+        }
+        .feature-update-title {
+            margin: 0;
+            font-size: 21px;
+            line-height: 1.25;
+        }
+        .feature-update-meta {
+            margin: 6px 0 0;
+            color: var(--apple-text-secondary);
+            font-size: 12px;
+        }
+        .feature-update-list {
+            padding: 6px 24px 20px;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+        .feature-update-items {
+            display: grid;
+            gap: 9px;
+            margin: 0;
+            padding-left: 19px;
+            color: var(--apple-text-secondary);
+            font-size: 13px;
+            line-height: 1.55;
+        }
+        .feature-update-items li::marker { color: var(--apple-blue); }
+        .feature-update-release + .feature-update-release {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid var(--apple-divider);
+        }
+        .feature-update-release h3 {
+            margin: 0 0 10px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .feature-update-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 24px 18px;
+            border-top: 1px solid var(--apple-divider);
+        }
+        .feature-update-action {
+            min-height: 36px;
+            padding: 7px 12px;
+            border: 0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 650;
+            cursor: pointer;
+        }
+        .feature-update-action:focus { outline: none; }
+        .feature-update-action:focus-visible {
+            outline: 2px solid var(--apple-blue);
+            outline-offset: 2px;
+        }
+        .feature-update-history {
+            background: transparent;
+            color: var(--apple-blue);
+        }
+        .feature-update-history:hover { background: var(--apple-blue-soft); }
+        .feature-update-confirm {
+            min-width: 88px;
+            background: var(--apple-blue);
+            color: #fff;
+        }
+        .feature-update-confirm:hover { filter: brightness(1.06); }
+        @media (max-width: 640px) {
+            .feature-update-dialog {
+                width: calc(100vw - 20px);
+                max-height: 88vh;
+            }
+            .feature-update-shell { max-height: 88vh; }
+            .feature-update-header { padding: 20px 18px 10px; }
+            .feature-update-list { padding: 6px 18px 18px; }
+            .feature-update-footer { padding: 12px 18px 15px; }
+        }
+
         /* ─── Wish Wall ─── */
         .wish-admin-toggle {
             cursor: pointer;
@@ -3056,6 +3163,24 @@
             <a class="site-url" id="siteUrlLink" href="__SITE_BASE_URL__" target="_blank" rel="noopener noreferrer">__SITE_BASE_URL__</a>
         </div>
     </header>
+
+    <dialog id="featureUpdateDialog" class="feature-update-dialog" tabindex="-1"
+            aria-labelledby="featureUpdateTitle" aria-describedby="featureUpdateMeta">
+        <div class="feature-update-shell">
+            <div class="feature-update-header">
+                <h2 class="feature-update-title" id="featureUpdateTitle" data-i18n="featureUpdates.title">功能更新</h2>
+                <p class="feature-update-meta" id="featureUpdateMeta"></p>
+            </div>
+            <div class="feature-update-list" id="featureUpdateList"></div>
+            <div class="feature-update-footer">
+                <button class="feature-update-action feature-update-history" id="featureUpdateHistory" type="button"
+                        aria-controls="featureUpdateList" aria-expanded="false"
+                        data-i18n="featureUpdates.history">查看历史更新</button>
+                <button class="feature-update-action feature-update-confirm" id="featureUpdateConfirm" type="button"
+                        data-i18n="featureUpdates.confirm">知道了</button>
+            </div>
+        </div>
+    </dialog>
 
     <main class="main pc-main">
         <nav class="tab-bar">
@@ -6529,6 +6654,7 @@
     </main>
 
     <script src="/js/i18n.js"></script>
+    <script src="/js/feature-updates.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/visitor-stats.js"></script>
     <script>

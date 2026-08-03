@@ -1,33 +1,43 @@
 # GlobalAssetHistory — 全球资产历史收益分析工具
 
-GlobalAssetHistory 是一个跨资产历史收益查询、市场分析与投资回测站点，覆盖美股、数字货币、A 股指数、场内 ETF 和 QDII 基金。
+GlobalAssetHistory 是一个跨资产历史收益查询、市场分析与投资研究站点，覆盖美股、港股、全球股票、数字货币、A 股指数、场内 ETF 和 QDII 基金。
 
 项目采用轻量架构：Flask 提供 API、动态页面与 SEO 响应，前端使用原生 HTML/CSS/JavaScript 和 SVG，不需要 Node.js 或前端构建步骤。生产环境面向 Vercel Serverless Functions。
 
-## 主要功能
+## 功能总览
 
-### 历史收益与回测
+主站提供 12 个用户功能入口；同一个功能可通过中文 `/zh/...`、英文 `/en/...` 或无语言前缀路径访问。
 
-- 多资产历年涨跌幅热力表和年度走势图
-- 年 → 月 → 日三级钻取，展示涨跌幅与收盘价
-- 一次性、每日、每周、每月投入策略回测
-- 总资产、累计投入、收益曲线和逐笔投入明细
-- CSV 导出和浏览器本地状态保存
+| 功能 | 路径 | 主要能力 |
+| --- | --- | --- |
+| 市场热力图 | `/heatmap` | 全球大盘情绪；美股、港股、全球热门股票、数字货币和 A 股 Treemap；支持日/周/月/季/年周期和成交额/市值/涨跌幅权重 |
+| 历年涨跌幅 | `/yearly` | 多资产年度收益热力表、年度走势、年 → 月 → 日钻取、预设组合和 CSV 导出 |
+| 股票详情 | `/detail` | 收益概览、CAGR、波动率、回撤与修复、收益质量、收益日历、复权 OHLC 图、估值快照及美股历史 PE/PB/ROE |
+| 美股对比 | `/stock-compare` | 同时比较 2–8 只美股的年度综合收益、涨跌幅、税后分红、最大回撤和二维聚合结果 |
+| 数据下载 | `/download` | 按代码或名称搜索标的，预览并下载多周期 OHLCV JSON；周/月/年数据由日线聚合 |
+| 投资回测 | `/backtest` | 一次性或按日/周/月/年投入；资产、投入和盈亏曲线；资金加权年化收益（IRR）及逐笔成交明细 |
+| 暴跌统计 | `/crash` | 日 K、N 日 K、周 K、月 K 暴跌检测；触底、修复率、恢复天数和单次事件走势图 |
+| 场内 ETF 追踪 | `/etf` | A 股场内 ETF 实时报价、费率、溢价成本、跟踪误差、估值误差、单只历史图和多 ETF 聚合分析 |
+| 场外 QDII 追踪 | `/qdii-funds` | 纳指100、标普500和主动 QDII；申购状态、限额、费率、多周期收益、基金经理及最新报告持仓地区配置 |
+| VIX/VXN 分析 | `/vix` | SPY/QQQ/VIX/VXN 多周期走势、情绪分位和相关性，以及恐慌指数达到阈值后的远期收益统计 |
+| 数据科普 | `/knowledge` | 价值投资、美股购买、核心 ETF、纳指 ETF、市场数据研究、金融术语及专题 ETF 文章 |
+| 心愿墙 | `/wishes` | SVG 验证码、匿名心愿、频率限制，以及管理员回复和删除 |
 
-### 市场分析
+### 跨资产能力
 
-- 历史暴跌区间、频率和修复统计
-- VIX 恐慌指数与资产价格对比
-- 美股市场 Treemap 热力图
-- A 股场内 ETF 实时报价、费率、溢价率和跟踪误差
-- QDII 基金净值、收益、费率与限购状态
+- 统一支持 `stock`、`hk_stock`、`global_stock`、`crypto`、`cn_stock` 五类标的。
+- 历年收益、股票详情、数据下载和投资回测覆盖全部五类资产；暴跌统计覆盖美股、港股、全球股票和数字货币。
+- 标的输入支持代码规范化；股票对比和数据下载支持按公司名称或代码搜索。
+- 页面会在浏览器本地保存常用标的、参数、筛选条件、主题和涨跌颜色偏好。
 
-### 内容与互动
+### 内容、体验与运营
 
-- 中文、英文界面和语言前缀 URL
-- 金融知识文章及 Article JSON-LD
-- 心愿墙、SVG 验证码、管理员回复和删除
-- 访问次数、Tab 浏览、设置操作和链接点击统计
+- 中文、英文界面和语言前缀 URL。
+- 深色/浅色主题、绿涨红跌/红涨绿跌切换，以及桌面端和移动端适配。
+- 版本化功能更新弹窗集中展示近期更新；用户确认后同一版本不再提醒。
+- 金融知识文章、独立工具落地页、Article JSON-LD、Open Graph 和多语言 SEO。
+- 访问次数、匿名用户、网站/设备语言、Tab 浏览、设置操作和外链点击统计。
+- 心愿墙管理员操作和受 Token 保护的站点统计页。
 
 ## 技术架构
 
@@ -38,25 +48,27 @@ GlobalAssetHistory 是一个跨资产历史收益查询、市场分析与投资�
 | 图表 | 原生 SVG，自实现折线图、热力图和 Treemap 布局 |
 | 数据请求 | `requests`、`curl_cffi`（可用时模拟浏览器 TLS） |
 | 缓存 | L1 进程内存 + L2 Upstash Redis/Vercel KV + L3 JSON 快照 |
-| 测试 | pytest，当前收集 306 个测试 |
+| 测试 | pytest，当前收集 464 个测试 |
 | 部署 | Vercel 静态资源 + Python Serverless Function |
 
 ### 后端模块
 
 - `backend/app.py`：Flask 入口、页面托管、SEO、健康检查和站点统计
-- `backend/routes/price_change.py`：收益、回测、暴跌、热力图、VIX 等 API
-- `backend/routes/etf_market.py`：场内 ETF、QDII 和历史行情 API
+- `backend/routes/price_change.py`：标的搜索、收益、详情、基本面历史、美股对比、数据下载、回测、暴跌、热力图和 VIX/VXN API
+- `backend/routes/etf_market.py`：场内 ETF 报价/估值、ETF 历史、QDII 基金和定期报告持仓 API
 - `backend/routes/wishes.py`：心愿墙 API
 - `backend/service/price_change/`：数据抓取、统一日线模型、计算、缓存和诊断
 - `backend/service/wishes/`：验证码和心愿业务逻辑
 
-所有核心收益能力均建立在统一的 `PriceSeries` 日线数据上。新增资产类型时，应优先实现 daily-series fetcher，再复用年度、月度、日度、回测和暴跌计算。
+所有核心收益能力均建立在统一的 `PriceSeries` 日线数据上。新增资产类型时，应优先实现 daily-series fetcher，再复用年度、月度、日度、详情、下载、回测、暴跌和比较计算。
 
 ### 数据源
 
 | 类型 | 主要来源 | 降级策略 |
 | --- | --- | --- |
 | 美股/美股 ETF | Yahoo Finance | 多种 Yahoo 接口互相回退 |
+| 港股 | Yahoo Finance、East Money | 统一补全港股交易所后缀并按数据类型回退 |
+| 全球股票 | Yahoo Finance | 使用带交易所后缀的 Yahoo 标的代码 |
 | 数字货币 | Binance | Binance → OKX → CoinGecko |
 | A 股指数/股票 | East Money、Tencent Finance | 按数据类型回退 |
 | A 股场内 ETF | Tencent Finance、East Money | 本地历史与净值快照兜底 |
@@ -115,7 +127,7 @@ HOST=127.0.0.1 PORT=8080 ./start.sh debug
 PYTHONPATH=backend backend/.venv/bin/python3 -m pytest backend/tests -q
 ```
 
-测试覆盖收益计算、回测、缓存、API、ETF/QDII、SEO 和站点统计。新增功能或修改核心逻辑时必须补充对应测试。
+测试覆盖收益计算、基本面历史、数据下载、回测、缓存、API、ETF/QDII、持仓解析、SEO、站点统计、运行日志和交付流程。新增功能或修改核心逻辑时必须补充对应测试。
 
 ## 配置
 
@@ -148,6 +160,30 @@ Redis 两套变量会自动识别，优先使用 `UPSTASH_*`。
 - 外部数据源地址
 - 站点基础配置
 
+`frontend/config/feature-updates.json` 控制功能更新弹窗：
+
+- 配置是一个版本数组，数组最后一项就是本次更新；发布时只需在末尾追加一项。
+- 每个版本只包含数字 `version`、`date`、`zh` 和 `en`；日期格式固定为 `YYYY.MM.DD`，两种语言都使用字符串列表维护更新内容。
+- 用户确认后会记住最后一项的版本号，同一版本只显示一次；后续追加新版本会再次提醒。
+- 弹窗中的“查看历史更新”会按新到旧展示整个数组；将数组设为空即可关闭提醒。
+
+```json
+[
+  {
+    "version": 1,
+    "date": "2026.08.01",
+    "zh": ["功能一", "功能二"],
+    "en": ["Feature one", "Feature two"]
+  },
+  {
+    "version": 2,
+    "date": "2026.08.03",
+    "zh": ["本次更新"],
+    "en": ["Latest update"]
+  }
+]
+```
+
 `backend/data/` 存放 ETF 费率、QDII 及行情快照。这些文件既是数据资产，也是 Serverless 冷启动时的 L3 兜底。
 
 ## API 概览
@@ -157,17 +193,22 @@ Redis 两套变量会自动识别，优先使用 `UPSTASH_*`。
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | GET | `/config` | 站点、资产组和颜色配置 |
+| GET | `/symbol-search` | 按代码或名称搜索受支持标的 |
 | GET | `/market-pulse` | 上证、KOSPI、标普500、纳指100和 BTC 最新价格及日涨跌幅 |
 | POST | `/yearly` | 多资产年度收益 |
 | POST | `/monthly` | 单资产月度收益 |
 | POST | `/monthly-batch` | 多资产批量月度收益 |
 | POST | `/daily` | 单资产指定月份日收益 |
-| POST | `/detail` | 资产明细 |
+| POST | `/detail` | 单标的收益概览、质量、估值和日/月/年明细 |
+| POST | `/fundamentals-history` | 美股历史 PE、PB 和年度 ROE |
+| POST | `/stock-compare` | 2–8 只美股的年度收益、分红和回撤比较 |
+| POST | `/history-download` | 指定标的、周期和日期范围的 OHLCV JSON 数据 |
 | POST | `/backtest` | 投资回测 |
 | POST | `/crash-stats` | 暴跌统计 |
 | POST | `/crash-chart` | 暴跌图表数据 |
-| POST | `/heatmap` | 美股市场热力图 |
-| POST | `/vix-comparison` | VIX 对比 |
+| POST | `/heatmap` | 美股、港股、全球股票、数字货币和 A 股市场热力图 |
+| POST | `/vix-comparison` | SPY、QQQ、VIX 和 VXN 多周期对比 |
+| POST | `/fear-threshold-stats` | VIX/VXN 达到阈值后的 SPY/QQQ 远期收益统计 |
 | GET | `/header-trend` | 页头市场趋势 |
 
 ### ETF 市场 `/api/etf-market`
@@ -177,6 +218,7 @@ Redis 两套变量会自动识别，优先使用 `UPSTASH_*`。
 | GET | `/quote` | 场内 ETF 报价 |
 | GET | `/valuation` | ETF 估值和跟踪分析 |
 | GET | `/qdii-funds` | QDII 基金数据 |
+| GET | `/qdii-funds/<code>/holdings` | QDII 最新定期报告持仓和地区配置 |
 | GET | `/history` | ETF 历史行情 |
 
 ### 心愿墙 `/api/wishes`
@@ -190,7 +232,7 @@ Redis 两套变量会自动识别，优先使用 `UPSTASH_*`。
 | PATCH | `/<wish_id>/reply` | 管理员回复 |
 | DELETE | `/<wish_id>` | 管理员删除 |
 
-其他系统接口包括 `/api/health`、`/api/diag`、`/api/visits`、`/api/track` 和管理员统计页 `/api/stats?token=...`。
+其他系统接口包括 `/api/health`、`/api/diag`、`/api/visits`、`/api/track`、专题 CSV 下载和管理员统计页 `/api/stats?token=...`。
 
 ## Vercel 部署
 

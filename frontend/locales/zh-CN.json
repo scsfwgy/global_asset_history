@@ -30,6 +30,17 @@
     "linkGithub": "Github",
     "linkXiaohongshu": "小红书"
   },
+  "featureUpdates": {
+    "title": "功能更新",
+    "historyTitle": "历史更新记录",
+    "version": "版本 {{version}} · {{date}}",
+    "latestMetaOne": "版本 {{version}} · {{date}} · {{n}} 项更新",
+    "latestMeta": "版本 {{version}} · {{date}} · {{n}} 项更新",
+    "historyMeta": "共 {{n}} 个版本",
+    "history": "查看历史更新",
+    "backToLatest": "返回本次更新",
+    "confirm": "知道了"
+  },
   "status": {
     "connected": "已连接",
     "disconnected": "未连接",

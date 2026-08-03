@@ -30,6 +30,17 @@
     "linkGithub": "GitHub",
     "linkXiaohongshu": "Xiaohongshu"
   },
+  "featureUpdates": {
+    "title": "What's New",
+    "historyTitle": "Update History",
+    "version": "Version {{version}} · {{date}}",
+    "latestMetaOne": "Version {{version}} · {{date}} · {{n}} update",
+    "latestMeta": "Version {{version}} · {{date}} · {{n}} updates",
+    "historyMeta": "{{n}} versions",
+    "history": "View history",
+    "backToLatest": "Back to latest",
+    "confirm": "Got it"
+  },
   "status": {
     "connected": "Connected",
     "disconnected": "Disconnected",

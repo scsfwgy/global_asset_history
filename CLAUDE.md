@@ -6,30 +6,27 @@
 
 ### 知识图谱优先（强制）
 
-阅读、搜索或探索代码前，必须先查询现有知识图谱，用它定位相关社区、节点、调用路径和影响范围，再按查询结果阅读具体源码和测试。默认优先使用噪声更少、包含前后端 API 桥接的架构图：
+阅读、搜索或探索代码前，必须先查询现有知识图谱，用它定位相关社区、节点、调用路径和影响范围，再按查询结果阅读具体源码和测试。当前仓库图谱位于 `graphify-out/graph.json`：
 
 ```bash
-graphify query "<问题>" \
-  --graph graphify-architecture/graphify-out/graph.json
+graphify query "<问题>" --graph graphify-out/graph.json
 ```
 
 按任务需要使用：
 
 ```bash
 graphify explain "<类、函数或概念>" \
-  --graph graphify-architecture/graphify-out/graph.json
+  --graph graphify-out/graph.json
 graphify path "<起点>" "<终点>" \
-  --graph graphify-architecture/graphify-out/graph.json
-graphify affected "<被修改节点>" --depth 2 \
-  --graph graphify-architecture/graphify-out/graph.json
+  --graph graphify-out/graph.json
 ```
 
 - 架构、调用链、功能入口、依赖关系和改动影响问题，禁止跳过知识图谱直接进行全仓库搜索。
 - 图谱用于定位和缩小阅读范围，不能替代源码、测试和运行时验证；修改具体实现前仍必须阅读相关源码与测试。
 - 优先相信 `EXTRACTED` 关系；`INFERRED` 只作为调查线索，必须回到源码确认。
 - 若图谱缺失、明显过期或没有覆盖目标，必须明确说明，再使用 `rg` 等工具补充检索。
-- 需要测试、文档和完整语义关系时，可改查 `graphify-out/graph.json`；日常开发默认使用架构图。
-- 修改代码后，如关系或架构发生变化，按 `graphify-architecture/README.md` 重建架构图，避免后续会话基于过期关系工作。
+- 当前没有单独的 `graphify-architecture/` 轻量图目录；不要引用不存在的路径。
+- 修改代码后，如关系或架构发生变化，使用 `graphify update .` 更新仓库图谱，避免后续会话基于过期关系工作。
 
 ### 1. 修改功能必须补测试
 
@@ -51,7 +48,7 @@ graphify affected "<被修改节点>" --depth 2 \
 PYTHONPATH=backend backend/.venv/bin/python3 -m pytest backend/tests -q
 ```
 
-当前测试套件收集 306 个测试，覆盖计算、服务、路由、ETF/QDII、SEO、统计、运行日志和交付流程。
+当前测试套件收集 464 个测试，覆盖计算、服务、路由、基本面、数据下载、ETF/QDII、持仓解析、SEO、统计、运行日志和交付流程。
 
 ### 2. 产品交付门禁（强制）
 
@@ -104,7 +101,15 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 - 部署：Vercel 静态资源 + Python Serverless Function
 - 国际化：`frontend/locales/zh-CN.json` 和 `en.json`
 
-主要功能包括历史收益钻取、投资回测、暴跌统计、VIX 对比、美股热力图、A 股 ETF、QDII 基金、知识文章、心愿墙和站点统计。
+主要功能包括多市场热力图、历史收益钻取、单标的详情和基本面历史、美股对比、多周期数据下载、投资回测、暴跌统计、VIX/VXN 对比与阈值研究、A 股场内 ETF、QDII 基金及持仓地区配置、知识文章、心愿墙和站点统计。
+
+统一资产类型为：
+
+- `stock`：美股和美股 ETF
+- `hk_stock`：港股
+- `global_stock`：带 Yahoo 交易所后缀的全球股票
+- `crypto`：数字货币
+- `cn_stock`：A 股指数和股票
 
 ## 核心架构
 
@@ -113,11 +118,15 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 `backend/service/price_change/common.py` 中的 `PriceSeries` 是核心基础数据结构。以下能力均从日线数据派生：
 
 - yearly / monthly / monthly-batch / daily / detail
+- stock-compare / history-download
 - backtest
 - crash-stats / crash-chart
-- VIX comparison
+- heatmap 的周期收益
+- VIX/VXN comparison / fear-threshold-stats
 
 统一入口位于 `price_change_service.py` 的日线缓存获取逻辑。新增资产类型时优先扩展 `fetchers.py` 的 `DAILY_SERIES_FETCHERS`，不要为每个统计接口重复抓取逻辑。
+
+`fundamentals-history` 不属于 `PriceSeries` 日线派生能力；它由 `backend/service/price_change/fundamentals_history.py` 单独抓取和合并历史 PE、PB、ROE。不要把价格缓存与基本面时间序列缓存混为一套。
 
 ### 多级缓存
 
@@ -134,8 +143,8 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 ### Flask 模块
 
 - `backend/app.py`：应用入口、前端响应、SEO、健康检查、诊断、访问和点击统计
-- `price_change_bp` (`/api/price-change`)：收益、回测、暴跌、热力图、VIX
-- `etf_market_bp` (`/api/etf-market`)：ETF 报价、估值、QDII、历史数据
+- `price_change_bp` (`/api/price-change`)：标的搜索、收益、详情、基本面历史、美股对比、数据下载、回测、暴跌、热力图、VIX/VXN
+- `etf_market_bp` (`/api/etf-market`)：ETF 报价和估值、ETF 历史、QDII 基金、QDII 定期报告持仓
 - `wishes_bp` (`/api/wishes`)：验证码、心愿提交和管理
 - `api/index.py`：Vercel 导入并暴露 Flask `app`
 
@@ -146,7 +155,33 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 - `frontend/css/app.css`：共享样式
 - `frontend/js/api.js`：同源 API 常量，`API_BASE = ""`
 - `frontend/js/i18n.js`：语言切换
-- 其他 JS 按功能拆分，全部是 classic script，共享全局状态
+- `frontend/js/feature-updates.js`：按配置版本展示一次性功能更新通知
+- `price-change.js` / `drilldown.js` / `charts.js`：历年收益、月日钻取和共享图表
+- `price-detail.js`：单标的收益、质量、估值、基本面历史、收益日历和年度分红数据
+- `stock-compare.js` / `data-download.js` / `backtest.js` / `crash-stats.js`：独立研究工具
+- `heatmap.js` / `etf-market.js` / `qdii-funds.js` / `vix-chart.js`：市场分析工具
+- `wishes.js` / `visitor-stats.js` / `header-trend.js`：互动、统计和页头装饰
+
+全部脚本都是 classic script，并通过加载顺序共享全局常量、函数和状态。新增脚本时必须检查 `price-change.html` 底部的加载顺序。
+
+功能更新通知由 `frontend/config/feature-updates.json` 手动控制。配置是按时间排列的版本数组，最后一项为最新版本；发布时只需在数组末尾追加包含数字 `version`、`date`、`zh` 和 `en` 的对象，`date` 固定使用 `YYYY.MM.DD` 格式，双语内容均为字符串列表。空数组会关闭提醒。用户只有点击确认按钮后才会在 localStorage 记录最新版本，弹窗可切换查看全部历史更新。
+
+### 用户功能与代码入口
+
+| 功能 | 页面路径 | 主要前端模块 | 主要 API |
+| --- | --- | --- | --- |
+| 市场热力图 | `/heatmap` | `heatmap.js` | `market-pulse`、`heatmap` |
+| 历年涨跌幅 | `/yearly` | `price-change.js`、`drilldown.js`、`charts.js` | `yearly`、`monthly-batch`、`daily` |
+| 股票详情 | `/detail` | `price-detail.js` | `detail`、`fundamentals-history` |
+| 美股对比 | `/stock-compare` | `stock-compare.js` | `symbol-search`、`stock-compare` |
+| 数据下载 | `/download` | `data-download.js` | `symbol-search`、`history-download` |
+| 投资回测 | `/backtest` | `backtest.js` | `backtest` |
+| 暴跌统计 | `/crash` | `crash-stats.js` | `crash-stats`、`crash-chart` |
+| 场内 ETF | `/etf` | `etf-market.js` | `/api/etf-market/quote`、`valuation`、`history` |
+| 场外 QDII | `/qdii-funds` | `qdii-funds.js` | `/api/etf-market/qdii-funds`、`qdii-funds/<code>/holdings` |
+| VIX/VXN | `/vix` | `vix-chart.js` | `vix-comparison`、`fear-threshold-stats` |
+| 数据科普 | `/knowledge/...`、`/us-etf/...` | `price-change.html` 内嵌文章和路由映射 | 专题 CSV 接口（部分文章） |
+| 心愿墙 | `/wishes` | `wishes.js` | `/api/wishes` |
 
 不要引入 React/Vue 或构建工具，除非用户明确要求进行架构迁移。新增图表应延续现有 SVG 风格，并注意移动端和深浅色主题。
 
@@ -194,11 +229,11 @@ Flask 会根据请求语言和路径动态替换：
 - Website/Article JSON-LD
 - `X-Robots-Tag`
 
-`/zh/...` 和 `/en/...` 是 sitemap 中的 canonical 版本。无语言前缀 URL 不进入 sitemap。工具型内部 Tab 通常 `noindex,follow`；知识文章和两个主要落地页可索引。
+`/zh/...` 和 `/en/...` 是 sitemap 中的 canonical 版本。无语言前缀 URL 不进入 sitemap。可索引工具由 `INDEXABLE_TOOL_PATHS` 管理；知识文章和专题 ETF 页面由 `KNOWLEDGE_ARTICLES` 管理。其他内部工具通常为 `noindex,follow`。
 
-旧知识路径保留兼容，但必须 canonical 到新路径并保持 `noindex,follow`。新增知识文章需同步处理：
+旧知识路径保留兼容，但必须 canonical 到新路径并保持 `noindex,follow`。新增知识文章、专题 ETF 页面或可索引工具需同步处理：
 
-1. `KNOWLEDGE_ARTICLES`
+1. `KNOWLEDGE_ARTICLES` 或 `INDEXABLE_TOOL_PATHS`
 2. 必要的 `legacy_paths`
 3. Flask 路由
 4. `vercel.json` 的文章路径正则
@@ -211,8 +246,11 @@ SEO 分享图片必须实际存在于 `frontend/doc/screenshot/`，因为 Vercel
 ## 数据与抓取约定
 
 - 美股优先使用 Yahoo Finance 相关接口。
+- 港股优先使用 Yahoo/East Money；进入统一日线层前必须使用 `normalize_asset_symbol()` 规范化代码。
+- 全球股票使用 Yahoo 交易所后缀代码，例如 `7203.T`、`005930.KS`、`2330.TW`；不要把它们按美股代码截断。
 - 数字货币按 Binance → OKX → CoinGecko 回退。
 - A 股指数、场内 ETF、净值和 QDII 使用 East Money/Tencent 等接口。
+- QDII 地区配置来自最新定期报告；直接股票/存托凭证、基金/ETF 仓位必须分开呈现，不能在未穿透时把基金仓位直接归入某个地区。
 - 单个上游失败不应拖垮批量请求；网络 IO 可使用 `ThreadPoolExecutor` 并发。
 - 外部数据结构变化时，要先保存/构造样例并增加解析测试。
 - 不要用单个数据点校准金融参数；应检查中间值并用多日期回归验证。
@@ -234,6 +272,7 @@ SEO 分享图片必须实际存在于 `frontend/doc/screenshot/`，因为 Vercel
 3. 检查浏览器历史、canonical 和 Tab URL 映射。
 4. 可见内容变化时更新对应 SEO `lastmod`。
 5. 若改变 OG 图片，确保文件位于 `frontend/` 下。
+6. 新增用户可见功能时同步更新 `README.md` 的功能总览/API 表，以及本文件的“用户功能与代码入口”。
 
 ### 完成前
 
