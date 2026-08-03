@@ -2532,7 +2532,7 @@
         font-size: var(--text-xs);
         margin-top: 4px;
     }
-    #qdiiFundsTable { min-width: 1980px; }
+    #qdiiFundsTable { min-width: 2180px; }
     #qdiiFundsTable th,
     #qdiiFundsTable td {
         padding: 8px 10px;
@@ -2570,12 +2570,135 @@
         opacity: 1;
         color: var(--apple-blue);
     }
+    .qdii-holdings-cell { min-width: 230px; }
+    .qdii-holdings-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 30px;
+        max-width: 260px;
+        padding: 4px 8px;
+        border: 1px solid var(--apple-divider);
+        border-radius: var(--radius-md);
+        background: var(--apple-surface-2);
+        color: var(--apple-text-primary);
+        cursor: pointer;
+        font: inherit;
+    }
+    .qdii-holdings-toggle:hover,
+    .qdii-holdings-toggle[aria-expanded="true"] {
+        border-color: var(--apple-blue);
+        background: var(--apple-blue-soft);
+    }
+    .qdii-holdings-summary {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .qdii-holdings-summary.muted { color: var(--apple-text-secondary); }
+    .qdii-holdings-chevron {
+        color: var(--apple-text-tertiary);
+        font-size: 9px;
+        margin-left: auto;
+    }
+    .qdii-region-chip {
+        border-radius: var(--radius-full);
+        padding: 2px 5px;
+        font-size: 11px;
+        font-weight: 650;
+        white-space: nowrap;
+    }
+    .qdii-region-chip.cn { color: #b42318; background: rgba(240, 68, 56, 0.1); }
+    .qdii-region-chip.hk { color: #6941c6; background: rgba(127, 86, 217, 0.1); }
+    .qdii-region-chip.us { color: #175cd3; background: rgba(47, 128, 237, 0.1); }
+    #qdiiFundsTable .qdii-holdings-detail-row > td {
+        padding: 0;
+        white-space: normal;
+        background: var(--apple-surface-2);
+        border-bottom: 1px solid var(--apple-divider);
+    }
+    .qdii-holdings-detail {
+        position: sticky;
+        left: 0;
+        width: min(1080px, calc(100vw - 48px));
+        box-sizing: border-box;
+        padding: 16px 18px;
+        color: var(--apple-text-primary);
+        line-height: 1.5;
+    }
+    .qdii-holdings-detail-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 14px;
+    }
+    .qdii-holdings-detail-head > div { min-width: 0; }
+    .qdii-holdings-detail-head strong { display: block; font-size: 14px; }
+    .qdii-holdings-detail-head span {
+        display: block;
+        color: var(--apple-text-tertiary);
+        font-size: 12px;
+        margin-top: 3px;
+    }
+    .qdii-holdings-detail-head a { white-space: nowrap; font-size: 12px; }
+    .qdii-holdings-section-title {
+        color: var(--apple-text-secondary);
+        font-size: 12px;
+        font-weight: 650;
+        margin: 12px 0 7px;
+    }
+    .qdii-region-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(120px, 1fr));
+        gap: 8px;
+    }
+    .qdii-region-card {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 9px 11px;
+        border: 1px solid var(--apple-divider);
+        border-radius: var(--radius-md);
+        background: var(--apple-surface-1);
+        font-size: 12px;
+    }
+    .qdii-region-card strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+    .qdii-fund-position-list {
+        border: 1px solid var(--apple-divider);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        background: var(--apple-surface-1);
+    }
+    .qdii-fund-position-list > div {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 8px 11px;
+        font-size: 12px;
+    }
+    .qdii-fund-position-list > div + div { border-top: 1px solid var(--apple-divider); }
+    .qdii-fund-position-list strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .qdii-holdings-method,
+    .qdii-holdings-empty {
+        margin: 12px 0 0;
+        color: var(--apple-text-tertiary);
+        font-size: 12px;
+    }
+    .qdii-holdings-detail-loading { color: var(--apple-text-secondary); }
+    .qdii-holdings-detail-error { color: var(--data-negative); }
     .qdii-status-badge {
         display: inline-block;
         border-radius: var(--radius-full);
         padding: 2px 8px;
         font-size: var(--text-xs);
         font-weight: 600;
+    }
+    @media (max-width: 720px) {
+        .qdii-holdings-detail { width: calc(100vw - 80px); padding: 14px 12px; }
+        .qdii-holdings-detail-head { flex-direction: column; gap: 6px; }
+        .qdii-region-grid { grid-template-columns: repeat(2, minmax(110px, 1fr)); }
     }
     .qdii-status-badge.buyable {
         color: var(--data-positive);
@@ -3032,10 +3155,11 @@
         <div class="controls-bar" style="margin-bottom: 12px;">
             <div class="control-group">
                 <span class="control-label" data-i18n="yearly.symbolInput">统计代码</span>
-                <input type="text" id="pcSymbolInput" class="pc-symbol-input" data-i18n-attr="placeholder|yearly.placeholderSymbol" placeholder="AAPL" maxlength="10">
+                <input type="text" id="pcSymbolInput" class="pc-symbol-input" data-i18n-attr="placeholder|yearly.placeholderSymbol" placeholder="AAPL" maxlength="30">
                 <select id="pcTypeSelect" class="pc-type-select">
                     <option value="stock" data-i18n="yearly.assetTypeStock">美股</option>
                     <option value="hk_stock" data-i18n="yearly.assetTypeHkStock">港股</option>
+                    <option value="global_stock" data-i18n="yearly.assetTypeGlobalStock">全球股票</option>
                     <option value="crypto" data-i18n="yearly.assetTypeCrypto">数字货币</option>
                     <option value="cn_stock" data-i18n="yearly.assetTypeCnStock">A股</option>
                 </select>
@@ -3109,10 +3233,11 @@
             <div class="controls-bar" style="margin-bottom:12px;">
                 <div class="control-group pd-controls">
                     <span class="control-label" data-i18n="yearly.symbolInput">统计代码</span>
-                    <input type="text" id="pdSymbolInput" class="pc-symbol-input" data-i18n-attr="placeholder|yearly.placeholderSymbol" placeholder="BTC" maxlength="20">
+                    <input type="text" id="pdSymbolInput" class="pc-symbol-input" data-i18n-attr="placeholder|yearly.placeholderSymbol" placeholder="BTC" maxlength="30">
                     <select id="pdTypeSelect" class="pc-type-select">
                         <option value="stock" data-i18n="yearly.assetTypeStock">美股</option>
                         <option value="hk_stock" data-i18n="yearly.assetTypeHkStock">港股</option>
+                        <option value="global_stock" data-i18n="yearly.assetTypeGlobalStock">全球股票</option>
                         <option value="crypto" selected data-i18n="yearly.assetTypeCrypto">数字货币</option>
                         <option value="cn_stock" data-i18n="yearly.assetTypeCnStock">A股</option>
                     </select>
@@ -3476,10 +3601,11 @@
             <div id="btParamsPanel">
             <div class="pc-bt-row">
                 <span class="pc-bt-label" data-i18n="backtest.symbol">定投标的</span>
-                <input type="text" id="btSymbolInput" class="pc-bt-input" placeholder="SPY" maxlength="10" value="QQQ" style="width:120px;text-transform:uppercase;">
+                <input type="text" id="btSymbolInput" class="pc-bt-input" placeholder="SPY" maxlength="30" value="QQQ" style="width:120px;text-transform:uppercase;">
                 <select id="btTypeSelect" class="pc-bt-input" style="width:110px;">
                     <option value="stock" data-i18n="yearly.assetTypeStock">美股</option>
                     <option value="hk_stock" data-i18n="yearly.assetTypeHkStock">港股</option>
+                    <option value="global_stock" data-i18n="yearly.assetTypeGlobalStock">全球股票</option>
                     <option value="crypto" data-i18n="yearly.assetTypeCrypto">数字货币</option>
                     <option value="cn_stock" data-i18n="yearly.assetTypeCnStock">A股</option>
                 </select>
@@ -3574,10 +3700,11 @@
             <div id="crashParamsPanel">
             <div class="pc-bt-row">
                 <span class="pc-bt-label" data-i18n="crash.symbol">股票代码</span>
-                <input type="text" id="crashSymbol" class="pc-bt-input" value="QQQ" placeholder="QQQ" maxlength="10" style="text-transform:uppercase">
+                <input type="text" id="crashSymbol" class="pc-bt-input" value="QQQ" placeholder="QQQ" maxlength="30" style="text-transform:uppercase">
                 <select id="crashType" class="pc-bt-input" style="width:110px;">
                     <option value="stock" selected data-i18n="yearly.assetTypeStock">美股</option>
                     <option value="hk_stock" data-i18n="yearly.assetTypeHkStock">港股</option>
+                    <option value="global_stock" data-i18n="yearly.assetTypeGlobalStock">全球股票</option>
                     <option value="crypto" data-i18n="yearly.assetTypeCrypto">数字货币</option>
                 </select>
                 <span class="pc-bt-label" data-i18n="crash.dropPct">暴跌幅度</span>
@@ -3764,6 +3891,7 @@
                             <th class="qdii-sortable" data-qdii-sort="company"><span data-i18n="qdii.colCompany">基金公司</span> <span class="qdii-sort-arrow">⇅</span></th>
                             <th class="qdii-sortable qdii-num" data-qdii-sort="fund_scale"><span data-i18n="qdii.colScale">基金规模</span> <span class="qdii-sort-arrow">⇅</span></th>
                             <th class="qdii-sortable" data-qdii-sort="fund_manager"><span data-i18n="qdii.colManager">基金经理</span> <span class="qdii-sort-arrow">⇅</span></th>
+                            <th><span data-i18n="qdii.colRegions">地区配置</span></th>
                             <th class="qdii-sortable" data-qdii-sort="status"><span data-i18n="qdii.colStatus">状态</span> <span class="qdii-sort-arrow">⇅</span></th>
                             <th class="qdii-sortable qdii-num" data-qdii-sort="daily_limit"><span data-i18n="qdii.colDailyLimit">单日限额</span> <span class="qdii-sort-arrow">⇅</span></th>
                             <th class="qdii-sortable qdii-num" data-qdii-sort="min_purchase"><span data-i18n="qdii.colMinPurchase">起购</span> <span class="qdii-sort-arrow">⇅</span></th>
@@ -3781,7 +3909,7 @@
                         </tr>
                     </thead>
                     <tbody id="qdiiFundsBody">
-                        <tr><td colspan="22" style="text-align:center;padding:24px;color:var(--apple-text-secondary);" data-i18n="vix.loading">加载中...</td></tr>
+                        <tr><td colspan="23" style="text-align:center;padding:24px;color:var(--apple-text-secondary);" data-i18n="vix.loading">加载中...</td></tr>
                     </tbody>
                 </table>
             </div>

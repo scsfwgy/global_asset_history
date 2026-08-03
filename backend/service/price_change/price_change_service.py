@@ -52,7 +52,7 @@ _CACHE_LOCK = threading.RLock()
 _FETCHERS: Dict[str, Callable[[str], Dict[str, float]]] = dict(FETCHERS)
 _DAILY_SERIES_FETCHERS: Dict[str, Callable[[str], PriceSeries]] = dict(DAILY_SERIES_FETCHERS)
 
-_STOCK_ASSET_TYPES = {"stock", "hk_stock"}
+_STOCK_ASSET_TYPES = {"stock", "hk_stock", "global_stock"}
 _ASSET_CURRENCIES = {
     "stock": "USD",
     "hk_stock": "HKD",
@@ -376,9 +376,8 @@ def fetch_price_history(
 ) -> Dict:
     """Return a date-bounded OHLCV collection aggregated to the requested period."""
     clean_type = asset_type.strip().lower()
-    # ``global_stock`` is a download-only product type.  International Yahoo
-    # symbols use the same chart endpoints as US stocks, so share the stock
-    # fetcher and cache while preserving the requested type in the response.
+    # International Yahoo symbols use the same chart endpoints as US stocks,
+    # so downloads share the stock cache while preserving the requested type.
     fetch_type = "stock" if clean_type == "global_stock" else clean_type
     clean_symbol = normalize_asset_symbol(symbol, fetch_type)
     clean_period = period.strip().lower()
@@ -1807,10 +1806,14 @@ def fetch_return_detail(
         _enrich_detail_fundamentals_from_series(
             series,
             external_fundamentals,
-            fallback_currency=_ASSET_CURRENCIES[clean_type],
+            fallback_currency=_asset_currency(clean_sym, clean_type),
         )
         if clean_type in _STOCK_ASSET_TYPES
         else None
+    )
+    detail_currency = (
+        (fundamentals or {}).get("currency")
+        or _asset_currency(clean_sym, clean_type)
     )
     if fundamentals is not None:
         logger.info(
@@ -1827,7 +1830,7 @@ def fetch_return_detail(
     # -- yearly mode ---------------------------------------------------------
     if year is None:
         stock_tables = (
-            _build_stock_history_tables(series, _ASSET_CURRENCIES[clean_type])
+            _build_stock_history_tables(series, detail_currency)
             if clean_type in _STOCK_ASSET_TYPES
             else None
         )
@@ -1931,7 +1934,7 @@ def fetch_return_detail(
         "daily_rows": daily_rows,
         "stats": _build_monthly_stats(month_values),
         "stock_tables": (
-            _build_stock_history_tables(series, _ASSET_CURRENCIES[clean_type])
+            _build_stock_history_tables(series, detail_currency)
             if clean_type in _STOCK_ASSET_TYPES and include_stock_history
             else None
         ),
@@ -2042,7 +2045,7 @@ def run_dca_backtest(payload: Dict) -> Dict:
     return {
         "symbol": symbol,
         "type": asset_type,
-        "currency": _ASSET_CURRENCIES.get(asset_type, "USD"),
+        "currency": _asset_currency(symbol, asset_type),
         "source": series.source,
         "frequency": frequency,
         "interval": interval,
@@ -2469,6 +2472,13 @@ def _heatmap_stock_meta(symbol: str, asset_type: str) -> Tuple[str, Optional[str
     return _TURNOVER_CURRENCY.get(asset_type, "USD"), None
 
 
+def _asset_currency(symbol: str, asset_type: str) -> str:
+    """Return the native quote currency for a supported asset symbol."""
+    clean_type = str(asset_type or "stock").strip().lower()
+    lookup_type = "stock" if clean_type == "global_stock" else clean_type
+    return _heatmap_stock_meta(symbol, lookup_type)[0]
+
+
 def _heatmap_currency(
     symbol: str, asset_type: str, quote_currency: Optional[str] = None
 ) -> str:
@@ -2521,8 +2531,8 @@ _HEATMAP_HK_WATCHLIST = [
     "9992.HK", "1876.HK", "2020.HK", "6690.HK", "2269.HK", "1177.HK",
 ]
 
-# Cross-region preview pool.  It intentionally uses the shared ``stock``
-# fetcher: ``global_stock`` is a heatmap market selector, not a new asset type.
+# Cross-region preview pool.  Heatmap entries retain the shared ``stock`` type
+# for response compatibility; the analysis modules also accept ``global_stock``.
 # Since native-currency turnover is not comparable across markets, the frontend
 # forces this view to size blocks by absolute return.
 _HEATMAP_GLOBAL_WATCHLIST = [

@@ -139,7 +139,7 @@
     var cleanSymbol = String(symbol || "").trim().toUpperCase();
     if (!cleanSymbol) return [];
 
-    if (assetType === "hk_stock") {
+    if (["hk_stock", "global_stock"].indexOf(assetType) !== -1) {
       var hkYahooBase = "https://finance.yahoo.com/quote/"
         + encodeURIComponent(cleanSymbol) + "/";
       return [{ labelKey: "detail.companyProfile", url: hkYahooBase + "profile/" }];
@@ -466,6 +466,7 @@
     var typeLabels = {
       stock: __("yearly.assetTypeStock"),
       hk_stock: __("yearly.assetTypeHkStock"),
+      global_stock: __("yearly.assetTypeGlobalStock"),
       crypto: __("yearly.assetTypeCrypto"),
       cn_stock: __("yearly.assetTypeCnStock"),
     };
@@ -509,7 +510,7 @@
 
     if (basisNote) {
       basisNote.textContent = __(
-        ["stock", "hk_stock"].indexOf(result.type) !== -1
+        ["stock", "hk_stock", "global_stock"].indexOf(result.type) !== -1
           ? "detail.returnBasisStock"
           : "detail.returnBasisAdjusted"
       );
@@ -1401,7 +1402,7 @@
     var body = $("pdStockHistoryBody");
     var tables = result && result.stock_tables;
     if (!section || !body) return;
-    if (["stock", "hk_stock"].indexOf(result.type) === -1) {
+    if (["stock", "hk_stock", "global_stock"].indexOf(result.type) === -1) {
       hideStockHistory(true);
       return;
     }
@@ -1874,7 +1875,7 @@
     try {
       var body = { symbol: symbol, type: type };
       if (year) body.year = parseInt(year, 10);
-      if (year && ["stock", "hk_stock"].indexOf(type) !== -1) {
+      if (year && ["stock", "hk_stock", "global_stock"].indexOf(type) !== -1) {
         body.include_stock_history = !canReuseStockHistory;
       }
       var resp = await fetch(DETAIL_ENDPOINT, {

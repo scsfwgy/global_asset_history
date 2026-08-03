@@ -33,6 +33,17 @@ def test_hk_stock_daily_fetcher_reuses_yahoo_with_canonical_symbol(mock_fetch):
     mock_fetch.assert_called_once_with("0700.HK")
 
 
+@patch.object(fetchers, "_fetch_daily_series_stock")
+def test_global_stock_daily_fetcher_reuses_yahoo_symbol(mock_fetch):
+    expected = Mock()
+    mock_fetch.return_value = expected
+
+    result = fetchers.DAILY_SERIES_FETCHERS["global_stock"]("2330.tw")
+
+    assert result is expected
+    mock_fetch.assert_called_once_with("2330.TW")
+
+
 @patch.object(fetchers._session, "get")
 def test_yahoo_daily_preserves_raw_close_with_adjusted_close(mock_get):
     timestamp = int(datetime(2024, 1, 2, tzinfo=timezone.utc).timestamp())

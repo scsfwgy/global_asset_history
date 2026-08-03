@@ -189,7 +189,7 @@ function renderTags() {
       (s, i) =>
         `<span class="pc-tag">
           ${displayName(s)}
-          <span class="pc-tag-type">${s.type === "crypto" ? __("yearly.labelCrypto") : s.type === "cn_stock" ? __("yearly.labelA") : s.type === "hk_stock" ? __("yearly.labelHK") : __("yearly.labelStock")}</span>
+          <span class="pc-tag-type">${s.type === "crypto" ? __("yearly.labelCrypto") : s.type === "cn_stock" ? __("yearly.labelA") : s.type === "hk_stock" ? __("yearly.labelHK") : s.type === "global_stock" ? __("yearly.labelGlobal") : __("yearly.labelStock")}</span>
           <span class="pc-tag-remove" data-index="${i}">✕</span>
         </span>`
     )
@@ -894,6 +894,18 @@ async function init() {
       if (_acSeen[key]) return;
       _acSeen[key] = true;
       _acIndex.push({ code: s.symbol, name: s.name || '', type: s.type });
+    });
+  });
+  document.querySelectorAll('#downloadGlobalSymbolSelect option[value]').forEach(function (option) {
+    var code = String(option.value || '').trim().toUpperCase();
+    var key = code + '|global_stock';
+    if (!code || _acSeen[key]) return;
+    _acSeen[key] = true;
+    var labelParts = String(option.textContent || '').split('·');
+    _acIndex.push({
+      code: code,
+      name: labelParts.slice(1).join('·').trim(),
+      type: 'global_stock',
     });
   });
 

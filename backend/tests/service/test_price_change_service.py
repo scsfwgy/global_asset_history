@@ -319,6 +319,13 @@ class TestFetchReturnDetail:
         assert hk_result["stock_tables"]["dividend_unit"] == "HKD/share"
         mock_fetch.assert_called_with("0700.HK", "hk_stock")
 
+        global_result = svc.fetch_return_detail("2330.tw", "global_stock")
+        assert global_result["symbol"] == "2330.TW"
+        assert global_result["type"] == "global_stock"
+        assert global_result["fundamentals"]["currency"] == "TWD"
+        assert global_result["stock_tables"]["dividend_unit"] == "TWD/share"
+        mock_fetch.assert_called_with("2330.TW", "global_stock")
+
     def test_detail_period_returns_drawdowns_and_distribution_stats(self):
         points = [
             (date(2020, 1, 1), 100.0),
@@ -953,6 +960,15 @@ class TestFetchYearlyReturns:
         assert result["meta"]["0700.HK"]["type"] == "hk_stock"
         mock_fetch_daily_series.assert_called_once_with("0700.HK", "hk_stock")
 
+    def test_global_stock_keeps_yahoo_exchange_suffix(self, mock_fetch_daily_series, three_year_series):
+        mock_fetch_daily_series.return_value = three_year_series
+
+        result = svc.fetch_yearly_returns([{"symbol": "2330.tw", "type": "global_stock"}])
+
+        assert "2330.TW" in result["data"]
+        assert result["meta"]["2330.TW"]["type"] == "global_stock"
+        mock_fetch_daily_series.assert_called_once_with("2330.TW", "global_stock")
+
     def test_unknown_asset_type(self, mock_fetch_daily_series):
         """Unknown asset type returns error meta."""
         mock_fetch_daily_series.return_value = empty_series(None, "unknown asset type: futures")
@@ -1165,6 +1181,23 @@ class TestRunDcaBacktest:
         assert result["type"] == "hk_stock"
         assert result["currency"] == "HKD"
         mock_fetch_daily_series.assert_called_once_with("0700.HK", "hk_stock")
+
+    def test_global_stock_uses_exchange_currency(self, mock_fetch_daily_series, three_year_series):
+        mock_fetch_daily_series.return_value = three_year_series
+
+        result = svc.run_dca_backtest({
+            "symbol": "7203.t",
+            "type": "global_stock",
+            "start_date": "2023-01-03",
+            "end_date": "2024-06-28",
+            "frequency": "monthly",
+            "amount": 1000,
+        })
+
+        assert result["symbol"] == "7203.T"
+        assert result["type"] == "global_stock"
+        assert result["currency"] == "JPY"
+        mock_fetch_daily_series.assert_called_once_with("7203.T", "global_stock")
 
     def test_empty_symbol_raises(self):
         """Empty symbol → ValueError."""
@@ -1381,6 +1414,25 @@ class TestRunCrashStats:
         assert result["symbol"] == "9988.HK"
         assert result["type"] == "hk_stock"
         mock_fetch_daily_series.assert_called_once_with("9988.HK", "hk_stock")
+
+    def test_global_stock_crash_stats_keep_exchange_suffix(
+        self,
+        mock_fetch_daily_series,
+        three_year_series,
+    ):
+        mock_fetch_daily_series.return_value = three_year_series
+
+        result = svc.run_crash_stats({
+            "symbol": "asml.as",
+            "type": "global_stock",
+            "start_date": "2023-01-01",
+            "end_date": "2024-12-31",
+            "threshold_pct": 10.0,
+        })
+
+        assert result["symbol"] == "ASML.AS"
+        assert result["type"] == "global_stock"
+        mock_fetch_daily_series.assert_called_once_with("ASML.AS", "global_stock")
 
     def test_validation_errors(self):
         """Various invalid inputs should raise ValueError."""

@@ -48,7 +48,7 @@
             var symbol = normalizeAssetSymbol(state && state.symbol || "", type);
             if (!symbol) return false;
             if (symbolInput) symbolInput.value = symbol;
-            if (typeSelect && ["stock", "hk_stock", "crypto", "cn_stock"].indexOf(type) !== -1) {
+            if (typeSelect && ["stock", "hk_stock", "global_stock", "crypto", "cn_stock"].indexOf(type) !== -1) {
                 typeSelect.value = type;
             }
             return true;

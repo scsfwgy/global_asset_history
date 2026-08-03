@@ -7,9 +7,11 @@ import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
+from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
+from pypdf import PdfReader
 from service.price_change import cache_store
 from service.price_change.price_change_service import _fetch_daily_series_cached
 
@@ -48,17 +50,21 @@ _ETF_HISTORY_TTL_SECONDS = 4 * 60 * 60
 _ETF_HISTORY_STALE_SECONDS = 7 * 24 * 60 * 60
 _NAV_CACHE_TTL_SECONDS = 4 * 60 * 60
 _QDII_FUND_TTL_SECONDS = 4 * 60 * 60
+_QDII_HOLDINGS_TTL_SECONDS = 24 * 60 * 60
+_QDII_HOLDINGS_STALE_SECONDS = 30 * 24 * 60 * 60
 _CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "price_change_config.json"
 _QDII_FUND_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "qdii_funds.json"
 _ETF_HISTORY_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "etf_history"
 _ETF_NAV_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "etf_nav"
 _QDII_FUND_SHARED_CACHE_KEY = "v3:qdii_funds:all"
+_QDII_HOLDINGS_SHARED_CACHE_PREFIX = "v2:qdii_holdings"
 _ETF_HISTORY_SHARED_CACHE_PREFIX = "v2:etf_history"
 _ETF_NAV_SHARED_CACHE_PREFIX = "v2:etf_nav"
 _tracking_error_cache: dict[str, tuple[float, dict]] = {}
 _etf_history_cache: dict[str, tuple[float, dict]] = {}
 _nav_cache: dict[str, tuple[float, dict]] = {}
 _qdii_fund_cache: dict[str, tuple[float, dict]] = {}
+_qdii_holdings_cache: dict[str, tuple[float, dict]] = {}
 _benchmark_map: dict[str, tuple[str, str]] = {}
 
 
@@ -589,6 +595,236 @@ def _qdii_json_response(payload: dict, *, fresh: bool = False):
         resp.headers["CDN-Cache-Control"] = "no-store"
         resp.headers["Vercel-CDN-Cache-Control"] = "no-store"
     return resp
+
+
+def _qdii_holdings_cache_key(code: str) -> str:
+    return f"{_QDII_HOLDINGS_SHARED_CACHE_PREFIX}:{code}"
+
+
+def _read_qdii_holdings_shared_cache(code: str) -> Optional[dict]:
+    """Read one fund's parsed periodic-report holdings from shared cache."""
+    raw = cache_store.cache_get(_qdii_holdings_cache_key(code))
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except (ValueError, TypeError) as exc:
+        logger.warning("Failed to deserialize QDII holdings cache code=%s: %s", code, exc)
+        return None
+    if not isinstance(data, dict) or data.get("code") != code or "status" not in data:
+        return None
+    return data
+
+
+def _write_qdii_holdings_shared_cache(code: str, data: dict) -> None:
+    """Keep report data beyond its fresh TTL so it can serve as a fallback."""
+    try:
+        cache_store.cache_set(
+            _qdii_holdings_cache_key(code),
+            json.dumps(data, ensure_ascii=False, separators=(",", ":")),
+            _QDII_HOLDINGS_STALE_SECONDS,
+        )
+    except Exception as exc:
+        logger.warning("Failed to write QDII holdings cache code=%s: %s", code, exc)
+
+
+def _market_bucket(name: str) -> str:
+    normalized = re.sub(r"\s+", "", name)
+    if "香港" in normalized:
+        return "hk"
+    if normalized in ("中国", "中国内地", "中国大陆", "内地", "大陆"):
+        return "cn"
+    if normalized in ("美国", "美利坚合众国"):
+        return "us"
+    return "other"
+
+
+def _section_after_last_marker(text: str, marker_pattern: str, *, limit: int = 6000) -> str:
+    matches = list(re.finditer(marker_pattern, text, flags=re.IGNORECASE))
+    if not matches:
+        return ""
+    section = text[matches[-1].end():matches[-1].end() + limit]
+    next_heading = re.search(r"(?m)^\s*\d+\.\d+(?:\.\d+)?\s+", section)
+    return section[:next_heading.start()] if next_heading else section
+
+
+def _parse_qdii_regions(text: str) -> tuple[list[dict], dict[str, float]]:
+    """Parse the official report's country/region equity distribution table."""
+    section = _section_after_last_marker(
+        text,
+        r"在各个国家（地区）证券市场的股票及存托凭证投资分\s*布",
+        limit=3000,
+    )
+    regions = []
+    row_pattern = re.compile(
+        r"^\s*([^\d\n][^\n]*?)\s+([\d,]+(?:\.\d+)?)\s+([\d.]+)\s*%?\s*$"
+    )
+    for line in section.splitlines():
+        match = row_pattern.match(line)
+        if not match:
+            continue
+        name = re.sub(r"\s+", "", match.group(1))
+        if name in ("合计", "总计") or "公允价值" in name or "国家" in name:
+            continue
+        try:
+            market_value = float(match.group(2).replace(",", ""))
+            nav_pct = float(match.group(3))
+        except ValueError:
+            continue
+        regions.append({
+            "name": name,
+            "bucket": _market_bucket(name),
+            "market_value": market_value,
+            "nav_pct": nav_pct,
+        })
+
+    summary = {"cn": 0.0, "hk": 0.0, "us": 0.0, "other": 0.0}
+    for region in regions:
+        bucket = region["bucket"]
+        summary[bucket] = round(summary[bucket] + region["nav_pct"], 2)
+    return regions, summary
+
+
+def _clean_report_fund_name(value: str) -> str:
+    value = value.strip()
+    chinese_chars = len(re.findall(r"[\u4e00-\u9fff]", value))
+    non_space_chars = len(re.sub(r"\s+", "", value))
+    if chinese_chars and chinese_chars >= non_space_chars * 0.45:
+        return re.sub(r"\s+", "", value)
+    return re.sub(r"\s+", " ", value)
+
+
+def _parse_qdii_fund_positions(text: str) -> list[dict]:
+    """Parse fund/ETF positions disclosed separately from direct equities."""
+    section = _section_after_last_marker(
+        text,
+        r"(?:期末投资目标基金明细|基金投资明\s*细)",
+        limit=5000,
+    )
+    if not section or re.search(r"未持有(?:基金|目标基金)", section):
+        return []
+
+    positions = []
+    type_pattern = r"(?:权益类|股票型|混合型|债券型|基金中基金|商品型|其他)"
+    for row in re.split(r"(?m)(?=^\s*\d+\s+(?=\S))", section):
+        identity = re.match(rf"\s*(\d+)\s+(.*?){type_pattern}", row, flags=re.DOTALL)
+        values = re.findall(r"([\d,]+\.\d{2})\s+([\d]+(?:\.\d+)?)\s*%?\s*$", row.strip())
+        if not identity or not values:
+            continue
+        name = _clean_report_fund_name(identity.group(2))
+        if not name or name == "-":
+            continue
+        market_value, nav_pct = values[-1]
+        positions.append({
+            "name": name,
+            "market_value": float(market_value.replace(",", "")),
+            "nav_pct": float(nav_pct),
+        })
+    return positions
+
+
+def _has_qdii_fund_exposure(text: str) -> bool:
+    section = _section_after_last_marker(
+        text,
+        r"(?:期末投资目标基金明细|基金投资明\s*细)",
+        limit=5000,
+    )
+    if not section or re.search(r"未持有(?:基金|目标基金)", section):
+        return False
+    compact = re.sub(r"\s+", "", section)
+    return "公允价值" in compact and ("基金资产净值" in compact or "净值比例" in compact)
+
+
+def _extract_qdii_pdf_text(content: bytes) -> str:
+    reader = PdfReader(BytesIO(content))
+    return "\n".join(page.extract_text() or "" for page in reader.pages)
+
+
+def _fetch_latest_qdii_report(code: str) -> Optional[dict]:
+    response = requests.get(
+        "https://api.fund.eastmoney.com/f10/JJGG",
+        params={"fundCode": code, "pageIndex": 1, "pageSize": 20, "type": 3},
+        headers={
+            "User-Agent": "Mozilla/5.0",
+            "Referer": f"https://fundf10.eastmoney.com/jjgg_{code}.html",
+        },
+        timeout=_REQUEST_TIMEOUT,
+    )
+    response.raise_for_status()
+    rows = response.json().get("Data") or []
+    for row in rows:
+        title = str(row.get("TITLE") or "")
+        report_id = str(row.get("ID") or "")
+        if report_id and "报告" in title and "摘要" not in title:
+            return {
+                "id": report_id,
+                "title": title,
+                "published_date": str(row.get("PUBLISHDATEDesc") or ""),
+                "url": f"https://pdf.dfcfw.com/pdf/H2_{report_id}_1.pdf",
+            }
+    return None
+
+
+def _fetch_qdii_holdings(code: str) -> dict:
+    """Fetch and parse one fund's latest official periodic report on demand."""
+    report = _fetch_latest_qdii_report(code)
+    now = time.time()
+    if report is None:
+        return {
+            "code": code,
+            "status": "unreported",
+            "regions": [],
+            "region_summary": {"cn": 0.0, "hk": 0.0, "us": 0.0, "other": 0.0},
+            "direct_equity_pct": 0.0,
+            "fund_positions": [],
+            "has_fund_exposure": False,
+            "fund_investment_pct": 0.0,
+            "report": None,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "stored_at_epoch": now,
+            "cache_ttl_seconds": _QDII_HOLDINGS_TTL_SECONDS,
+            "source": "East Money periodic report archive",
+        }
+
+    pdf_response = requests.get(
+        report["url"],
+        headers={"User-Agent": "Mozilla/5.0", "Referer": f"https://fund.eastmoney.com/{code}.html"},
+        timeout=max(_REQUEST_TIMEOUT, 20),
+    )
+    pdf_response.raise_for_status()
+    if len(pdf_response.content) > 20 * 1024 * 1024:
+        raise ValueError("periodic report PDF exceeds 20 MB safety limit")
+    text = _extract_qdii_pdf_text(pdf_response.content)
+    regions, summary = _parse_qdii_regions(text)
+    fund_positions = _parse_qdii_fund_positions(text)
+    has_fund_exposure = bool(fund_positions) or _has_qdii_fund_exposure(text)
+    direct_equity_pct = round(sum(row["nav_pct"] for row in regions), 2)
+    fund_investment_pct = round(sum(row["nav_pct"] for row in fund_positions), 2)
+    status = "direct" if regions else ("fund" if has_fund_exposure else "no_equity")
+    payload = {
+        "code": code,
+        "status": status,
+        "regions": regions,
+        "region_summary": summary,
+        "direct_equity_pct": direct_equity_pct,
+        "fund_positions": fund_positions,
+        "has_fund_exposure": has_fund_exposure,
+        "fund_investment_pct": fund_investment_pct,
+        "report": report,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "stored_at_epoch": now,
+        "cache_ttl_seconds": _QDII_HOLDINGS_TTL_SECONDS,
+        "source": "East Money periodic report PDF",
+    }
+    logger.info(
+        "QDII holdings fetched code=%s report_id=%s status=%s regions=%d fund_positions=%d",
+        code,
+        report["id"],
+        status,
+        len(regions),
+        len(fund_positions),
+    )
+    return payload
 
 
 def _copy_jsonable(data: dict) -> dict:
@@ -1350,6 +1586,60 @@ def qdii_funds():
             _qdii_fund_cache["all"] = (time.time(), response)
             return _qdii_json_response(_filter_qdii_response(response, index_key))
         return jsonify({"error": f"upstream fetch failed and no local snapshot exists: {exc}"}), 502
+
+
+@etf_market_bp.route("/qdii-funds/<code>/holdings", methods=["GET"])
+def qdii_fund_holdings(code: str):
+    """Return regional and fund/ETF holdings parsed from the latest report."""
+    code = code.strip()
+    if not re.fullmatch(r"\d{6}", code):
+        return jsonify({"error": "fund code must be exactly 6 digits"}), 400
+
+    fresh = request.args.get("fresh") in ("1", "true", "yes")
+    now = time.time()
+    stale_payload = None
+    cached = _qdii_holdings_cache.get(code)
+    if cached:
+        age = _cache_payload_age_seconds(cached[1])
+        if age is None:
+            age = now - cached[0]
+        if not fresh and age < _QDII_HOLDINGS_TTL_SECONDS:
+            response = _copy_jsonable(cached[1])
+            response["cache_status"] = "memory"
+            response["cache_age_seconds"] = round(age)
+            return _qdii_json_response(response)
+        if age < _QDII_HOLDINGS_STALE_SECONDS:
+            stale_payload = cached[1]
+        else:
+            del _qdii_holdings_cache[code]
+
+    shared = _read_qdii_holdings_shared_cache(code)
+    shared_age = _cache_payload_age_seconds(shared) if shared else None
+    if shared and shared_age is not None:
+        if not fresh and shared_age < _QDII_HOLDINGS_TTL_SECONDS:
+            _qdii_holdings_cache[code] = (now, shared)
+            response = _copy_jsonable(shared)
+            response["cache_status"] = "shared"
+            response["cache_age_seconds"] = round(shared_age)
+            return _qdii_json_response(response)
+        if shared_age < _QDII_HOLDINGS_STALE_SECONDS:
+            stale_payload = shared
+
+    try:
+        payload = _fetch_qdii_holdings(code)
+        _qdii_holdings_cache[code] = (time.time(), payload)
+        _write_qdii_holdings_shared_cache(code, payload)
+        response = _copy_jsonable(payload)
+        response["cache_status"] = "fresh"
+        return _qdii_json_response(response, fresh=fresh)
+    except Exception as exc:
+        logger.warning("QDII holdings refresh failed code=%s: %s", code, exc)
+        if stale_payload:
+            response = _copy_jsonable(stale_payload)
+            response["cache_status"] = "stale_upstream_failed"
+            response["warning"] = "Upstream refresh failed; served cached periodic report."
+            return _qdii_json_response(response, fresh=fresh)
+        return jsonify({"error": f"holdings report fetch failed: {exc}", "code": code}), 502
 
 
 @etf_market_bp.route("/history", methods=["GET"])

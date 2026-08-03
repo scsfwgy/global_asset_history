@@ -19,6 +19,7 @@ const MARKET_PULSE_ENDPOINT = `${API_BASE}/api/price-change/market-pulse`;
 const VIX_COMPARISON_ENDPOINT = `${API_BASE}/api/price-change/vix-comparison`;
 const FEAR_THRESHOLD_STATS_ENDPOINT = `${API_BASE}/api/price-change/fear-threshold-stats`;
 const QDII_FUNDS_ENDPOINT = `${API_BASE}/api/etf-market/qdii-funds`;
+const QDII_FUND_HOLDINGS_ENDPOINT = `${API_BASE}/api/etf-market/qdii-funds`;
 const WISHES_ENDPOINT = `${API_BASE}/api/wishes`;
 const WISH_CAPTCHA_ENDPOINT = `${API_BASE}/api/wishes/captcha`;
 const WISH_VERIFY_ADMIN_ENDPOINT = `${API_BASE}/api/wishes/verify-admin`;

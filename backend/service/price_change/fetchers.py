@@ -250,6 +250,16 @@ def _fetch_daily_series_hk_stock(symbol: str) -> PriceSeries:
     return _fetch_daily_series_stock(normalize_asset_symbol(symbol, "hk_stock"))
 
 
+def _fetch_global_stock(symbol: str) -> Dict[str, float]:
+    """Fetch yearly returns for an international Yahoo Finance listing."""
+    return _fetch_stock(normalize_asset_symbol(symbol, "global_stock"))
+
+
+def _fetch_daily_series_global_stock(symbol: str) -> PriceSeries:
+    """Fetch an international listing while preserving its exchange suffix."""
+    return _fetch_daily_series_stock(normalize_asset_symbol(symbol, "global_stock"))
+
+
 # ---------------------------------------------------------------------------
 # Crypto fetcher — Binance (primary) + CoinGecko (fallback)
 # ---------------------------------------------------------------------------
@@ -650,7 +660,7 @@ def fetch_intraday_series(
     """Fetch exact intraday OHLCV bars for supported asset types."""
     if asset_type == "crypto":
         return _fetch_intraday_crypto_binance(symbol, interval, start_date, end_date)
-    if asset_type in {"stock", "hk_stock"}:
+    if asset_type in {"stock", "hk_stock", "global_stock"}:
         clean_symbol = normalize_asset_symbol(symbol, asset_type)
         return _fetch_intraday_stock_yahoo(clean_symbol, interval, start_date, end_date)
     if asset_type == "cn_stock":
@@ -972,6 +982,7 @@ FETCHERS = {
     "crypto": _fetch_crypto,
     "stock": _fetch_stock,
     "hk_stock": _fetch_hk_stock,
+    "global_stock": _fetch_global_stock,
     "cn_stock": _fetch_cn_stock,
 }
 
@@ -979,5 +990,6 @@ DAILY_SERIES_FETCHERS = {
     "crypto": _fetch_daily_series_crypto,
     "stock": _fetch_daily_series_stock,
     "hk_stock": _fetch_daily_series_hk_stock,
+    "global_stock": _fetch_daily_series_global_stock,
     "cn_stock": _fetch_daily_series_cn_stock,
 }

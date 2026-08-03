@@ -764,6 +764,7 @@ function hmJumpToDetail(d) {
     if (d.type === 'crypto') typeSelect.value = 'crypto';
     else if (d.type === 'cn_stock') typeSelect.value = 'cn_stock';
     else if (d.type === 'hk_stock') typeSelect.value = 'hk_stock';
+    else if (_hmLastData && _hmLastData.market_type === 'global_stock') typeSelect.value = 'global_stock';
     else typeSelect.value = 'stock';
   }
   var yearSelect = document.getElementById('pdYearSelect');

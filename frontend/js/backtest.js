@@ -3,7 +3,22 @@
 const BACKTEST_SYMBOL_STORAGE_KEY = "gah_backtest_symbol";
 let _btCurrency = "USD";
 
-function backtestCurrencyForType(type) {
+const GLOBAL_STOCK_CURRENCIES = [
+  [".TWO", "TWD"], [".KS", "KRW"], [".KQ", "KRW"], [".TW", "TWD"],
+  [".NS", "INR"], [".BO", "INR"], [".SI", "SGD"], [".AX", "AUD"],
+  [".TO", "CAD"], [".V", "CAD"], [".L", "GBp"], [".DE", "EUR"],
+  [".AS", "EUR"], [".PA", "EUR"], [".SW", "CHF"], [".CO", "DKK"],
+  [".SA", "BRL"], [".SR", "SAR"], [".T", "JPY"],
+];
+
+function backtestCurrencyForType(type, symbol) {
+  if (type === "global_stock") {
+    var cleanSymbol = String(symbol || "").trim().toUpperCase();
+    var match = GLOBAL_STOCK_CURRENCIES.find(function (item) {
+      return cleanSymbol.endsWith(item[0]);
+    });
+    return match ? match[1] : "USD";
+  }
   return type === "hk_stock" ? "HKD"
     : type === "cn_stock" ? "CNY"
       : type === "crypto" ? "USDT"
@@ -11,7 +26,10 @@ function backtestCurrencyForType(type) {
 }
 
 function syncBacktestCurrency(type, currency) {
-  _btCurrency = currency || backtestCurrencyForType(type || btTypeSelect?.value || "stock");
+  _btCurrency = currency || backtestCurrencyForType(
+    type || btTypeSelect?.value || "stock",
+    btSymbolInput?.value || ""
+  );
   var label = document.getElementById("pcBtCurrency");
   if (label) label.textContent = _btCurrency;
 }
@@ -34,7 +52,7 @@ function restoreBacktestSymbol() {
     var symbol = normalizeAssetSymbol(state && state.symbol || "", type);
     if (!symbol) return false;
     if (btSymbolInput) btSymbolInput.value = symbol;
-    if (btTypeSelect && ["stock", "hk_stock", "crypto", "cn_stock"].indexOf(type) !== -1) {
+    if (btTypeSelect && ["stock", "hk_stock", "global_stock", "crypto", "cn_stock"].indexOf(type) !== -1) {
       btTypeSelect.value = type;
     }
     syncBacktestCurrency(type);
@@ -110,31 +128,46 @@ let _btPageSize = 20;
 
 function formatBtMoney(value, signed) {
   const number = Number(value) || 0;
-  const amount = new Intl.NumberFormat(
-    typeof __lang === "function" ? __lang() : undefined,
-    {
-      style: "currency",
-      currency: _btCurrency,
-      currencyDisplay: "symbol",
+  let amount;
+  try {
+    amount = new Intl.NumberFormat(
+      typeof __lang === "function" ? __lang() : undefined,
+      {
+        style: "currency",
+        currency: _btCurrency,
+        currencyDisplay: "symbol",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }
+    ).format(Math.abs(number));
+  } catch (_) {
+    amount = Math.abs(number).toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }
-  ).format(Math.abs(number));
+    }) + " " + _btCurrency;
+  }
   const sign = signed ? (number > 0 ? "+" : number < 0 ? "-" : "") : (number < 0 ? "-" : "");
   return `${sign}${amount}`;
 }
 
 function formatBtAxisMoney(value) {
-  return new Intl.NumberFormat(
-    typeof __lang === "function" ? __lang() : undefined,
-    {
-      style: "currency",
-      currency: _btCurrency,
-      currencyDisplay: "narrowSymbol",
+  try {
+    return new Intl.NumberFormat(
+      typeof __lang === "function" ? __lang() : undefined,
+      {
+        style: "currency",
+        currency: _btCurrency,
+        currencyDisplay: "narrowSymbol",
+        notation: "compact",
+        maximumFractionDigits: 1,
+      }
+    ).format(Number(value) || 0);
+  } catch (_) {
+    return (Number(value) || 0).toLocaleString(undefined, {
       notation: "compact",
       maximumFractionDigits: 1,
-    }
-  ).format(Number(value) || 0);
+    }) + " " + _btCurrency;
+  }
 }
 
 function formatBtNumber(value, maximumFractionDigits) {

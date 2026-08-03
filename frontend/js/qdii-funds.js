@@ -16,6 +16,10 @@
         },
         data: null,
         paramsCollapsed: false,
+        holdings: {},
+        holdingsLoading: {},
+        holdingsErrors: {},
+        expandedCode: "",
     };
     var NUMERIC_SORT_COLUMNS = {
         daily_limit: true,
@@ -69,6 +73,12 @@
         var n = Number(value);
         if (!isFinite(n)) return "--";
         return (n > 0 ? "+" : "") + n.toFixed(2) + "%";
+    }
+
+    function fmtHoldingPct(value) {
+        var n = Number(value);
+        if (!isFinite(n)) return "--";
+        return n.toFixed(2).replace(/\.00$/, "") + "%";
     }
 
     function pctClass(value) {
@@ -265,12 +275,100 @@
         ].join("");
     }
 
+    function holdingsStatusLabel(data) {
+        if (!data) return __("qdii.holdingsView");
+        if (data.status === "fund") return __("qdii.holdingsFundOnly");
+        if (data.status === "no_equity") return __("qdii.holdingsNoEquity");
+        if (data.status === "unreported") return __("qdii.holdingsUnreported");
+        return __("qdii.holdingsView");
+    }
+
+    function holdingsSummaryHtml(code) {
+        if (STATE.holdingsLoading[code]) {
+            return '<span class="qdii-holdings-summary muted">' + escapeHtml(__("qdii.holdingsLoading")) + '</span>';
+        }
+        var data = STATE.holdings[code];
+        if (!data || data.status !== "direct") {
+            return '<span class="qdii-holdings-summary muted">' + escapeHtml(holdingsStatusLabel(data)) + '</span>';
+        }
+        var summary = data.region_summary || {};
+        return [
+            '<span class="qdii-region-chip cn">A ', escapeHtml(fmtHoldingPct(summary.cn)), '</span>',
+            '<span class="qdii-region-chip hk">', escapeHtml(__("qdii.regionHkShort")), ' ', escapeHtml(fmtHoldingPct(summary.hk)), '</span>',
+            '<span class="qdii-region-chip us">', escapeHtml(__("qdii.regionUsShort")), ' ', escapeHtml(fmtHoldingPct(summary.us)), '</span>',
+        ].join("");
+    }
+
+    function holdingsRegionCard(label, value, className) {
+        return [
+            '<div class="qdii-region-card ', className, '">',
+            '<span>', escapeHtml(label), '</span>',
+            '<strong>', escapeHtml(fmtHoldingPct(value)), '</strong>',
+            '</div>',
+        ].join("");
+    }
+
+    function renderHoldingsDetail(code) {
+        if (STATE.holdingsLoading[code]) {
+            return '<div class="qdii-holdings-detail qdii-holdings-detail-loading">' + escapeHtml(__("qdii.holdingsLoadingReport")) + '</div>';
+        }
+        if (STATE.holdingsErrors[code]) {
+            return '<div class="qdii-holdings-detail qdii-holdings-detail-error">' + escapeHtml(__("qdii.holdingsLoadFailed")) + escapeHtml(STATE.holdingsErrors[code]) + '</div>';
+        }
+        var data = STATE.holdings[code];
+        if (!data) return "";
+        var report = data.report || null;
+        var reportLink = report && report.url
+            ? '<a href="' + escapeHtml(report.url) + '" target="_blank" rel="noopener">' + escapeHtml(__("qdii.holdingsOpenReport")) + '</a>'
+            : "";
+        var header = [
+            '<div class="qdii-holdings-detail-head">',
+            '<div><strong>', escapeHtml(__("qdii.holdingsDetailTitle")), '</strong>',
+            report ? '<span>' + escapeHtml(report.title || "") + ' · ' + escapeHtml(report.published_date || "") + '</span>' : '',
+            '</div>', reportLink, '</div>',
+        ].join("");
+
+        if (data.status === "unreported") {
+            return '<div class="qdii-holdings-detail">' + header + '<p class="qdii-holdings-empty">' + escapeHtml(__("qdii.holdingsUnreportedDetail")) + '</p></div>';
+        }
+
+        var summary = data.region_summary || {};
+        var regions = [
+            holdingsRegionCard(__("qdii.regionCn"), summary.cn, "cn"),
+            holdingsRegionCard(__("qdii.regionHk"), summary.hk, "hk"),
+            holdingsRegionCard(__("qdii.regionUs"), summary.us, "us"),
+            holdingsRegionCard(__("qdii.regionOther"), summary.other, "other"),
+        ].join("");
+        var directSection = data.status === "direct" ? [
+            '<div class="qdii-holdings-section-title">', escapeHtml(__("qdii.holdingsDirectEquity", {pct: fmtHoldingPct(data.direct_equity_pct)})), '</div>',
+            '<div class="qdii-region-grid">', regions, '</div>',
+        ].join("") : '<p class="qdii-holdings-empty">' + escapeHtml(data.status === "fund" ? __("qdii.holdingsFundOnlyDetail") : __("qdii.holdingsNoEquityDetail")) + '</p>';
+
+        var positions = data.fund_positions || [];
+        var fundSection = "";
+        if (positions.length) {
+            fundSection = [
+                '<div class="qdii-holdings-section-title">', escapeHtml(__("qdii.holdingsFundPositions", {pct: fmtHoldingPct(data.fund_investment_pct)})), '</div>',
+                '<div class="qdii-fund-position-list">',
+                positions.map(function (position) {
+                    return '<div><span>' + escapeHtml(position.name) + '</span><strong>' + escapeHtml(fmtHoldingPct(position.nav_pct)) + '</strong></div>';
+                }).join(""),
+                '</div>',
+            ].join("");
+        }
+        return [
+            '<div class="qdii-holdings-detail">', header, directSection, fundSection,
+            '<p class="qdii-holdings-method">', escapeHtml(__("qdii.holdingsMethod")), '</p>',
+            '</div>',
+        ].join("");
+    }
+
     function renderTable() {
         var body = $("qdiiFundsBody");
         if (!body) return;
         var rows = rowsForActiveIndex();
         if (!rows.length) {
-            body.innerHTML = '<tr><td colspan="22" style="text-align:center;padding:24px;color:var(--apple-text-secondary);">' + escapeHtml(__("qdii.noMatchingFunds")) + '</td></tr>';
+            body.innerHTML = '<tr><td colspan="23" style="text-align:center;padding:24px;color:var(--apple-text-secondary);">' + escapeHtml(__("qdii.noMatchingFunds")) + '</td></tr>';
             return;
         }
         body.innerHTML = rows.map(function (row) {
@@ -279,8 +377,9 @@
             var statusDetail = row.purchase_status || "--";
             var feeText = fmtRate(row.discounted_rate);
             var rateClass = row.discounted_rate_num === 0 ? "etf-pos" : "";
-            return [
-                "<tr>",
+            var expanded = STATE.expandedCode === row.code;
+            var mainRow = [
+                '<tr class="qdii-fund-row', expanded ? ' expanded' : '', '">',
                 "<td>", escapeHtml(indexLabel(row.index)), "</td>",
                 '<td><a href="', escapeHtml(row.source_url), '" target="_blank" rel="noopener">', escapeHtml(row.code), "</a></td>",
                 '<td title="', escapeHtml(row.name), '">', escapeHtml(row.name), "</td>",
@@ -289,6 +388,8 @@
                 "<td>", escapeHtml(row.company || "--"), "</td>",
                 '<td class="qdii-num">', escapeHtml(fmtScale(row.fund_scale)), "</td>",
                 "<td>", escapeHtml(row.fund_manager || "--"), "</td>",
+                '<td class="qdii-holdings-cell"><button type="button" class="qdii-holdings-toggle" data-qdii-holdings-code="', escapeHtml(row.code), '" aria-expanded="', String(expanded), '">',
+                holdingsSummaryHtml(row.code), '<span class="qdii-holdings-chevron">', expanded ? '▲' : '▼', '</span></button></td>',
                 '<td><span class="qdii-status-badge ', statusClass, '">', statusText, '</span> <span title="', escapeHtml(statusDetail), '">', escapeHtml(statusDetail), "</span></td>",
                 '<td class="qdii-num">', escapeHtml(fmtMoney(row.daily_limit)), "</td>",
                 '<td class="qdii-num">', escapeHtml(fmtMoney(row.min_purchase)), "</td>",
@@ -305,7 +406,28 @@
                 "<td>", escapeHtml(row.redeem_status || "--"), "</td>",
                 "</tr>",
             ].join("");
+            if (!expanded) return mainRow;
+            return mainRow + '<tr class="qdii-holdings-detail-row"><td colspan="23">' + renderHoldingsDetail(row.code) + '</td></tr>';
         }).join("");
+    }
+
+    function loadHoldings(code, force) {
+        if (STATE.holdingsLoading[code]) return;
+        STATE.holdingsLoading[code] = true;
+        delete STATE.holdingsErrors[code];
+        renderTable();
+        var url = QDII_FUND_HOLDINGS_ENDPOINT + "/" + encodeURIComponent(code) + "/holdings" + (force ? "?fresh=1" : "");
+        fetch(url)
+            .then(function (res) {
+                if (!res.ok) throw new Error(__("qdii.interfaceError") + res.status);
+                return res.json();
+            })
+            .then(function (data) { STATE.holdings[code] = data; })
+            .catch(function (err) { STATE.holdingsErrors[code] = err && err.message ? err.message : String(err); })
+            .finally(function () {
+                delete STATE.holdingsLoading[code];
+                renderTable();
+            });
     }
 
     function renderGuide() {
@@ -448,6 +570,7 @@
                 document.querySelectorAll("#qdiiFundsTabs .transfer-tab").forEach(function (b) { b.classList.remove("active"); });
                 btn.classList.add("active");
                 STATE.activeIndex = btn.dataset.qdiiIndex || "nasdaq100";
+                STATE.expandedCode = "";
                 STATE.filters.share_class = "";
                 STATE.filters.fund_type = "";
                 STATE.filters.company = "";
@@ -482,6 +605,22 @@
 
         var clearBtn = $("qdiiClearFilters");
         if (clearBtn) clearBtn.addEventListener("click", clearFiltersAndSort);
+
+        var tableBody = $("qdiiFundsBody");
+        if (tableBody) tableBody.addEventListener("click", function (event) {
+            var button = event.target.closest("[data-qdii-holdings-code]");
+            if (!button || !tableBody.contains(button)) return;
+            var code = button.dataset.qdiiHoldingsCode || "";
+            if (!code) return;
+            if (STATE.expandedCode === code) {
+                STATE.expandedCode = "";
+                renderTable();
+                return;
+            }
+            STATE.expandedCode = code;
+            renderTable();
+            if (!STATE.holdings[code]) loadHoldings(code, false);
+        });
 
         document.querySelectorAll("#qdiiFundsTable th.qdii-sortable").forEach(function (th) {
             th.addEventListener("click", function () {

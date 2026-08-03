@@ -78,7 +78,7 @@ def test_backtest_remembers_symbol_and_asset_type():
         "initBacktestSymbolPersistence)"
     ) in backtest
     assert 'btSymbolInput.addEventListener("input", saveCurrentPreference)' in backtest
-    assert '["stock", "hk_stock", "crypto", "cn_stock"]' in backtest
+    assert '["stock", "hk_stock", "global_stock", "crypto", "cn_stock"]' in backtest
     assert 'id="btTypeSelect"' in page
     assert 'value="hk_stock" data-i18n="yearly.assetTypeHkStock"' in page
     assert 'id="pcBtCurrency"' in page
@@ -93,7 +93,7 @@ def test_crash_stats_remembers_symbol_and_asset_type():
     assert "function restoreSymbolPreference()" in source
     assert "restoreSymbolPreference();" in source
     assert 'symbolInput.addEventListener("input", saveCurrentPreference)' in source
-    assert '["stock", "hk_stock", "crypto", "cn_stock"]' in source
+    assert '["stock", "hk_stock", "global_stock", "crypto", "cn_stock"]' in source
     assert 'id="crashType"' in page
     assert 'value="hk_stock" data-i18n="yearly.assetTypeHkStock"' in page
 
@@ -128,6 +128,8 @@ def test_symbol_inputs_use_remote_company_name_search_with_local_fallback():
     assert "fetch(url)" in source
     assert "encodeURIComponent(type" in source
     assert "_acMerge(remoteItems, localItems)" in source
+    assert "#downloadGlobalSymbolSelect option[value]" in source
+    assert "type: 'global_stock'" in source
     assert "_acEscape(details)" in source
     assert "}, 250);" in source
     for input_id in (
@@ -151,22 +153,38 @@ def test_symbol_inputs_use_remote_company_name_search_with_local_fallback():
         assert rule in autocomplete_style
 
 
-def test_hk_stock_is_available_in_history_and_detail_with_bilingual_labels():
+def test_hk_and_global_stocks_are_available_across_analysis_modules():
     page = _source("frontend/price-change.html")
     yearly = _source("frontend/js/price-change.js")
     detail = _source("frontend/js/price-detail.js")
+    backtest = _source("frontend/js/backtest.js")
+    crash = _source("frontend/js/crash-stats.js")
+    heatmap = _source("frontend/js/heatmap.js")
     zh_locale = json.loads(_source("frontend/locales/zh-CN.json"))
     en_locale = json.loads(_source("frontend/locales/en.json"))
 
     assert 'id="pcTypeSelect"' in page
     assert 'id="pdTypeSelect"' in page
     assert page.count('value="hk_stock" data-i18n="yearly.assetTypeHkStock"') >= 4
+    assert page.count('value="global_stock" data-i18n="yearly.assetTypeGlobalStock"') == 4
     assert "function normalizeAssetSymbol(symbol, type)" in yearly
+    assert 's.type === "global_stock" ? __("yearly.labelGlobal")' in yearly
+    assert '["stock", "hk_stock", "global_stock"]' in detail
+    assert '["stock", "hk_stock", "global_stock", "crypto", "cn_stock"]' in backtest
+    assert '["stock", "hk_stock", "global_stock", "crypto", "cn_stock"]' in crash
+    assert "typeSelect.value = 'global_stock'" in heatmap
+    for input_id in ("pcSymbolInput", "pdSymbolInput", "btSymbolInput", "crashSymbol"):
+        input_markup = page.split(f'id="{input_id}"', 1)[1].split(">", 1)[0]
+        assert 'maxlength="30"' in input_markup
     assert 'currencyDisplay: "symbol"' in detail
     assert zh_locale["yearly"]["assetTypeHkStock"] == "港股"
     assert zh_locale["yearly"]["labelHK"] == "港"
+    assert zh_locale["yearly"]["assetTypeGlobalStock"] == "全球股票"
+    assert zh_locale["yearly"]["labelGlobal"] == "全球"
     assert en_locale["yearly"]["assetTypeHkStock"] == "HK Stock"
     assert en_locale["yearly"]["labelHK"] == "HK"
+    assert en_locale["yearly"]["assetTypeGlobalStock"] == "Global Stock"
+    assert en_locale["yearly"]["labelGlobal"] == "Global"
 
 
 def test_data_download_supports_hk_and_global_stocks():
