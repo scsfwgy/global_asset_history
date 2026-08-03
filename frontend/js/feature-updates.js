@@ -9,6 +9,7 @@
 
   var STORAGE_KEY = 'gah-feature-update-seen-version';
   var CONFIG_PATH = '/config/feature-updates.json';
+  var cachedConfig = null;
 
   function getSeenVersion() {
     try {
@@ -75,7 +76,7 @@
     container.appendChild(list);
   }
 
-  function renderNotice(config) {
+  function openDialog(config) {
     var dialog = document.getElementById('featureUpdateDialog');
     var content = document.getElementById('featureUpdateList');
     var title = document.getElementById('featureUpdateTitle');
@@ -89,7 +90,6 @@
     if (!releases.length) return;
 
     var latest = releases[releases.length - 1];
-    if (getSeenVersion() === latest.version) return;
 
     function showLatest() {
       title.textContent = translated('featureUpdates.title', null, 'What\'s New');
@@ -155,6 +155,32 @@
       dialog.setAttribute('open', '');
     }
   }
+
+  function renderNotice(config) {
+    cachedConfig = config;
+    var lang = typeof window.__lang === 'function' ? window.__lang() : 'zh-CN';
+    var releases = validReleases(config, lang);
+    if (!releases.length) return;
+    var latest = releases[releases.length - 1];
+    if (getSeenVersion() === latest.version) return;
+    openDialog(config);
+  }
+
+  function showFeatureUpdates() {
+    if (cachedConfig) { openDialog(cachedConfig); return; }
+    fetch(configUrl(), { headers: { Accept: 'application/json' } })
+      .then(function (response) {
+        if (!response.ok) throw new Error('feature update config unavailable');
+        return response.json();
+      })
+      .then(function (config) {
+        cachedConfig = config;
+        openDialog(config);
+      })
+      .catch(function () { /* Optional notice: page functionality must remain unaffected. */ });
+  }
+
+  window.showFeatureUpdates = showFeatureUpdates;
 
   fetch(configUrl(), { headers: { Accept: 'application/json' } })
     .then(function (response) {

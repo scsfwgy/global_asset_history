@@ -3150,6 +3150,11 @@
                         </div>
                         <!-- System: visit count -->
                         <div class="header-settings-info" id="settingsVisitCount" data-i18n="settings.visitCountPrefix">访问次数：⋯</div>
+                        <!-- System: update log -->
+                        <div id="settingsUpdateLogRow" class="header-settings-info header-settings-theme-row" role="button" tabindex="0">
+                            <span class="header-settings-theme-icon">📢</span>
+                            <span data-i18n="settings.updateLog">更新日志</span>
+                        </div>
                         <div class="header-settings-sep"></div>
                         <!-- External links -->
                         <a href="https://kcn9via7j7oq.feishu.cn/docx/Qi92drlQFor9s7xc0uIcH44ennh" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="header-settings-link-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span data-i18n="settings.linkUsStock">美股投资新途径</span></a>
@@ -6923,6 +6928,15 @@
                     }
                 });
             }
+        })();
+
+        // ─── Update log: open the feature-update dialog on demand ───
+        (function() {
+            var row = document.getElementById('settingsUpdateLogRow');
+            if (!row) return;
+            row.addEventListener('click', function() {
+                if (typeof window.showFeatureUpdates === 'function') window.showFeatureUpdates();
+            });
         })();
 
         // ─── Tab Routing (URL-based) ───

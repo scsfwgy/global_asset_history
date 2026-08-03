@@ -48,7 +48,7 @@ GlobalAssetHistory 是一个跨资产历史收益查询、市场分析与投资�
 | 图表 | 原生 SVG，自实现折线图、热力图和 Treemap 布局 |
 | 数据请求 | `requests`、`curl_cffi`（可用时模拟浏览器 TLS） |
 | 缓存 | L1 进程内存 + L2 Upstash Redis/Vercel KV + L3 JSON 快照 |
-| 测试 | pytest，当前收集 464 个测试 |
+| 测试 | pytest，当前收集 465 个测试 |
 | 部署 | Vercel 静态资源 + Python Serverless Function |
 
 ### 后端模块

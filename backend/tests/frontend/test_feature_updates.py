@@ -55,6 +55,22 @@ def test_feature_update_dialog_and_history_controls_are_wired_into_the_main_page
     assert expected_keys <= en.keys()
 
 
+def test_settings_menu_opens_the_update_dialog_on_demand():
+    page = _source("frontend/price-change.html")
+    script = _source("frontend/js/feature-updates.js")
+    zh = json.loads(_source("frontend/locales/zh-CN.json"))["settings"]
+    en = json.loads(_source("frontend/locales/en.json"))["settings"]
+
+    assert 'id="settingsUpdateLogRow"' in page
+    assert 'data-i18n="settings.updateLog"' in page
+    assert "document.getElementById('settingsUpdateLogRow')" in page
+    assert "row.addEventListener('click'" in page
+    assert "window.showFeatureUpdates === 'function'" in page
+    assert "window.showFeatureUpdates = showFeatureUpdates" in script
+    assert zh["updateLog"] == "更新日志"
+    assert en["updateLog"] == "Update Log"
+
+
 def test_settings_feature_list_ui_and_copy_are_removed():
     page = _source("frontend/price-change.html")
     zh_settings = json.loads(_source("frontend/locales/zh-CN.json"))["settings"]
