@@ -34,6 +34,7 @@ from service.price_change.price_change_service import (
     run_crash_stats,
     run_fear_threshold_stats,
     get_crash_chart_data,
+    search_asset_symbols,
 )
 
 logger = logging.getLogger(__name__)
@@ -85,6 +86,25 @@ def config():
         "color_scheme": color_scheme,
         "site": site,
     })
+
+
+@price_change_bp.route("/symbol-search", methods=["GET"])
+def symbol_search():
+    """Search supported assets by symbol or company name."""
+    query = str(request.args.get("q", "")).strip()
+    asset_type = str(request.args.get("type", "stock")).strip().lower()
+    if not query:
+        return jsonify({"query": "", "type": asset_type, "results": []})
+    if len(query) > 80:
+        return jsonify({"error": "q must be at most 80 characters"}), 400
+    if asset_type not in {"stock", "hk_stock", "global_stock", "crypto", "cn_stock"}:
+        return jsonify({"error": "unsupported asset type"}), 400
+    try:
+        results = search_asset_symbols(query, asset_type, limit=8)
+        return jsonify({"query": query, "type": asset_type, "results": results})
+    except Exception as exc:
+        logger.exception("Failed to search symbols: %s", exc)
+        return jsonify({"error": str(exc)}), 500
 
 
 @price_change_bp.route("/market-pulse", methods=["GET"])

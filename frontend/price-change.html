@@ -1079,6 +1079,16 @@
             line-height: 1.6;
         }
         .download-converter-note a { color: var(--apple-blue); }
+
+        #downloadGlobalSymbolSelect { max-width: 100%; }
+
+        @media (max-width: 700px) {
+            #tab-download .control-group {
+                width: 100%;
+                flex-wrap: wrap;
+                justify-content: flex-start;
+            }
+        }
         .pd-table-wrap {
             overflow-x: auto;
             border: 1px solid var(--apple-divider);
@@ -1877,8 +1887,11 @@
             min-width: 180px; display: none;
         }
         .pc-ac-item {
-            padding: 6px 12px; cursor: pointer;
-            font-size: 13px; color: var(--apple-text-primary);
+            width: 100%; margin: 0; padding: 6px 12px;
+            border: 0; appearance: none; -webkit-appearance: none;
+            background: transparent; cursor: pointer;
+            font: inherit; font-size: 13px; color: var(--apple-text-primary);
+            text-align: left;
             display: flex; gap: 6px; align-items: baseline;
         }
         .pc-ac-item:first-child { border-radius: var(--radius-md) var(--radius-md) 0 0; }
@@ -3365,11 +3378,46 @@
             <div class="controls-bar" style="margin-bottom:12px;">
                 <div class="control-group">
                     <span class="control-label" data-i18n="yearly.symbolInput">统计代码</span>
-                    <input type="text" id="downloadSymbolInput" class="pc-symbol-input" data-i18n-attr="placeholder|download.placeholderSymbol" placeholder="BTC" maxlength="20" value="BTC">
+                    <input type="text" id="downloadSymbolInput" class="pc-symbol-input" data-i18n-attr="placeholder|download.placeholderSymbol" placeholder="BTC" maxlength="20" value="BTC" autocomplete="off">
                     <select id="downloadTypeSelect" class="pc-type-select">
                         <option value="stock" data-i18n="yearly.assetTypeStock">美股</option>
+                        <option value="hk_stock" data-i18n="yearly.assetTypeHkStock">港股</option>
+                        <option value="global_stock" data-i18n="download.assetTypeGlobalStock">全球股票</option>
                         <option value="crypto" selected data-i18n="yearly.assetTypeCrypto">数字货币</option>
                         <option value="cn_stock" data-i18n="yearly.assetTypeCnStock">A股</option>
+                    </select>
+                    <select id="downloadGlobalSymbolSelect" class="pc-type-select" style="display:none;">
+                        <option value="" data-i18n="download.globalPopular">选择热门全球股票</option>
+                        <option value="7203.T">7203.T · Toyota</option>
+                        <option value="6758.T">6758.T · Sony</option>
+                        <option value="9984.T">9984.T · SoftBank</option>
+                        <option value="8306.T">8306.T · Mitsubishi UFJ</option>
+                        <option value="005930.KS">005930.KS · Samsung Electronics</option>
+                        <option value="000660.KS">000660.KS · SK Hynix</option>
+                        <option value="035420.KS">035420.KS · NAVER</option>
+                        <option value="2330.TW">2330.TW · TSMC</option>
+                        <option value="2317.TW">2317.TW · Hon Hai</option>
+                        <option value="2454.TW">2454.TW · MediaTek</option>
+                        <option value="RELIANCE.NS">RELIANCE.NS · Reliance</option>
+                        <option value="TCS.NS">TCS.NS · TCS</option>
+                        <option value="HDFCBANK.NS">HDFCBANK.NS · HDFC Bank</option>
+                        <option value="D05.SI">D05.SI · DBS</option>
+                        <option value="O39.SI">O39.SI · OCBC</option>
+                        <option value="CBA.AX">CBA.AX · Commonwealth Bank</option>
+                        <option value="BHP.AX">BHP.AX · BHP</option>
+                        <option value="CSL.AX">CSL.AX · CSL</option>
+                        <option value="SHOP.TO">SHOP.TO · Shopify</option>
+                        <option value="RY.TO">RY.TO · Royal Bank of Canada</option>
+                        <option value="HSBA.L">HSBA.L · HSBC</option>
+                        <option value="AZN.L">AZN.L · AstraZeneca</option>
+                        <option value="SHEL.L">SHEL.L · Shell</option>
+                        <option value="SAP.DE">SAP.DE · SAP</option>
+                        <option value="ASML.AS">ASML.AS · ASML</option>
+                        <option value="MC.PA">MC.PA · LVMH</option>
+                        <option value="NESN.SW">NESN.SW · Nestle</option>
+                        <option value="NOVO-B.CO">NOVO-B.CO · Novo Nordisk</option>
+                        <option value="PETR4.SA">PETR4.SA · Petrobras</option>
+                        <option value="2222.SR">2222.SR · Saudi Aramco</option>
                     </select>
                     <span class="control-label" data-i18n="download.period">数据周期</span>
                     <select id="downloadPeriodSelect" class="pc-type-select">
@@ -3390,6 +3438,8 @@
                     <button id="downloadJsonBtn" class="pc-btn primary" data-i18n="download.downloadJson">下载 JSON</button>
                 </div>
             </div>
+            <div class="pc-empty-hint" style="margin-bottom:8px;" data-i18n="download.symbolSearchHint">不知道代码？直接输入公司名称或代码搜索，选择结果会自动回填。</div>
+            <div id="downloadGlobalHint" class="pc-empty-hint" style="display:none;margin-bottom:12px;" data-i18n="download.globalSymbolHint">全球股票代码需包含 Yahoo 交易所后缀，例如 7203.T、005930.KS、2330.TW。</div>
             <div class="pc-error" id="downloadError"></div>
             <div class="pc-loading" id="downloadLoading" style="display:none;">
                 <div class="spinner"></div>
@@ -3397,7 +3447,7 @@
             </div>
             <div id="downloadEmpty" class="pc-empty">
                 <div style="font-size:32px;margin-bottom:8px;">⇩</div>
-                <div data-i18n="download.emptyPrompt">选择币种、周期和日期范围后预览或下载</div>
+                <div data-i18n="download.emptyPrompt">选择标的、周期和日期范围后预览或下载</div>
                 <div class="pc-empty-hint" data-i18n="download.emptyHint">默认导出 JSON，周/月/年数据由日线 OHLCV 聚合</div>
                 <div class="pc-empty-hint" data-i18n="download.intradayLimitHint">短周期范围上限：1分 7天、5分 60天、1小时/4小时 730天；A股暂不支持短周期</div>
             </div>

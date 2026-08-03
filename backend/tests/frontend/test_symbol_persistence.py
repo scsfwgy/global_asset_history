@@ -1,4 +1,4 @@
-"""Regression checks for locally remembered user-entered asset symbols."""
+"""Regression checks for remembered selections and reusable symbol search."""
 
 import json
 from pathlib import Path
@@ -98,6 +98,59 @@ def test_crash_stats_remembers_symbol_and_asset_type():
     assert 'value="hk_stock" data-i18n="yearly.assetTypeHkStock"' in page
 
 
+def test_data_download_remembers_all_user_selected_parameters_immediately():
+    source = _source("frontend/js/data-download.js")
+    page = _source("frontend/price-change.html")
+
+    assert 'var DOWNLOAD_STATE_STORAGE_KEY = "gah_download_state";' in source
+    assert "function saveState()" in source
+    assert "function restoreState()" in source
+    assert "localStorage.setItem(DOWNLOAD_STATE_STORAGE_KEY" in source
+    assert "localStorage.getItem(DOWNLOAD_STATE_STORAGE_KEY)" in source
+    for field in ("symbol", "type", "period", "start_date", "end_date", "global_symbol"):
+        assert field in source
+    assert '$("downloadSymbolInput").addEventListener("input", saveState)' in source
+    assert '$("downloadStartDate").addEventListener("change", saveState)' in source
+    assert "DOWNLOAD_ASSET_TYPES.indexOf(saved.type)" in source
+    assert "DOWNLOAD_PERIODS.indexOf(saved.period)" in source
+    assert 'id="downloadGlobalSymbolSelect"' in page
+
+
+def test_symbol_inputs_use_remote_company_name_search_with_local_fallback():
+    api = _source("frontend/js/api.js")
+    source = _source("frontend/js/price-change.js")
+    page = _source("frontend/price-change.html")
+    zh_locale = json.loads(_source("frontend/locales/zh-CN.json"))
+    en_locale = json.loads(_source("frontend/locales/en.json"))
+
+    assert "SYMBOL_SEARCH_ENDPOINT" in api
+    assert "loadRemoteSuggestions" in source
+    assert "fetch(url)" in source
+    assert "encodeURIComponent(type" in source
+    assert "_acMerge(remoteItems, localItems)" in source
+    assert "_acEscape(details)" in source
+    assert "}, 250);" in source
+    for input_id in (
+        "pcSymbolInput", "pdSymbolInput", "downloadSymbolInput", "btSymbolInput", "crashSymbol",
+    ):
+        assert f"document.getElementById('{input_id}')" in source
+    assert 'data-i18n="download.symbolSearchHint"' in page
+    assert "公司名称或代码" in zh_locale["download"]["symbolSearchHint"]
+    assert "company name or symbol" in en_locale["download"]["symbolSearchHint"].lower()
+
+    style_start = page.index("\n        .pc-ac-item {\n")
+    style_end = page.index("\n        }", style_start)
+    autocomplete_style = page[style_start:style_end]
+    for rule in (
+        "border: 0",
+        "appearance: none",
+        "-webkit-appearance: none",
+        "background: transparent",
+        "color: var(--apple-text-primary)",
+    ):
+        assert rule in autocomplete_style
+
+
 def test_hk_stock_is_available_in_history_and_detail_with_bilingual_labels():
     page = _source("frontend/price-change.html")
     yearly = _source("frontend/js/price-change.js")
@@ -114,3 +167,26 @@ def test_hk_stock_is_available_in_history_and_detail_with_bilingual_labels():
     assert zh_locale["yearly"]["labelHK"] == "港"
     assert en_locale["yearly"]["assetTypeHkStock"] == "HK Stock"
     assert en_locale["yearly"]["labelHK"] == "HK"
+
+
+def test_data_download_supports_hk_and_global_stocks():
+    page = _source("frontend/price-change.html")
+    script = _source("frontend/js/data-download.js")
+    zh_locale = json.loads(_source("frontend/locales/zh-CN.json"))
+    en_locale = json.loads(_source("frontend/locales/en.json"))
+
+    assert 'id="downloadTypeSelect"' in page
+    assert 'value="hk_stock" data-i18n="yearly.assetTypeHkStock"' in page
+    assert 'value="global_stock" data-i18n="download.assetTypeGlobalStock"' in page
+    assert 'id="downloadGlobalSymbolSelect"' in page
+    assert "#tab-download .control-group" in page
+    assert "flex-wrap: wrap;" in page
+    assert page.count('<option value=') >= 30
+    for symbol in ("7203.T", "005930.KS", "2330.TW", "ASML.AS", "2222.SR"):
+        assert f'value="{symbol}"' in page
+    assert '=== "global_stock"' in script
+    assert '$("downloadSymbolInput").value = this.value' in script
+    assert zh_locale["download"]["assetTypeGlobalStock"] == "全球股票"
+    assert en_locale["download"]["assetTypeGlobalStock"] == "Global Stock"
+    assert en_locale["download"]["period1m"] == "1 Min"
+    assert "2330.TW" in zh_locale["download"]["globalSymbolHint"]

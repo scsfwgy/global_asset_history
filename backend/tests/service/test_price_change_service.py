@@ -16,6 +16,90 @@ from tests.conftest import diagnose, make_daily_data, make_series, track_coverag
 MOD = "price_change_service.py"
 
 
+class TestSearchAssetSymbols:
+    """Company-name and symbol lookup for reusable autocomplete controls."""
+
+    def setup_method(self):
+        with svc._symbol_search_lock:
+            svc._symbol_search_cache.clear()
+
+    @patch.object(svc._em_session, "get")
+    def test_filters_east_money_results_for_selected_market(self, mock_get):
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "QuotationCodeTable": {"Data": [
+                {
+                    "UnifiedCode": "AAPL",
+                    "Name": "苹果",
+                    "JYS": "NASDAQ",
+                    "Classify": "UsStock",
+                    "TypeUS": "1",
+                },
+                {
+                    "UnifiedCode": "AAPL22",
+                    "Name": "Apple Notes",
+                    "JYS": "NASDAQ",
+                    "Classify": "UsStock",
+                    "TypeUS": "6",
+                },
+                {
+                    "UnifiedCode": "09988",
+                    "Name": "阿里巴巴-W",
+                    "JYS": "HK",
+                    "Classify": "HK",
+                    "TypeUS": "3",
+                },
+            ]}
+        }
+
+        result = svc.search_asset_symbols("Apple", "stock")
+
+        assert result == [{
+            "symbol": "AAPL",
+            "name": "苹果",
+            "type": "stock",
+            "exchange": "NASDAQ",
+        }]
+        assert mock_get.call_args.kwargs["params"]["input"] == "Apple"
+
+    @patch.object(svc._em_session, "get")
+    def test_a_share_search_uses_human_readable_exchange_name(self, mock_get):
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "QuotationCodeTable": {"Data": [{
+                "UnifiedCode": "600519",
+                "Name": "贵州茅台",
+                "JYS": "2",
+                "SecurityTypeName": "沪A",
+                "Classify": "AStock",
+            }]}
+        }
+
+        result = svc.search_asset_symbols("贵州茅台", "cn_stock")
+
+        assert result[0]["exchange"] == "沪A"
+
+    @patch.object(svc, "_yahoo_crumb", return_value=None)
+    @patch.object(svc._yh_session, "get")
+    def test_global_search_uses_yahoo_compatible_symbols(self, mock_get, _mock_crumb):
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"quotes": [{
+            "symbol": "7203.T",
+            "longname": "Toyota Motor Corporation",
+            "quoteType": "EQUITY",
+            "exchDisp": "Tokyo",
+        }]}
+
+        result = svc.search_asset_symbols("Toyota", "global_stock")
+
+        assert result[0] == {
+            "symbol": "7203.T",
+            "name": "Toyota Motor Corporation",
+            "type": "global_stock",
+            "exchange": "Tokyo",
+        }
+
+
 class TestFetchPriceHistory:
     """Date filtering and OHLCV period aggregation for JSON downloads."""
 
@@ -44,6 +128,21 @@ class TestFetchPriceHistory:
         assert result["count"] == 2
         assert [row["date"] for row in result["data"]] == ["2024-01-02", "2024-01-08"]
         assert result["data"][0]["volume"] == 200.0
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_global_stock_reuses_stock_fetcher_with_local_market_metadata(self, mock_fetch):
+        mock_fetch.return_value = self._series()
+
+        result = svc.fetch_price_history(
+            "2330.tw", "global_stock", "daily", "2024-01-01", "2024-01-08"
+        )
+
+        assert result["symbol"] == "2330.TW"
+        assert result["type"] == "global_stock"
+        assert result["currency"] == "TWD"
+        assert result["market"] == "TW"
+        assert result["count"] == 3
+        mock_fetch.assert_called_once_with("2330.TW", "stock")
 
     @patch("service.price_change.price_change_service._fetch_daily_series_cached")
     def test_weekly_aggregates_ohlcv(self, mock_fetch):

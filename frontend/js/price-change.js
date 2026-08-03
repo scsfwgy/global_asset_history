@@ -906,13 +906,33 @@ async function init() {
     }).slice(0, 10);
   }
 
+  function _acEscape(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function _acMerge(primary, fallback) {
+    var seen = {};
+    return (primary || []).concat(fallback || []).filter(function (item) {
+      var key = (item.code || '').toUpperCase() + '|' + (item.type || 'stock');
+      if (!item.code || seen[key]) return false;
+      seen[key] = true;
+      return true;
+    }).slice(0, 10);
+  }
+
   function _acRenderDrop(items) {
     if (!items.length) return '';
     return items.map(function (it, i) {
-      var label = it.name ? '<span class="ac-name">' + it.name + '</span>' : '';
-      return '<div class="pc-ac-item" data-idx="' + i + '">' +
-             '<span class="ac-code">' + it.code + '</span>' + label +
-             '</div>';
+      var details = [it.name || '', it.exchange || ''].filter(Boolean).join(' · ');
+      var label = details ? '<span class="ac-name">' + _acEscape(details) + '</span>' : '';
+      return '<button type="button" class="pc-ac-item" data-idx="' + i + '">' +
+             '<span class="ac-code">' + _acEscape(it.code) + '</span>' + label +
+             '</button>';
     }).join('');
   }
 
@@ -928,18 +948,60 @@ async function init() {
     wrap.appendChild(drop);
 
     var items = [], activeIdx = -1;
+    var searchTimer = null, searchSequence = 0, selecting = false;
 
-    function showDropdown() {
-      var q = inputEl.value || '';
-      items = _acFilter(q);
+    function renderItems(nextItems) {
+      items = nextItems;
       drop.innerHTML = _acRenderDrop(items);
       activeIdx = -1;
       drop.style.display = items.length ? 'block' : 'none';
     }
 
+    async function loadRemoteSuggestions(query, type, sequence, localItems) {
+      try {
+        var url = SYMBOL_SEARCH_ENDPOINT + '?q=' + encodeURIComponent(query)
+          + '&type=' + encodeURIComponent(type || 'stock');
+        var response = await fetch(url);
+        if (!response.ok) return;
+        var payload = await response.json();
+        if (sequence !== searchSequence || inputEl.value.trim() !== query) return;
+        var remoteItems = (payload.results || []).map(function (item) {
+          return {
+            code: String(item.symbol || '').toUpperCase(),
+            name: item.name || '',
+            type: item.type || type || 'stock',
+            exchange: item.exchange || '',
+          };
+        });
+        renderItems(_acMerge(remoteItems, localItems));
+      } catch (_) { /* Keep the local preset suggestions when search is unavailable. */ }
+    }
+
+    function showDropdown() {
+      if (selecting) return;
+      var q = inputEl.value || '';
+      var localItems = _acFilter(q);
+      renderItems(localItems);
+      window.clearTimeout(searchTimer);
+      searchSequence += 1;
+      var sequence = searchSequence;
+      if (!q.trim()) return;
+      searchTimer = window.setTimeout(function () {
+        loadRemoteSuggestions(q.trim(), typeEl ? typeEl.value : 'stock', sequence, localItems);
+      }, 250);
+    }
+
     function selectItem(it) {
+      window.clearTimeout(searchTimer);
+      searchSequence += 1;
       inputEl.value = it.code;
-      if (typeEl) typeEl.value = it.type;
+      selecting = true;
+      if (typeEl && it.type) {
+        typeEl.value = it.type;
+        typeEl.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+      selecting = false;
       drop.style.display = 'none';
       if (inputEl.id === 'pcSymbolInput' && typeof addSymbol === 'function') {
         addSymbol(it.code, it.type);
@@ -948,6 +1010,11 @@ async function init() {
 
     inputEl.addEventListener('input', showDropdown);
     inputEl.addEventListener('focus', showDropdown);
+    if (typeEl) {
+      typeEl.addEventListener('change', function () {
+        if (!selecting && document.activeElement === inputEl) showDropdown();
+      });
+    }
 
     inputEl.addEventListener('keydown', function (e) {
       if (!items.length) return;

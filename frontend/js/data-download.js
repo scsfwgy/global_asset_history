@@ -2,6 +2,9 @@
   "use strict";
 
   var $ = function (id) { return document.getElementById(id); };
+  var DOWNLOAD_STATE_STORAGE_KEY = "gah_download_state";
+  var DOWNLOAD_ASSET_TYPES = ["stock", "hk_stock", "global_stock", "crypto", "cn_stock"];
+  var DOWNLOAD_PERIODS = ["1m", "5m", "1h", "4h", "daily", "weekly", "monthly", "yearly"];
 
   function localIsoDate(value) {
     var year = value.getFullYear();
@@ -17,6 +20,7 @@
       var button = $(id);
       if (button) button.disabled = on;
     });
+    if ($("downloadGlobalSymbolSelect")) $("downloadGlobalSymbolSelect").disabled = on;
   }
 
   function showError(message) {
@@ -34,6 +38,20 @@
       start_date: $("downloadStartDate")?.value || "",
       end_date: $("downloadEndDate")?.value || "",
     };
+  }
+
+  function saveState() {
+    var values = formValues();
+    values.global_symbol = $("downloadGlobalSymbolSelect")?.value || "";
+    try {
+      localStorage.setItem(DOWNLOAD_STATE_STORAGE_KEY, JSON.stringify(values));
+    } catch (_) { /* localStorage unavailable — keep the current form value */ }
+  }
+
+  function validIsoDate(value, latest) {
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    var parsed = new Date(value + "T00:00:00");
+    return !Number.isNaN(parsed.getTime()) && localIsoDate(parsed) === value && value <= latest;
   }
 
   function validate(values) {
@@ -59,6 +77,14 @@
     }
   }
 
+  function syncAssetTypeControls() {
+    var isGlobal = $("downloadTypeSelect")?.value === "global_stock";
+    var popular = $("downloadGlobalSymbolSelect");
+    var hint = $("downloadGlobalHint");
+    if (popular) popular.style.display = isGlobal ? "inline-block" : "none";
+    if (hint) hint.style.display = isGlobal ? "block" : "none";
+  }
+
   function render(result) {
     var empty = $("downloadEmpty");
     var resultEl = $("downloadResult");
@@ -79,6 +105,7 @@
 
   async function fetchData() {
     var values = formValues();
+    saveState();
     var error = validate(values);
     if (error) {
       showError(error);
@@ -95,7 +122,6 @@
       var result = await response.json().catch(function () { return {}; });
       if (!response.ok) throw new Error(result.error || "HTTP " + response.status);
       render(result);
-      try { localStorage.setItem("gah_download_state", JSON.stringify(values)); } catch (_) {}
       return result;
     } catch (err) {
       showError(__("download.errorRequest") + " " + err.message);
@@ -131,18 +157,44 @@
   function restoreState() {
     var today = new Date();
     var yearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
-    $("downloadStartDate").value = localIsoDate(yearAgo);
-    $("downloadEndDate").value = localIsoDate(today);
-    $("downloadEndDate").max = localIsoDate(today);
+    var todayValue = localIsoDate(today);
+    var defaultStart = localIsoDate(yearAgo);
+    $("downloadStartDate").value = defaultStart;
+    $("downloadEndDate").value = todayValue;
+    $("downloadEndDate").max = todayValue;
     try {
-      var saved = JSON.parse(localStorage.getItem("gah_download_state") || "null");
-      if (!saved) return;
-      if (saved.symbol) $("downloadSymbolInput").value = saved.symbol;
-      if (saved.type) $("downloadTypeSelect").value = saved.type;
-      if (saved.period) $("downloadPeriodSelect").value = saved.period;
-      if (saved.start_date) $("downloadStartDate").value = saved.start_date;
-      if (saved.end_date) $("downloadEndDate").value = saved.end_date;
+      var saved = JSON.parse(localStorage.getItem(DOWNLOAD_STATE_STORAGE_KEY) || "null");
+      if (saved) {
+        if (typeof saved.symbol === "string" && saved.symbol.trim()) {
+          $("downloadSymbolInput").value = saved.symbol.trim().toUpperCase().slice(0, 20);
+        }
+        if (DOWNLOAD_ASSET_TYPES.indexOf(saved.type) !== -1) {
+          $("downloadTypeSelect").value = saved.type;
+        }
+        if (DOWNLOAD_PERIODS.indexOf(saved.period) !== -1) {
+          $("downloadPeriodSelect").value = saved.period;
+        }
+        if (validIsoDate(saved.start_date, todayValue)) {
+          $("downloadStartDate").value = saved.start_date;
+        }
+        if (validIsoDate(saved.end_date, todayValue)) {
+          $("downloadEndDate").value = saved.end_date;
+        }
+        if ($("downloadStartDate").value > $("downloadEndDate").value) {
+          $("downloadStartDate").value = defaultStart <= $("downloadEndDate").value
+            ? defaultStart : $("downloadEndDate").value;
+        }
+        var popular = $("downloadGlobalSymbolSelect");
+        var preferredPopular = saved.global_symbol || $("downloadSymbolInput").value;
+        if (popular && Array.from(popular.options).some(function (option) {
+          return option.value === preferredPopular;
+        })) {
+          popular.value = preferredPopular;
+        }
+      }
     } catch (_) {}
+    enforceIntradayRange();
+    syncAssetTypeControls();
   }
 
   function init() {
@@ -150,8 +202,24 @@
     restoreState();
     $("downloadPreviewBtn").addEventListener("click", preview);
     $("downloadJsonBtn").addEventListener("click", downloadJson);
-    $("downloadPeriodSelect").addEventListener("change", enforceIntradayRange);
-    $("downloadEndDate").addEventListener("change", enforceIntradayRange);
+    $("downloadPeriodSelect").addEventListener("change", function () {
+      enforceIntradayRange();
+      saveState();
+    });
+    $("downloadStartDate").addEventListener("change", saveState);
+    $("downloadEndDate").addEventListener("change", function () {
+      enforceIntradayRange();
+      saveState();
+    });
+    $("downloadTypeSelect").addEventListener("change", function () {
+      syncAssetTypeControls();
+      saveState();
+    });
+    $("downloadGlobalSymbolSelect").addEventListener("change", function () {
+      if (this.value) $("downloadSymbolInput").value = this.value;
+      saveState();
+    });
+    $("downloadSymbolInput").addEventListener("input", saveState);
     $("downloadSymbolInput").addEventListener("keydown", function (event) {
       if (event.key === "Enter") preview();
     });

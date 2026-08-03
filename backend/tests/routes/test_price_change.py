@@ -36,6 +36,43 @@ class TestConfigEndpoint:
         track_coverage(MOD, 3)
 
 
+class TestSymbolSearchEndpoint:
+    """GET /api/price-change/symbol-search"""
+
+    @patch("routes.price_change.search_asset_symbols")
+    def test_searches_selected_market_by_company_name(self, mock_search, client):
+        mock_search.return_value = [{
+            "symbol": "600519",
+            "name": "贵州茅台",
+            "type": "cn_stock",
+            "exchange": "SH",
+        }]
+
+        response = client.get(
+            f"{BASE}/symbol-search", query_string={"q": "贵州茅台", "type": "cn_stock"}
+        )
+
+        assert response.status_code == 200
+        assert response.get_json()["results"][0]["symbol"] == "600519"
+        mock_search.assert_called_once_with("贵州茅台", "cn_stock", limit=8)
+
+    @patch("routes.price_change.search_asset_symbols")
+    def test_blank_query_returns_empty_without_upstream_request(self, mock_search, client):
+        response = client.get(f"{BASE}/symbol-search", query_string={"q": "  "})
+
+        assert response.status_code == 200
+        assert response.get_json()["results"] == []
+        mock_search.assert_not_called()
+
+    def test_rejects_unsupported_asset_type(self, client):
+        response = client.get(
+            f"{BASE}/symbol-search", query_string={"q": "Apple", "type": "option"}
+        )
+
+        assert response.status_code == 400
+        assert "unsupported" in response.get_json()["error"]
+
+
 class TestMarketPulseEndpoint:
     """GET /api/price-change/market-pulse"""
 
@@ -1100,6 +1137,36 @@ class TestHistoryDownloadEndpoint:
         response = client.post(f"{BASE}/history-download", json={"symbol": "BTC"})
         assert response.status_code == 400
         assert "required" in response.get_json()["error"]
+
+    @patch("routes.price_change.fetch_price_history")
+    def test_global_stock_type_is_forwarded(self, mock_fetch, client):
+        mock_fetch.return_value = {
+            "symbol": "7203.T",
+            "type": "global_stock",
+            "currency": "JPY",
+            "market": "JP",
+            "period": "daily",
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+            "source": "yahoo",
+            "updated_at": "2024-12-31T00:00:00+00:00",
+            "count": 1,
+            "data": [{"date": "2024-01-02", "close": 2600.0}],
+        }
+
+        response = client.post(f"{BASE}/history-download", json={
+            "symbol": "7203.t",
+            "type": "global_stock",
+            "period": "daily",
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+        })
+
+        assert response.status_code == 200
+        assert response.get_json()["currency"] == "JPY"
+        mock_fetch.assert_called_once_with(
+            "7203.T", "global_stock", "daily", "2024-01-01", "2024-12-31"
+        )
 
     @patch("routes.price_change.fetch_price_history")
     def test_validation_error_returns_400(self, mock_fetch, client):

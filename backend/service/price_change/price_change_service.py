@@ -376,7 +376,11 @@ def fetch_price_history(
 ) -> Dict:
     """Return a date-bounded OHLCV collection aggregated to the requested period."""
     clean_type = asset_type.strip().lower()
-    clean_symbol = normalize_asset_symbol(symbol, clean_type)
+    # ``global_stock`` is a download-only product type.  International Yahoo
+    # symbols use the same chart endpoints as US stocks, so share the stock
+    # fetcher and cache while preserving the requested type in the response.
+    fetch_type = "stock" if clean_type == "global_stock" else clean_type
+    clean_symbol = normalize_asset_symbol(symbol, fetch_type)
     clean_period = period.strip().lower()
     if not clean_symbol:
         raise ValueError("symbol is required")
@@ -395,7 +399,7 @@ def fetch_price_history(
         max_days = {"1m": 7, "5m": 60, "1h": 730, "4h": 730}[clean_period]
         if (end - start).days + 1 > max_days:
             raise ValueError(f"{clean_period} period supports a maximum date range of {max_days} days")
-        series = fetch_intraday_series(clean_symbol, clean_type, clean_period, start, end)
+        series = fetch_intraday_series(clean_symbol, fetch_type, clean_period, start, end)
         if series.error:
             raise ValueError(series.error)
         data = []
@@ -413,9 +417,12 @@ def fetch_price_history(
                 "close": close,
                 "volume": values[3],
             })
+        currency, market = _heatmap_stock_meta(clean_symbol, fetch_type)
         return {
             "symbol": clean_symbol,
             "type": clean_type,
+            "currency": currency,
+            "market": market,
             "period": clean_period,
             "start_date": start.isoformat(),
             "end_date": end.isoformat(),
@@ -425,7 +432,7 @@ def fetch_price_history(
             "data": data,
         }
 
-    series = _fetch_daily_series_cached(clean_symbol, clean_type)
+    series = _fetch_daily_series_cached(clean_symbol, fetch_type)
     if series.error:
         raise ValueError(series.error)
     if not series.timestamps:
@@ -492,9 +499,12 @@ def fetch_price_history(
                 "volume": sum(volumes) if volumes else None,
             })
 
+    currency, market = _heatmap_stock_meta(clean_symbol, fetch_type)
     return {
         "symbol": clean_symbol,
         "type": clean_type,
+        "currency": currency,
+        "market": market,
         "period": clean_period,
         "start_date": start.isoformat(),
         "end_date": end.isoformat(),
@@ -2630,6 +2640,7 @@ import requests as _requests
 # East Money is a direct domestic API — bypass any ambient proxy (trust_env),
 # which on some dev machines routes through a flaky proxy and fails.
 _EM_QUOTE_URL = "https://push2.eastmoney.com/api/qt/stock/get"
+_EM_SYMBOL_SEARCH_URL = "https://searchapi.eastmoney.com/api/suggest/get"
 _em_session = _requests.Session()
 _em_session.trust_env = False
 _em_session.headers.update({"User-Agent": "Mozilla/5.0"})
@@ -2637,6 +2648,7 @@ _em_session.headers.update({"User-Agent": "Mozilla/5.0"})
 # Yahoo quote endpoint. Prefer curl_cffi (browser TLS impersonation dodges the
 # bot throttling that plain requests hits); fall back to requests if absent.
 _YH_QUOTE_URL = "https://query1.finance.yahoo.com/v7/finance/quote"
+_YH_SYMBOL_SEARCH_URL = "https://query1.finance.yahoo.com/v1/finance/search"
 _YH_CRUMB_URL = "https://query1.finance.yahoo.com/v1/test/getcrumb"
 _YH_COOKIE_URL = "https://fc.yahoo.com"
 _YH_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -2655,6 +2667,10 @@ except Exception:  # pragma: no cover - curl_cffi optional
 _yh_crumb: Optional[str] = None
 _yh_crumb_ts: float = 0.0
 _yh_crumb_lock = threading.Lock()
+_symbol_search_cache: Dict[Tuple[str, str, int], Tuple[List[Dict], float]] = {}
+_symbol_search_lock = threading.Lock()
+_SYMBOL_SEARCH_TTL = 60 * 60
+_SYMBOL_SEARCH_MAX_CACHE = 512
 
 
 def _yahoo_crumb() -> Optional[str]:
@@ -2676,6 +2692,151 @@ def _yahoo_crumb() -> Optional[str]:
         except Exception as e:
             logger.debug("Yahoo crumb fetch failed: %s", e)
     return None
+
+
+def _east_money_symbol_search(query: str, asset_type: str, limit: int) -> List[Dict]:
+    """Search Chinese, Hong Kong, and US listings by code or company name."""
+    classifications = {
+        "stock": {"UsStock"},
+        "hk_stock": {"HK"},
+        "cn_stock": {"AStock"},
+    }.get(asset_type)
+    if not classifications:
+        return []
+
+    try:
+        response = _em_session.get(
+            _EM_SYMBOL_SEARCH_URL,
+            params={"input": query, "type": 14, "count": max(limit * 3, 12)},
+            timeout=8,
+        )
+        if response.status_code != 200:
+            return []
+        rows = ((response.json().get("QuotationCodeTable") or {}).get("Data") or [])
+    except Exception as exc:
+        logger.debug("East Money symbol search failed: %s", exc)
+        return []
+
+    results: List[Dict] = []
+    seen = set()
+    for row in rows:
+        if row.get("Classify") not in classifications:
+            continue
+        # East Money also returns US notes, warrants, and other similarly named
+        # instruments. Keep common shares, ADRs, and ETFs for this stock picker.
+        if asset_type in {"stock", "hk_stock"} and str(row.get("TypeUS", "")) not in {
+            "1", "2", "3", "5",
+        }:
+            continue
+        symbol = str(row.get("UnifiedCode") or row.get("Code") or "").strip().upper()
+        if not symbol or symbol in seen:
+            continue
+        seen.add(symbol)
+        exchange = str(row.get("JYS") or "").strip()
+        if not exchange or exchange.isdigit():
+            exchange = str(row.get("SecurityTypeName") or "").strip()
+        results.append({
+            "symbol": symbol,
+            "name": str(row.get("Name") or "").strip(),
+            "type": asset_type,
+            "exchange": exchange,
+        })
+        if len(results) >= limit:
+            break
+    return results
+
+
+def _yahoo_symbol_search(query: str, asset_type: str, limit: int) -> List[Dict]:
+    """Best-effort Yahoo search for global listings and crypto assets."""
+    try:
+        params = {
+            "q": query,
+            "quotesCount": max(limit * 3, 12),
+            "newsCount": 0,
+            "enableFuzzyQuery": "true",
+        }
+        crumb = _yahoo_crumb()
+        if crumb:
+            params["crumb"] = crumb
+        response = _yh_session.get(_YH_SYMBOL_SEARCH_URL, params=params, timeout=8)
+        if response.status_code != 200:
+            return []
+        rows = response.json().get("quotes") or []
+    except Exception as exc:
+        logger.debug("Yahoo symbol search failed: %s", exc)
+        return []
+
+    stock_quote_types = {"EQUITY", "ETF", "MUTUALFUND", "INDEX"}
+    results: List[Dict] = []
+    seen = set()
+    for row in rows:
+        quote_type = str(row.get("quoteType") or "").upper()
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if asset_type == "crypto":
+            if quote_type != "CRYPTOCURRENCY":
+                continue
+            for suffix in ("-USD", "-USDT"):
+                if symbol.endswith(suffix):
+                    symbol = symbol[:-len(suffix)]
+                    break
+        else:
+            if quote_type not in stock_quote_types:
+                continue
+            if asset_type == "stock" and (symbol.endswith(".HK") or symbol.endswith(".SS") or symbol.endswith(".SZ")):
+                continue
+            if asset_type == "hk_stock" and not symbol.endswith(".HK"):
+                continue
+            if asset_type == "cn_stock":
+                if not (symbol.endswith(".SS") or symbol.endswith(".SZ")):
+                    continue
+                symbol = symbol.rsplit(".", 1)[0]
+        if not symbol or symbol in seen:
+            continue
+        seen.add(symbol)
+        results.append({
+            "symbol": symbol,
+            "name": str(row.get("longname") or row.get("shortname") or "").strip(),
+            "type": asset_type,
+            "exchange": str(row.get("exchDisp") or row.get("exchange") or "").strip(),
+        })
+        if len(results) >= limit:
+            break
+    return results
+
+
+def search_asset_symbols(query: str, asset_type: str, limit: int = 8) -> List[Dict]:
+    """Return symbol suggestions suitable for the site's asset input controls."""
+    clean_query = str(query or "").strip()[:80]
+    clean_type = str(asset_type or "stock").strip().lower()
+    clean_limit = max(1, min(int(limit), 10))
+    if not clean_query or clean_type not in {
+        "stock", "hk_stock", "global_stock", "crypto", "cn_stock",
+    }:
+        return []
+
+    cache_key = (clean_query.casefold(), clean_type, clean_limit)
+    with _symbol_search_lock:
+        cached = _symbol_search_cache.get(cache_key)
+        if cached and time.time() - cached[1] < _SYMBOL_SEARCH_TTL:
+            return [dict(item) for item in cached[0]]
+
+    results = _east_money_symbol_search(clean_query, clean_type, clean_limit)
+    if not results:
+        results = _yahoo_symbol_search(clean_query, clean_type, clean_limit)
+
+    with _symbol_search_lock:
+        now = time.time()
+        expired_keys = [
+            key for key, (_, cached_at) in _symbol_search_cache.items()
+            if now - cached_at >= _SYMBOL_SEARCH_TTL
+        ]
+        for key in expired_keys:
+            _symbol_search_cache.pop(key, None)
+        while len(_symbol_search_cache) >= _SYMBOL_SEARCH_MAX_CACHE:
+            oldest_key = min(_symbol_search_cache, key=lambda key: _symbol_search_cache[key][1])
+            _symbol_search_cache.pop(oldest_key, None)
+        _symbol_search_cache[cache_key] = ([dict(item) for item in results], now)
+    return results
 
 
 def _yahoo_market_caps(symbols: List[str]) -> Dict[str, float]:

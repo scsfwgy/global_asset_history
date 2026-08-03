@@ -3,6 +3,7 @@
 const API_BASE = "";
 const ENDPOINT = `${API_BASE}/api/price-change/yearly`;
 const CONFIG_ENDPOINT = `${API_BASE}/api/price-change/config`;
+const SYMBOL_SEARCH_ENDPOINT = `${API_BASE}/api/price-change/symbol-search`;
 const MONTHLY_ENDPOINT = `${API_BASE}/api/price-change/monthly`;
 const BATCH_MONTHLY_ENDPOINT = `${API_BASE}/api/price-change/monthly-batch`;
 const DAILY_ENDPOINT = `${API_BASE}/api/price-change/daily`;
