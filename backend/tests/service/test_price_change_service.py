@@ -79,6 +79,25 @@ class TestSearchAssetSymbols:
 
         assert result[0]["exchange"] == "沪A"
 
+    @patch.object(svc._em_session, "get")
+    def test_a_share_etf_search_accepts_fund_classification(self, mock_get):
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "QuotationCodeTable": {"Data": [{
+                "UnifiedCode": "159941",
+                "Name": "纳指ETF广发",
+                "JYS": "10",
+                "SecurityTypeName": "基金",
+                "Classify": "Fund",
+            }]}
+        }
+
+        result = svc.search_asset_symbols("159941", "cn_stock")
+
+        assert result[0]["symbol"] == "159941"
+        assert result[0]["name"] == "纳指ETF广发"
+        assert result[0]["exchange"] == "基金"
+
     @patch.object(svc, "_yahoo_crumb", return_value=None)
     @patch.object(svc._yh_session, "get")
     def test_global_search_uses_yahoo_compatible_symbols(self, mock_get, _mock_crumb):
@@ -194,6 +213,15 @@ class TestFetchPriceHistory:
 
 class TestFetchReturnDetail:
     """Return-detail chart data uses compounded period returns."""
+
+    def setup_method(self):
+        # fetch_return_detail falls back to the shared symbol-search for the
+        # asset name; keep these tests offline by defaulting it to no hits.
+        self._search_patch = patch.object(svc, "search_asset_symbols", return_value=[])
+        self._search_patch.start()
+
+    def teardown_method(self):
+        self._search_patch.stop()
 
     @patch("service.price_change.price_change_service._fetch_daily_series_cached")
     def test_selected_year_includes_monthly_returns(self, mock_fetch):
@@ -562,6 +590,69 @@ class TestFetchReturnDetail:
         assert february["low_return"] == -8.33
         assert february["close_return"] == 5.0
         assert february["amplitude_percent"] == 18.18
+
+
+class TestDetailAssetName:
+    """The detail response carries a human-readable asset name."""
+
+    def setup_method(self):
+        svc.clear_price_change_cache()
+
+    @staticmethod
+    def _series(source="test"):
+        dates = [
+            datetime(2023, 12, 29, 12, tzinfo=timezone.utc),
+            datetime(2024, 1, 2, 12, tzinfo=timezone.utc),
+            datetime(2024, 1, 3, 12, tzinfo=timezone.utc),
+            datetime(2024, 1, 4, 12, tzinfo=timezone.utc),
+            datetime(2024, 2, 1, 12, tzinfo=timezone.utc),
+            datetime(2024, 12, 31, 12, tzinfo=timezone.utc),
+        ]
+        return PriceSeries(
+            timestamps=[int(d.timestamp()) for d in dates],
+            closes=[100.0, 110.0, 99.0, 108.9, 87.12, 120.0],
+            raw_closes=[200.0, 210.0, 180.0, 190.0, 195.0, 220.0],
+            source=source,
+            fetched_at=dates[-1].timestamp(),
+        )
+
+    @patch("service.price_change.price_change_service.search_asset_symbols",
+           return_value=[{"symbol": "BTC", "name": "Bitcoin", "type": "crypto"}])
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_crypto_detail_name_resolved_via_search(self, mock_fetch, mock_search):
+        mock_fetch.return_value = self._series()
+        result = svc.fetch_return_detail("BTC", "crypto")
+
+        assert result["name"] == "Bitcoin"
+        mock_search.assert_called_once_with("BTC", "crypto", 1)
+
+    @patch("service.price_change.price_change_service.search_asset_symbols",
+           return_value=[{"symbol": "159941", "name": "纳指ETF广发", "type": "cn_stock"}])
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_cn_stock_detail_name_resolved_via_search(self, mock_fetch, mock_search):
+        mock_fetch.return_value = self._series()
+        result = svc.fetch_return_detail("159941", "cn_stock")
+
+        assert result["name"] == "纳指ETF广发"
+
+    @patch("service.price_change.price_change_service.search_asset_symbols",
+           return_value=[{"symbol": "AAPL", "name": "苹果", "type": "stock"}])
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_stock_detail_uses_search_when_fundamentals_lacks_name(self, mock_fetch, mock_search):
+        mock_fetch.return_value = self._series()
+        result = svc.fetch_return_detail("AAPL", "stock")
+
+        assert result["name"] == "苹果"
+
+    @patch("service.price_change.price_change_service._fetch_detail_fundamentals",
+           return_value={"available": True, "name": "Apple Inc."})
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_stock_detail_prefers_fundamentals_name(self, mock_fetch, mock_fundamentals):
+        mock_fetch.return_value = self._series(source="yahoo")
+        result = svc.fetch_return_detail("AAPL", "stock")
+
+        assert result["name"] == "Apple Inc."
+        mock_fundamentals.assert_called_once_with("AAPL")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1319,6 +1410,25 @@ class TestRunCrashStats:
         assert result["period_days"] is None
         diagnose("crash summary", result["summary"])
         track_coverage(MOD, 2)
+
+    def test_cn_stock_accepted(self, mock_fetch_daily_series):
+        """cn_stock (A-share) is a supported crash-stats asset type."""
+        from tests.conftest import make_crash_data
+        ts, closes = make_crash_data()
+        series = PriceSeries(ts, closes, "test-crash", time.time())
+        mock_fetch_daily_series.return_value = series
+
+        result = svc.run_crash_stats({
+            "symbol": "159696",
+            "type": "cn_stock",
+            "start_date": "2022-01-01",
+            "end_date": "2025-12-31",
+            "threshold_pct": 3.0,
+        })
+
+        assert result["symbol"] == "159696"
+        assert result["type"] == "cn_stock"
+        assert result["summary"]["total_crashes"] >= 1
 
     def test_n_day_period_is_returned_and_applied(self, mock_fetch_daily_series):
         """Service builds non-overlapping N-day candles."""

@@ -122,6 +122,13 @@
       var result = await response.json().catch(function () { return {}; });
       if (!response.ok) throw new Error(result.error || "HTTP " + response.status);
       render(result);
+      if (typeof gahHistoryRecord === "function") {
+        gahHistoryRecord("gah_download_history", {
+          symbol: result.symbol || values.symbol,
+          name: "",
+          type: values.type,
+        });
+      }
       return result;
     } catch (err) {
       showError(__("download.errorRequest") + " " + err.message);
@@ -223,6 +230,17 @@
     $("downloadSymbolInput").addEventListener("keydown", function (event) {
       if (event.key === "Enter") preview();
     });
+    if (typeof gahHistoryBind === "function") {
+      gahHistoryBind("gah_download_history", $("downloadHistory"), function (rec) {
+        var input = $("downloadSymbolInput");
+        var typeSel = $("downloadTypeSelect");
+        if (input) input.value = rec.symbol.slice(0, 20);
+        if (typeSel) {
+          typeSel.value = rec.type;
+          typeSel.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      });
+    }
   }
 
   document.addEventListener("DOMContentLoaded", init);

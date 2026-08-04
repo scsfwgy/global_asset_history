@@ -486,6 +486,8 @@
         fetch("/api/etf-market/history?symbol=" + code + "&days=120")
             .then(function (r) { return r.json(); })
             .then(function (data) {
+                // Ignore stale responses if the detail panel switched away.
+                if (_expandedCode !== code) return;
                 if (data.bars && data.bars.length > 0) {
                     _lastChartData = data;
                     var noteEl = document.getElementById("etfPremiumNote");
@@ -507,6 +509,8 @@
         if (!st) return;
         var tbody = document.querySelector("#etfDetailStats tbody");
         if (!tbody) return;
+        // Replace any stale supplementary rows; keep only the first (Row 1) row.
+        while (tbody.rows.length > 1) tbody.deleteRow(1);
         var tr = document.createElement("tr");
         function addLbl(v) { var t=document.createElement("td");t.textContent=v;t.className="etf-ds-label";tr.appendChild(t); }
         function addVal(v, cls) { var t=document.createElement("td");t.textContent=v;t.className="etf-ds-val"+(cls?" "+cls:"");tr.appendChild(t); }
@@ -520,7 +524,7 @@
 
         // Row 2 — supplementary
         addLbl(__("etf.detailFundCompany")); addVal(st.company || "--");
-        addLbl(__("etf.detailListed")); addVal((st.first_date||"").slice(0,7));
+        addLbl(__("etf.detailEstablished")); addVal((st.est_date || st.first_date || "").slice(0,7));
         addLbl(__("etf.detailDays")); addVal(st.days_since_listed != null ? __("etf.daysValue", {n: st.days_since_listed}) : "?");
         addPctLbl(__("etf.detail1M"), st.ret_1m);
         addPctLbl(__("etf.detail3M"), st.ret_3m);

@@ -42,6 +42,10 @@
     "backToLatest": "Back to latest",
     "confirm": "Got it"
   },
+  "historyRecords": {
+    "title": "History",
+    "clear": "Clear"
+  },
   "status": {
     "connected": "Connected",
     "disconnected": "Disconnected",
@@ -479,6 +483,7 @@
     "colEstError": "Est Error",
     "detailFundCompany": "Fund Company",
     "detailListed": "Listed",
+    "detailEstablished": "Established",
     "detailDays": "Days",
     "detail1M": "1-Month",
     "detail3M": "3-Month",

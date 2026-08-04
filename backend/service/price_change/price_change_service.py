@@ -1824,6 +1824,15 @@ def fetch_return_detail(
             fundamentals.get("field_count", 0),
             bool(external_fundamentals and external_fundamentals.get("available")),
         )
+    # Human-readable asset name for the overview header. Stocks prefer the
+    # quote snapshot; other types (and stocks without a quote) fall back to
+    # the shared symbol-search resolver.
+    detail_name = (fundamentals or {}).get("name") or ""
+    if not detail_name:
+        for hit in search_asset_symbols(clean_sym, clean_type, 1):
+            if str(hit.get("symbol", "")).upper() == clean_sym.upper():
+                detail_name = str(hit.get("name") or "")
+                break
     yearly_extremes, monthly_extremes = _compute_daily_extremes(series)
     yearly_candles, monthly_candles = _compute_return_candles(series)
 
@@ -1885,6 +1894,7 @@ def fetch_return_detail(
             "overview": overview,
             "quality": quality,
             "fundamentals": fundamentals,
+            "name": detail_name,
             "years": years,
             "rows": monthly_rows,
             "stats": _build_monthly_stats(month_values),
@@ -1922,6 +1932,7 @@ def fetch_return_detail(
         "overview": overview,
         "quality": quality,
         "fundamentals": fundamentals,
+        "name": detail_name,
         "years": years,
         "monthly_returns": [
             _with_chart_detail(
@@ -2709,7 +2720,7 @@ def _east_money_symbol_search(query: str, asset_type: str, limit: int) -> List[D
     classifications = {
         "stock": {"UsStock"},
         "hk_stock": {"HK"},
-        "cn_stock": {"AStock"},
+        "cn_stock": {"AStock", "Fund"},
     }.get(asset_type)
     if not classifications:
         return []

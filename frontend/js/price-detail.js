@@ -496,8 +496,8 @@
       + escapeHtml(result.symbol || overview.symbol || "—") + '</span><span class="pd-asset-type">'
       + escapeHtml(typeLabels[result.type] || result.type || "—") + '</span>'
       + resourceLinksHtml + '</div>'
-      + (fundamentals.name
-        ? '<div class="pd-asset-name">' + escapeHtml(fundamentals.name) + '</div>'
+      + ((result.name || fundamentals.name)
+        ? '<div class="pd-asset-name">' + escapeHtml(result.name || fundamentals.name) + '</div>'
         : "")
       + '<div class="pd-asset-meta">' + escapeHtml(__("detail.coverage")) + " · "
       + escapeHtml(coverage) + "<br>" + escapeHtml(__("detail.summarySource")) + " · "
@@ -1905,6 +1905,13 @@
       }
       renderStockHistory(result);
       setResultVisible(true);
+      if (typeof gahHistoryRecord === "function") {
+        gahHistoryRecord("gah_detail_history", {
+          symbol: result.symbol || symbol,
+          name: result.name || (result.fundamentals && result.fundamentals.name) || "",
+          type: type,
+        });
+      }
       loadFundamentalsHistory(
         result.symbol || symbol,
         result,
@@ -1957,6 +1964,12 @@
     var dividendTaxInput = $("pdDividendTaxRate");
     if (!btn || !input) return;
     restoreState();
+    if (typeof gahHistoryBind === "function") {
+      gahHistoryBind("gah_detail_history", document.getElementById("pdHistory"), function (rec) {
+        $("pdSymbolInput").value = rec.symbol;
+        $("pdTypeSelect").value = rec.type;
+      });
+    }
     var params = new URLSearchParams(window.location.search);
     var linkedSymbol = (params.get("symbol") || "").trim().toUpperCase();
     if (linkedSymbol) {

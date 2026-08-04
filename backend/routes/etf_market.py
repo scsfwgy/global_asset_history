@@ -47,6 +47,71 @@ _TENCENT_QUOTE_URL = "https://qt.gtimg.cn/q="
 _REQUEST_TIMEOUT = 10
 _TRACKING_ERROR_TTL_SECONDS = 6 * 60 * 60
 _ETF_HISTORY_TTL_SECONDS = 4 * 60 * 60
+
+# East Money is a direct domestic API — bypass any ambient proxy (trust_env),
+# matching the price_change_service session; the ambient proxy drops these hosts.
+_em_trust_env_session = requests.Session()
+_em_trust_env_session.trust_env = False
+_em_trust_env_session.headers.update({"User-Agent": "Mozilla/5.0"})
+
+_ETF_EST_DATE_CACHE: dict = {}
+_ETF_EST_DATE_TTL_SECONDS = 7 * 24 * 60 * 60       # static data — long-lived
+_ETF_EST_DATE_SHARED_TTL_SECONDS = 30 * 24 * 60 * 60
+_ETF_EST_DATE_SHARED_PREFIX = "etf_est_date"
+
+
+def _fetch_etf_est_date(symbol: str) -> Optional[str]:
+    """Return the ETF's fund establishment date (成立日期) as YYYY-MM-DD.
+
+    The history endpoint only keeps the most recent ``days`` bars, so its own
+    first date is the window start, not the fund's real date. This parses the
+    East Money fund profile page instead — no kline traversal. The value is
+    static, so it is cached long-term in memory and the shared cache (Redis).
+    Returns None when the profile is unreachable.
+    """
+    now = time.time()
+    cached = _ETF_EST_DATE_CACHE.get(symbol)
+    if cached and now - cached[1] < _ETF_EST_DATE_TTL_SECONDS:
+        return cached[0]
+
+    shared_key = f"{_ETF_EST_DATE_SHARED_PREFIX}:{symbol}"
+    try:
+        raw = cache_store.cache_get(shared_key)
+        if raw:
+            _ETF_EST_DATE_CACHE[symbol] = (raw, now)
+            return raw
+    except Exception:
+        pass
+
+    est_date = None
+    try:
+        resp = _em_trust_env_session.get(
+            f"https://fundf10.eastmoney.com/jbgk_{symbol}.html",
+            timeout=_REQUEST_TIMEOUT,
+        )
+        resp.raise_for_status()
+        raw = resp.content.decode("utf-8", errors="ignore")
+        m = re.search(r"成立日期[^<]*</th>\s*<td[^>]*>([^<]+)</td>", raw)
+        if m:
+            mm = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", m.group(1))
+            if mm:
+                est_date = "{:04d}-{:02d}-{:02d}".format(
+                    int(mm.group(1)), int(mm.group(2)), int(mm.group(3))
+                )
+    except Exception as exc:
+        logger.error("ETF establishment-date fetch failed for %s: %s", symbol, exc)
+
+    if est_date:
+        _ETF_EST_DATE_CACHE[symbol] = (est_date, now)
+        try:
+            cache_store.cache_set(
+                shared_key,
+                est_date,
+                _ETF_EST_DATE_SHARED_TTL_SECONDS,
+            )
+        except Exception:
+            pass
+    return est_date
 _ETF_HISTORY_STALE_SECONDS = 7 * 24 * 60 * 60
 _NAV_CACHE_TTL_SECONDS = 4 * 60 * 60
 _QDII_FUND_TTL_SECONDS = 4 * 60 * 60
@@ -1795,11 +1860,14 @@ def history():
     # ── Stats summary ──
     first_date = parsed[0]["date"] if parsed else None
     last_date = parsed[-1]["date"] if parsed else None
-    days_since_first = None
-    if first_date:
+    # Fund establishment date (成立日期) from the East Money profile — not the
+    # recent-window start, and not the exchange listing date.
+    est_date = _fetch_etf_est_date(symbol) or first_date
+    days_since_est = None
+    if est_date:
         try:
-            fd = datetime.strptime(first_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            days_since_first = (datetime.now(timezone.utc) - fd).days
+            fd = datetime.strptime(est_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            days_since_est = (datetime.now(timezone.utc) - fd).days
         except ValueError:
             pass
 
@@ -1930,7 +1998,8 @@ def history():
         "stats": {
             "first_date": first_date,
             "last_date": last_date,
-            "days_since_listed": days_since_first,
+            "est_date": est_date,
+            "days_since_listed": days_since_est,
             "ret_1m": ret_1m,
             "ret_3m": ret_3m,
             "avg_daily_amount": avg_amount,

@@ -112,6 +112,12 @@
                 setParamsCollapsed(!_paramsCollapsed);
             });
         }
+        if (typeof gahHistoryBind === "function") {
+            gahHistoryBind("gah_crash_history", document.getElementById("crashHistory"), function (rec) {
+                symbolInput.value = rec.symbol;
+                typeSelect.value = rec.type;
+            });
+        }
     }
 
     /* ── Run query ── */
@@ -157,6 +163,9 @@
                 setLoading(false);
                 if (!res.ok || res.data.error) { showError(res.data.error || __("crash.requestFailed"), run); return; }
                 render(res.data);
+                if (typeof gahHistoryRecord === "function") {
+                    gahHistoryRecord("gah_crash_history", { symbol: symbol, name: "", type: assetType });
+                }
             })
             .catch(function (e) {
                 setLoading(false);

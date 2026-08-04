@@ -42,6 +42,10 @@
     "backToLatest": "返回本次更新",
     "confirm": "知道了"
   },
+  "historyRecords": {
+    "title": "历史记录",
+    "clear": "清空"
+  },
   "status": {
     "connected": "已连接",
     "disconnected": "未连接",
@@ -475,6 +479,7 @@
     "colEstError": "估值误差",
     "detailFundCompany": "基金公司",
     "detailListed": "上市",
+    "detailEstablished": "成立",
     "detailDays": "天数",
     "detail1M": "近1月",
     "detail3M": "近3月",

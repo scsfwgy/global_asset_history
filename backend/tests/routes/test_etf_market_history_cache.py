@@ -41,8 +41,53 @@ def _sample_history_payload(stored_at=None):
 @pytest.fixture(autouse=True)
 def reset_history_cache():
     etf_market._etf_history_cache.clear()
+    etf_market._ETF_EST_DATE_CACHE.clear()
     yield
     etf_market._etf_history_cache.clear()
+    etf_market._ETF_EST_DATE_CACHE.clear()
+
+
+class TestEtfEstDate:
+    """The ETF fund establishment date comes from the East Money profile."""
+
+    @staticmethod
+    def _jbgk_resp(html):
+        from unittest.mock import MagicMock
+
+        resp = MagicMock()
+        resp.raise_for_status.return_value = None
+        resp.content = html.encode("utf-8")
+        return resp
+
+    @staticmethod
+    def _page(est):
+        return f"<html><th>成立日期/规模</th><td>{est} / 2.697亿份</td></html>"
+
+    def test_parses_establishment_date(self):
+        with patch(
+            "routes.etf_market._em_trust_env_session.get",
+            return_value=self._jbgk_resp(self._page("2022年07月21日")),
+        ) as mock_get:
+            result = etf_market._fetch_etf_est_date("159632")
+
+        assert result == "2022-07-21"
+        assert "jbgk_159632.html" in mock_get.call_args[0][0]
+
+    def test_returns_none_when_profile_missing_date(self):
+        with patch(
+            "routes.etf_market._em_trust_env_session.get",
+            return_value=self._jbgk_resp("<html>no date</html>"),
+        ):
+            assert etf_market._fetch_etf_est_date("999999") is None
+
+    def test_memoized_within_ttl(self):
+        etf_market._ETF_EST_DATE_CACHE["513300"] = ("2013-05-15", time.time())
+
+        with patch("routes.etf_market._em_trust_env_session.get") as mock_get:
+            result = etf_market._fetch_etf_est_date("513300")
+
+        assert result == "2013-05-15"
+        mock_get.assert_not_called()
 
 
 class TestEtfHistoryCache:

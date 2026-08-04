@@ -75,6 +75,13 @@ function initBacktestSymbolPersistence() {
 
   if (btSymbolInput) btSymbolInput.addEventListener("input", saveCurrentPreference);
   if (btTypeSelect) btTypeSelect.addEventListener("change", saveCurrentPreference);
+
+  if (typeof gahHistoryBind === "function") {
+    gahHistoryBind("gah_backtest_history", document.getElementById("btHistory"), function (rec) {
+      if (btSymbolInput) btSymbolInput.value = rec.symbol;
+      if (btTypeSelect) btTypeSelect.value = rec.type;
+    });
+  }
 }
 
 if (document.readyState === "loading") {
@@ -323,6 +330,9 @@ async function runBacktest() {
     const result = await resp.json();
     if (!resp.ok) throw new Error(result.error || `HTTP ${resp.status}`);
     renderBacktestResult(symbol, result);
+    if (typeof gahHistoryRecord === "function") {
+      gahHistoryRecord("gah_backtest_history", { symbol: symbol, name: "", type: assetType });
+    }
   } catch (e) {
     showError(__("backtest.errorBacktest") + e.message);
   }

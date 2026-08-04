@@ -14,5 +14,19 @@
       "Yearly Returns, Stock Detail, Backtest, Crash Stats, and Data Download: most global stock symbols are supported.",
       "S&P & Nasdaq Funds (OTC): view holdings distribution and proportions (under 'Region Mix')."
     ]
+  },
+  {
+    "version": 6,
+    "date": "2026.08.04",
+    "zh": [
+      "股票详情、回测、暴跌统计、数据下载：新增历史记录，显示代码与名称，点击可回填。",
+      "暴跌统计：新增 A 股支持。",
+      "场内 ETF：修复上市时间不准确问题，修改为成立日期。"
+    ],
+    "en": [
+      "Stock Detail, Backtest, Crash Stats, Data Download: added query history with symbol and name; click to refill.",
+      "Crash Stats: now supports A-shares.",
+      "Listed ETFs: detail now shows the fund's establishment date."
+    ]
   }
 ]

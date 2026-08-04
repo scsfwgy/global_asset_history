@@ -3383,6 +3383,7 @@
                 </div>
             </div>
             </div>
+            <div id="pdHistory"></div>
             <div class="pc-error" id="pdError"></div>
             <div class="pc-loading" id="pdLoading" style="display:none;">
                 <div class="spinner"></div>
@@ -3693,6 +3694,7 @@
                     <button id="downloadJsonBtn" class="pc-btn primary" data-i18n="download.downloadJson">下载 JSON</button>
                 </div>
             </div>
+            <div id="downloadHistory"></div>
             <div class="pc-empty-hint" style="margin-bottom:8px;" data-i18n="download.symbolSearchHint">不知道代码？直接输入公司名称或代码搜索，选择结果会自动回填。</div>
             <div id="downloadGlobalHint" class="pc-empty-hint" style="display:none;margin-bottom:12px;" data-i18n="download.globalSymbolHint">全球股票代码需包含 Yahoo 交易所后缀，例如 7203.T、005930.KS、2330.TW。</div>
             <div class="pc-error" id="downloadError"></div>
@@ -3784,6 +3786,7 @@
                 </label>
             </div>
             </div>
+            <div id="btHistory"></div>
             <div id="pcBtResult" style="display:none;">
                 <div id="btChart" style="margin-bottom:20px;"></div>
                 <div class="pc-bt-summary" id="pcBtSummary"></div>
@@ -3836,6 +3839,7 @@
                     <option value="hk_stock" data-i18n="yearly.assetTypeHkStock">港股</option>
                     <option value="global_stock" data-i18n="yearly.assetTypeGlobalStock">全球股票</option>
                     <option value="crypto" data-i18n="yearly.assetTypeCrypto">数字货币</option>
+                    <option value="cn_stock" data-i18n="yearly.assetTypeCnStock">A股</option>
                 </select>
                 <span class="pc-bt-label" data-i18n="crash.dropPct">暴跌幅度</span>
                 <input type="number" id="crashThreshold" class="pc-bt-input" value="4.77" min="0.01" step="0.1" style="width:80px;">
@@ -3863,6 +3867,7 @@
                 <button id="crashCloseBtn" class="pc-btn" style="padding:7px 14px;" data-i18n="crash.clear">清空</button>
             </div>
             </div>
+            <div id="crashHistory"></div>
             <div class="crash-error" id="crashError" style="display:none;"></div>
             <div class="pc-loading" id="crashLoading" style="display:none;">
                 <div class="spinner"></div>
@@ -6661,6 +6666,7 @@
     <script src="/js/i18n.js"></script>
     <script src="/js/feature-updates.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/js/history.js"></script>
     <script src="/js/visitor-stats.js"></script>
     <script>
       // Compact count formatting: 1234 -> 1.2K, 1500000 -> 1.5M, etc.
