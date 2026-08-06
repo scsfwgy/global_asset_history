@@ -28,5 +28,17 @@
       "Crash Stats: now supports A-shares.",
       "Listed ETFs: detail now shows the fund's establishment date."
     ]
+  },
+  {
+    "version": 7,
+    "date": "2026.08.06",
+    "zh": [
+      "新增汇率损失计算：持有盈亏计算，按起止汇率折算持有货币到目标货币的损益。",
+      "新增汇率计算器：支持任意币对汇率换算与多币种对比。"
+    ],
+    "en": [
+      "Added exchange-loss calculation: holding P&L that converts held currency into the target currency at the start/end rates.",
+      "Added an exchange calculator: convert between any currency pair and compare multiple currencies at once."
+    ]
   }
 ]

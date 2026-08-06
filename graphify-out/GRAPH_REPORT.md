@@ -1,16 +1,16 @@
-# Graph Report - GlobalAssetHistory  (2026-08-04)
+# Graph Report - GlobalAssetHistory  (2026-08-05)
 
 ## Corpus Check
-- 125 files · ~493,154 words
+- 126 files · ~499,773 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2104 nodes · 4053 edges · 135 communities (115 shown, 20 thin omitted)
-- Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 188 edges (avg confidence: 0.74)
+- 2165 nodes · 4197 edges · 132 communities (117 shown, 15 thin omitted)
+- Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 196 edges (avg confidence: 0.73)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `09fcff0d`
+- Built from commit: `f451b90e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -21,12 +21,12 @@
 - price-detail.js
 - price_change.py
 - Main Price Change Page — historical returns & backtest UI
-- test_calculations.py
+- date
 - TestEtfEstDate
 - fetch_heatmap_data
 - price-change.js
 - backtest.js
-- history
+- test_fundamentals_history.py
 - TestEventTracking
 - wishes.py
 - fundamentals_history.py
@@ -34,24 +34,24 @@
 - etf-market.js
 - qdii-funds.js
 - vix-chart.js
-- date
+- TestBuildEquityCurve
 - app.py
 - System Health Dashboard Page
 - stock-compare.js
 - fetchers.py
 - cache_store.py
-- TestFetchHeatmapToday
+- TestBuildHeatmapToday
 - date
 - patch
-- PriceSeries
+- TestFetchStockComparison
 - fetch_return_detail
 - TestHtmlMeta
-- TestBuildHeatmapToday
-- diagnose
-- TestFetchStockComparison
-- config.py
-- quote
-- empty_series
+- TestCache
+- track_coverage
+- normalize_asset_symbol
+- diagnostics.py
+- history
+- PriceSeries
 - TestHeaderTrendEndpoint
 - start.sh
 - init
@@ -62,7 +62,7 @@
 - TestDailyEndpoint
 - TestRunCrashStats
 - TestComputeYearlyReturns
-- track_coverage
+- patch
 - TestVixComparisonEndpoint
 - ._series
 - route
@@ -74,44 +74,43 @@
 - _fetch_qdii_fund_info
 - price_change_service.py
 - captcha.py
-- index.py
+- exchange-loss.js
 - test_etf_market_qdii.py
-- TestDetailFundamentals
-- TestRunFearThresholdStats
-- TestYahooQuoteBatch
+- .test_cross_month_prev_close
+- TestFetchMonthlyReturns
+- ._isolate_fetcher_state
 - _record_unique_visit
 - TestFundamentalsHistoryEndpoint
 - .test_valid_frequencies
 - TestReturnDetailEndpoint
-- .test_normal_month
+- TestComputeMonthlyReturns
 - TestMonthlyEndpoint
-- TestFetchYearlyReturns
+- config.py
 - Monthly Return Breakdown Feature
 - fetchData
-- seo_data.py
-- ._isolate_fetcher_state
+- TestYahooQuoteBatch
+- TestExchangeLossEndpoint
 - test_visitor_stats.py
 - header-trend.js
 - vercel.json
-- patch
-- _fetch_daily_series_cn_stock_eastmoney
+- _fetch_all_qdii_fund_groups
+- _cn_secid
 - TestYearlyEndpoint
 - TestBacktestEndpoint
 - _enrich_detail_fundamentals_from_series
 - search_asset_symbols
-- TestFetchMonthlyReturns
 - TestFetchDailyReturns
 - stats_dashboard
 - feature-updates.js
-- common.py
+- ThreadLocalSession
 - test_symbol_persistence.py
-- _fetch_daily_series_cn_stock
+- TestGetCrashChartData
 - Multi-Asset Yearly Total Returns (% per calendar year)
 - Bitget Stock Trading Fee Schedule
 - Yearly Heatmap / Treemap Visualization
 - capture_screenshots.py
-- serve_frontend_asset
-- TestRunDcaBacktest
+- TestFetchHeatmapToday
+- binance_base_url
 - qdii_fund_holdings
 - routes/conftest.py
 - TestMonthlyBatchEndpoint
@@ -127,7 +126,7 @@
 - history.js
 - scrape_fund_profile
 - routes/test_operational_logging.py
-- run_dca_backtest
+- TestFetcherRegistration
 - test_delivery_workflow.py
 - Yearly Heatmap Visualization — SVG-based color-coded grid displaying annual percentage returns for multiple global asset classes (equities, bonds, commodities, crypto) across multiple years, with color intensity proportional to return magnitude
 - S&P 500 Annual Returns Visualization
@@ -137,15 +136,13 @@
 - Content & Interaction — articles, wish wall, stats
 - Project Directory Structure
 - test_qdii_holdings_ui.py
-- TestSymbolSearchEndpoint
+- add_seo_headers
 - Flask-Cors 5.0.0 — CORS support
-- TestGetCrashChartData
-- TestFearThresholdStatsEndpoint
-- TestFetcherRegistration
-- TestFetchMonthlyReturnsBatch
+- TestDetailFundamentals
+- TestRunFearThresholdStats
 
 ## God Nodes (most connected - your core abstractions)
-1. `track_coverage()` - 205 edges
+1. `track_coverage()` - 213 edges
 2. `PriceSeries` - 92 edges
 3. `diagnose()` - 63 edges
 4. `_to_timestamp()` - 43 edges
@@ -153,8 +150,8 @@
 6. `normalize_asset_symbol()` - 26 edges
 7. `empty_series()` - 25 edges
 8. `fetch_return_detail()` - 25 edges
-9. `_compute_yearly_returns()` - 24 edges
-10. `TestHtmlMeta` - 24 edges
+9. `TestHtmlMeta` - 25 edges
+10. `_compute_yearly_returns()` - 24 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Landing Page — pure static HTML, no JS dependencies` --semantically_similar_to--> `No React/Vue/Build Tools — Classic JS Only`  [INFERRED] [semantically similar]
@@ -176,11 +173,11 @@
 - **Free Financial API Survey — Three Vendors Evaluated for ETF Data Coverage** — doc_free_financial_api_survey_finnhub, doc_free_financial_api_survey_fmp, doc_free_financial_api_survey_yfinance, doc_free_financial_api_survey_etf_holdings_gap, doc_free_financial_api_survey_comparison_matrix [EXTRACTED 1.00]
 - **Flask Application Blueprint Architecture** — CLAUDE_price_change_bp, CLAUDE_etf_market_bp, CLAUDE_wishes_bp, CLAUDE_backend_app_py, CLAUDE_api_index_py [EXTRACTED 1.00]
 
-## Communities (135 total, 20 thin omitted)
+## Communities (132 total, 15 thin omitted)
 
 ### Community 0 - "_to_timestamp"
 Cohesion: 0.04
-Nodes (61): _build_period_windows(), compute_crash_statistics(), date, Crash detection and recovery analysis using period close returns., Return non-overlapping (candle-start, candle-end) point indices., Find crash events and their recovery metrics. Daily, N-trading-day, weekly, and…, Only 1 year of data — needs at least 2 year-end closes., parametrize (+53 more)
+Nodes (61): _build_period_windows(), compute_crash_statistics(), date, Crash detection and recovery analysis using period close returns., Return non-overlapping (candle-start, candle-end) point indices., Find crash events and their recovery metrics. Daily, N-trading-day, weekly, and…, A full month of trading days with rising prices., Only 1 year of data — needs at least 2 year-end closes. (+53 more)
 
 ### Community 1 - "heatmap.js"
 Cohesion: 0.07
@@ -195,20 +192,20 @@ Cohesion: 0.11
 Nodes (51): attachBarChartTooltips(), attachFundamentalsHistoryTooltips(), barChartPoints(), buildAssetResourceLinks(), buildYearSelector(), cellColor(), chartDetailText(), escapeHtml() (+43 more)
 
 ### Community 4 - "price_change.py"
-Cohesion: 0.06
-Nodes (63): config(), crash_chart(), crash_stats(), fear_threshold_stats(), _get_cached_heatmap(), _get_cached_market_pulse(), get_daily_returns(), get_fundamentals_history() (+55 more)
+Cohesion: 0.07
+Nodes (42): backtest(), crash_chart(), crash_stats(), exchange_loss(), fear_threshold_stats(), _get_cached_heatmap(), _get_cached_market_pulse(), get_fundamentals_history() (+34 more)
 
 ### Community 5 - "Main Price Change Page — historical returns & backtest UI"
 Cohesion: 0.05
 Nodes (48): DAILY_SERIES_FETCHERS registry, etf_market_bp — /api/etf-market Blueprint, i18n — zh-CN and en locales, Knowledge Article SEO Addition Checklist, Native SVG Charts — no charting library, No React/Vue/Build Tools — Classic JS Only, price_change_bp — /api/price-change Blueprint, PriceSeries — unified daily price data structure (+40 more)
 
-### Community 6 - "test_calculations.py"
-Cohesion: 0.05
-Nodes (39): _compute_daily_returns_for_month(), _compute_money_weighted_annualized_return(), _compute_monthly_returns(), _generate_schedule_dates(), _next_month_anchor(), _normalize_frequency(), date, Return calculations and backtest helpers. (+31 more)
+### Community 6 - "date"
+Cohesion: 0.04
+Nodes (55): _build_equity_curve(), _compute_daily_returns_for_month(), _compute_money_weighted_annualized_return(), _compute_monthly_returns(), _generate_schedule_dates(), _next_month_anchor(), _normalize_frequency(), date (+47 more)
 
 ### Community 8 - "fetch_heatmap_data"
-Cohesion: 0.14
-Nodes (18): _build_heatmap_today(), fetch_heatmap_data(), _fetch_heatmap_watchlist(), _heatmap_currency(), _heatmap_stock_meta(), _market_pulse_yahoo_quotes(), _period_label(), _period_start_ts() (+10 more)
+Cohesion: 0.12
+Nodes (20): _asset_currency(), _build_heatmap_today(), fetch_heatmap_data(), _fetch_heatmap_watchlist(), _heatmap_currency(), _heatmap_stock_meta(), _market_pulse_yahoo_quotes(), _period_label() (+12 more)
 
 ### Community 9 - "price-change.js"
 Cohesion: 0.05
@@ -218,9 +215,9 @@ Nodes (41): addBtn, btAmount, btAnimSeconds, btBody, btDayOfMonth, btDayOfMonthL
 Cohesion: 0.10
 Nodes (37): backtestCurrencyForType(), _btCashflows, _btEquityByDate, formatBtAxisMoney(), formatBtMoney(), formatBtNumber(), getBacktestAnimMs(), getBacktestSampleSize() (+29 more)
 
-### Community 11 - "history"
+### Community 11 - "test_fundamentals_history.py"
 Cohesion: 0.07
-Nodes (41): _etf_history_json_response(), _fetch_etf_est_date(), history(), Return recent daily OHLCV history for an ETF symbol. Query params: symbol: ETF…, Return the ETF's fund establishment date (成立日期) as YYYY-MM-DD. The history…, object, Tests for US-stock valuation and profitability history., Dropping negative ROE would hide the companies where the metric matters most. (+33 more)
+Nodes (36): object, Tests for US-stock valuation and profitability history., Dropping negative ROE would hide the companies where the metric matters most., A wrong field dispatch or sign filter must not corrupt PE/PB history., Duplicate revised rows must produce one deterministic chart point., The source adapter must request both historical and latest PE/PB fields., An expired Yahoo crumb should be refreshed before degrading the source., Yahoo's fundamentals endpoint requires a session cookie and crumb pair. (+28 more)
 
 ### Community 12 - "TestEventTracking"
 Cohesion: 0.06
@@ -250,13 +247,13 @@ Nodes (36): baseRowsForActiveIndex(), cacheStatusLabel(), clearFiltersAndSort(),
 Cohesion: 0.15
 Nodes (31): attachVixInteractions(), fearForwardCell(), fetchFearThresholdStats(), fetchLatestVix(), fetchVixData(), formatDateLabel(), formatFearPercent(), getVixColors() (+23 more)
 
-### Community 19 - "date"
-Cohesion: 0.10
-Nodes (18): _build_equity_curve(), date, Month-over-month returns for a specific year., All 12 months with data should produce 12 entries with computed returns., Months without data should have return=None., January's prev_close comes from December of previous year., All closes are None → all 12 months return None., When prev_close is 0, month return is None (div-by-zero guard). (+10 more)
+### Community 19 - "TestBuildEquityCurve"
+Cohesion: 0.16
+Nodes (8): Equity curve construction from price points and executions., Build executed_points in the format expected by _build_equity_curve. Format:…, 12 monthly executions, 24 months of price data., Initial lump sum, no recurring executions., initial_price=0 should not cause div-by-zero (units not computed)., Neither executions nor initial investment → flat zero curve., After all executions, value should continue tracking price changes., TestBuildEquityCurve
 
 ### Community 20 - "app.py"
-Cohesion: 0.15
-Nodes (24): after_request, add_seo_headers(), _base_request_path(), _canonical_content_path(), index(), index_lang(), _is_indexable_content_path(), _json_script_value() (+16 more)
+Cohesion: 0.13
+Nodes (25): Vercel serverless entry point — wraps the existing Flask app., _base_request_path(), _canonical_content_path(), _frontend_asset_version(), frontend_files(), index(), index_lang(), _is_indexable_content_path() (+17 more)
 
 ### Community 21 - "System Health Dashboard Page"
 Cohesion: 0.08
@@ -267,60 +264,60 @@ Cohesion: 0.22
 Nodes (25): activate(), addSymbol(), cellColor(), clearSymbols(), escapeHtml(), formatPct(), getTaxRate(), highlightSuggestion() (+17 more)
 
 ### Community 23 - "fetchers.py"
-Cohesion: 0.09
-Nodes (32): _compute_yearly_returns(), Compute yearly returns using YoY change on year-end close prices. For each…, okx_base_url(), _binance_pair(), _fetch_crypto(), _fetch_crypto_binance(), _fetch_crypto_okx(), _fetch_daily_series_crypto() (+24 more)
+Cohesion: 0.07
+Nodes (36): _compute_yearly_returns(), Compute yearly returns using YoY change on year-end close prices. For each…, _cn_tencent_symbol(), _fetch_cn_stock(), _fetch_crypto(), _fetch_crypto_okx(), _fetch_daily_closes_cn_stock(), _fetch_daily_series_crypto() (+28 more)
 
 ### Community 24 - "cache_store.py"
 Cohesion: 0.14
 Nodes (23): cache_del(), cache_expire(), cache_get(), cache_hgetall(), cache_hincrby(), cache_incr(), cache_lpush(), cache_lrange() (+15 more)
 
-### Community 25 - "TestFetchHeatmapToday"
-Cohesion: 0.25
-Nodes (5): Integration tests: fetch_heatmap_data with period='today'., period='today' routes through _build_heatmap_today., When fast path returns None, fall through to per-symbol OHLCV., period='month' should NOT use the today fast path., TestFetchHeatmapToday
+### Community 25 - "TestBuildHeatmapToday"
+Cohesion: 0.10
+Nodes (10): Tests for _build_heatmap_today — today fast-path orchestrator., Stub matching _compute_one signature for non-stock entries., All entries are stocks → batch used, no fallback., Batch returns empty for non-empty stocks → return None., include_market_cap=False → market_cap absent from results., Stocks via batch, crypto via compute_fn., No entries → empty data, batch never called., Stock not in batch response → None values, no crash. (+2 more)
 
 ### Community 26 - "date"
-Cohesion: 0.22
-Nodes (14): _build_detail_overview(), _compute_daily_extremes(), _date_years_before(), _detail_annualized_volatility(), _detail_drawdown_summary(), _detail_period_return(), _detail_price_points(), _detail_window_start() (+6 more)
+Cohesion: 0.15
+Nodes (20): _build_detail_overview(), _build_stock_history_tables(), _compute_yearly_dividends(), _compute_yearly_drawdowns(), _compute_yearly_runups(), _date_years_before(), _detail_annualized_volatility(), _detail_drawdown_summary() (+12 more)
 
 ### Community 27 - "patch"
-Cohesion: 0.14
-Nodes (7): patch, POST /api/price-change/heatmap cross-instance cache behavior., GET /api/price-change/market-pulse, POST /api/price-change/crash-chart, TestCrashChartEndpoint, TestHeatmapSharedCache, TestMarketPulseEndpoint
-
-### Community 28 - "PriceSeries"
 Cohesion: 0.11
-Nodes (12): PriceSeries, _fetch_daily_series_global_stock(), Fetch an international listing while preserving its exchange suffix., Register a daily-series fetcher for a new asset type., register_daily_series_fetcher(), TestHistoricalCsv, Two-layer caching (L1 in-memory, L2 Redis)., Uncached symbol should return None. (+4 more)
+Nodes (9): patch, POST /api/price-change/heatmap cross-instance cache behavior., GET /api/price-change/market-pulse, POST /api/price-change/crash-chart, POST /api/price-change/fear-threshold-stats, TestCrashChartEndpoint, TestFearThresholdStatsEndpoint, TestHeatmapSharedCache (+1 more)
+
+### Community 28 - "TestFetchStockComparison"
+Cohesion: 0.13
+Nodes (5): object, Company-name and symbol lookup for reusable autocomplete controls., Compact annual comparison data for multiple US stocks., TestFetchStockComparison, TestSearchAssetSymbols
 
 ### Community 29 - "fetch_return_detail"
-Cohesion: 0.16
-Nodes (18): _avg(), _build_detail_quality(), _build_monthly_stats(), _compute_daily_grid(), _compute_return_candles(), fetch_return_detail(), _median(), Compute daily returns grouped by (day, month) for a single year. Returns rows… (+10 more)
+Cohesion: 0.19
+Nodes (16): _avg(), _build_detail_quality(), _build_monthly_stats(), _compute_daily_extremes(), _compute_daily_grid(), _compute_return_candles(), fetch_return_detail(), _median() (+8 more)
 
 ### Community 30 - "TestHtmlMeta"
 Cohesion: 0.05
 Nodes (15): client(), fixture, parametrize, Tests for SEO configuration: sitemap.xml, robots.txt, rendered meta tags, JSON-…, Canonical / robots / og:image on rendered pages., Flask test client with a fixed SITE_URL so absolute URLs are stable., og:image screenshots referenced by meta tags must exist under frontend/., GET /sitemap.xml — structure and real lastmod. (+7 more)
 
-### Community 31 - "TestBuildHeatmapToday"
-Cohesion: 0.10
-Nodes (10): Tests for _build_heatmap_today — today fast-path orchestrator., Stub matching _compute_one signature for non-stock entries., All entries are stocks → batch used, no fallback., Batch returns empty for non-empty stocks → return None., include_market_cap=False → market_cap absent from results., Stocks via batch, crypto via compute_fn., No entries → empty data, batch never called., Stock not in batch response → None values, no crash. (+2 more)
-
-### Community 32 - "diagnose"
-Cohesion: 0.05
-Nodes (28): get_color_range(), get_color_scheme(), get_presets(), load_config(), Return the color scheme: 'green_up' (default, international) or 'red_up'…, Tests for backend/service/price_change/config.py, Accessor functions for config values., Reset config cache before each test. (+20 more)
-
-### Community 33 - "TestFetchStockComparison"
-Cohesion: 0.11
-Nodes (7): object, Company-name and symbol lookup for reusable autocomplete controls., Compact annual comparison data for multiple US stocks., Expired L1 entry should be treated as miss., When L1 misses but L2 has data, it should warm L1 and return., TestFetchStockComparison, TestSearchAssetSymbols
-
-### Community 34 - "config.py"
+### Community 31 - "TestCache"
 Cohesion: 0.12
-Nodes (20): binance_base_url(), coingecko_base_url(), coingecko_ids(), crypto_config(), Configuration loader for price change feature., _collect(), _probe(), _probe_binance() (+12 more)
+Nodes (8): Two-layer caching (L1 in-memory, L2 Redis)., Uncached symbol should return None., Expired L1 entry should be treated as miss., clear_price_change_cache should empty L1., serialize → deserialize should be lossless., Corrupt serialized data should return None gracefully., When L1 misses but L2 has data, it should warm L1 and return., TestCache
 
-### Community 35 - "quote"
-Cohesion: 0.14
-Nodes (15): _fetch_etf_history_rows(), _fetch_live_premium(), _load_fee_data(), _parse_tencent_quote(), route, quote(), Fetch ETF daily rows with date and close, oldest to newest., Return real-time quotes for a list of ETF symbols. Query params: symbols:… (+7 more)
+### Community 32 - "track_coverage"
+Cohesion: 0.04
+Nodes (44): _parse_iso_date(), ISO date string parsing., Feb 30 doesn't exist., Error message should include the field name., TestParseIsoDate, Accessor functions for config values., Reset config cache before each test., The actual config file in the project should load successfully. (+36 more)
 
-### Community 36 - "empty_series"
-Cohesion: 0.23
-Nodes (15): empty_series(), series_from_points(), _aggregate_intraday_hours(), _fetch_daily_series_stock(), _fetch_daily_series_stock_direct(), _fetch_daily_series_stock_yfinance(), _fetch_intraday_crypto_binance(), fetch_intraday_series() (+7 more)
+### Community 33 - "normalize_asset_symbol"
+Cohesion: 0.11
+Nodes (26): get_daily_returns(), get_monthly_returns(), header_trend(), history_download(), Return a downsampled full-history daily close series for the header background…, Return monthly returns for a symbol in a given year. Request body: {"symbol":…, Return daily returns for a symbol in a given year and month., Return date-bounded price history as a JSON collection. (+18 more)
+
+### Community 34 - "diagnostics.py"
+Cohesion: 0.18
+Nodes (11): okx_base_url(), _collect(), _probe(), _probe_coingecko(), _probe_okx(), _probe_tencent(), Live reachability probes for the upstream market-data sources. Each probe makes…, Probe all sources, memoised for _MEMO_TTL seconds unless fresh=True. (+3 more)
+
+### Community 35 - "history"
+Cohesion: 0.13
+Nodes (20): _etf_history_json_response(), _fetch_etf_est_date(), _fetch_etf_history_rows(), _fetch_live_premium(), history(), _load_fee_data(), _parse_tencent_quote(), route (+12 more)
+
+### Community 36 - "PriceSeries"
+Cohesion: 0.13
+Nodes (28): empty_series(), PriceSeries, Shared models and low-level HTTP helpers for price change services., series_from_points(), _aggregate_intraday_hours(), _fetch_daily_series_cn_stock(), _fetch_daily_series_cn_stock_eastmoney(), _fetch_daily_series_cn_stock_tencent() (+20 more)
 
 ### Community 37 - "TestHeaderTrendEndpoint"
 Cohesion: 0.15
@@ -339,16 +336,16 @@ Cohesion: 0.12
 Nodes (26): _benchmark_for_etf(), _clean_report_fund_name(), _compute_tracking_error_history(), _daily_return_map_from_rows(), _daily_return_map_from_series(), _extract_qdii_pdf_text(), _fetch_latest_qdii_report(), _fetch_qdii_holdings() (+18 more)
 
 ### Community 41 - "qdii_funds"
-Cohesion: 0.09
-Nodes (22): _build_qdii_summary(), _discover_active_qdii_codes(), _fetch_all_qdii_fund_groups(), _filter_qdii_response(), _is_active_qdii_candidate(), qdii_funds(), _qdii_snapshot_age_seconds(), Fetch all configured QDII fund groups from East Money. (+14 more)
+Cohesion: 0.15
+Nodes (13): _filter_qdii_response(), qdii_funds(), _qdii_snapshot_age_seconds(), Return public East Money data for Nasdaq-100 / S&P 500 QDII funds. Query…, Return either the full QDII snapshot or a single-index view., Read the locally persisted QDII snapshot, if present and valid., Persist the latest successful QDII snapshot for offline/overseas fallback., Read the cross-instance QDII snapshot from Upstash/Vercel KV. (+5 more)
 
 ### Community 42 - "test_intraday_fetchers.py"
 Cohesion: 0.24
 Nodes (10): object, Unit tests for intraday market-data download fetchers., _response(), test_binance_intraday_parses_ohlcv(), test_eastmoney_a_share_uses_stock_exchange_mapping_and_handles_empty_data(), test_global_stock_daily_fetcher_reuses_yahoo_symbol(), test_hk_stock_daily_fetcher_reuses_yahoo_with_canonical_symbol(), test_hk_stock_symbol_normalization_accepts_common_code_variants() (+2 more)
 
 ### Community 43 - "test_price_change.py"
-Cohesion: 0.25
-Nodes (5): Tests for backend/routes/price_change.py — API endpoint integration tests. All…, GET /api/price-change/config, POST /api/price-change/crash-stats, TestConfigEndpoint, TestCrashStatsEndpoint
+Cohesion: 0.15
+Nodes (7): Tests for backend/routes/price_change.py — API endpoint integration tests. All…, GET /api/price-change/config, GET /api/price-change/symbol-search, POST /api/price-change/crash-stats, TestConfigEndpoint, TestCrashStatsEndpoint, TestSymbolSearchEndpoint
 
 ### Community 44 - "TestDailyEndpoint"
 Cohesion: 0.25
@@ -362,9 +359,9 @@ Nodes (8): Crash statistics analysis., cn_stock (A-share) is a supported crash-s
 Cohesion: 0.14
 Nodes (8): Data in 2022 and 2024 but not 2023 — compute 2022→2024 directly., Year-over-year returns from year-end close prices., 3-year uptrend data should produce returns for years 2023 and 2024., Empty timestamps and closes should return {}., Year where prev_close == 0 should be skipped (no ZeroDivisionError)., Price going down should produce negative returns., None closes should be ignored; year-end is last valid close., TestComputeYearlyReturns
 
-### Community 47 - "track_coverage"
-Cohesion: 0.08
-Nodes (21): _parse_iso_date(), ISO date string parsing., Feb 30 doesn't exist., Error message should include the field name., DCA schedule generation for all frequency types., Once frequency returns only start_date., Daily interval=1 from Jan 1 to Jan 5., Daily interval=2 skips every other day. (+13 more)
+### Community 47 - "patch"
+Cohesion: 0.14
+Nodes (5): patch, Return-detail chart data uses compounded period returns., Fixed global benchmark strip., TestFetchReturnDetail, TestMarketPulse
 
 ### Community 48 - "TestVixComparisonEndpoint"
 Cohesion: 0.17
@@ -375,8 +372,8 @@ Cohesion: 0.14
 Nodes (4): Date filtering and OHLCV period aggregation for JSON downloads., The detail response carries a human-readable asset name., TestDetailAssetName, TestFetchPriceHistory
 
 ### Community 50 - "route"
-Cohesion: 0.15
-Nodes (14): diag(), health(), route, qqqm_holdings_csv(), Download the dated top-10 QQQM snapshot displayed on the landing page., Generate a machine-readable TQQQ daily price export., Live reachability of upstream data sources + Redis. Read-only; results are…, Record a tracking event. Fire-and-forget — always returns 200. (+6 more)
+Cohesion: 0.17
+Nodes (13): diag(), health(), route, qqqm_holdings_csv(), Download the dated top-10 QQQM snapshot displayed on the landing page., Generate a machine-readable TQQQ daily price export., Live reachability of upstream data sources + Redis. Read-only; results are…, Record a tracking event. Fire-and-forget — always returns 200. (+5 more)
 
 ### Community 51 - "_read_etf_history_cache"
 Cohesion: 0.14
@@ -403,24 +400,28 @@ Cohesion: 0.18
 Nodes (12): _fetch_qdii_fund_info(), _fetch_qdii_period_increase(), _parse_fee_pct(), _parse_float(), _parse_qdii_limit(), Parse fee string like '0.60%' → 0.60. Returns None on failure., Parse East Money numeric fields, preserving None for blanks., Parse "单日投资上限100元" from East Money purchase status text. (+4 more)
 
 ### Community 57 - "price_change_service.py"
-Cohesion: 0.10
-Nodes (31): _build_stock_comparison_symbol(), _build_stock_history_tables(), _cache_ttl(), clear_price_change_cache(), _compute_yearly_dividends(), _compute_yearly_drawdowns(), _compute_yearly_runups(), _deserialize_series() (+23 more)
+Cohesion: 0.12
+Nodes (27): _build_stock_comparison_symbol(), _cache_ttl(), clear_price_change_cache(), _deserialize_series(), _fetch_one_yearly(), fetch_stock_comparison(), fetch_yearly_returns(), _get_cached_daily_series() (+19 more)
 
 ### Community 58 - "captcha.py"
 Cohesion: 0.24
 Nodes (11): generate(), _pop_answer(), _purge_expired(), Dependency-free SVG image CAPTCHA with one-time verification. Answers are…, Issue a new CAPTCHA. Returns (captcha_id, svg_string)., One-time, case-insensitive verification. Consumes the answer on any lookup so a…, Fetch and consume the stored answer (one-time use). Returns None if…, Render the code as a noisy, distorted SVG string. (+3 more)
 
+### Community 59 - "exchange-loss.js"
+Cohesion: 0.14
+Nodes (38): attachFxInteractions(), buildDetailRows(), calcDates(), clearData(), computeBase(), fetchFxData(), flingStep(), fmtMoney() (+30 more)
+
 ### Community 60 - "test_etf_market_qdii.py"
 Cohesion: 0.11
 Nodes (9): fixture, Tests for QDII fund tracker route and data mapping., reset_qdii_memory_cache(), _sample_holdings(), _sample_payload(), TestQdiiFundInfoMapping, TestQdiiFundsRoute, TestQdiiHoldingsParsing (+1 more)
 
-### Community 62 - "TestRunFearThresholdStats"
-Cohesion: 0.22
-Nodes (3): parametrize, VIX/VXN threshold-day forward return analysis., TestRunFearThresholdStats
+### Community 61 - ".test_cross_month_prev_close"
+Cohesion: 0.25
+Nodes (5): Daily returns within a specific month., Month not in data → empty list., Prev_close for March 1 should come from February's last trading day., None closes should not break prev_close chain., TestComputeDailyReturnsForMonth
 
-### Community 63 - "TestYahooQuoteBatch"
-Cohesion: 0.17
-Nodes (7): Unit tests for _yahoo_quote_batch — batch v7/quote fetching., Valid crumb + 200 response → parsed quote list., None crumb → empty list (no request made)., Non-200 status → empty list for that chunk., Symbol with regularMarketPrice=None is filtered out., Symbols beyond _YH_BATCH (50) are split across multiple requests., TestYahooQuoteBatch
+### Community 62 - "TestFetchMonthlyReturns"
+Cohesion: 0.25
+Nodes (5): Monthly return computation for a single symbol., Year present in data → 12 months with computed returns., Unknown asset type → 12 None entries., Series with fetch error → 12 None entries., TestFetchMonthlyReturns
 
 ### Community 64 - "_record_unique_visit"
 Cohesion: 0.25
@@ -434,17 +435,17 @@ Nodes (5): parametrize, POST /api/price-change/fundamentals-history, POST /api/p
 Cohesion: 0.22
 Nodes (7): parametrize, Frequency string normalization and validation., Valid inputs should normalize correctly; None/empty default to 'monthly'., Invalid frequency strings should raise ValueError., Safe integer conversion with fallback default., TestNormalizeFrequency, TestSafeInt
 
-### Community 68 - ".test_normal_month"
-Cohesion: 0.20
-Nodes (6): Daily returns within a specific month., A full month of trading days with rising prices., Month not in data → empty list., Prev_close for March 1 should come from February's last trading day., None closes should not break prev_close chain., TestComputeDailyReturnsForMonth
+### Community 68 - "TestComputeMonthlyReturns"
+Cohesion: 0.14
+Nodes (8): Month-over-month returns for a specific year., All 12 months with data should produce 12 entries with computed returns., Months without data should have return=None., January's prev_close comes from December of previous year., All closes are None → all 12 months return None., When prev_close is 0, month return is None (div-by-zero guard)., Requesting a year with no data → all months return None., TestComputeMonthlyReturns
 
 ### Community 69 - "TestMonthlyEndpoint"
 Cohesion: 0.20
 Nodes (5): POST /api/price-change/monthly, Valid request → 200 with monthly data., Missing symbol → 400., Non-integer year → 400., TestMonthlyEndpoint
 
-### Community 70 - "TestFetchYearlyReturns"
-Cohesion: 0.10
-Nodes (10): Multi-symbol yearly return fetching., Single stock with valid data returns yearly returns., Multiple symbols fetched concurrently., Unknown asset type returns error meta., Empty list returns empty data., Duplicate (symbol, type) pairs should be fetched once., Symbol with empty string should be skipped., Entry without 'symbol' key should be skipped gracefully. (+2 more)
+### Community 70 - "config.py"
+Cohesion: 0.13
+Nodes (21): config(), Return presets and other config for the frontend., coingecko_base_url(), coingecko_ids(), crypto_config(), get_color_range(), get_color_scheme(), get_presets() (+13 more)
 
 ### Community 71 - "Monthly Return Breakdown Feature"
 Cohesion: 0.29
@@ -454,6 +455,14 @@ Nodes (10): Annual Return Aggregation Column, Green Positive / Red Negative Colo
 Cohesion: 0.33
 Nodes (10): escapeHtml(), fetchData(), fetchMonthlyBatch(), getSelectedYear(), hideYearlySections(), renderMetaInfo(), setConnected(), setLoading() (+2 more)
 
+### Community 73 - "TestYahooQuoteBatch"
+Cohesion: 0.17
+Nodes (7): Unit tests for _yahoo_quote_batch — batch v7/quote fetching., Valid crumb + 200 response → parsed quote list., None crumb → empty list (no request made)., Non-200 status → empty list for that chunk., Symbol with regularMarketPrice=None is filtered out., Symbols beyond _YH_BATCH (50) are split across multiple requests., TestYahooQuoteBatch
+
+### Community 74 - "TestExchangeLossEndpoint"
+Cohesion: 0.13
+Nodes (11): _fx_series(), Build a fake PriceSeries-like object with daily closes from base_date., POST /api/price-change/exchange-loss, Default held=USD, target=CNY → cross OHLC equals the CNY=X close (1 /…, USD→EUR is 1 / EURUSD close (direct quote)., CNY→EUR = (1 / CNY=X) / EURUSD=X on shared dates., Cross high = held high / target low; cross low = held low / target high., held == target → fetch once and all rates are 1. (+3 more)
+
 ### Community 76 - "header-trend.js"
 Cohesion: 0.47
 Nodes (8): buildTrendSvg(), fetchAndRender(), init(), readCache(), render(), scheduleInit(), todayKey(), writeCache()
@@ -462,13 +471,13 @@ Nodes (8): buildTrendSvg(), fetchAndRender(), init(), readCache(), render(), sch
 Cohesion: 0.22
 Nodes (8): hkg1, maxDuration, memory, functions, api/index.py, outputDirectory, regions, rewrites
 
-### Community 78 - "patch"
-Cohesion: 0.14
-Nodes (5): patch, Return-detail chart data uses compounded period returns., Fixed global benchmark strip., TestFetchReturnDetail, TestMarketPulse
+### Community 78 - "_fetch_all_qdii_fund_groups"
+Cohesion: 0.22
+Nodes (9): _build_qdii_summary(), _discover_active_qdii_codes(), _fetch_all_qdii_fund_groups(), _is_active_qdii_candidate(), Fetch all configured QDII fund groups from East Money., Best-effort filter for RMB QDII active funds from East Money code list., Discover RMB active QDII fund codes from East Money's public code list., Put buyable/larger-limit/cheaper rows first for the guide table. (+1 more)
 
-### Community 79 - "_fetch_daily_series_cn_stock_eastmoney"
-Cohesion: 0.29
-Nodes (8): _cn_secid(), _cn_stock_secid(), _fetch_daily_series_cn_stock_eastmoney(), _parse_east_money_klines(), Map A-share code to East Money secid format., Map individual A-share stock code to East Money secid format. Individual stock…, Parse East Money kline strings into (timestamps, closes, opens, highs, lows,…, Fetch daily OHLCV data for A-share indices and stocks via East Money.
+### Community 79 - "_cn_secid"
+Cohesion: 0.50
+Nodes (4): _cn_secid(), _cn_stock_secid(), Map A-share code to East Money secid format., Map individual A-share stock code to East Money secid format. Individual stock…
 
 ### Community 80 - "TestYearlyEndpoint"
 Cohesion: 0.33
@@ -483,16 +492,12 @@ Cohesion: 0.33
 Nodes (7): _eastmoney_detail_quote(), _enrich_detail_fundamentals_from_series(), _fetch_detail_fundamentals(), _finite_quote_number(), Fill resilient market-snapshot fields from the existing daily series., Fetch and cache a best-effort valuation snapshot for one US symbol., Return a normalized US quote snapshot from East Money as a fallback.
 
 ### Community 83 - "search_asset_symbols"
-Cohesion: 0.12
-Nodes (16): Search supported assets by symbol or company name., symbol_search(), _east_money_symbol_search(), _em_market_cap(), _get_market_caps(), Return a cached Yahoo crumb, priming cookies + crumb hourly., Search Chinese, Hong Kong, and US listings by code or company name., Best-effort Yahoo search for global listings and crypto assets. (+8 more)
-
-### Community 84 - "TestFetchMonthlyReturns"
-Cohesion: 0.33
-Nodes (4): Monthly return computation for a single symbol., Unknown asset type → 12 None entries., Series with fetch error → 12 None entries., TestFetchMonthlyReturns
+Cohesion: 0.14
+Nodes (14): _east_money_symbol_search(), _em_market_cap(), _get_market_caps(), Return a cached Yahoo crumb, priming cookies + crumb hourly., Search Chinese, Hong Kong, and US listings by code or company name., Best-effort Yahoo search for global listings and crypto assets., Return symbol suggestions suitable for the site's asset input controls., Batched Yahoo v7/quote market-cap lookup. Returns {symbol: cap}. (+6 more)
 
 ### Community 85 - "TestFetchDailyReturns"
-Cohesion: 0.33
-Nodes (4): Daily return computation for a specific month., Unknown type → empty list., Error series → empty list., TestFetchDailyReturns
+Cohesion: 0.25
+Nodes (5): Daily return computation for a specific month., Month with data → list of daily return dicts., Unknown type → empty list., Error series → empty list., TestFetchDailyReturns
 
 ### Community 86 - "stats_dashboard"
 Cohesion: 0.15
@@ -502,17 +507,17 @@ Nodes (13): _check_admin_token(), link_click(), link_clicks(), Record a click on
 Cohesion: 0.33
 Nodes (8): configUrl(), getSeenVersion(), openDialog(), releaseItems(), rememberVersion(), renderNotice(), showFeatureUpdates(), validReleases()
 
-### Community 88 - "common.py"
-Cohesion: 0.29
-Nodes (4): Shared models and low-level HTTP helpers for price change services., Small thread-safe session wrapper for concurrent market-data fetches., ThreadLocalSession, Session
+### Community 88 - "ThreadLocalSession"
+Cohesion: 0.40
+Nodes (3): Small thread-safe session wrapper for concurrent market-data fetches., ThreadLocalSession, Session
 
 ### Community 89 - "test_symbol_persistence.py"
 Cohesion: 0.36
 Nodes (9): Regression checks for remembered selections and reusable symbol search., _source(), test_backtest_remembers_symbol_and_asset_type(), test_crash_stats_remembers_symbol_and_asset_type(), test_data_download_remembers_all_user_selected_parameters_immediately(), test_data_download_supports_hk_and_global_stocks(), test_heatmap_uses_market_types_without_symbol_or_top_n_controls(), test_hk_and_global_stocks_are_available_across_analysis_modules() (+1 more)
 
-### Community 90 - "_fetch_daily_series_cn_stock"
-Cohesion: 0.20
-Nodes (10): _cn_tencent_symbol(), _fetch_cn_stock(), _fetch_daily_closes_cn_stock(), _fetch_daily_series_cn_stock(), _fetch_daily_series_cn_stock_tencent(), Map A-share code to Tencent Finance symbol format. SSE (Shanghai): sh prefix —…, Fetch yearly returns for A-share indices., Fetch daily OHLCV data for A-share indices via Tencent Finance API. Paginates… (+2 more)
+### Community 90 - "TestGetCrashChartData"
+Cohesion: 0.25
+Nodes (5): Crash chart window data retrieval., Valid pre_crash_date returns a window of prices., Date not in data → ValueError., trading_days out of range → ValueError., TestGetCrashChartData
 
 ### Community 91 - "Multi-Asset Yearly Total Returns (% per calendar year)"
 Cohesion: 0.48
@@ -530,13 +535,13 @@ Nodes (7): Global Asset Yearly Returns Data, Native SVG Treemap Rendering, Yearl
 Cohesion: 0.57
 Nodes (6): Screenshot of investment channels comparison knowledge article — comparing BIT, Binance, and Bitget platforms for US stock investing via crypto accounts, capture_backtest(), capture_monthly(), capture_yearly(), main(), wait_for_idle()
 
-### Community 95 - "serve_frontend_asset"
-Cohesion: 0.33
-Nodes (6): _frontend_asset_version(), frontend_files(), lang_frontend(), Return a content fingerprint that changes for uncommitted frontend edits. The…, Serve local frontend assets with cache rules matching their version URL., serve_frontend_asset()
+### Community 95 - "TestFetchHeatmapToday"
+Cohesion: 0.25
+Nodes (5): Integration tests: fetch_heatmap_data with period='today'., period='today' routes through _build_heatmap_today., When fast path returns None, fall through to per-symbol OHLCV., period='month' should NOT use the today fast path., TestFetchHeatmapToday
 
-### Community 96 - "TestRunDcaBacktest"
-Cohesion: 0.11
-Nodes (9): DCA backtest execution., Full monthly DCA backtest with upward-trending prices., Once frequency → single trade., Empty symbol → ValueError., Both amount and initial_amount = 0 → ValueError., end_date < start_date → ValueError., Series with error → ValueError., Weekly DCA should produce weekly execution points. (+1 more)
+### Community 96 - "binance_base_url"
+Cohesion: 0.33
+Nodes (7): binance_base_url(), _probe_binance(), _binance_pair(), _fetch_crypto_binance(), _fetch_daily_series_crypto_binance(), Fetch yearly returns via Binance public klines API., Fetch daily close data for crypto via Binance.
 
 ### Community 97 - "qdii_fund_holdings"
 Cohesion: 0.25
@@ -586,9 +591,9 @@ Nodes (7): _escape(), _load(), _render(), _resolveName(), _same(), _save(), _ups
 Cohesion: 0.67
 Nodes (3): main(), Scrape management fee and custody fee for a single ETF. Returns: dict with keys…, scrape_fund_profile()
 
-### Community 112 - "run_dca_backtest"
+### Community 112 - "TestFetcherRegistration"
 Cohesion: 0.33
-Nodes (6): backtest(), Run DCA backtest using daily prices., _asset_currency(), Run a single-symbol DCA backtest using daily price data., Return the native quote currency for a supported asset symbol., run_dca_backtest()
+Nodes (4): Custom fetcher registration., Register a custom fetcher and verify it's used., Register a daily series fetcher and verify., TestFetcherRegistration
 
 ### Community 114 - "Yearly Heatmap Visualization — SVG-based color-coded grid displaying annual percentage returns for multiple global asset classes (equities, bonds, commodities, crypto) across multiple years, with color intensity proportional to return magnitude"
 Cohesion: 0.67
@@ -602,28 +607,28 @@ Nodes (3): Bar Chart: Green positive years, Red negative years, Yearly Performan
 Cohesion: 0.53
 Nodes (5): Static integration checks for the lazy QDII holdings table UI., _source(), test_qdii_holdings_are_lazy_loaded_and_render_fund_positions(), test_qdii_holdings_copy_exists_in_both_locales(), test_qdii_table_exposes_region_column_and_23_column_detail_row()
 
-### Community 131 - "TestGetCrashChartData"
-Cohesion: 0.25
-Nodes (5): Crash chart window data retrieval., Valid pre_crash_date returns a window of prices., Date not in data → ValueError., trading_days out of range → ValueError., TestGetCrashChartData
+### Community 124 - "add_seo_headers"
+Cohesion: 0.29
+Nodes (7): after_request, add_seo_headers(), mark_request_start(), Return a stable path label without query strings or private wish IDs., _request_log_path(), _should_log_request(), before_request
 
-### Community 133 - "TestFetcherRegistration"
-Cohesion: 0.33
-Nodes (4): Custom fetcher registration., Register a custom fetcher and verify it's used., Register a daily series fetcher and verify., TestFetcherRegistration
+### Community 132 - "TestRunFearThresholdStats"
+Cohesion: 0.22
+Nodes (3): parametrize, VIX/VXN threshold-day forward return analysis., TestRunFearThresholdStats
 
 ## Knowledge Gaps
 - **117 isolated node(s):** `_btCashflows`, `_btEquityByDate`, `LINE_COLORS`, `_chartHidden`, `hmFilterToggle` (+112 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **20 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **15 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `PriceSeries` connect `PriceSeries` to `_to_timestamp`, `TestGetCrashChartData`, `price_change.py`, `TestFetcherRegistration`, `TestFetchMonthlyReturnsBatch`, `computation/conftest.py`, `fetchers.py`, `TestFetchHeatmapToday`, `date`, `fetch_return_detail`, `TestHtmlMeta`, `TestBuildHeatmapToday`, `diagnose`, `TestFetchStockComparison`, `config.py`, `empty_series`, `TestRunCrashStats`, `._series`, `price_change_service.py`, `TestDetailFundamentals`, `TestRunFearThresholdStats`, `TestYahooQuoteBatch`, `TestFetchYearlyReturns`, `patch`, `_fetch_daily_series_cn_stock_eastmoney`, `_enrich_detail_fundamentals_from_series`, `TestFetchMonthlyReturns`, `TestFetchDailyReturns`, `common.py`, `_fetch_daily_series_cn_stock`, `TestRunDcaBacktest`?**
-  _High betweenness centrality (0.156) - this node is a cross-community bridge._
-- **Why does `_fetch_daily_series_cached()` connect `price_change.py` to `empty_series`, `etf_market.py`, `run_dca_backtest`, `route`, `app.py`, `price_change_service.py`, `PriceSeries`, `fetch_return_detail`?**
-  _High betweenness centrality (0.130) - this node is a cross-community bridge._
-- **Why does `track_coverage()` connect `track_coverage` to `_to_timestamp`, `TestGetCrashChartData`, `TestFearThresholdStatsEndpoint`, `TestFetcherRegistration`, `test_calculations.py`, `TestFetchMonthlyReturnsBatch`, `date`, `TestFetchHeatmapToday`, `patch`, `PriceSeries`, `TestBuildHeatmapToday`, `diagnose`, `TestFetchStockComparison`, `TestHeaderTrendEndpoint`, `test_price_change.py`, `TestDailyEndpoint`, `TestRunCrashStats`, `TestComputeYearlyReturns`, `TestVixComparisonEndpoint`, `TestRunFearThresholdStats`, `TestYahooQuoteBatch`, `TestFundamentalsHistoryEndpoint`, `.test_valid_frequencies`, `TestReturnDetailEndpoint`, `.test_normal_month`, `TestMonthlyEndpoint`, `TestFetchYearlyReturns`, `TestYearlyEndpoint`, `TestBacktestEndpoint`, `TestFetchMonthlyReturns`, `TestFetchDailyReturns`, `TestRunDcaBacktest`, `TestMonthlyBatchEndpoint`?**
-  _High betweenness centrality (0.114) - this node is a cross-community bridge._
+- **Why does `PriceSeries` connect `PriceSeries` to `_to_timestamp`, `TestDetailFundamentals`, `TestRunFearThresholdStats`, `computation/conftest.py`, `fetchers.py`, `TestBuildHeatmapToday`, `date`, `TestFetchStockComparison`, `fetch_return_detail`, `TestHtmlMeta`, `TestCache`, `track_coverage`, `normalize_asset_symbol`, `TestRunCrashStats`, `patch`, `._series`, `price_change_service.py`, `TestFetchMonthlyReturns`, `TestYahooQuoteBatch`, `_enrich_detail_fundamentals_from_series`, `TestFetchDailyReturns`, `TestGetCrashChartData`, `TestFetchHeatmapToday`, `binance_base_url`, `TestFetcherRegistration`?**
+  _High betweenness centrality (0.151) - this node is a cross-community bridge._
+- **Why does `_fetch_daily_series_cached()` connect `normalize_asset_symbol` to `price_change.py`, `PriceSeries`, `etf_market.py`, `route`, `app.py`, `price_change_service.py`, `fetch_return_detail`?**
+  _High betweenness centrality (0.127) - this node is a cross-community bridge._
+- **Why does `track_coverage()` connect `track_coverage` to `_to_timestamp`, `TestRunFearThresholdStats`, `date`, `TestBuildEquityCurve`, `TestBuildHeatmapToday`, `patch`, `TestCache`, `TestHeaderTrendEndpoint`, `test_price_change.py`, `TestDailyEndpoint`, `TestRunCrashStats`, `TestComputeYearlyReturns`, `TestVixComparisonEndpoint`, `.test_cross_month_prev_close`, `TestFetchMonthlyReturns`, `TestFundamentalsHistoryEndpoint`, `.test_valid_frequencies`, `TestReturnDetailEndpoint`, `TestComputeMonthlyReturns`, `TestMonthlyEndpoint`, `config.py`, `TestYahooQuoteBatch`, `TestExchangeLossEndpoint`, `TestYearlyEndpoint`, `TestBacktestEndpoint`, `TestFetchDailyReturns`, `TestGetCrashChartData`, `TestFetchHeatmapToday`, `TestMonthlyBatchEndpoint`, `TestFetcherRegistration`?**
+  _High betweenness centrality (0.121) - this node is a cross-community bridge._
 - **Are the 25 inferred relationships involving `PriceSeries` (e.g. with `TestHistoricalCsv` and `TestHtmlMeta`) actually correct?**
   _`PriceSeries` has 25 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `_btCashflows`, `_btEquityByDate`, `LINE_COLORS` to the rest of the system?**
