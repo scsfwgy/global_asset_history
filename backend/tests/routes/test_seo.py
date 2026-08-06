@@ -362,6 +362,31 @@ class TestHtmlMeta:
         assert "USDT" not in script
         assert "/api/price-change/exchange-loss" in api_script
 
+        # FX Calculator sub-view: sub-tabs, container, script + API constant.
+        calc_script = client.get("/js/fx-calculator.js").get_data(as_text=True)
+        assert 'id="fxSubTabs"' in html
+        assert 'data-fx-sub="loss"' in html
+        assert 'data-fx-sub="calc"' in html
+        assert 'id="fxLossView"' in html
+        assert 'id="fxCalcView"' in html
+        assert '/js/fx-calculator.js' in html
+        assert "selectFxSubView" in calc_script
+        assert "renderResults" in calc_script
+        assert "EXCHANGE_RATES_ENDPOINT" in calc_script
+        assert "/api/price-change/exchange-rates" in api_script
+
+        # Calculator + renamed holding P&L copy exist in both locales.
+        fx_zh = client.get("/locales/zh-CN.json").get_json()["fxCalc"]
+        fx_en = client.get("/locales/en.json").get_json()["fxCalc"]
+        for key in ("tabLoss", "tabCalc", "amount", "baseCurrency", "comparison",
+                    "copy", "addCurrency", "searchCurrency", "historyLabel"):
+            assert key in fx_zh, f"zh fxCalc.{key}"
+            assert key in fx_en, f"en fxCalc.{key}"
+        zh_loss = client.get("/locales/zh-CN.json").get_json()["exchangeLoss"]["gainLoss"]
+        en_loss = client.get("/locales/en.json").get_json()["exchangeLoss"]["gainLoss"]
+        assert zh_loss == "持有盈亏（目标货币）"
+        assert en_loss == "Holding P&L (target currency)"
+
     def test_stock_compare_has_search_tags_and_metric_tables(self, client):
         html = client.get("/zh/stock-compare").get_data(as_text=True)
         assert "年度综合收益（税后）" in html

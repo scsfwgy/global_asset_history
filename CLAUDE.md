@@ -101,7 +101,7 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 - 部署：Vercel 静态资源 + Python Serverless Function
 - 国际化：`frontend/locales/zh-CN.json` 和 `en.json`
 
-主要功能包括多市场热力图、历史收益钻取、单标的详情和基本面历史、美股对比、多周期数据下载、投资回测、暴跌统计、VIX/VXN 对比与阈值研究、A 股场内 ETF、QDII 基金及持仓地区配置、知识文章、心愿墙和站点统计。
+主要功能包括多市场热力图、历史收益钻取、单标的详情和基本面历史、美股对比、多周期数据下载、投资回测、暴跌统计、VIX/VXN 对比与阈值研究、汇率损失与汇率计算器、A 股场内 ETF、QDII 基金及持仓地区配置、知识文章、心愿墙和站点统计。
 
 统一资产类型为：
 
@@ -143,7 +143,7 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 ### Flask 模块
 
 - `backend/app.py`：应用入口、前端响应、SEO、健康检查、诊断、访问和点击统计
-- `price_change_bp` (`/api/price-change`)：标的搜索、收益、详情、基本面历史、美股对比、数据下载、回测、暴跌、热力图、VIX/VXN
+- `price_change_bp` (`/api/price-change`)：标的搜索、收益、详情、基本面历史、美股对比、数据下载、回测、暴跌、热力图、VIX/VXN、汇率（`exchange-loss` / `exchange-rates`）
 - `etf_market_bp` (`/api/etf-market`)：ETF 报价和估值、ETF 历史、QDII 基金、QDII 定期报告持仓
 - `wishes_bp` (`/api/wishes`)：验证码、心愿提交和管理
 - `api/index.py`：Vercel 导入并暴露 Flask `app`
@@ -159,7 +159,7 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 - `price-change.js` / `drilldown.js` / `charts.js`：历年收益、月日钻取和共享图表
 - `price-detail.js`：单标的收益、质量、估值、基本面历史、收益日历和年度分红数据
 - `stock-compare.js` / `data-download.js` / `backtest.js` / `crash-stats.js`：独立研究工具
-- `heatmap.js` / `etf-market.js` / `qdii-funds.js` / `vix-chart.js`：市场分析工具
+- `heatmap.js` / `etf-market.js` / `qdii-funds.js` / `vix-chart.js` / `exchange-loss.js` / `fx-calculator.js`：市场分析与汇率工具
 - `wishes.js` / `visitor-stats.js` / `header-trend.js`：互动、统计和页头装饰
 
 全部脚本都是 classic script，并通过加载顺序共享全局常量、函数和状态。新增脚本时必须检查 `price-change.html` 底部的加载顺序。
@@ -180,6 +180,7 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 | 场内 ETF | `/etf` | `etf-market.js` | `/api/etf-market/quote`、`valuation`、`history` |
 | 场外 QDII | `/qdii-funds` | `qdii-funds.js` | `/api/etf-market/qdii-funds`、`qdii-funds/<code>/holdings` |
 | VIX/VXN | `/vix` | `vix-chart.js` | `vix-comparison`、`fear-threshold-stats` |
+| 汇率损失 | `/exchange-loss` | `exchange-loss.js`、`fx-calculator.js` | `exchange-loss`、`exchange-rates` |
 | 数据科普 | `/knowledge/...`、`/us-etf/...` | `price-change.html` 内嵌文章和路由映射 | 专题 CSV 接口（部分文章） |
 | 心愿墙 | `/wishes` | `wishes.js` | `/api/wishes` |
 
@@ -249,6 +250,7 @@ SEO 分享图片必须实际存在于 `frontend/doc/screenshot/`，因为 Vercel
 - 港股优先使用 Yahoo/East Money；进入统一日线层前必须使用 `normalize_asset_symbol()` 规范化代码。
 - 全球股票使用 Yahoo 交易所后缀代码，例如 `7203.T`、`005930.KS`、`2330.TW`；不要把它们按美股代码截断。
 - 数字货币按 Binance → OKX → CoinGecko 回退。
+- 汇率计算器参考汇率使用 Frankfurter（欧洲央行，EUR 基准，160+ 币种）；汇率损失页历史走势仍用 Yahoo FX。
 - A 股指数、场内 ETF、净值和 QDII 使用 East Money/Tencent 等接口。
 - QDII 地区配置来自最新定期报告；直接股票/存托凭证、基金/ETF 仓位必须分开呈现，不能在未穿透时把基金仓位直接归入某个地区。
 - 单个上游失败不应拖垮批量请求；网络 IO 可使用 `ThreadPoolExecutor` 并发。

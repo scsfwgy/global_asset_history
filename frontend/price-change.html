@@ -4223,6 +4223,11 @@
         <!-- 汇率损失 -->
         <div class="tab-panel" id="tab-exchange-loss">
         <div class="pc-monthly">
+            <div class="transfer-tabs fx-sub-tabs" id="fxSubTabs" role="tablist">
+                <button class="transfer-tab active" data-fx-sub="loss" role="tab" aria-selected="true" data-i18n="fxCalc.tabLoss">汇率损失</button>
+                <button class="transfer-tab" data-fx-sub="calc" role="tab" aria-selected="false" data-i18n="fxCalc.tabCalc">汇率计算器</button>
+            </div>
+            <div id="fxLossView" role="tabpanel">
             <div class="pc-monthly-header">
                 <span class="pc-chart-title" id="fxChartTitle" data-i18n="exchangeLoss.chartTitle">💱 USD/CNY 历史汇率</span>
                 <span class="fx-chart-range" id="fxChartRange"></span>
@@ -4336,6 +4341,8 @@
                     </div>
                 </div>
             </div>
+            </div><!-- /fxLossView -->
+            <div id="fxCalcView" role="tabpanel" style="display:none;"></div>
         </div>
         </div><!-- /tab-exchange-loss -->
 
@@ -6861,6 +6868,7 @@
     <script src="/js/qdii-funds.js"></script>
     <script src="/js/vix-chart.js"></script>
     <script src="/js/exchange-loss.js"></script>
+    <script src="/js/fx-calculator.js"></script>
     <script src="/js/header-trend.js"></script>
     <script src="/js/wishes.js"></script>
     <script src="/js/heatmap.js"></script>

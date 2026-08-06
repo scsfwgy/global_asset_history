@@ -20,7 +20,7 @@ GlobalAssetHistory 是一个跨资产历史收益查询、市场分析与投资�
 | 场内 ETF 追踪 | `/etf` | A 股场内 ETF 实时报价、费率、溢价成本、跟踪误差、估值误差、单只历史图和多 ETF 聚合分析 |
 | 场外 QDII 追踪 | `/qdii-funds` | 纳指100、标普500和主动 QDII；申购状态、限额、费率、多周期收益、基金经理及最新报告持仓地区配置 |
 | VIX/VXN 分析 | `/vix` | SPY/QQQ/VIX/VXN 多周期走势、情绪分位和相关性，以及恐慌指数达到阈值后的远期收益统计 |
-| 汇率损失 | `/exchange-loss` | 多法币历史交叉汇率走势，以及跨币种持有亏损计算（持有货币与金额按起止汇率折算到目标货币的损益） |
+| 汇率损失 | `/exchange-loss` | 多法币历史交叉汇率走势、跨币种持有盈亏计算，以及汇率计算器子工具（任意币对多目标折算、正反向汇率、搜索选择器与历史记录） |
 | 数据科普 | `/knowledge` | 价值投资、美股购买、核心 ETF、纳指 ETF、市场数据研究、金融术语及专题 ETF 文章 |
 | 心愿墙 | `/wishes` | SVG 验证码、匿名心愿、频率限制，以及管理员回复和删除 |
 
@@ -212,6 +212,7 @@ Redis 两套变量会自动识别，优先使用 `UPSTASH_*`。
 | POST | `/vix-comparison` | SPY、QQQ、VIX 和 VXN 多周期对比 |
 | POST | `/fear-threshold-stats` | VIX/VXN 达到阈值后的 SPY/QQQ 远期收益统计 |
 | POST | `/exchange-loss` | 指定持有/目标货币对的历史交叉汇率（以 USD 为枢纽计算） |
+| GET | `/exchange-rates` | Frankfurter（欧洲央行）参考汇率，EUR 基准 160+ 币种（供汇率计算器折算任意币对） |
 | GET | `/header-trend` | 页头市场趋势 |
 
 ### ETF 市场 `/api/etf-market`

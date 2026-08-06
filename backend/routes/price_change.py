@@ -1077,6 +1077,123 @@ def exchange_loss():
     return jsonify(result)
 
 
+# Reference exchange rates for the FX calculator — Frankfurter (ECB) EUR basis.
+# 30+ fiat currencies with names/symbols; one snapshot cached in process for a
+# day, degraded to a stale snapshot for a week if the upstream blips. The
+# calculator derives any pair as amount * rates[target] / rates[base].
+_FX_RATES_STATE = {"payload": None, "fetched_at": 0.0}
+_FX_RATES_LOCK = _threading.Lock()
+_FX_RATES_TTL = 24 * 3600
+_FX_RATES_STALE_TTL = 7 * 24 * 3600
+_FX_RATES_REQUIRED = ("EUR", "CNY", "USD", "JPY", "KRW", "HKD")
+_FX_RATES_URL = "https://api.frankfurter.dev/v2/rates"
+_FX_CURRENCIES_URL = "https://api.frankfurter.dev/v2/currencies"
+
+
+def _valid_fx_payload(payload):
+    if (
+        not isinstance(payload, dict)
+        or not isinstance(payload.get("rates"), dict)
+        or not isinstance(payload.get("currencies"), list)
+    ):
+        return False
+    rates = payload["rates"]
+    codes = {item.get("code") for item in payload["currencies"] if isinstance(item, dict)}
+    return (
+        len(rates) >= 20
+        and len(codes) >= 20
+        and all(isinstance(rates.get(code), (int, float)) and rates[code] > 0 for code in _FX_RATES_REQUIRED)
+        and all(code in codes for code in _FX_RATES_REQUIRED)
+    )
+
+
+def _fetch_fx_remote():
+    import requests
+
+    rates_resp = requests.get(_FX_RATES_URL, params={"base": "EUR"}, timeout=10)
+    rates_resp.raise_for_status()
+    rows = rates_resp.json()
+    if not isinstance(rows, list):
+        raise ValueError("Unexpected Frankfurter rates response")
+
+    currency_resp = requests.get(_FX_CURRENCIES_URL, timeout=10)
+    currency_resp.raise_for_status()
+    currency_rows = currency_resp.json()
+    if not isinstance(currency_rows, list):
+        raise ValueError("Unexpected Frankfurter currency response")
+
+    rates = {"EUR": 1.0}
+    dates = set()
+    for row in rows:
+        if not isinstance(row, dict) or row.get("base") != "EUR":
+            continue
+        quote, rate = row.get("quote"), row.get("rate")
+        if isinstance(quote, str) and len(quote) == 3 and isinstance(rate, (int, float)) and rate > 0:
+            rates[quote] = float(rate)
+            if row.get("date"):
+                dates.add(row["date"])
+
+    currencies = []
+    for item in currency_rows:
+        if not isinstance(item, dict):
+            continue
+        code = item.get("iso_code")
+        if code not in rates:
+            continue
+        currencies.append({
+            "code": code,
+            "name": str(item.get("name") or code),
+            "symbol": str(item.get("symbol") or code),
+        })
+    currencies.sort(key=lambda item: item["code"])
+
+    payload = {
+        "date": max(dates) if dates else "",
+        "base": "EUR",
+        "rates": rates,
+        "currencies": currencies,
+        "fetched_at": int(time.time()),
+    }
+    if not _valid_fx_payload(payload):
+        raise ValueError("Frankfurter response is incomplete")
+    return payload
+
+
+def _fx_rates_response(payload, stale=False):
+    return jsonify({
+        "base": payload["base"],
+        "date": payload.get("date", ""),
+        "rates": payload["rates"],
+        "currencies": payload["currencies"],
+        "stale": stale,
+    })
+
+
+@price_change_bp.route("/exchange-rates", methods=["GET"])
+def exchange_rates():
+    """Return Frankfurter (ECB) reference rates for the FX calculator.
+
+    Base is EUR: rates[code] means "1 EUR = <rate> code". Any held->target pair
+    is amount * rates[target] / rates[base]. One snapshot is cached in process
+    for 24h; a stale snapshot degrades gracefully for 7 days on upstream failure.
+    """
+    now = time.time()
+    with _FX_RATES_LOCK:
+        state = _FX_RATES_STATE
+        if state["payload"] and now - state["fetched_at"] <= _FX_RATES_TTL:
+            return _fx_rates_response(state["payload"])
+        try:
+            payload = _fetch_fx_remote()
+        except Exception as exc:
+            logger.warning("event=exchange_rates_remote_failed error_type=%s", type(exc).__name__)
+            if state["payload"] and now - state["fetched_at"] <= _FX_RATES_STALE_TTL:
+                return _fx_rates_response(state["payload"], stale=True)
+            return jsonify({"error": "exchange rates unavailable"}), 502
+        state["payload"] = payload
+        state["fetched_at"] = now
+        return _fx_rates_response(payload)
+
+
 @price_change_bp.route("/fear-threshold-stats", methods=["POST"])
 def fear_threshold_stats():
     """Return SPY/QQQ forward returns after VIX/VXN threshold days."""

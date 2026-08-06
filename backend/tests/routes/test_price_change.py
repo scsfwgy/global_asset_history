@@ -1201,6 +1201,69 @@ class TestExchangeLossEndpoint:
         track_coverage(MOD, 1)
 
 
+def _fx_payload():
+    """A valid Frankfurter-style EUR-basis payload for exchange-rates tests."""
+    codes = ["EUR", "CNY", "USD", "JPY", "KRW", "HKD", "GBP", "AUD", "CAD", "SGD",
+             "CHF", "TWD", "THB", "INR", "SEK", "NOK", "NZD", "MXN", "ZAR", "TRY"]
+    rates, currencies = {"EUR": 1.0}, []
+    for i, code in enumerate(codes):
+        if code != "EUR":
+            rates[code] = 0.9 + i * 0.05
+        currencies.append({"code": code, "name": code + " name", "symbol": code[:1]})
+    return {"date": "2026-08-06", "base": "EUR", "rates": rates, "currencies": currencies, "fetched_at": 0}
+
+
+class TestExchangeRatesEndpoint:
+    """GET /api/price-change/exchange-rates (Frankfurter EUR basis)"""
+
+    @patch("routes.price_change._fetch_fx_remote")
+    def test_returns_eur_basis_rates(self, mock_fetch, client):
+        """Rates are EUR-basis with names/symbols; fresh snapshot, not stale."""
+        from routes import price_change
+
+        price_change._FX_RATES_STATE["payload"] = None
+        price_change._FX_RATES_STATE["fetched_at"] = 0.0
+        mock_fetch.return_value = _fx_payload()
+        resp = client.get(f"{BASE}/exchange-rates")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["base"] == "EUR"
+        assert data["rates"]["EUR"] == 1.0
+        assert data["rates"]["CNY"] > 0
+        assert data["date"] == "2026-08-06"
+        assert data["stale"] is False
+        assert len(data["currencies"]) >= 20
+        assert data["currencies"][0]["code"] and data["currencies"][0].get("symbol")
+        track_coverage(MOD, 1)
+
+    @patch("routes.price_change._fetch_fx_remote")
+    def test_stale_degradation_on_upstream_failure(self, mock_fetch, client):
+        """Stale snapshot is served (stale=True) when the upstream is down."""
+        from routes import price_change
+
+        price_change._FX_RATES_STATE["payload"] = _fx_payload()
+        price_change._FX_RATES_STATE["fetched_at"] = time.time() - 48 * 3600  # past 24h TTL, within stale TTL
+        mock_fetch.side_effect = RuntimeError("upstream down")
+        resp = client.get(f"{BASE}/exchange-rates")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["stale"] is True
+        assert data["rates"]["EUR"] == 1.0
+        track_coverage(MOD, 1)
+
+    @patch("routes.price_change._fetch_fx_remote")
+    def test_fetch_failure_without_cache_returns_502(self, mock_fetch, client):
+        """No snapshot and upstream down → 502."""
+        from routes import price_change
+
+        price_change._FX_RATES_STATE["payload"] = None
+        price_change._FX_RATES_STATE["fetched_at"] = 0.0
+        mock_fetch.side_effect = RuntimeError("upstream down")
+        resp = client.get(f"{BASE}/exchange-rates")
+        assert resp.status_code == 502
+        track_coverage(MOD, 1)
+
+
 class TestHeaderTrendEndpoint:
     """GET /api/price-change/header-trend"""
 
