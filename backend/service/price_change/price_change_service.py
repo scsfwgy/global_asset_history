@@ -194,11 +194,12 @@ def _normalize_symbol_entry(entry: Dict[str, str]) -> Tuple[str, str]:
     return symbol, asset_type
 
 
-def _fetch_daily_series_cached(symbol: str, asset_type: str) -> PriceSeries:
+def _fetch_daily_series_cached(symbol: str, asset_type: str, force_refresh: bool = False) -> PriceSeries:
     symbol = normalize_asset_symbol(symbol, asset_type)
-    cached = _get_cached_daily_series(symbol, asset_type)
-    if cached is not None:
-        return cached
+    if not force_refresh:
+        cached = _get_cached_daily_series(symbol, asset_type)
+        if cached is not None:
+            return cached
 
     fetcher = _DAILY_SERIES_FETCHERS.get(asset_type)
     if fetcher is None:

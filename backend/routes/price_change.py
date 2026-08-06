@@ -916,6 +916,167 @@ def vix_comparison():
     return jsonify(result)
 
 
+# Supported fiat currencies for the exchange-loss tool. Each maps to a Yahoo
+# FX symbol plus an inverse flag: inverse=True means the symbol quotes "units
+# of the currency per 1 USD" (e.g. CNY=X is USD/CNY), inverse=False means the
+# symbol quotes "USD per 1 unit" (e.g. EURUSD=X is EUR/USD). USD is the hub.
+FX_CURRENCIES = {
+    "USD": (None, False),
+    "CNY": ("CNY=X", True),
+    "EUR": ("EURUSD=X", False),
+    "GBP": ("GBPUSD=X", False),
+    "JPY": ("JPY=X", True),
+    "HKD": ("HKD=X", True),
+    "KRW": ("KRW=X", True),
+    "AUD": ("AUDUSD=X", False),
+    "SGD": ("SGD=X", True),
+    "CAD": ("CAD=X", True),
+    "CHF": ("CHF=X", True),
+    "TWD": ("TWD=X", True),
+}
+
+
+@price_change_bp.route("/exchange-loss", methods=["POST"])
+def exchange_loss():
+    """Return the held->target fiat cross-rate daily OHLC history.
+
+    Every supported currency is priced against USD (the hub) via Yahoo FX
+    symbols, so any held->target pair's close is
+    usd_per_unit[held] / usd_per_unit[target] on shared dates.
+
+    Only the close is a true cross rate — a real intraday high/low cannot be
+    derived by dividing two independent currencies' intraday extremes (the
+    extremes almost never coincide), so doing so fabricates volatile wicks that
+    never happened. We instead build an honest OHLC from the close series:
+    open = previous close, high/low = max/min(open, close). Same-currency
+    pairs (e.g. USD/USD) therefore collapse to a flat series of 1.0. Weekly/
+    monthly k-lines are aggregated client-side from this daily series.
+
+    Request body:
+        {"held": "USD", "target": "CNY"}   # 3-letter codes, default USD / CNY
+
+    Returns:
+        {"held": "USD", "target": "CNY",
+         "series": [{"date": "YYYY-MM-DD", "open": o, "high": h, "low": l, "close": c}, ...],
+         "latest": {"date": ..., "rate": ...},
+         "meta": {"held": {"source", "points", "error"}, "target": {...}}}
+    """
+    import concurrent.futures
+    from datetime import datetime, timezone
+
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify({"error": "request body must be a JSON object"}), 400
+    held = str(body.get("held", "USD")).upper().strip()
+    target = str(body.get("target", "CNY")).upper().strip()
+    for code in (held, target):
+        if code not in FX_CURRENCIES:
+            return jsonify({"error": f"unsupported currency: {code}"}), 400
+
+    def _usd_per_unit(code: str) -> dict:
+        """Return {"points": [{date, open, high, low, close}, ...], "source"} where
+        each field is USD per 1 unit (inverse-quoted symbols are flipped)."""
+        if code == "USD":
+            return {"points": [], "source": "usd-basis", "constant": True}
+        symbol, inverse = FX_CURRENCIES[code]
+        try:
+            s = _fetch_daily_series_cached(symbol, "stock")
+            # Trust the unified layer's ~5 min negative cache: a transient upstream
+            # blip is already cached short-lived, so we do NOT force-refresh here.
+            # Re-hitting Yahoo on every request would amplify 429s and timeouts
+            # under a sustained outage (two sources × every page load).
+            if s and not s.error and s.closes:
+                n = len(s.closes)
+                opens = getattr(s, "opens", None) or [None] * n
+                highs = getattr(s, "highs", None) or [None] * n
+                lows = getattr(s, "lows", None) or [None] * n
+                points = []
+                for ts, o, h, l, c in zip(s.timestamps, opens, highs, lows, s.closes):
+                    if c is None or c <= 0:
+                        continue
+                    o = o if (o is not None and o > 0) else c
+                    h = h if (h is not None and h > 0) else c
+                    l = l if (l is not None and l > 0) else c
+                    dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+                    if inverse:
+                        o, h, l, c = 1.0 / o, 1.0 / l, 1.0 / h, 1.0 / c
+                    # Keep full precision; only the final cross OHLC is rounded.
+                    points.append({
+                        "date": dt.strftime("%Y-%m-%d"),
+                        "open": o, "high": h, "low": l, "close": c,
+                    })
+                return {"points": points, "source": s.source}
+            return {"error": s.error if s else "no data"}
+        except Exception as e:
+            logger.exception("Failed to fetch FX %s: %s", symbol, e)
+            return {"error": str(e)}
+
+    codes = sorted({c for c in (held, target) if c != "USD"})
+    results = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(len(codes), 1)) as executor:
+        futures = {executor.submit(_usd_per_unit, code): code for code in codes}
+        for fut in concurrent.futures.as_completed(futures):
+            results[futures[fut]] = fut.result()
+
+    # usd_per_unit OHLC maps; missing currency (or USD) means constant 1.
+    held_raw = results.get(held) if held != "USD" else None
+    target_raw = results.get(target) if target != "USD" else None
+    held_points = (held_raw or {}).get("points", [])
+    target_points = (target_raw or {}).get("points", [])
+    held_ohlc = {p["date"]: p for p in held_points}
+    target_ohlc = {p["date"]: p for p in target_points}
+    _ONE = {"open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0}
+
+    if held_points and target_points:
+        dates = [p["date"] for p in held_points if p["date"] in target_ohlc]
+    elif held_points:
+        dates = [p["date"] for p in held_points]
+    elif target_points:
+        dates = [p["date"] for p in target_points]
+    else:
+        dates = []
+
+    series = []
+    prev_close = None
+    for d in dates:
+        h = held_ohlc.get(d, _ONE)
+        t = target_ohlc.get(d, _ONE)
+        close = round(h["close"] / t["close"], 6)
+        # Honest OHLC from the close series: open = previous close, high/low are
+        # bounded by the open/close pair — no synthetic intraday extremes.
+        open_v = prev_close if prev_close is not None else close
+        series.append({
+            "date": d,
+            "open": round(open_v, 6),
+            "high": round(max(open_v, close), 6),
+            "low": round(min(open_v, close), 6),
+            "close": close,
+        })
+        prev_close = close
+    # Bound the payload; the default chart counts (730/105/24) are well within it.
+    series = series[-2600:]
+
+    def _meta(code, raw, is_usd):
+        return {
+            "code": code,
+            "source": (raw or {}).get("source", "usd-basis"),
+            "points": None if is_usd else len((raw or {}).get("points", [])),
+            "error": (raw or {}).get("error"),
+        }
+
+    result = {
+        "held": held,
+        "target": target,
+        "series": series,
+        "latest": {"date": series[-1]["date"], "rate": series[-1]["close"]} if series else None,
+        "meta": {
+            "held": _meta(held, held_raw, held == "USD"),
+            "target": _meta(target, target_raw, target == "USD"),
+        },
+    }
+    return jsonify(result)
+
+
 @price_change_bp.route("/fear-threshold-stats", methods=["POST"])
 def fear_threshold_stats():
     """Return SPY/QQQ forward returns after VIX/VXN threshold days."""

@@ -476,6 +476,15 @@
             #tab-vix .pc-chart-title { flex: 0 0 100%; }
             #vixPeriodTabs,
             #vixPeriodTabs + div { margin-left: 0 !important; }
+
+            #tab-exchange-loss .pc-monthly-header {
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                gap: 10px;
+            }
+            #tab-exchange-loss .pc-chart-title { flex: 0 0 100%; }
+            #fxPeriodTabs,
+            #fxPeriodTabs + div { margin-left: 0 !important; }
         }
 
         .pc-monthly-grid {
@@ -3198,6 +3207,7 @@
             <a class="tab-btn" href="__LANG_PREFIX__/etf" data-tab="etf" data-i18n="tab.etfTracking">标普纳指ETF追踪（场内）</a>
             <a class="tab-btn" href="__LANG_PREFIX__/qdii-funds" data-tab="qdii-funds" data-i18n="tab.qdiiFunds">标普纳指基金追踪（场外）</a>
             <a class="tab-btn" href="__LANG_PREFIX__/vix" data-tab="vix" data-i18n="tab.vixIndex">美股恐慌指数</a>
+            <a class="tab-btn" href="__LANG_PREFIX__/exchange-loss" data-tab="exchange-loss" data-i18n="tab.exchangeLoss">汇率损失</a>
             <a class="tab-btn" href="__LANG_PREFIX__/knowledge" data-tab="knowledge" data-i18n="tab.knowledge">数据科普</a>
             <a class="tab-btn" href="__LANG_PREFIX__/download" data-tab="download" data-i18n="tab.dataDownload">数据下载</a>
             <a class="tab-btn" href="__LANG_PREFIX__/wishes" data-tab="wishes" data-i18n="tab.wishes">心愿墙</a>
@@ -4209,6 +4219,125 @@
             <div id="vixOverviewView" role="tabpanel" style="display:none;"></div>
         </div>
         </div><!-- /tab-vix -->
+
+        <!-- 汇率损失 -->
+        <div class="tab-panel" id="tab-exchange-loss">
+        <div class="pc-monthly">
+            <div class="pc-monthly-header">
+                <span class="pc-chart-title" id="fxChartTitle" data-i18n="exchangeLoss.chartTitle">💱 USD/CNY 历史汇率</span>
+                <span class="fx-chart-range" id="fxChartRange"></span>
+                <div class="transfer-tabs" id="fxPeriodTabs" style="margin-left:auto;">
+                    <button class="transfer-tab active" data-fx-period="daily" data-i18n="exchangeLoss.periodDay">日</button>
+                    <button class="transfer-tab" data-fx-period="weekly" data-i18n="exchangeLoss.periodWeek">周</button>
+                    <button class="transfer-tab" data-fx-period="monthly" data-i18n="exchangeLoss.periodMonth">月</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-left:10px;">
+                    <span class="pc-bt-label" data-i18n="exchangeLoss.countLabel">条数</span>
+                    <input type="number" id="fxCountInput" class="pc-bt-input" value="730" min="5" max="2600" step="5" style="width:82px;">
+                </div>
+            </div>
+            <div class="fx-chart-options">
+                <div class="transfer-tabs" id="fxChartModeTabs">
+                    <button class="transfer-tab active" data-fx-mode="line" data-i18n="exchangeLoss.modeLine">折线图</button>
+                    <button class="transfer-tab" data-fx-mode="candle" data-i18n="exchangeLoss.modeCandle">蜡烛图</button>
+                </div>
+                <div class="transfer-tabs" id="fxRangeModeTabs">
+                    <button class="transfer-tab active" data-fx-range="count" data-i18n="exchangeLoss.rangeCount">条数</button>
+                    <button class="transfer-tab" data-fx-range="follow" data-i18n="exchangeLoss.rangeFollow">跟随计算时间</button>
+                </div>
+                <div class="fx-zoom-group">
+                    <button id="fxResetZoom" class="pc-btn pc-btn-sm" type="button" data-i18n="exchangeLoss.resetZoom">重置缩放</button>
+                    <span class="fx-zoom-hint" data-i18n="exchangeLoss.zoomHint">滚轮缩放 · 拖拽平移</span>
+                    <button id="fxJumpLeftBtn" class="pc-btn pc-btn-sm" type="button" data-i18n="exchangeLoss.jumpLeft">◀ 最左</button>
+                    <button id="fxJumpRightBtn" class="pc-btn pc-btn-sm" type="button" data-i18n="exchangeLoss.jumpRight">最右 ▶</button>
+                </div>
+            </div>
+            <div class="pc-loading" id="fxLoading" style="display:none;" aria-live="polite">
+                <div class="spinner"></div>
+                <span data-i18n="exchangeLoss.loading">加载中...</span>
+            </div>
+            <div class="pc-error" id="fxError" style="display:none;" role="alert"></div>
+            <div id="fxChartContainer"></div>
+
+            <div class="fx-calc-card" id="fxCalcCard">
+                <div class="fx-calc-title" data-i18n="exchangeLoss.calcTitle">🧮 跨币种持有亏损计算</div>
+                <div class="fx-calc-controls">
+                    <label class="vix-threshold-field">
+                        <span class="pc-bt-label" data-i18n="exchangeLoss.heldCurrency">持有货币</span>
+                        <select id="fxHeldCurrency" class="pc-bt-input"></select>
+                    </label>
+                    <label class="vix-threshold-field">
+                        <span class="pc-bt-label" data-i18n="exchangeLoss.amount">持有金额</span>
+                        <input id="fxAmount" class="pc-bt-input" type="number" value="10000" min="0" step="100">
+                    </label>
+                    <label class="vix-threshold-field">
+                        <span class="pc-bt-label" data-i18n="exchangeLoss.startDate">起始日期</span>
+                        <input id="fxStartDate" class="pc-bt-input" type="date" value="2025-01-01">
+                    </label>
+                    <label class="vix-threshold-field">
+                        <span class="pc-bt-label" data-i18n="exchangeLoss.targetCurrency">目标货币</span>
+                        <select id="fxTargetCurrency" class="pc-bt-input"></select>
+                    </label>
+                    <label class="vix-threshold-field">
+                        <span class="pc-bt-label" data-i18n="exchangeLoss.endDate">结束日期</span>
+                        <input id="fxEndDate" class="pc-bt-input" type="date">
+                    </label>
+                    <label class="vix-threshold-field">
+                        <span class="pc-bt-label" data-i18n="exchangeLoss.aggLabel">聚合条数</span>
+                        <input id="fxAggCount" class="pc-bt-input" type="number" value="30" min="1" max="1000" step="1">
+                    </label>
+                    <button id="fxLoadBtn" class="pc-btn primary fx-load-btn" type="button" data-i18n="exchangeLoss.loadBtn">加载</button>
+                </div>
+                <p class="vix-threshold-note" data-i18n="exchangeLoss.calcNote">把持有的货币与金额按起始、结束日期汇率折算到目标货币，自动计算折算损益。结束日期留空时取最新数据日期。</p>
+                <p class="fx-calc-note fx-calc-note-error" id="fxCalcNoteLine" style="display:none;"></p>
+                <div class="pc-bt-summary" id="fxCalcResults" style="display:none;" aria-live="polite">
+                    <div class="pc-bt-summary-item">
+                        <div class="pc-bt-summary-label" data-i18n="exchangeLoss.startValue">起始日折算</div>
+                        <div class="pc-bt-summary-val" id="fxStartValue">--</div>
+                        <div class="pc-bt-summary-note" id="fxStartRate"></div>
+                    </div>
+                    <div class="pc-bt-summary-item">
+                        <div class="pc-bt-summary-label" data-i18n="exchangeLoss.endValue">结束日折算</div>
+                        <div class="pc-bt-summary-val" id="fxEndValue">--</div>
+                        <div class="pc-bt-summary-note" id="fxEndRate"></div>
+                    </div>
+                    <div class="pc-bt-summary-item">
+                        <div class="pc-bt-summary-label" data-i18n="exchangeLoss.gainLoss">折算损益（目标货币）</div>
+                        <div class="pc-bt-summary-val" id="fxGainLoss">--</div>
+                        <div class="pc-bt-summary-note" id="fxGainLossPct"></div>
+                    </div>
+                </div>
+
+                <div class="fx-detail" id="fxDetail" style="display:none;">
+                    <div class="pc-bt-detail-header">
+                        <span class="pc-bt-detail-title" data-i18n="exchangeLoss.detailTitle">📋 持有亏损明细</span>
+                    </div>
+                    <p class="vix-threshold-note" data-i18n="exchangeLoss.aggNote">按 N 个交易日聚合：把所选日期范围平均切成每 N 根日 K 一段，逐段统计持有折算损益。</p>
+                    <div class="vix-threshold-table-wrap">
+                        <table class="vix-threshold-table fx-detail-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="exchangeLoss.detailPeriod">聚合期</th>
+                                    <th data-i18n="exchangeLoss.detailStartRate">起始汇率</th>
+                                    <th data-i18n="exchangeLoss.detailEndRate">结束汇率</th>
+                                    <th data-i18n="exchangeLoss.detailLoss">折算损益</th>
+                                    <th data-i18n="exchangeLoss.detailPct">百分比</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fxDetailBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pc-bt-pagination" id="fxDetailPagination">
+                        <span class="pc-bt-page-info" id="fxDetailPageInfo"></span>
+                        <div class="pc-bt-page-controls">
+                            <button class="pc-btn pc-btn-sm" id="fxDetailPrevBtn" type="button" data-i18n="exchangeLoss.prevPage">上一页</button>
+                            <button class="pc-btn pc-btn-sm" id="fxDetailNextBtn" type="button" data-i18n="exchangeLoss.nextPage">下一页</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div><!-- /tab-exchange-loss -->
 
         <!-- 数据科普 -->
         <div class="tab-panel" id="tab-knowledge">
@@ -6731,6 +6860,7 @@
     <script src="/js/etf-market.js"></script>
     <script src="/js/qdii-funds.js"></script>
     <script src="/js/vix-chart.js"></script>
+    <script src="/js/exchange-loss.js"></script>
     <script src="/js/header-trend.js"></script>
     <script src="/js/wishes.js"></script>
     <script src="/js/heatmap.js"></script>
@@ -6975,6 +7105,7 @@
                 '/etf/global_others': 'etf',
                 '/qdii-funds': 'qdii-funds',
                 '/vix': 'vix',
+                '/exchange-loss': 'exchange-loss',
                 '/knowledge': 'knowledge',
                 '/knowledge/how-to-buy': 'knowledge',
                 '/knowledge/how-to-buy-us-stocks': 'knowledge',
@@ -7009,6 +7140,7 @@
                 'etf': '/etf',
                 'qdii-funds': '/qdii-funds',
                 'vix': '/vix',
+                'exchange-loss': '/exchange-loss',
                 'knowledge': '/knowledge/how-to-buy-us-stocks',
                 'wishes': '/wishes'
             };
@@ -7185,6 +7317,12 @@
                     titleKey: 'seo.vixTitle',
                     descKey: 'seo.vixDescription',
                     canonical: '/vix',
+                    noindex: true
+                },
+                'exchange-loss': {
+                    titleKey: 'seo.exchangeLossTitle',
+                    descKey: 'seo.exchangeLossDescription',
+                    canonical: '/exchange-loss',
                     noindex: true
                 },
                 'knowledge': {

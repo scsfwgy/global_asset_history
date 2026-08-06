@@ -781,6 +781,71 @@ body {
 @media (max-width: 480px) {
     .vix-threshold-controls { grid-template-columns: 1fr; }
 }
+/* ─── Exchange Rate Loss (汇率损失) ─── */
+.fx-chart-options {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 16px;
+            margin: 2px 0 12px;
+            padding: 8px 10px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            background: var(--apple-surface-2);
+        }
+.fx-chart-range { margin-left: 10px; color: var(--apple-text-tertiary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.fx-zoom-group { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
+.fx-zoom-hint { color: var(--apple-text-tertiary); font-size: 11px; white-space: nowrap; }
+.fx-empty {
+            text-align: center;
+            padding: 48px 16px;
+            color: var(--apple-text-tertiary);
+            font-size: 13px;
+        }
+/* pan-y lets the page scroll vertically when touched over the chart; pinch-zoom
+   keeps whole-page zoom on mobile. Horizontal drag is left to JS for panning. */
+#fxSvg { user-select: none; touch-action: pan-y pinch-zoom; }
+.fx-calc-card {
+            margin-top: 18px;
+            padding: 14px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            background: var(--apple-surface-1);
+        }
+.fx-calc-title { margin: 0 0 12px; font-size: 15px; font-weight: 600; }
+.fx-calc-controls {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(100px, 1fr));
+            gap: 10px;
+            align-items: end;
+            margin-bottom: 12px;
+        }
+.fx-load-btn {
+            min-height: 34px;
+            white-space: nowrap;
+            font-weight: 600;
+        }
+.fx-calc-note {
+            margin: 0 0 12px;
+            padding: 10px 12px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            background: var(--apple-surface-2);
+            color: var(--apple-text-secondary);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+.fx-calc-note.fx-calc-note-error { color: var(--data-negative); border-color: var(--data-negative); }
+/* The exchange-loss detail table has 5 columns, not the 8 of the VIX threshold
+   table it shares markup with — a smaller min-width avoids needless horizontal
+   scrolling on phones. */
+.fx-detail-table { min-width: 480px; }
+@media (max-width: 900px) {
+    .fx-calc-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+    .fx-calc-controls { grid-template-columns: 1fr; }
+}
 /* ─── Heatmap (treemap) ─── */
 .market-pulse {
             margin-bottom: 14px;

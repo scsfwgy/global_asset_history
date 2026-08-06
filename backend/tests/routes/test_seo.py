@@ -292,6 +292,76 @@ class TestHtmlMeta:
         assert "FEAR_THRESHOLD_STATS_ENDPOINT" in script
         assert "/api/price-change/fear-threshold-stats" in api_script
 
+    def test_exchange_loss_tab_has_chart_and_calculator(self, client):
+        html = client.get("/zh/exchange-loss").get_data(as_text=True)
+        script = client.get("/js/exchange-loss.js").get_data(as_text=True)
+        api_script = client.get("/js/api.js").get_data(as_text=True)
+
+        # New tab button sits right after the VIX tab button.
+        assert html.index('data-tab="vix"') < html.index('data-tab="exchange-loss"')
+        assert 'data-tab="exchange-loss"' in html
+        assert 'id="tab-exchange-loss"' in html
+        assert '/js/exchange-loss.js' in html
+        assert 'id="fxChartTitle"' in html
+        assert 'id="fxChartContainer"' in html
+        # K-line period tabs + count (defaults 730 / 105 / 24).
+        assert 'id="fxPeriodTabs"' in html
+        assert 'data-fx-period="daily"' in html
+        assert 'data-fx-period="weekly"' in html
+        assert 'data-fx-period="monthly"' in html
+        assert 'id="fxCountInput"' in html
+        assert 'value="730"' in html
+        # Chart mode (line/candle), mutual-exclusive 条数/跟随 toggle, reset zoom.
+        assert 'id="fxChartModeTabs"' in html
+        assert 'data-fx-mode="line"' in html
+        assert 'data-fx-mode="candle"' in html
+        assert 'id="fxRangeModeTabs"' in html
+        assert 'data-fx-range="count"' in html
+        assert 'data-fx-range="follow"' in html
+        assert 'id="fxResetZoom"' in html
+        assert 'id="fxJumpLeftBtn"' in html
+        assert 'id="fxJumpRightBtn"' in html
+        # Manual load button + calculator controls.
+        assert 'id="fxLoadBtn"' in html
+        assert 'id="fxHeldCurrency"' in html
+        assert 'id="fxAmount"' in html
+        assert 'value="2025-01-01"' in html
+        assert 'id="fxStartDate"' in html
+        assert 'id="fxTargetCurrency"' in html
+        assert 'id="fxEndDate"' in html
+        assert 'id="fxCalcResults"' in html
+        # Detail list: aggregation field + table + pagination.
+        assert 'id="fxAggCount"' in html
+        assert 'id="fxDetailBody"' in html
+        assert 'id="fxDetailPagination"' in html
+        assert 'id="fxDetailPrevBtn"' in html
+        assert 'id="fxDetailNextBtn"' in html
+        # No USDT/stablecoin leftovers, no old lookback table.
+        panel_html = html[html.index('id="tab-exchange-loss"'):html.index('/tab-exchange-loss')]
+        assert "USDT" not in panel_html
+        assert "fxLookbackBody" not in panel_html
+        assert "fetchFxData" in script
+        assert "EXCHANGE_LOSS_ENDPOINT" in script
+        assert "rateAt" in script
+        assert "FX_CURRENCIES" in script
+        assert "groupOHLC" in script
+        assert "PERIOD_COUNTS" in script
+        assert "buildDetailRows" in script
+        assert "renderDetail" in script
+        assert "followCalc" in script
+        assert "syncRangeMode" in script
+        assert "computeBase" in script
+        assert "_fxMode" in script
+        assert "_fxZoom" in script
+        assert "onPanMove" in script
+        assert "jumpZoomLeft" in script
+        assert "jumpZoomRight" in script
+        assert '"CNY"' in script
+        assert '"EUR"' in script
+        assert '"JPY"' in script
+        assert "USDT" not in script
+        assert "/api/price-change/exchange-loss" in api_script
+
     def test_stock_compare_has_search_tags_and_metric_tables(self, client):
         html = client.get("/zh/stock-compare").get_data(as_text=True)
         assert "年度综合收益（税后）" in html

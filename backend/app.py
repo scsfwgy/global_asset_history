@@ -672,7 +672,7 @@ def add_seo_headers(response):
         response.headers.setdefault("X-Robots-Tag", "index,follow")
     elif base_path in INDEXABLE_PATHS:
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
-    elif base_path.startswith(ROBOT_BLOCKED_PREFIXES) or base_path in {"/yearly", "/detail", "/download", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/knowledge", *KNOWLEDGE_LEGACY_PATHS.keys(), "/wishes", "/heatmap"}:
+    elif base_path.startswith(ROBOT_BLOCKED_PREFIXES) or base_path in {"/yearly", "/detail", "/download", "/backtest", "/crash", "/etf", "/etf/nasdaq100", "/etf/sp500", "/etf/global_others", "/qdii-funds", "/vix", "/exchange-loss", "/knowledge", *KNOWLEDGE_LEGACY_PATHS.keys(), "/wishes", "/heatmap"}:
         response.headers.setdefault("X-Robots-Tag", "noindex,follow")
     if _should_log_request() and request.path.startswith("/api/"):
         start = request.environ.get("gah_request_start")
@@ -826,6 +826,7 @@ def etf_market():
 @app.route("/etf/global_others")
 @app.route("/qdii-funds")
 @app.route("/vix")
+@app.route("/exchange-loss")
 @app.route("/knowledge")
 @app.route("/knowledge/how-to-buy")
 @app.route("/knowledge/how-to-buy-us-stocks")
@@ -940,7 +941,7 @@ def visits_increment():
 #                        {"type": "ad_click", "link": "value-investing"}
 #                        {"type": "settings_click"}
 _VALID_TABS = {"heatmap", "yearly", "detail", "stock-compare", "download", "backtest", "crash",
-               "etf", "qdii-funds", "vix", "knowledge", "wishes"}
+               "etf", "qdii-funds", "vix", "exchange-loss", "knowledge", "wishes"}
 
 
 @app.route("/api/track", methods=["POST"])

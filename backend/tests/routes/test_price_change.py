@@ -1012,6 +1012,195 @@ def _series(n):
     return SimpleNamespace(timestamps=timestamps, closes=closes, source="yahoo", error=None)
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# POST /api/price-change/exchange-loss
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _fx_series(base_date, values, source="yahoo"):
+    """Build a fake PriceSeries-like object with daily closes from base_date."""
+    import calendar
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+
+    base = calendar.timegm(
+        datetime.strptime(base_date, "%Y-%m-%d").replace(tzinfo=timezone.utc).timetuple()
+    )
+    timestamps = [base + i * 86400 for i in range(len(values))]
+    return SimpleNamespace(
+        timestamps=timestamps, closes=list(values), source=source, error=None
+    )
+
+
+class TestExchangeLossEndpoint:
+    """POST /api/price-change/exchange-loss"""
+
+    @patch("routes.price_change._fetch_daily_series_cached")
+    def test_default_usd_to_cny_uses_yahoo_inverse(self, mock_fetch, client):
+        """Default held=USD, target=CNY → cross OHLC equals the CNY=X close (1 / usd_per_unit)."""
+        cny = _fx_series("2024-01-01", [6.5, 6.6, 6.7])
+
+        def _side(symbol, _asset_type):
+            if symbol == "CNY=X":
+                return cny
+            raise AssertionError(f"unexpected symbol {symbol}")
+
+        mock_fetch.side_effect = _side
+        resp = client.post(f"{BASE}/exchange-loss", json={})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["held"] == "USD"
+        assert data["target"] == "CNY"
+        # Close-only fake series: close = CNY=X closes; open = previous close
+        # (honest OHLC built from the close series — first bar's open == close).
+        assert [p["close"] for p in data["series"]] == [6.5, 6.6, 6.7]
+        assert [p["open"] for p in data["series"]] == [6.5, 6.5, 6.6]
+        assert data["latest"] == {"date": "2024-01-03", "rate": 6.7}
+        assert data["meta"]["target"]["source"] == "yahoo"
+        assert {call.args[0] for call in mock_fetch.call_args_list} == {"CNY=X"}
+        track_coverage(MOD, 1)
+
+    @patch("routes.price_change._fetch_daily_series_cached")
+    def test_usd_to_eur_inverts_direct_quote(self, mock_fetch, client):
+        """USD→EUR is 1 / EURUSD close (direct quote)."""
+        eur = _fx_series("2024-01-01", [1.1, 1.12, 1.08])
+        mock_fetch.return_value = eur
+        resp = client.post(f"{BASE}/exchange-loss", json={"held": "USD", "target": "EUR"})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert [p["close"] for p in data["series"]] == [
+            round(1 / 1.1, 6),
+            round(1 / 1.12, 6),
+            round(1 / 1.08, 6),
+        ]
+        assert {call.args[0] for call in mock_fetch.call_args_list} == {"EURUSD=X"}
+        track_coverage(MOD, 1)
+
+    @patch("routes.price_change._fetch_daily_series_cached")
+    def test_cross_cny_to_eur_uses_both_usd_basis_series(self, mock_fetch, client):
+        """CNY→EUR = (1 / CNY=X) / EURUSD=X on shared dates."""
+        cny = _fx_series("2024-01-01", [6.5, 6.6, 6.7])
+        eur = _fx_series("2024-01-01", [1.1, 1.12, 1.08])
+
+        def _side(symbol, _asset_type):
+            if symbol == "CNY=X":
+                return cny
+            if symbol == "EURUSD=X":
+                return eur
+            raise AssertionError(f"unexpected symbol {symbol}")
+
+        mock_fetch.side_effect = _side
+        resp = client.post(f"{BASE}/exchange-loss", json={"held": "CNY", "target": "EUR"})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        expected = [round((1.0 / c) / e, 6) for c, e in zip([6.5, 6.6, 6.7], [1.1, 1.12, 1.08])]
+        assert [p["close"] for p in data["series"]] == expected
+        assert {call.args[0] for call in mock_fetch.call_args_list} == {"CNY=X", "EURUSD=X"}
+        track_coverage(MOD, 1)
+
+    @patch("routes.price_change._fetch_daily_series_cached")
+    def test_cross_ohlc_is_honest_no_synthetic_intraday(self, mock_fetch, client):
+        """Cross OHLC is built from the close series (open = previous close,
+        high/low = max/min(open, close)) — never by dividing two currencies'
+        intraday extremes, which would fabricate wicks that never happened."""
+        cny = _fx_series("2024-01-01", [6.5, 6.6])
+        eur = _fx_series("2024-01-01", [1.1, 1.12])
+
+        def _side(symbol, _asset_type):
+            if symbol == "CNY=X":
+                return cny
+            if symbol == "EURUSD=X":
+                return eur
+            raise AssertionError(f"unexpected symbol {symbol}")
+
+        mock_fetch.side_effect = _side
+        resp = client.post(f"{BASE}/exchange-loss", json={"held": "CNY", "target": "EUR"})
+        assert resp.status_code == 200
+        s = resp.get_json()["series"]
+        # cross close = (1 / cny) / eur (CNY is inverse-quoted)
+        c0 = round((1.0 / 6.5) / 1.1, 6)
+        c1 = round((1.0 / 6.6) / 1.12, 6)
+        assert [p["close"] for p in s] == [c0, c1]
+        # First bar has no predecessor: open = close, body is flat.
+        assert s[0]["open"] == c0 and s[0]["high"] == c0 and s[0]["low"] == c0
+        # Second bar: open = previous close; high/low stay within the open/close
+        # pair — no wick beyond either (the old high/low>1,<1 fabrication is gone).
+        assert s[1]["open"] == c0
+        assert s[1]["high"] == max(c0, c1)
+        assert s[1]["low"] == min(c0, c1)
+        track_coverage(MOD, 1)
+
+    @patch("routes.price_change._fetch_daily_series_cached")
+    def test_same_currency_returns_unity_rates(self, mock_fetch, client):
+        """held == target → fetch once and all rates are 1."""
+        eur = _fx_series("2024-01-01", [1.1, 1.12])
+        mock_fetch.return_value = eur
+        resp = client.post(f"{BASE}/exchange-loss", json={"held": "EUR", "target": "EUR"})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert len(mock_fetch.call_args_list) == 1
+        assert all(p["close"] == 1.0 for p in data["series"])
+        # Same-currency cross collapses to a flat unity series across all OHLC,
+        # not just close (the old synthetic high/low would show high>1, low<1).
+        assert all(p["open"] == 1.0 and p["high"] == 1.0 and p["low"] == 1.0 for p in data["series"])
+        track_coverage(MOD, 1)
+
+    @patch("routes.price_change._fetch_daily_series_cached")
+    def test_single_source_failure_keeps_200(self, mock_fetch, client):
+        """A failed upstream keeps the response 200 with an empty series."""
+        from types import SimpleNamespace
+
+        def _side(symbol, _asset_type, **_kwargs):
+            return SimpleNamespace(timestamps=[], closes=[], source="yahoo", error="upstream 429")
+
+        mock_fetch.side_effect = _side
+        resp = client.post(f"{BASE}/exchange-loss", json={})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["series"] == []
+        assert data["latest"] is None
+        assert data["meta"]["target"]["error"] == "upstream 429"
+        track_coverage(MOD, 1)
+
+    @patch("routes.price_change._fetch_daily_series_cached")
+    def test_cached_error_is_served_without_force_refresh(self, mock_fetch, client):
+        """A cached error is trusted for ~5 min: the route must NOT bypass the
+        cache with force_refresh on every request — doing so would re-hit Yahoo
+        on each page load and amplify 429s under a sustained outage. The response
+        stays 200 with an empty series."""
+        from types import SimpleNamespace
+
+        bad = SimpleNamespace(timestamps=[], closes=[], source="yahoo", error="transient 429")
+        mock_fetch.return_value = bad
+
+        resp = client.post(f"{BASE}/exchange-loss", json={})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["series"] == []
+        assert data["latest"] is None
+        assert data["meta"]["target"]["error"] == "transient 429"
+        # Exactly one fetch, and it is not a force-refresh retry.
+        assert mock_fetch.call_count == 1
+        assert not mock_fetch.call_args.kwargs.get("force_refresh")
+        track_coverage(MOD, 1)
+
+    def test_unsupported_currency_returns_400(self, client):
+        resp = client.post(f"{BASE}/exchange-loss", json={"held": "BTC", "target": "CNY"})
+        assert resp.status_code == 400
+        assert "unsupported" in resp.get_json()["error"]
+        track_coverage(MOD, 1)
+
+    def test_non_object_json_body_returns_400(self, client):
+        """A JSON array / string / number / null body is not a dict and must be
+        rejected at the trust boundary instead of crashing on .get()."""
+        for payload in ("[]", '"hello"', "42", "null"):
+            resp = client.post(
+                f"{BASE}/exchange-loss", data=payload, content_type="application/json"
+            )
+            assert resp.status_code == 400, payload
+            assert "object" in resp.get_json()["error"]
+        track_coverage(MOD, 1)
+
+
 class TestHeaderTrendEndpoint:
     """GET /api/price-change/header-trend"""
 
