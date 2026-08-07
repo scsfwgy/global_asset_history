@@ -169,7 +169,9 @@
     "colPrice": "Price",
     "colShares": "Shares",
     "colCumShares": "Cum. Shares",
-    "colTotalReturn": "Portfolio P/L on Date"
+    "colTotalReturn": "Portfolio P/L on Date",
+    "showSeries": "Show lines",
+    "fetching": "Loading..."
   },
   "detail": {
     "title": "Stock Detail",

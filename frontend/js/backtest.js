@@ -133,6 +133,31 @@ let _btEquityByDate = {};
 let _btPage = 1;
 let _btPageSize = 20;
 
+// Series visibility, shared by the advanced-panel checkboxes and the chart legend.
+let _btVisibleSeries = { asset: true, invested: true, profit: true };
+const BT_SERIES_NAMES = ["asset", "invested", "profit"];
+
+function btSetSeriesVisible(name, visible) {
+  const svgEl = $("btChart")?.querySelector("svg");
+  const g = svgEl?.querySelector("#btSeries-" + name);
+  if (g) g.style.display = visible ? "" : "none";
+  const pulse = svgEl?.querySelector("#btPulse-" + name);
+  if (pulse) pulse.style.display = visible ? "" : "none";
+  const chip = document.querySelector('.bt-legend-chip[data-series="' + name + '"]');
+  if (chip) chip.style.display = visible ? "" : "none";
+  const cb = document.getElementById("btShow" + name.charAt(0).toUpperCase() + name.slice(1));
+  if (cb) cb.checked = visible;
+}
+
+function btToggleSeries(name, visible) {
+  if (!visible && BT_SERIES_NAMES.filter((n) => n !== name && _btVisibleSeries[n]).length === 0) {
+    btSetSeriesVisible(name, true); // keep at least one series visible
+    return;
+  }
+  _btVisibleSeries[name] = visible;
+  btSetSeriesVisible(name, visible);
+}
+
 function formatBtMoney(value, signed) {
   const number = Number(value) || 0;
   let amount;
@@ -142,7 +167,7 @@ function formatBtMoney(value, signed) {
       {
         style: "currency",
         currency: _btCurrency,
-        currencyDisplay: "symbol",
+        currencyDisplay: "narrowSymbol",
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }
@@ -298,6 +323,26 @@ function populateBacktestOptions() {
   }
 }
 
+function showBacktestLoading() {
+  if (btResult) btResult.style.display = "";
+  if (btWrap) btWrap.style.display = "";
+  const loading = $("btLoading");
+  if (loading) loading.style.display = "flex";
+  ["btLiveData", "btChart", "pcBtSummary"].forEach((id) => {
+    const el = $(id);
+    if (el) el.style.display = "none";
+  });
+}
+
+function hideBacktestLoading() {
+  const loading = $("btLoading");
+  if (loading) loading.style.display = "none";
+  ["btLiveData", "btChart", "pcBtSummary"].forEach((id) => {
+    const el = $(id);
+    if (el) el.style.display = "";
+  });
+}
+
 async function runBacktest() {
   const assetType = btTypeSelect?.value || "stock";
   const symbol = normalizeAssetSymbol(btSymbolInput?.value || "", assetType);
@@ -322,6 +367,7 @@ async function runBacktest() {
   };
 
   try {
+    showBacktestLoading();
     const resp = await fetch(BACKTEST_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -329,11 +375,13 @@ async function runBacktest() {
     });
     const result = await resp.json();
     if (!resp.ok) throw new Error(result.error || `HTTP ${resp.status}`);
+    hideBacktestLoading();
     renderBacktestResult(symbol, result);
     if (typeof gahHistoryRecord === "function") {
       gahHistoryRecord("gah_backtest_history", { symbol: symbol, name: "", type: assetType });
     }
   } catch (e) {
+    hideBacktestLoading();
     showError(__("backtest.errorBacktest") + e.message);
   }
 }
@@ -343,9 +391,44 @@ function renderBtChart(equityCurve) {
   const c = getChartColors();
   const sampledCurve = sampleEvenly(equityCurve, getBacktestSampleSize());
 
-  const W = 700, H = 220, PAD = { top: 32, right: 64, bottom: 30, left: 56 };
+  // Live header row: currency, date range, and the three amounts that roll up with the reveal.
+  const liveEl = document.getElementById("btLiveData");
+  const lastRow = sampledCurve[sampledCurve.length - 1];
+  const liveTarget = lastRow ? {
+    value: lastRow.value,
+    invested: lastRow.invested,
+    profit: lastRow.value - lastRow.invested,
+  } : null;
+  if (liveEl) {
+    if (!liveTarget) {
+      liveEl.innerHTML = "";
+    } else {
+      const profitClass = liveTarget.profit >= 0 ? "bt-val-positive" : "bt-val-negative";
+      // Legend chips sit in the same row as the live data, vertically centered.
+      liveEl.innerHTML = `
+        <span class="bt-live-legend">
+          <button class="bt-legend-chip" type="button" data-series="asset"><span class="bt-legend-swatch" style="background:#2997ff"></span>${__("backtest.totalAssets")}</button>
+          <button class="bt-legend-chip" type="button" data-series="invested"><span class="bt-legend-swatch" style="background:${c.invested}"></span>${__("backtest.totalInvested")}</button>
+          <button class="bt-legend-chip" type="button" data-series="profit"><span class="bt-legend-swatch" style="background:${c.positiveAlpha88}"></span>${__("backtest.totalReturn")}</button>
+        </span>
+        <span class="bt-live-static">${escapeHtml(btSymbolInput?.value || _btCurrency)}</span>
+        <span class="bt-live-range">${escapeHtml(sampledCurve[0].date)} ~ ${escapeHtml(lastRow.date)}</span>
+        <span class="bt-live-item"><span class="bt-live-label">${__("backtest.totalAssets")}</span><b id="btLiveAsset" class="bt-live-val">${formatBtMoney(0)}</b></span>
+        <span class="bt-live-item"><span class="bt-live-label">${__("backtest.totalInvested")}</span><b id="btLiveInvested" class="bt-live-val">${formatBtMoney(0)}</b></span>
+        <span class="bt-live-item"><span class="bt-live-label">${__("backtest.totalReturn")}</span><b id="btLiveProfit" class="bt-live-val ${profitClass}">${formatBtMoney(0, true)}</b></span>
+      `;
+      liveEl.querySelectorAll(".bt-legend-chip").forEach((chip) => {
+        const series = chip.dataset.series;
+        if (_btVisibleSeries[series] === false) chip.style.display = "none";
+        chip.addEventListener("click", () => btToggleSeries(series, _btVisibleSeries[series] === false));
+      });
+    }
+  }
+
+  // All three series share one left Y-axis (amounts); the right axis is removed.
+  // Legend moved to the HTML row above, so the SVG no longer needs top headroom for it.
+  const W = 700, H = 220, PAD = { top: 14, right: 16, bottom: 30, left: 56 };
   const assetVals = sampledCurve.map((row) => row.value);
-  const profitVals = sampledCurve.map((row) => row.value - row.invested);
   const minAssetVal = Math.min(...assetVals, 0);
   const maxAssetVal = Math.max(...assetVals, 0);
   const assetRange = maxAssetVal - minAssetVal || 1;
@@ -353,18 +436,10 @@ function renderBtChart(equityCurve) {
   const assetYMin = minAssetVal - assetPad;
   const assetYMax = maxAssetVal + assetPad;
   const assetYRange = assetYMax - assetYMin;
-  const minProfitVal = Math.min(...profitVals, 0);
-  const maxProfitVal = Math.max(...profitVals, 0);
-  const profitRange = maxProfitVal - minProfitVal || 1;
-  const profitPad = profitRange * 0.1;
-  const profitYMin = minProfitVal - profitPad;
-  const profitYMax = maxProfitVal + profitPad;
-  const profitYRange = profitYMax - profitYMin;
   const cw = W - PAD.left - PAD.right;
   const ch = H - PAD.top - PAD.bottom;
   const xPos = (idx) => PAD.left + (idx / Math.max(1, sampledCurve.length - 1)) * cw;
   const assetYPos = (v) => PAD.top + ch - ((v - assetYMin) / assetYRange) * ch;
-  const profitYPos = (v) => PAD.top + ch - ((v - profitYMin) / profitYRange) * ch;
 
   // Left Y-axis: total assets
   const yTicks = 5;
@@ -375,13 +450,6 @@ function renderBtChart(equityCurve) {
     yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="var(--apple-divider)" stroke-width="1"/>`;
     const label = formatBtAxisMoney(v);
     yGrid += `<text x="${PAD.left - 6}" y="${y + 4}" text-anchor="end" fill="var(--apple-text-tertiary)" font-size="11">${label}</text>`;
-  }
-
-  let rightAxis = "";
-  for (let i = 0; i <= yTicks; i++) {
-    const v = profitYMin + (profitYRange * i) / yTicks;
-    const y = profitYPos(v);
-    rightAxis += `<text x="${W - PAD.right + 8}" y="${y + 4}" text-anchor="start" fill="${c.positive}" font-size="11">${v >= 0 ? "+" : ""}${formatBtAxisMoney(v)}</text>`;
   }
 
   const zeroY = assetYPos(0);
@@ -399,82 +467,52 @@ function renderBtChart(equityCurve) {
     }
   }
 
-  let investedLine = "";
-  let assetLines = "", assetDots = "", profitDots = "";
-  const profitPolylinePoints = [];
-  for (let i = 0; i < sampledCurve.length - 1; i++) {
-    const x1 = xPos(i), x2 = xPos(i + 1);
-    const assetY1 = assetYPos(sampledCurve[i].value), assetY2 = assetYPos(sampledCurve[i + 1].value);
-    const profitY1 = profitYPos(sampledCurve[i].value - sampledCurve[i].invested), profitY2 = profitYPos(sampledCurve[i + 1].value - sampledCurve[i + 1].invested);
-    const investedY1 = assetYPos(sampledCurve[i].invested), investedY2 = assetYPos(sampledCurve[i + 1].invested);
-    assetLines += `<line x1="${x1}" y1="${assetY1}" x2="${x2}" y2="${assetY2}" stroke="#2997ff" stroke-width="1.5" stroke-linecap="round" opacity="0.9"/>`;
-    investedLine += `<line x1="${x1}" y1="${investedY1}" x2="${x2}" y2="${investedY2}" stroke="${c.invested}" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>`;
-  }
+  const assetPoints = [];
+  const investedPoints = [];
+  const profitPoints = [];
   sampledCurve.forEach((row, idx) => {
-    profitPolylinePoints.push({ x: xPos(idx), y: profitYPos(row.value - row.invested), profit: row.value - row.invested });
-    assetDots += `<circle cx="${xPos(idx)}" cy="${assetYPos(row.value)}" r="2.2" fill="#2997ff" stroke="var(--apple-bg)" stroke-width="0.8"/>`;
-    profitDots += `<circle cx="${xPos(idx)}" cy="${profitYPos(row.value - row.invested)}" r="2.2" fill="${c.positive}" stroke="var(--apple-bg)" stroke-width="0.8"/>`;
+    assetPoints.push({ x: xPos(idx), y: assetYPos(row.value) });
+    investedPoints.push({ x: xPos(idx), y: assetYPos(row.invested) });
+    profitPoints.push({ x: xPos(idx), y: assetYPos(row.value - row.invested) });
   });
 
-  function buildAreaSegments(points) {
-    if (points.length < 2) return "";
-    const zero = profitYPos(0);
-    const positiveSegments = [];
-    const negativeSegments = [];
-
-    const addSegment = (target, p1, p2) => {
-      target.push(`M ${p1.x} ${zero}`);
-      target.push(`L ${p1.x} ${p1.y}`);
-      target.push(`L ${p2.x} ${p2.y}`);
-      target.push(`L ${p2.x} ${zero}`);
-      target.push("Z");
-    };
-
+  // Catmull-Rom -> cubic Bezier smoothing: one flowing path, no jagged segments.
+  function smoothPath(points) {
+    if (!points.length) return "";
+    let d = `M ${points[0].x} ${points[0].y}`;
     for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i - 1] || points[i];
       const p1 = points[i];
       const p2 = points[i + 1];
-      if ((p1.profit >= 0 && p2.profit >= 0)) {
-        addSegment(positiveSegments, p1, p2);
-        continue;
-      }
-      if ((p1.profit <= 0 && p2.profit <= 0)) {
-        addSegment(negativeSegments, p1, p2);
-        continue;
-      }
-      const ratio = (0 - p1.profit) / (p2.profit - p1.profit);
-      const crossX = p1.x + (p2.x - p1.x) * ratio;
-      const crossPoint = { x: crossX, y: zero, profit: 0 };
-      if (p1.profit > 0) {
-        addSegment(positiveSegments, p1, crossPoint);
-        addSegment(negativeSegments, crossPoint, p2);
-      } else {
-        addSegment(negativeSegments, p1, crossPoint);
-        addSegment(positiveSegments, crossPoint, p2);
-      }
+      const p3 = points[i + 2] || p2;
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
     }
-
-    const positive = positiveSegments.length
-      ? `<path d="${positiveSegments.join(" ")}" fill="${c.positiveAlpha22}" stroke="none"/>`
-      : "";
-    const negative = negativeSegments.length
-      ? `<path d="${negativeSegments.join(" ")}" fill="${c.negativeAlpha18}" stroke="none"/>`
-      : "";
-    const stroke = points.length
-      ? `<polyline points="${points.map((p) => `${p.x},${p.y}`).join(" ")}" fill="none" stroke="${c.positiveAlpha88}" stroke-width="1.2"/>`
-      : "";
-    return `${positive}${negative}${stroke}`;
+    return d;
   }
 
-  const profitAreaPath = buildAreaSegments(profitPolylinePoints);
-
-  const legend = `
-    <rect x="${PAD.left}" y="14" width="8" height="2.5" rx="1.25" fill="#2997ff"/>
-    <text x="${PAD.left + 12}" y="17" fill="var(--apple-text-secondary)" font-size="10">${__("backtest.totalAssets")}</text>
-    <rect x="${PAD.left + 60}" y="14" width="8" height="2.5" rx="1.25" fill="${c.invested}"/>
-    <text x="${PAD.left + 72}" y="17" fill="var(--apple-text-secondary)" font-size="10">${__("backtest.totalInvested")}</text>
-    <rect x="${PAD.left + 136}" y="11" width="8" height="8" rx="1.5" fill="${c.positiveAlpha22}" stroke="${c.positiveAlpha88}"/>
-    <text x="${PAD.left + 148}" y="17" fill="var(--apple-text-secondary)" font-size="10">${__("backtest.totalReturn")}</text>
-  `;
+  const assetCurveD = smoothPath(assetPoints);
+  const investedCurveD = smoothPath(investedPoints);
+  const profitCurveD = smoothPath(profitPoints);
+  // Gradient fill under the total-assets curve, down to the x-axis (plot bottom).
+  const assetBottomY = PAD.top + ch;
+  const firstX = assetPoints.length ? assetPoints[0].x : 0;
+  const lastX = assetPoints.length ? assetPoints[assetPoints.length - 1].x : 0;
+  const assetFill = assetPoints.length
+    ? `${assetCurveD} L ${lastX} ${assetBottomY} L ${firstX} ${assetBottomY} Z`
+    : "";
+  const assetPath = assetPoints.length
+    ? `<path d="${assetCurveD}" fill="none" stroke="#2997ff" stroke-width="1.5" stroke-linecap="round" opacity="0.9"/>`
+    : "";
+  const investedPath = investedPoints.length
+    ? `<path d="${investedCurveD}" fill="none" stroke="${c.invested}" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>`
+    : "";
+  const profitPath = profitPoints.length
+    ? `<path d="${profitCurveD}" fill="none" stroke="${c.positiveAlpha88}" stroke-width="1.2"/>`
+    : "";
 
   const hoverZones = sampledCurve.map((row, idx) => {
     const profit = row.value - row.invested;
@@ -505,14 +543,35 @@ function renderBtChart(equityCurve) {
     </g>
   `;
 
+  const seriesStyle = (name) => (_btVisibleSeries[name] !== false ? "" : ' style="display:none"');
+  // Solid pulsing dot on the latest point of each series (breathing via SMIL).
+  // Rendered in a layer OUTSIDE the reveal clip so it is visible during the reveal animation.
+  const pulseDot = (pts, color, dotId) => {
+    const last = pts[pts.length - 1];
+    return last
+      ? `<circle id="${dotId}" cx="${last.x}" cy="${last.y}" r="3.2" fill="${color}" stroke="var(--apple-bg)" stroke-width="1.5"><animate attributeName="r" values="3.2;5.4;3.2" dur="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.5;1" dur="1.6s" repeatCount="indefinite"/></circle>`
+      : "";
+  };
+  const pulseLayer = `
+    <g id="btPulseLayer">
+      <g id="btPulse-asset"${seriesStyle("asset")}>${pulseDot(assetPoints, "#2997ff", "btPulseDot-asset")}</g>
+      <g id="btPulse-invested"${seriesStyle("invested")}>${pulseDot(investedPoints, c.invested, "btPulseDot-invested")}</g>
+      <g id="btPulse-profit"${seriesStyle("profit")}>${pulseDot(profitPoints, c.positiveAlpha88, "btPulseDot-profit")}</g>
+    </g>
+  `;
   const svgH = H;
   const animatedLayer = `
     <g id="btAnimatedLayer" clip-path="url(#btChartReveal)">
-      ${profitAreaPath}
-      ${investedLine}
-      ${assetLines}
-      ${assetDots}
-      ${profitDots}
+      <g id="btSeries-asset"${seriesStyle("asset")}>
+        <path d="${assetFill}" fill="url(#btAssetGrad)" stroke="none"/>
+        ${assetPath}
+      </g>
+      <g id="btSeries-invested"${seriesStyle("invested")}>
+        ${investedPath}
+      </g>
+      <g id="btSeries-profit"${seriesStyle("profit")}>
+        ${profitPath}
+      </g>
     </g>
   `;
   $("btChart").innerHTML = `<svg viewBox="0 0 ${W} ${svgH}" style="width:100%;height:auto;display:block;">
@@ -520,8 +579,12 @@ function renderBtChart(equityCurve) {
       <clipPath id="btChartReveal">
         <rect id="btChartRevealRect" x="0" y="0" width="0" height="${H}"></rect>
       </clipPath>
+      <linearGradient id="btAssetGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2997ff" stop-opacity="0.28"/>
+        <stop offset="100%" stop-color="#2997ff" stop-opacity="0"/>
+      </linearGradient>
     </defs>
-    ${yGrid} ${rightAxis} ${zeroLine} ${animatedLayer} ${xLabels} ${legend} ${hoverZones} ${tooltip}
+    ${yGrid} ${zeroLine} ${animatedLayer} ${pulseLayer} ${xLabels} ${hoverZones} ${tooltip}
   </svg>`;
 
   const svgEl = $("btChart").querySelector("svg");
@@ -567,15 +630,48 @@ function renderBtChart(equityCurve) {
   });
 
   const durationMs = getBacktestAnimMs();
+  const setLive = (progress) => {
+    if (!liveTarget) return;
+    const assetEl = document.getElementById("btLiveAsset");
+    const investedEl = document.getElementById("btLiveInvested");
+    const profitEl = document.getElementById("btLiveProfit");
+    if (assetEl) assetEl.textContent = formatBtMoney(liveTarget.value * progress);
+    if (investedEl) investedEl.textContent = formatBtMoney(liveTarget.invested * progress);
+    if (profitEl) profitEl.textContent = formatBtMoney(liveTarget.profit * progress, true);
+  };
+  // Ride the pulsing dots on the reveal frontier, smoothly interpolated along the curves.
+  const movePulse = (progress) => {
+    const revealX = W * progress;
+    const x = Math.max(PAD.left, Math.min(PAD.left + cw, revealX));
+    const place = (dotId, pts) => {
+      const el = document.getElementById(dotId);
+      if (!el || pts.length < 2) return;
+      const span = pts[pts.length - 1].x - pts[0].x || 1;
+      const f = ((x - pts[0].x) / span) * (pts.length - 1);
+      const i0 = Math.max(0, Math.min(pts.length - 2, Math.floor(f)));
+      const frac = f - i0;
+      const y = pts[i0].y + (pts[i0 + 1].y - pts[i0].y) * frac;
+      el.setAttribute("cx", x);
+      el.setAttribute("cy", y);
+    };
+    place("btPulseDot-asset", assetPoints);
+    place("btPulseDot-invested", investedPoints);
+    place("btPulseDot-profit", profitPoints);
+  };
   if (revealRect) {
     if (durationMs <= 0) {
       revealRect.setAttribute("width", String(W));
+      setLive(1);
+      movePulse(1);
     } else {
       revealRect.setAttribute("width", "0");
       const start = performance.now();
       const tick = (now) => {
         const progress = Math.min((now - start) / durationMs, 1);
+        // Linear: curve, live numbers, and dots move at one steady pace and finish together.
         revealRect.setAttribute("width", String(W * progress));
+        setLive(progress);
+        movePulse(progress);
         if (progress < 1) requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
@@ -678,6 +774,14 @@ function renderBacktestResult(symbol, result) {
         el.classList.remove("show");
       }
     });
+  });
+})();
+
+// ─── Series visibility checkboxes (advanced panel) ───
+(function () {
+  [["asset", "btShowAsset"], ["invested", "btShowInvested"], ["profit", "btShowProfit"]].forEach((pair) => {
+    const cb = document.getElementById(pair[1]);
+    if (cb) cb.addEventListener("change", () => btToggleSeries(pair[0], cb.checked));
   });
 })();
 

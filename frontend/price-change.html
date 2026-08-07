@@ -1604,6 +1604,80 @@
 
         .pc-bt-input:focus { border-color: var(--apple-blue); outline: 2px solid var(--apple-blue); outline-offset: 1px; }
 
+        .pc-bt-check {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 12px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--apple-text-secondary);
+        }
+
+        .bt-live-data {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 8px 18px;
+            font-size: 14px;
+            margin: 58px auto 0;
+            color: var(--apple-text-secondary);
+        }
+
+        .bt-live-legend {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .bt-legend-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: none;
+            border: none;
+            padding: 0;
+            font-size: 13px;
+            color: var(--apple-text-secondary);
+            cursor: pointer;
+        }
+
+        .bt-legend-swatch {
+            width: 14px;
+            height: 4px;
+            border-radius: 2px;
+            flex: none;
+        }
+
+        .bt-live-range {
+            color: var(--apple-text-tertiary);
+        }
+
+        .bt-live-item {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 5px;
+        }
+
+        .bt-live-label {
+            color: var(--apple-text-tertiary);
+        }
+
+        .bt-live-val {
+            font-weight: 700;
+            color: var(--apple-text);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .bt-live-val.bt-val-positive {
+            color: var(--data-positive);
+        }
+
+        .bt-live-val.bt-val-negative {
+            color: var(--data-negative);
+        }
+
         .pc-bt-summary {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -3544,7 +3618,12 @@
                 <span class="pc-bt-advanced"><span class="pc-bt-label" id="pcBtSampleSizeLabel" data-i18n="backtest.sampleSize">显示点数</span>
                 <input type="number" id="pcBtSampleSize" class="pc-bt-input" value="120" min="20" max="500" step="10"></span>
                 <span class="pc-bt-advanced"><span class="pc-bt-label" data-i18n="backtest.animSeconds">动画秒数</span>
-                <input type="number" id="pcBtAnimSeconds" class="pc-bt-input" value="5" min="0" max="30" step="0.5"></span>
+                <input type="number" id="pcBtAnimSeconds" class="pc-bt-input" value="20" min="0" max="30" step="0.5"></span>
+                <span class="pc-bt-advanced pc-bt-show-series"><span class="pc-bt-label" data-i18n="backtest.showSeries">显示折线</span>
+                    <label class="pc-bt-check"><input type="checkbox" id="btShowAsset" checked><span data-i18n="backtest.totalAssets">总资产</span></label>
+                    <label class="pc-bt-check"><input type="checkbox" id="btShowInvested" checked><span data-i18n="backtest.totalInvested">累计投入</span></label>
+                    <label class="pc-bt-check"><input type="checkbox" id="btShowProfit" checked><span data-i18n="backtest.totalReturn">总收益</span></label>
+                </span>
                 <button id="pcBtRun" class="pc-btn primary" style="padding:7px 14px;" data-i18n="backtest.startBacktest">开始回测</button>
                 <label class="pc-bt-adv-toggle">
                     <input type="checkbox" id="pcBtAdvanced">
@@ -3555,7 +3634,12 @@
             </div>
             <div id="btHistory"></div>
             <div id="pcBtResult" style="display:none;">
-                <div id="btChart" style="margin-bottom:20px;"></div>
+                <div class="pc-loading" id="btLoading" style="display:none;">
+                <div class="spinner"></div>
+                <span data-i18n="backtest.fetching">加载中...</span>
+            </div>
+            <div id="btLiveData" class="bt-live-data"></div>
+            <div id="btChart" style="margin-bottom:20px;"></div>
                 <div class="pc-bt-summary" id="pcBtSummary"></div>
                 <div class="pc-bt-detail-header">
                     <span class="pc-bt-detail-title" data-i18n="backtest.detailRecords">买入详情</span>

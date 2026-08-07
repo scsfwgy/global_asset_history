@@ -165,7 +165,9 @@
     "colPrice": "成交价",
     "colShares": "买入份额",
     "colCumShares": "累计份额",
-    "colTotalReturn": "当日累计盈亏"
+    "colTotalReturn": "当日累计盈亏",
+    "showSeries": "显示折线",
+    "fetching": "加载中..."
   },
   "detail": {
     "title": "股票详情",
