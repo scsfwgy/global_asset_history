@@ -220,17 +220,6 @@
             display: none;
         }
 
-        .pc-loading {
-            display: none;
-            align-items: center;
-            gap: 8px;
-            color: var(--apple-text-secondary);
-            font-size: 13px;
-            padding: 8px 0;
-        }
-
-        .pc-loading .spinner { margin: 0; }
-
         /* ─── Full-width override ─── */
         .pc-main {
             max-width: 100%;
@@ -3041,7 +3030,7 @@
         <div class="pc-error" id="hmError"></div>
         <div class="pc-loading" id="hmLoading">
             <div class="spinner"></div>
-            <span data-i18n="heatmap.fetching">获取数据中...</span>
+            <span data-i18n="heatmap.fetching">加载中...</span>
         </div>
         <div id="hmTreemapWrap" class="hm-treemap-wrap">
             <svg id="hmTreemapSvg" class="hm-treemap-svg" preserveAspectRatio="xMidYMid meet"></svg>
@@ -3101,7 +3090,7 @@
         <div class="pc-error" id="pcError"></div>
         <div class="pc-loading" id="pcLoading">
             <div class="spinner"></div>
-            <span data-i18n="yearly.fetching">获取数据中...</span>
+            <span data-i18n="yearly.fetching">加载中...</span>
         </div>
 
         <div class="pc-table-wrap" id="pcTableWrap">
@@ -3478,7 +3467,7 @@
             <div class="pc-error" id="downloadError"></div>
             <div class="pc-loading" id="downloadLoading" style="display:none;">
                 <div class="spinner"></div>
-                <span data-i18n="download.fetching">正在获取数据...</span>
+                <span data-i18n="download.fetching">加载中...</span>
             </div>
             <div id="downloadEmpty" class="pc-empty">
                 <div style="font-size:32px;margin-bottom:8px;">⇩</div>
@@ -3703,7 +3692,7 @@
                         </tr>
                     </thead>
                     <tbody id="etfBody">
-                        <tr><td colspan="14" style="text-align:center;padding:24px;color:var(--apple-text-secondary);" data-i18n="etf.loading">加载中...</td></tr>
+                        <tr><td colspan="14" class="loading-cell"><div class="spinner"></div><span data-i18n="etf.loading">加载中...</span></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -3790,7 +3779,7 @@
             <div class="pc-error" id="qdiiFundsError"></div>
             <div class="pc-loading" id="qdiiFundsLoading">
                 <div class="spinner"></div>
-                <span data-i18n="qdii.loadingFunds">获取 QDII 基金数据中...</span>
+                <span data-i18n="qdii.loadingFunds">加载中...</span>
             </div>
             <div class="transfer-table-wrap" style="padding:0;">
                 <table class="transfer-table" id="qdiiFundsTable">
@@ -3822,7 +3811,7 @@
                         </tr>
                     </thead>
                     <tbody id="qdiiFundsBody">
-                        <tr><td colspan="23" style="text-align:center;padding:24px;color:var(--apple-text-secondary);" data-i18n="vix.loading">加载中...</td></tr>
+                        <tr><td colspan="23" class="loading-cell"><div class="spinner"></div><span data-i18n="vix.loading">加载中...</span></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -3921,7 +3910,7 @@
                 </p>
                 <div class="pc-loading" id="fearStatsLoading" style="display:none;">
                     <div class="spinner"></div>
-                    <span data-i18n="vix.thresholdLoading">正在统计历史数据...</span>
+                    <span data-i18n="vix.thresholdLoading">加载中...</span>
                 </div>
                 <div class="pc-error" id="fearStatsError" style="display:none;"></div>
                 <div class="pc-bt-summary" id="fearStatsSummary" style="display:none;">
@@ -6382,13 +6371,13 @@
             <div class="kb-sub-panel" id="kb-tqqq-csv" style="display:none;">
             <div class="kb-page-hero"><div><h2>TQQQ 历史价格与 CSV</h2><p>默认展示最近一年日线数据。先在线核对日期范围、记录数和区间表现，再下载相同口径的 CSV。</p></div><span class="kb-page-symbol">TQQQ · 3X</span></div>
             <div class="kb-section"><div class="kb-callout kb-callout-green"><strong>下载说明：</strong>CSV 由站点统一日线数据层按请求生成，包含日期、复权收盘价，以及上游可用时的 OHLC 和成交量。</div></div>
-            <div class="kb-section kb-tool-panel tqqq-tool" data-locale="zh"><h3 class="kb-section-title">选择范围并预览</h3><form class="pc-controls" action="/api/assets/TQQQ/history.csv" method="get"><label class="control-label">开始日期 <input class="pc-bt-input" name="start" data-role="start" type="date"></label><label class="control-label">结束日期 <input class="pc-bt-input" name="end" data-role="end" type="date"></label><button class="pc-btn" data-role="preview" type="button">刷新预览</button><button class="pc-btn primary" type="submit">下载 CSV</button></form><p class="kb-tool-status" data-role="status">正在加载最近一年数据…</p><div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">数据范围</div><div class="kb-stat-value" data-role="range">—</div><div class="kb-stat-note">首个交易日 → 最新交易日</div></div><div class="kb-stat-card"><div class="kb-stat-label">交易日记录</div><div class="kb-stat-value" data-role="count">—</div><div class="kb-stat-note">当前筛选范围</div></div><div class="kb-stat-card"><div class="kb-stat-label">最新复权收盘价</div><div class="kb-stat-value" data-role="latest">—</div><div class="kb-stat-note">adjusted_close</div></div><div class="kb-stat-card"><div class="kb-stat-label">区间价格变化</div><div class="kb-stat-value" data-role="return">—</div><div class="kb-stat-note">首尾复权收盘价计算</div></div></div><h4 class="kb-section-subtitle">最近 10 个交易日预览</h4><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>日期</th><th>开盘</th><th>最高</th><th>最低</th><th>复权收盘</th><th>成交量</th></tr></thead><tbody data-role="rows"><tr><td colspan="6"><div class="kb-preview-empty">正在获取数据…</div></td></tr></tbody></table></div></div>
+            <div class="kb-section kb-tool-panel tqqq-tool" data-locale="zh"><h3 class="kb-section-title">选择范围并预览</h3><form class="pc-controls" action="/api/assets/TQQQ/history.csv" method="get"><label class="control-label">开始日期 <input class="pc-bt-input" name="start" data-role="start" type="date"></label><label class="control-label">结束日期 <input class="pc-bt-input" name="end" data-role="end" type="date"></label><button class="pc-btn" data-role="preview" type="button">刷新预览</button><button class="pc-btn primary" type="submit">下载 CSV</button></form><p class="kb-tool-status" data-role="status">加载中...</p><div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">数据范围</div><div class="kb-stat-value" data-role="range">—</div><div class="kb-stat-note">首个交易日 → 最新交易日</div></div><div class="kb-stat-card"><div class="kb-stat-label">交易日记录</div><div class="kb-stat-value" data-role="count">—</div><div class="kb-stat-note">当前筛选范围</div></div><div class="kb-stat-card"><div class="kb-stat-label">最新复权收盘价</div><div class="kb-stat-value" data-role="latest">—</div><div class="kb-stat-note">adjusted_close</div></div><div class="kb-stat-card"><div class="kb-stat-label">区间价格变化</div><div class="kb-stat-value" data-role="return">—</div><div class="kb-stat-note">首尾复权收盘价计算</div></div></div><h4 class="kb-section-subtitle">最近 10 个交易日预览</h4><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>日期</th><th>开盘</th><th>最高</th><th>最低</th><th>复权收盘</th><th>成交量</th></tr></thead><tbody data-role="rows"><tr><td colspan="6"><div class="kb-preview-empty">加载中...</div></td></tr></tbody></table></div></div>
             <div class="kb-section"><h3 class="kb-section-title">数据口径与杠杆风险</h3><div class="kb-grid"><div class="kb-grid-col"><h4>CSV 字段</h4><ul><li>date：交易日期</li><li>open / high / low：上游可用的原始价格</li><li>adjusted_close：适合历史收益研究的复权收盘价</li><li>volume：当日成交量</li></ul></div><div class="kb-grid-col"><h4>不能忽略的风险</h4><ul><li>TQQQ 追求纳斯达克100单日 3 倍表现</li><li>多日收益不等于指数区间收益简单乘以 3</li><li>每日重置会产生路径依赖和波动损耗</li><li>高波动阶段可能出现极深回撤</li></ul></div></div><div class="kb-callout kb-callout-yellow">预览中的“区间价格变化”没有计入税费，也不是未来收益预测。研究长期持有结果时，必须把每日重置与波动路径纳入判断。</div><div class="kb-inline-actions"><a class="pc-btn" href="https://www.proshares.com/our-etfs/leveraged-and-inverse/tqqq" target="_blank" rel="noopener">ProShares 官方页面</a><a class="pc-btn" href="__LANG_PREFIX__/detail?symbol=TQQQ&amp;type=stock">查看完整历史走势</a></div></div>
             </div>
             <div class="kb-sub-panel" id="kb-tqqq-csv-en" style="display:none;">
             <div class="kb-page-hero"><div><h2>TQQQ Historical Prices and CSV</h2><p>The latest year is selected by default. Verify dates, record count, and period change online before downloading the same filtered data.</p></div><span class="kb-page-symbol">TQQQ · 3X</span></div>
             <div class="kb-section"><div class="kb-callout kb-callout-green"><strong>Download scope:</strong> The CSV is generated by the unified daily-price layer and includes date, adjusted close, and OHLC/volume when available upstream.</div></div>
-            <div class="kb-section kb-tool-panel tqqq-tool" data-locale="en"><h3 class="kb-section-title">Select a Range and Preview</h3><form class="pc-controls" action="/api/assets/TQQQ/history.csv" method="get"><label class="control-label">Start date <input class="pc-bt-input" name="start" data-role="start" type="date"></label><label class="control-label">End date <input class="pc-bt-input" name="end" data-role="end" type="date"></label><button class="pc-btn" data-role="preview" type="button">Refresh preview</button><button class="pc-btn primary" type="submit">Download CSV</button></form><p class="kb-tool-status" data-role="status">Loading the latest year…</p><div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">Data range</div><div class="kb-stat-value" data-role="range">—</div><div class="kb-stat-note">First → latest trading day</div></div><div class="kb-stat-card"><div class="kb-stat-label">Trading days</div><div class="kb-stat-value" data-role="count">—</div><div class="kb-stat-note">Within the current filter</div></div><div class="kb-stat-card"><div class="kb-stat-label">Latest adjusted close</div><div class="kb-stat-value" data-role="latest">—</div><div class="kb-stat-note">adjusted_close</div></div><div class="kb-stat-card"><div class="kb-stat-label">Period price change</div><div class="kb-stat-value" data-role="return">—</div><div class="kb-stat-note">From first and last adjusted close</div></div></div><h4 class="kb-section-subtitle">Latest 10 Trading Days</h4><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>Date</th><th>Open</th><th>High</th><th>Low</th><th>Adjusted close</th><th>Volume</th></tr></thead><tbody data-role="rows"><tr><td colspan="6"><div class="kb-preview-empty">Fetching data…</div></td></tr></tbody></table></div></div>
+            <div class="kb-section kb-tool-panel tqqq-tool" data-locale="en"><h3 class="kb-section-title">Select a Range and Preview</h3><form class="pc-controls" action="/api/assets/TQQQ/history.csv" method="get"><label class="control-label">Start date <input class="pc-bt-input" name="start" data-role="start" type="date"></label><label class="control-label">End date <input class="pc-bt-input" name="end" data-role="end" type="date"></label><button class="pc-btn" data-role="preview" type="button">Refresh preview</button><button class="pc-btn primary" type="submit">Download CSV</button></form><p class="kb-tool-status" data-role="status">Loading...</p><div class="kb-stat-grid"><div class="kb-stat-card"><div class="kb-stat-label">Data range</div><div class="kb-stat-value" data-role="range">—</div><div class="kb-stat-note">First → latest trading day</div></div><div class="kb-stat-card"><div class="kb-stat-label">Trading days</div><div class="kb-stat-value" data-role="count">—</div><div class="kb-stat-note">Within the current filter</div></div><div class="kb-stat-card"><div class="kb-stat-label">Latest adjusted close</div><div class="kb-stat-value" data-role="latest">—</div><div class="kb-stat-note">adjusted_close</div></div><div class="kb-stat-card"><div class="kb-stat-label">Period price change</div><div class="kb-stat-value" data-role="return">—</div><div class="kb-stat-note">From first and last adjusted close</div></div></div><h4 class="kb-section-subtitle">Latest 10 Trading Days</h4><div class="kb-table-wrap"><table class="kb-table"><thead><tr><th>Date</th><th>Open</th><th>High</th><th>Low</th><th>Adjusted close</th><th>Volume</th></tr></thead><tbody data-role="rows"><tr><td colspan="6"><div class="kb-preview-empty">Loading...</div></td></tr></tbody></table></div></div>
             <div class="kb-section"><h3 class="kb-section-title">Data Scope and Leverage Risk</h3><div class="kb-grid"><div class="kb-grid-col"><h4>CSV fields</h4><ul><li>date: trading date</li><li>open / high / low: raw prices when available</li><li>adjusted_close: adjusted close for historical research</li><li>volume: daily trading volume</li></ul></div><div class="kb-grid-col"><h4>Risks that matter</h4><ul><li>TQQQ targets 3x the daily Nasdaq-100 return</li><li>Multi-day return is not simply index return times three</li><li>Daily reset creates path dependence and volatility decay</li><li>Drawdowns can be extreme in volatile markets</li></ul></div></div><div class="kb-callout kb-callout-yellow">The preview's period price change excludes taxes and costs and is not a forecast. Long-horizon analysis must account for daily reset and the realized volatility path.</div><div class="kb-inline-actions"><a class="pc-btn" href="https://www.proshares.com/our-etfs/leveraged-and-inverse/tqqq" target="_blank" rel="noopener">Official ProShares page</a><a class="pc-btn" href="__LANG_PREFIX__/detail?symbol=TQQQ&amp;type=stock">View full price history</a></div></div>
             </div>
 
@@ -7245,7 +7234,7 @@
                     return;
                 }
                 status.classList.remove('is-error');
-                status.textContent = isEnglish ? 'Loading price data…' : '正在加载价格数据…';
+                status.textContent = isEnglish ? 'Loading...' : '加载中...';
                 var preview = tool.querySelector('[data-role="preview"]');
                 if (preview) preview.disabled = true;
                 try {

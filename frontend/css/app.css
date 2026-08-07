@@ -471,13 +471,39 @@ body {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+/* Branded loading spinner: a gradient arc (Apple blue) rendered as a ring via
+   mask. drop-shadow respects the masked pixels, giving the arc a soft glow.
+   Gentle ease reads as a polished winding motion rather than a stock ring. */
 .spinner {
             width: 20px; height: 20px;
-            border: 2px solid var(--apple-divider);
-            border-top-color: var(--apple-text-secondary);
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+            background: conic-gradient(from 90deg, transparent 0deg, var(--apple-blue) 280deg, var(--apple-blue) 360deg);
+            -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+            mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+            filter: drop-shadow(0 0 5px rgba(0, 113, 227, 0.35));
+            animation: spin 0.9s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
             margin: 0 auto 10px;
+        }
+/* Loading text: soft breathing fade, subordinate to the spinner. */
+.pc-loading span,
+.loading-cell span,
+.hd-loading span {
+            animation: loading-text 1.8s ease-in-out infinite;
+        }
+@keyframes loading-text {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.55; }
+        }
+@media (prefers-reduced-motion: reduce) {
+            .spinner {
+                animation: none;
+                background: var(--apple-divider);
+                box-shadow: none;
+            }
+            .pc-loading span,
+            .loading-cell span,
+            .hd-loading span { animation: none; }
         }
 .main {
             padding: 32px 24px;
@@ -588,15 +614,28 @@ body {
             font-size: var(--text-xs);
             font-weight: 600;
         }
-.transfer-loading {
+/* ─── Unified loading states ─── */
+/* Block loader: spinner + text row (shown by JS via inline display:flex). */
+.pc-loading {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: var(--apple-text-secondary);
+            font-size: 13px;
+            padding: 8px 0;
+        }
+.pc-loading .spinner { margin: 0; }
+/* Table-cell loader: centered spinner + text inside a <td colspan>. */
+.loading-cell {
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 32px;
+            gap: 8px;
+            padding: 24px;
             color: var(--apple-text-secondary);
             font-size: 13px;
         }
+.loading-cell .spinner { margin: 0; }
 /* Responsive breakpoints */
 @media (max-width: 768px) {
     .header,  .main { padding: 14px; }
