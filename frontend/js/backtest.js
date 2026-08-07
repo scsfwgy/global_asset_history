@@ -583,6 +583,33 @@ function renderBtChart(equityCurve) {
   }
 }
 
+// Count-up animation for the summary values, synced with the chart reveal duration.
+const BT_ANIM_FORMATTERS = {
+  money: (v) => formatBtMoney(v),
+  moneySigned: (v) => formatBtMoney(v, true),
+  pct: (v) => (v >= 0 ? "+" : "") + v.toFixed(2) + "%",
+  int: (v) => formatBtNumber(Math.round(v), 0),
+};
+
+function animateBtSummary(durationMs) {
+  const vals = btSummary.querySelectorAll("[data-anim]");
+  if (!vals.length) return;
+  const targets = Array.from(vals, (el) => Number(el.dataset.value) || 0);
+  const format = (el, v) => BT_ANIM_FORMATTERS[el.dataset.anim](v);
+  if (durationMs <= 0) {
+    vals.forEach((el, i) => { el.textContent = format(el, targets[i]); });
+    return;
+  }
+  const start = performance.now();
+  const tick = (now) => {
+    const progress = Math.min((now - start) / durationMs, 1);
+    const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic decelerating roll
+    vals.forEach((el, i) => { el.textContent = format(el, targets[i] * eased); });
+    if (progress < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
 function renderBacktestResult(symbol, result) {
   syncBacktestCurrency(result.type, result.currency);
   const summary = result.summary || {};
@@ -594,38 +621,42 @@ function renderBacktestResult(symbol, result) {
   _btEquityByDate = Object.fromEntries((result.equity_curve || []).map((row) => [row.date, row]));
   _btPage = 1;
 
+  const animFinal = Number(summary.final_value) || 0;
+  const animInvested = Number(summary.invested) || 0;
+  const animTradeCount = Number(summary.trade_count) || 0;
   btSummary.innerHTML = `
     <div class="pc-bt-summary-item">
       <div class="pc-bt-summary-label">${__("backtest.finalAssets")}</div>
-      <div class="pc-bt-summary-val ${profit >= 0 ? "bt-val-positive" : "bt-val-negative"}">${formatBtMoney(summary.final_value)}</div>
+      <div class="pc-bt-summary-val ${profit >= 0 ? "bt-val-positive" : "bt-val-negative"}" data-anim="money" data-value="${animFinal}">${formatBtMoney(animFinal)}</div>
       <div class="pc-bt-summary-note">${__("backtest.finalAssetsNote", { symbol: escapeHtml(symbol) })}</div>
     </div>
     <div class="pc-bt-summary-item">
       <div class="pc-bt-summary-label">${__("backtest.totalInvested")}</div>
-      <div class="pc-bt-summary-val">${formatBtMoney(summary.invested)}</div>
+      <div class="pc-bt-summary-val" data-anim="money" data-value="${animInvested}">${formatBtMoney(animInvested)}</div>
       <div class="pc-bt-summary-note">${__("backtest.totalInvestedNote")}</div>
     </div>
     <div class="pc-bt-summary-item">
       <div class="pc-bt-summary-label">${__("backtest.profitAmount")}</div>
-      <div class="pc-bt-summary-val ${profit >= 0 ? "bt-val-positive" : "bt-val-negative"}">${formatBtMoney(profit, true)}</div>
+      <div class="pc-bt-summary-val ${profit >= 0 ? "bt-val-positive" : "bt-val-negative"}" data-anim="moneySigned" data-value="${profit}">${formatBtMoney(profit, true)}</div>
       <div class="pc-bt-summary-note">${__("backtest.profitAmountNote")}</div>
     </div>
     <div class="pc-bt-summary-item">
       <div class="pc-bt-summary-label">${__("backtest.totalReturnRate")}</div>
-      <div class="pc-bt-summary-val ${returnPct >= 0 ? "bt-val-positive" : "bt-val-negative"}">${returnPct >= 0 ? "+" : ""}${returnPct.toFixed(2)}%</div>
+      <div class="pc-bt-summary-val ${returnPct >= 0 ? "bt-val-positive" : "bt-val-negative"}" data-anim="pct" data-value="${returnPct}">${returnPct >= 0 ? "+" : ""}${returnPct.toFixed(2)}%</div>
       <div class="pc-bt-summary-note">${__("backtest.totalReturnRateNote")}</div>
     </div>
     <div class="pc-bt-summary-item">
       <div class="pc-bt-summary-label has-tip" title="${__("backtest.irrTooltip")}">${__("backtest.irrAnnualized")}</div>
-      <div class="pc-bt-summary-val ${annualizedReturnPct >= 0 ? "bt-val-positive" : "bt-val-negative"}">${annualizedReturnPct >= 0 ? "+" : ""}${annualizedReturnPct.toFixed(2)}%</div>
+      <div class="pc-bt-summary-val ${annualizedReturnPct >= 0 ? "bt-val-positive" : "bt-val-negative"}" data-anim="pct" data-value="${annualizedReturnPct}">${annualizedReturnPct >= 0 ? "+" : ""}${annualizedReturnPct.toFixed(2)}%</div>
       <div class="pc-bt-summary-note">${__("backtest.irrNote")}</div>
     </div>
     <div class="pc-bt-summary-item">
       <div class="pc-bt-summary-label">${__("backtest.tradeCount")}</div>
-      <div class="pc-bt-summary-val">${formatBtNumber(summary.trade_count, 0)}</div>
+      <div class="pc-bt-summary-val" data-anim="int" data-value="${animTradeCount}">${formatBtNumber(animTradeCount, 0)}</div>
       <div class="pc-bt-summary-note">${__("backtest.tradeCountNote")}</div>
     </div>
   `;
+  animateBtSummary(getBacktestAnimMs());
 
   btHead.innerHTML = "<th>" + __("backtest.colDate") + "</th><th>" + __("backtest.colKind") + "</th><th>" + __("backtest.colAmount") + "</th><th>" + __("backtest.colPrice") + "</th><th>" + __("backtest.colShares") + "</th><th>" + __("backtest.colCumShares") + "</th><th>" + __("backtest.colTotalReturn") + "</th>";
   renderBacktestCashflowPage();
