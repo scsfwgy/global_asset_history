@@ -103,7 +103,7 @@
     "metaFailed": "Failed:"
   },
   "backtest": {
-    "chartTitle": "📈 Backtest",
+    "chartTitle": "Backtest",
     "symbol": "Symbol",
     "initialAmount": "Initial Amount",
     "amountPerTime": "Per Investment",
@@ -403,7 +403,7 @@
     "summary": "{{symbol}} · {{period}} · {{count}} rows"
   },
   "crash": {
-    "chartTitle": "📉 Crash Stats — Multi-Period Crash Detection & Recovery Analysis",
+    "chartTitle": "Crash Stats — Multi-Period Crash Detection & Recovery Analysis",
     "symbol": "Symbol",
     "dropPct": "Drop Threshold",
     "periodType": "Candle Period",
@@ -515,7 +515,7 @@
     "refresh": "Refresh",
     "refreshQuotes": "Refresh Quotes",
     "title": "A-Share ETF Live Quotes",
-    "chartTitle": "📊 S&P & Nasdaq ETF Tracker (Listed) — A-Share Account for Exchange-Traded ETFs",
+    "chartTitle": "S&P & Nasdaq ETF Tracker (Listed) — A-Share Account for Exchange-Traded ETFs",
     "viewRank": "Live Ranking",
     "viewAggregate": "Aggregate Analysis",
     "quoteLoadFailed": "✗ Failed to load quotes",
@@ -561,7 +561,7 @@
     "reload": "Reload"
   },
   "qdii": {
-    "chartTitle": "📋 S&P & Nasdaq Fund Tracker (OTC) — Alipay OTC QDII Candidate List",
+    "chartTitle": "S&P & Nasdaq Fund Tracker (OTC) — Alipay OTC QDII Candidate List",
     "tabActiveQdii": "Active QDII",
     "candidateFunds": "Candidate Funds",
     "publicAvailable": "Publicly Available",
@@ -688,7 +688,7 @@
     "regionUsShort": "US"
   },
   "vix": {
-    "chartTitle": "📊 SPY · QQQ · VIX · VXN Comparison",
+    "chartTitle": "SPY · QQQ · VIX · VXN Comparison",
     "period1h": "1 Hour",
     "periodDay": "Daily",
     "periodWeek": "Weekly",
@@ -775,7 +775,7 @@
     "thresholdLoadFailed": "Analysis failed: "
   },
   "exchangeLoss": {
-    "chartTitle": "💱 USD/CNY Historical Rate",
+    "chartTitle": "USD/CNY Historical Rate",
     "rateHistory": "Historical Rate",
     "periodDay": "Day",
     "periodWeek": "Week",
@@ -810,7 +810,7 @@
     "tooltipOhlc": "O/H/L/C: ",
     "aggLabel": "Aggregate Bars",
     "aggNote": "Group the selected date range into consecutive chunks of N daily bars and compute the holding loss/gain for each chunk.",
-    "detailTitle": "📋 Holding Loss Breakdown",
+    "detailTitle": "Holding Loss Breakdown",
     "detailPeriod": "Period",
     "detailStartRate": "Start Rate",
     "detailEndRate": "End Rate",
@@ -823,7 +823,7 @@
   "fxCalc": {
     "tabLoss": "Exchange Loss",
     "tabCalc": "Exchange Calculator",
-    "title": "💱 Exchange Calculator",
+    "title": "Exchange Calculator",
     "amount": "Amount",
     "baseCurrency": "Base currency",
     "refresh": "Refresh",
@@ -850,7 +850,7 @@
     "empty": "Enter an amount and pick a base currency to see conversions."
   },
   "wishes": {
-    "title": "🌟 Wishes Wall — Suggest assets or features you'd like to see",
+    "title": "Wishes Wall — Suggest assets or features you'd like to see",
     "save": "Save",
     "adminPlaceholder": "Enter token to enable per-wish deletion",
     "placeholder": "Write your wish (max 200 characters)...",
@@ -918,7 +918,7 @@
     "dramTab": "DRAM Holdings",
     "qqqmTab": "QQQM Holdings",
     "tqqqCsvTab": "TQQQ CSV",
-    "title": "📚 Knowledge Base",
+    "title": "Knowledge Base",
     "howToBuy": "How to Buy US Stocks",
     "quickLearn": "Learn:",
     "quickHowToBuy": "How to Invest in US Stocks",

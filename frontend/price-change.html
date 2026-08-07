@@ -132,26 +132,6 @@
 
         .pc-range-input:focus { border-color: var(--apple-blue); outline: 2px solid var(--apple-blue); outline-offset: 1px; }
 
-        .pc-btn {
-            padding: 7px 14px;
-            border: 1px solid var(--apple-divider);
-            background: var(--apple-surface-1);
-            color: var(--apple-text-primary);
-            font-size: 13px;
-            border-radius: var(--radius-md);
-            cursor: pointer;
-            transition: all var(--transition-fast);
-            white-space: nowrap;
-        }
-
-        .pc-btn:hover { border-color: var(--apple-blue); color: var(--apple-text-primary); }
-        .pc-btn.primary { background: var(--apple-blue); border-color: var(--apple-blue); color: #fff; }
-        .pc-btn.primary:hover { opacity: 0.85; }
-        .pc-btn.danger { border-color: var(--data-negative); color: var(--data-negative); }
-        .pc-btn.danger:hover { background: var(--data-negative); color: #fff; }
-        .pc-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .pc-btn-sm { padding: var(--space-xs) 10px; font-size: var(--text-xs); border-radius: var(--radius-md); }
-
         .pc-presets {
             display: flex;
             align-items: center;
@@ -212,91 +192,6 @@
 
         .pc-tag-remove:hover { opacity: 1; }
         .pc-tag .pc-tag-type { opacity: 0.6; font-size: var(--text-xs); }
-
-        /* ─── Table ─── */
-        .pc-table-wrap {
-            overflow-x: auto;
-            border-radius: var(--radius-lg);
-            background: var(--apple-surface-1);
-            box-shadow: var(--apple-card-shadow);
-        }
-
-        .pc-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-
-        .pc-table th {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            background: var(--apple-surface-1);
-            padding: 12px 16px;
-            font-weight: 600;
-            font-size: 12px;
-            color: var(--apple-text-tertiary);
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            text-align: center;
-            border-bottom: 1px solid var(--apple-divider);
-            white-space: nowrap;
-        }
-
-        .pc-table th:first-child {
-            min-width: 70px;
-        }
-
-        .pc-table td {
-            padding: 10px 16px;
-            text-align: right;
-            border-bottom: 1px solid var(--apple-divider);
-            font-variant-numeric: tabular-nums;
-            transition: background-color var(--transition-fast);
-            white-space: nowrap;
-        }
-
-        .pc-table td:first-child {
-            text-align: left;
-            color: var(--apple-text-secondary);
-            font-weight: 500;
-            background: var(--apple-surface-1);
-            position: sticky;
-            left: 0;
-            z-index: 5;
-            box-shadow: var(--apple-sticky-shadow);
-        }
-
-        .pc-table tr:last-child td { border-bottom: none; }
-
-        .pc-table tbody tr:hover td {
-            background: var(--apple-overlay);
-        }
-        .pc-table tbody tr:hover td:first-child {
-            background: var(--apple-overlay);
-        }
-
-        .pc-table tbody tr:nth-child(even) td {
-            background: var(--apple-overlay-subtle);
-        }
-        .pc-table tbody tr:nth-child(even) td:first-child {
-            background: var(--apple-overlay-subtle);
-        }
-        .pc-table tbody tr:nth-child(even):hover td {
-            background: var(--apple-overlay);
-        }
-        .pc-table tbody tr:nth-child(even):hover td:first-child {
-            background: var(--apple-overlay);
-        }
-
-        .pc-empty {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--apple-text-tertiary);
-            font-size: 14px;
-        }
-
-        .pc-empty-hint { font-size: 12px; margin-top: 6px; opacity: 0.6; }
 
         /* ─── Error / Loading ─── */
         .pc-meta-info {
@@ -533,6 +428,7 @@
             gap: 8px;
         }
         .pd-asset-symbol {
+            font-family: var(--font-display);
             color: var(--apple-text-primary);
             font-size: 24px;
             font-weight: 750;
@@ -595,6 +491,7 @@
         }
         .pd-asset-price {
             margin-top: 3px;
+            font-family: var(--font-display);
             color: var(--apple-text-primary);
             font-size: 25px;
             font-weight: 750;
@@ -618,6 +515,7 @@
             margin-bottom: 4px;
         }
         .pd-summary-value {
+            font-family: var(--font-display);
             font-size: 18px;
             font-weight: 700;
             font-variant-numeric: tabular-nums;
@@ -2051,145 +1949,6 @@
             }
         }
 
-        /* Settings dropdown: anchor from left on small screens since the
-           button moves to the left side of the header (flex-start). */
-        @media (max-width: 768px) {
-            .header-settings-menu {
-                right: auto;
-                left: 0;
-                max-width: calc(100vw - 32px);
-            }
-        }
-
-        /* ─── Header brand links ─── */
-        .nav-links a {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .nav-links a svg {
-            width: 14px;
-            height: 14px;
-            display: block;
-        }
-
-        /* ─── Theme toggle ─── */
-        .theme-toggle {
-            width: 28px; height: 28px;
-            border-radius: 50%;
-            border: none;
-            background: transparent;
-            color: var(--apple-text-tertiary);
-            cursor: pointer;
-            display: inline-flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-            padding: 0;
-            transition: color var(--transition-fast);
-        }
-        .theme-toggle:hover { color: var(--apple-text-primary); }
-        .theme-toggle svg { width: 18px; height: 18px; display: block; }
-        /* Sun icon: visible in dark mode (suggest switching to light) */
-        [data-theme="light"] .theme-toggle .icon-sun { display: none; }
-        [data-theme="light"] .theme-toggle .icon-moon { display: block; }
-        .theme-toggle .icon-sun { display: block; }
-        .theme-toggle .icon-moon { display: none; }
-
-        /* ─── Header settings dropdown ─── */
-        .header-settings-wrap { position: relative; }
-        .header-settings-btn {
-            width: 28px; height: 28px;
-            border-radius: var(--radius-md);
-            border: none;
-            background: transparent;
-            color: var(--apple-text-tertiary);
-            cursor: pointer;
-            display: inline-flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-            transition: color var(--transition-fast);
-        }
-        .header-settings-btn:hover { color: var(--apple-text-primary); }
-        .header-settings-btn svg { width: 18px; height: 18px; }
-        /* Hint animation: pulse + rotate + glow to reveal hidden content. Triggered via JS after 10s. */
-        .header-settings-btn.hint {
-            animation: settings-hint 2s ease-in-out 3;
-            color: var(--apple-blue);
-            position: relative;
-        }
-        .header-settings-btn.hint::after {
-            content: '';
-            position: absolute;
-            inset: -4px;
-            border-radius: var(--radius-lg);
-            background: transparent;
-            box-shadow: 0 0 0 0 rgba(0,113,227,0.5);
-            animation: settings-ring 2s ease-out 3;
-            pointer-events: none;
-        }
-        @keyframes settings-hint {
-            0%   { transform: scale(1) rotate(0deg); }
-            15%  { transform: scale(1.25) rotate(25deg); }
-            30%  { transform: scale(0.9) rotate(-10deg); }
-            45%  { transform: scale(1.15) rotate(12deg); }
-            60%  { transform: scale(0.95) rotate(0deg); }
-            75%  { transform: scale(1.08) rotate(0deg); }
-            100% { transform: scale(1) rotate(0deg); color: var(--apple-text-tertiary); }
-        }
-        @keyframes settings-ring {
-            0%   { box-shadow: 0 0 0 0 rgba(0,113,227,0.5); }
-            50%  { box-shadow: 0 0 0 8px rgba(0,113,227,0); }
-            100% { box-shadow: 0 0 0 0 rgba(0,113,227,0); }
-        }
-        /* Breathing highlight for the new-feature link when menu is open */
-        .header-settings-menu a.highlight-link {
-            animation: link-breathe 2.4s ease-in-out infinite;
-        }
-        @keyframes link-breathe {
-            0%, 100% { background: transparent; }
-            50% { background: rgba(0,113,227,0.12); }
-        }
-        .header-settings-menu {
-            position: absolute; top: calc(100% + 8px); right: 0;
-            min-width: 210px;
-            background: var(--apple-surface-1);
-            border: 1px solid var(--apple-divider);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--apple-shadow-popover);
-            padding: 6px;
-            z-index: 100;
-        }
-        .header-settings-menu a {
-            display: flex; align-items: center; gap: 8px;
-            padding: 8px 12px;
-            border-radius: var(--radius-md);
-            font-size: 13px;
-            color: var(--apple-text-primary);
-            text-decoration: none;
-            transition: background 0.12s;
-        }
-        .header-settings-menu a:hover { background: var(--apple-overlay); }
-        .header-settings-sep {
-            height: 1px; background: var(--apple-divider);
-            margin: 6px 10px;
-        }
-        .header-settings-info {
-            padding: 7px 12px;
-            font-size: 12px;
-            color: var(--apple-text-secondary);
-            display: flex; align-items: center; gap: 6px;
-            user-select: none;
-        }
-        .header-settings-theme-row {
-            cursor: pointer;
-            border-radius: var(--radius-md);
-            transition: background 0.12s;
-        }
-        .header-settings-theme-row:hover { background: var(--apple-overlay); }
-        .header-settings-theme-icon { font-size: 14px; line-height: 1; }
-        .header-settings-link-icon {
-            width: 16px; height: 16px;
-            flex-shrink: 0;
-        }
-
         /* ─── Versioned feature updates ─── */
         .feature-update-dialog {
             width: min(520px, calc(100vw - 32px));
@@ -3144,24 +2903,33 @@
                         <div class="header-settings-info"><span class="status-dot" id="statusDot"></span> <span id="settingsConnLabel" data-i18n="nav.connecting">连接中...</span></div>
                         <!-- System: theme -->
                         <div id="settingsThemeToggle" class="header-settings-info header-settings-theme-row">
-                            <span class="header-settings-theme-icon" id="settingsThemeIcon">🌙</span>
+                            <span class="header-settings-theme-icon" id="settingsThemeIcon">
+                                <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                                <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                            </span>
                             <span id="settingsThemeLabel" data-i18n="settings.theme">深色模式</span>
                         </div>
                         <!-- System: color scheme -->
                         <div id="settingsColorSchemeToggle" class="header-settings-info header-settings-theme-row">
-                            <span class="header-settings-theme-icon" id="settingsColorSchemeIcon">📈</span>
+                            <span class="header-settings-theme-icon" id="settingsColorSchemeIcon">
+                                <svg class="cs-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                            </span>
                             <span id="settingsColorSchemeLabel" data-i18n="settings.colorScheme">绿涨红跌</span>
                         </div>
                         <!-- System: language -->
                         <div id="settingsLangRow" class="header-settings-info header-settings-theme-row">
-                            <span class="header-settings-theme-icon">🌐</span>
+                            <span class="header-settings-theme-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                            </span>
                             <span id="settingsLangLabel">Language</span>
                         </div>
                         <!-- System: visit count -->
                         <div class="header-settings-info" id="settingsVisitCount" data-i18n="settings.visitCountPrefix">访问次数：⋯</div>
                         <!-- System: update log -->
                         <div id="settingsUpdateLogRow" class="header-settings-info header-settings-theme-row" role="button" tabindex="0">
-                            <span class="header-settings-theme-icon">📢</span>
+                            <span class="header-settings-theme-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+                            </span>
                             <span data-i18n="settings.updateLog">更新日志</span>
                         </div>
                         <div class="header-settings-sep"></div>
@@ -3233,7 +3001,7 @@
         </section>
         <!-- Collapsible filter bar -->
         <div class="hm-filter-toggle" id="hmFilterToggle">
-            <span class="hm-filter-icon">⚙</span>
+            <span class="hm-filter-icon"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span>
             <span data-i18n="heatmap.filters">筛选条件</span>
             <span class="hm-filter-arrow">▸</span>
         </div>
@@ -3279,7 +3047,7 @@
             <svg id="hmTreemapSvg" class="hm-treemap-svg" preserveAspectRatio="xMidYMid meet"></svg>
         </div>
         <div id="hmEmpty" class="pc-empty" style="display:none;">
-            <div style="font-size: 32px; margin-bottom: 8px;">📊</div>
+            <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.45; margin-bottom:8px; color: var(--apple-text-tertiary);"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
             <div data-i18n="heatmap.emptyPrompt">点击「查询」查看市场热力图</div>
             <div class="pc-empty-hint" data-i18n="heatmap.emptyHint">块大小反映成交额，颜色深浅反映涨跌幅</div>
         </div>
@@ -3338,7 +3106,7 @@
 
         <div class="pc-table-wrap" id="pcTableWrap">
             <div class="pc-empty" id="pcEmpty">
-                <div style="font-size: 32px; margin-bottom: 8px;">📊</div>
+                <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.45; margin-bottom:8px; color: var(--apple-text-tertiary);"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
                 <div data-i18n="yearly.emptyPrompt">添加代码并点击"查询"查看历年涨跌幅</div>
                 <div class="pc-empty-hint" data-i18n="yearly.emptyHint">支持美股和数字货币，着色范围默认 -50% ~ +50%</div>
             </div>
@@ -3736,7 +3504,7 @@
         <div class="tab-panel" id="tab-backtest">
         <div id="pcBacktest" class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title" data-i18n="backtest.chartTitle">📈 回测</span>
+                <span class="pc-chart-title" data-i18n="backtest.chartTitle">回测</span>
                 <button class="pd-bar-chart-toggle" id="btParamsToggle" type="button"
                         aria-controls="btParamsPanel" aria-expanded="true" data-i18n="detail.collapseParams">收起参数</button>
             </div>
@@ -3836,7 +3604,7 @@
         <div class="tab-panel" id="tab-crash">
         <div id="pcCrashStats" class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title" data-i18n="crash.chartTitle">📉 暴跌统计 — 多周期暴跌检测与恢复分析</span>
+                <span class="pc-chart-title" data-i18n="crash.chartTitle">暴跌统计 — 多周期暴跌检测与恢复分析</span>
                 <button class="pd-bar-chart-toggle" id="crashParamsToggle" type="button"
                         aria-controls="crashParamsPanel" aria-expanded="true" data-i18n="detail.collapseParams">收起参数</button>
             </div>
@@ -3900,7 +3668,7 @@
         <div class="tab-panel" id="tab-etf">
         <div class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title" data-i18n="etf.chartTitle">📊 标普纳指ETF追踪（场内） — A股账户买交易所上市ETF</span>
+                <span class="pc-chart-title" data-i18n="etf.chartTitle">标普纳指ETF追踪（场内） — A股账户买交易所上市ETF</span>
                 <span id="etfRefreshInfo" style="font-size:12px;color:var(--apple-text-secondary);margin-left:auto;"></span>
                 <button id="etfRefreshBtn" class="pc-btn pc-btn-sm" style="margin-left:10px;" data-i18n="etf.refreshQuotes">刷新行情</button>
             </div>
@@ -3983,7 +3751,7 @@
         <div class="tab-panel" id="tab-qdii-funds">
         <div class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title" data-i18n="qdii.chartTitle">📋 标普纳指基金追踪（场外） — 支付宝场外 QDII 候选清单</span>
+                <span class="pc-chart-title" data-i18n="qdii.chartTitle">标普纳指基金追踪（场外） — 支付宝场外 QDII 候选清单</span>
                 <span id="qdiiFundsUpdated" style="font-size:12px;color:var(--apple-text-secondary);margin-left:auto;"></span>
                 <button class="pd-bar-chart-toggle" id="qdiiParamsToggle" type="button"
                         aria-controls="qdiiParamsPanel" aria-expanded="true" data-i18n="detail.collapseParams">收起参数</button>
@@ -4072,7 +3840,7 @@
             </div>
             <div id="vixChartView" role="tabpanel">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title" data-i18n="vix.chartTitle">📊 SPY · QQQ · VIX · VXN 对比走势</span>
+                <span class="pc-chart-title" data-i18n="vix.chartTitle">SPY · QQQ · VIX · VXN 对比走势</span>
                 <div class="transfer-tabs" id="vixPeriodTabs" style="margin-left:auto;">
                     <button class="transfer-tab" data-vix-period="1hour" data-i18n="vix.period1h">1小时</button>
                     <button class="transfer-tab active" data-vix-period="daily" data-i18n="vix.periodDay">日</button>
@@ -4229,7 +3997,7 @@
             </div>
             <div id="fxLossView" role="tabpanel">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title" id="fxChartTitle" data-i18n="exchangeLoss.chartTitle">💱 USD/CNY 历史汇率</span>
+                <span class="pc-chart-title" id="fxChartTitle" data-i18n="exchangeLoss.chartTitle">USD/CNY 历史汇率</span>
                 <span class="fx-chart-range" id="fxChartRange"></span>
                 <div class="transfer-tabs" id="fxPeriodTabs" style="margin-left:auto;">
                     <button class="transfer-tab active" data-fx-period="daily" data-i18n="exchangeLoss.periodDay">日</button>
@@ -4315,7 +4083,7 @@
 
                 <div class="fx-detail" id="fxDetail" style="display:none;">
                     <div class="pc-bt-detail-header">
-                        <span class="pc-bt-detail-title" data-i18n="exchangeLoss.detailTitle">📋 持有亏损明细</span>
+                        <span class="pc-bt-detail-title" data-i18n="exchangeLoss.detailTitle">持有亏损明细</span>
                     </div>
                     <p class="vix-threshold-note" data-i18n="exchangeLoss.aggNote">按 N 个交易日聚合：把所选日期范围平均切成每 N 根日 K 一段，逐段统计持有折算损益。</p>
                     <div class="vix-threshold-table-wrap">
@@ -4350,7 +4118,7 @@
         <div class="tab-panel" id="tab-knowledge">
         <div class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title" data-i18n="knowledge.title">📚 数据科普</span>
+                <span class="pc-chart-title" data-i18n="knowledge.title">数据科普</span>
                 <div class="transfer-tabs" id="kbSubTabs" style="margin-left:auto;">
                     <a class="transfer-tab active" href="__LANG_PREFIX__/knowledge/how-to-buy-us-stocks" data-kb-tab="how-to-buy" data-i18n="knowledge.howToBuy">如何购买美股</a>
                     <a class="transfer-tab" href="__LANG_PREFIX__/knowledge/value-investing" data-kb-tab="value-investing" data-i18n="knowledge.valueInvesting">何为价值投资</a>
@@ -6768,8 +6536,8 @@
         <div class="tab-panel" id="tab-wishes">
         <div class="pc-monthly">
             <div class="pc-monthly-header">
-                <span class="pc-chart-title" data-i18n="wishes.title">🌟 心愿墙 — 想看什么标的、想要什么功能，留个言</span>
-                <span class="wish-admin-toggle" id="wishAdminToggle" data-i18n-attr="title|wishes.manage">⚙</span>
+                <span class="pc-chart-title" data-i18n="wishes.title">心愿墙 — 想看什么标的、想要什么功能，留个言</span>
+                <span class="wish-admin-toggle" id="wishAdminToggle" data-i18n-attr="title|wishes.manage"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
             </div>
             <div class="wish-admin-row" id="wishAdminRow" style="display:none;">
                 <span class="pc-bt-label" data-i18n="wishes.adminToken">管理员 Token</span>
@@ -6872,216 +6640,10 @@
     <script src="/js/header-trend.js"></script>
     <script src="/js/wishes.js"></script>
     <script src="/js/heatmap.js"></script>
+    <script src="/js/site-settings.js"></script>
     <script>
-        // ─── Header settings dropdown ───
-        (function () {
-            var btn = document.getElementById('headerSettingsBtn');
-            var menu = document.getElementById('headerSettingsMenu');
-            if (!btn || !menu) return;
-
-            // 10s idle hint: pulse + rotate + ring glow (3 loops, 2s each → 6s total)
-            setTimeout(function () {
-                btn.classList.add('hint');
-                setTimeout(function () {
-                    btn.classList.remove('hint');
-                }, 6200);
-            }, 10000);
-
-            // Track clicks on tracked external links
-            var TRACKED_LINKS = {
-                'feishu_us_stock': 'a[href*="kcn9via7j7oq"]',
-                'github': 'a[href*="github.com"]',
-                'xiaohongshu': 'a[href*="xhslink.com"]',
-                'tools24': 'a[href*="tools24.uk"]'
-            };
-            Object.keys(TRACKED_LINKS).forEach(function (name) {
-                var link = menu.querySelector(TRACKED_LINKS[name]);
-                if (link) {
-                    link.addEventListener('click', function () {
-                        fetch('/api/link-click', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ name: name }),
-                            keepalive: true
-                        }).catch(function () {});
-                    });
-                }
-            });
-
-            btn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                var isOpen = menu.style.display === 'block';
-                if (isOpen) {
-                    // Close: hide menu, restore previous tab path
-                    menu.style.display = 'none';
-                    var prev = (history.state && history.state._prev) || '/yearly';
-                    history.replaceState({}, '', prev);
-                } else {
-                    // Open: show menu, push /settings to history
-                    menu.style.display = 'block';
-                    var newLink = menu.querySelector('a[href*="kcn9via7j7oq"]');
-                    if (newLink) newLink.classList.add('highlight-link');
-                    history.pushState({ _settingsOpen: true, _prev: location.pathname }, '', '/settings');
-                    // Track settings panel open
-                    if (typeof _track === 'function') _track('settings_click');
-                }
-            });
-            document.addEventListener('click', function () {
-                if (menu.style.display === 'block') {
-                    menu.style.display = 'none';
-                    var prev = (history.state && history.state._prev) || '/yearly';
-                    history.replaceState({}, '', prev);
-                }
-            });
-            menu.addEventListener('click', function (e) {
-                e.stopPropagation();
-            });
-        })();
-
-        // ─── Theme switching ───
-        (function() {
-            var STORAGE_KEY = 'global-asset-history-theme';
-            var html = document.documentElement;
-            var toggle = document.getElementById('settingsThemeToggle');
-            var icon = document.getElementById('settingsThemeIcon');
-            var label = document.getElementById('settingsThemeLabel');
-
-            function updateThemeUI(theme) {
-                if (icon) icon.textContent = theme === 'light' ? '☀️' : '🌙';
-                if (label) label.textContent = theme === 'light' ? __("settings.themeLight") : __("settings.theme");
-            }
-
-            function applyTheme(theme) {
-                if (theme === 'light') {
-                    html.setAttribute('data-theme', 'light');
-                } else {
-                    html.removeAttribute('data-theme');
-                }
-                updateThemeUI(theme);
-            }
-
-            function getSystemPreference() {
-                return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-            }
-
-            // Initialize theme
-            var stored = localStorage.getItem(STORAGE_KEY);
-            if (stored === 'light' || stored === 'dark') {
-                applyTheme(stored);
-            } else {
-                applyTheme(getSystemPreference());
-            }
-
-            // Toggle on click
-            if (toggle) {
-                toggle.addEventListener('click', function() {
-                    var current = html.getAttribute('data-theme');
-                    var next = current === 'light' ? 'dark' : 'light';
-                    applyTheme(next);
-                    localStorage.setItem(STORAGE_KEY, next);
-                    if (typeof window._refreshCharts === 'function') window._refreshCharts();
-                    if (typeof _track === 'function') _track('settings_action', { action: 'theme' });
-                });
-            }
-
-            // Listen for system preference changes (only when no manual override)
-            window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function(e) {
-                if (!localStorage.getItem(STORAGE_KEY)) {
-                    applyTheme(e.matches ? 'light' : 'dark');
-                    if (typeof window._refreshCharts === 'function') window._refreshCharts();
-                }
-            });
-        })();
-
-        // ─── Color scheme switching (green-up/red-up) ───
-        (function() {
-            var COLOR_SCHEME_KEY = 'global-asset-history-color-scheme';
-            var html = document.documentElement;
-            var toggle = document.getElementById('settingsColorSchemeToggle');
-            var icon = document.getElementById('settingsColorSchemeIcon');
-            var label = document.getElementById('settingsColorSchemeLabel');
-
-            function updateColorSchemeUI(scheme) {
-                if (icon) icon.textContent = scheme === 'red_up' ? '📉' : '📈';
-                if (label) label.textContent = scheme === 'red_up' ? __("settings.colorSchemeRedUp") : __("settings.colorScheme");
-            }
-
-            function applyColorScheme(scheme) {
-                if (scheme === 'red_up') {
-                    html.setAttribute('data-color-scheme', 'red_up');
-                } else {
-                    html.removeAttribute('data-color-scheme');
-                }
-                updateColorSchemeUI(scheme);
-                // Refresh any visible charts
-                if (typeof window._refreshCharts === 'function') window._refreshCharts();
-            }
-
-            // Initialize: localStorage override > backend config
-            var stored = localStorage.getItem(COLOR_SCHEME_KEY);
-            if (stored === 'green_up' || stored === 'red_up') {
-                applyColorScheme(stored);
-            }
-            // Backend config is fetched in price-change.js init; it will call applyColorScheme if no localStorage
-
-            // Toggle on click
-            if (toggle) {
-                toggle.addEventListener('click', function() {
-                    var current = html.getAttribute('data-color-scheme');
-                    var next = current === 'red_up' ? 'green_up' : 'red_up';
-                    applyColorScheme(next);
-                    localStorage.setItem(COLOR_SCHEME_KEY, next);
-                    if (typeof _track === 'function') _track('settings_action', { action: 'colorscheme' });
-                });
-            }
-
-            // Expose for use by other modules
-            window.getColorScheme = function() {
-                return html.getAttribute('data-color-scheme') || 'green_up';
-            };
-            window.applyColorScheme = applyColorScheme;
-            window.getDataColors = function() {
-                var s = getComputedStyle(html);
-                return {
-                    positive: s.getPropertyValue('--data-positive').trim() || '#30d158',
-                    negative: s.getPropertyValue('--data-negative').trim() || '#ff453a',
-                    positiveAlpha22: s.getPropertyValue('--data-positive-alpha-22').trim() || 'rgba(48,209,88,0.22)',
-                    positiveAlpha88: s.getPropertyValue('--data-positive-alpha-88').trim() || 'rgba(48,209,88,0.88)',
-                    negativeAlpha18: s.getPropertyValue('--data-negative-alpha-18').trim() || 'rgba(255,69,58,0.18)',
-                };
-            };
-        })();
-
-        // ─── Language switching ───
-        (function() {
-            var toggle = document.getElementById('settingsLangRow');
-            var label = document.getElementById('settingsLangLabel');
-            var currentLang = window.__lang ? __lang() : 'zh-CN';
-
-            function updateLangUI(lang) {
-                if (label) label.textContent = lang === 'en' ? 'English' : '中文';
-            }
-            updateLangUI(currentLang);
-
-            if (toggle) {
-                toggle.addEventListener('click', function() {
-                    var next = currentLang === 'zh-CN' ? 'en' : 'zh-CN';
-                    if (typeof _track === 'function') _track('settings_action', { action: 'language' });
-                    if (typeof window.__switchLang === 'function') {
-                        window.__switchLang(next);
-                    }
-                });
-            }
-        })();
-
-        // ─── Update log: open the feature-update dialog on demand ───
-        (function() {
-            var row = document.getElementById('settingsUpdateLogRow');
-            if (!row) return;
-            row.addEventListener('click', function() {
-                if (typeof window.showFeatureUpdates === 'function') window.showFeatureUpdates();
-            });
-        })();
+        // Settings toggles / dropdown logic lives in /js/site-settings.js (shared
+        // with the standalone ETF market page). Page-local routing starts here.
 
         // ─── Tab Routing (URL-based) ───
         (function() {

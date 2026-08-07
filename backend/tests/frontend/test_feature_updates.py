@@ -57,15 +57,18 @@ def test_feature_update_dialog_and_history_controls_are_wired_into_the_main_page
 
 def test_settings_menu_opens_the_update_dialog_on_demand():
     page = _source("frontend/price-change.html")
+    settings_js = _source("frontend/js/site-settings.js")
     script = _source("frontend/js/feature-updates.js")
     zh = json.loads(_source("frontend/locales/zh-CN.json"))["settings"]
     en = json.loads(_source("frontend/locales/en.json"))["settings"]
 
+    # The row markup stays on the page; the click wiring moved to the shared
+    # site-settings.js module (also loaded by the standalone ETF page).
     assert 'id="settingsUpdateLogRow"' in page
     assert 'data-i18n="settings.updateLog"' in page
-    assert "document.getElementById('settingsUpdateLogRow')" in page
-    assert "row.addEventListener('click'" in page
-    assert "window.showFeatureUpdates === 'function'" in page
+    assert 'document.getElementById("settingsUpdateLogRow")' in settings_js
+    assert 'row.addEventListener("click"' in settings_js
+    assert 'window.showFeatureUpdates === "function"' in settings_js
     assert "window.showFeatureUpdates = showFeatureUpdates" in script
     assert zh["updateLog"] == "更新日志"
     assert en["updateLog"] == "Update Log"

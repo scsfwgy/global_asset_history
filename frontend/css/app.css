@@ -64,6 +64,11 @@
             --apple-chart-text-dim: rgba(255, 255, 255, 0.50);
             --apple-chart-crosshair: rgba(255, 255, 255, 0.32);
             --apple-chart-color: rgba(255, 255, 255, 0.80);
+            /* Display serif — editorial figures for logo and large numbers.
+               System faces only (no webfont): Georgia covers Latin/numerals on
+               every platform; CJK serif fallbacks keep Chinese glyphs coherent
+               without the weight or availability problems of a webfont in CN. */
+            --font-display: Georgia, 'Times New Roman', 'Songti SC', SimSun, 'Noto Serif SC', 'Source Han Serif SC', serif;
             /* Type scale */
             --text-xs: 12px;
             --text-sm: 13px;
@@ -231,6 +236,128 @@ body {
             stroke-linejoin: round;
             stroke-linecap: round;
         }
+/* ─── Header settings dropdown (shared by all app pages) ─── */
+/* Anchor the menu from the left on small screens since the button moves to
+   the left side of the header (flex-start). */
+@media (max-width: 768px) {
+    .header-settings-menu {
+        right: auto;
+        left: 0;
+        max-width: calc(100vw - 32px);
+    }
+}
+.header-settings-wrap { position: relative; }
+.header-settings-btn {
+            width: 28px; height: 28px;
+            border-radius: var(--radius-md);
+            border: none;
+            background: transparent;
+            color: var(--apple-text-tertiary);
+            cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            transition: color var(--transition-fast);
+        }
+.header-settings-btn:hover { color: var(--apple-text-primary); }
+.header-settings-btn svg { width: 18px; height: 18px; }
+/* Hint animation: pulse + rotate + glow to reveal hidden content. Triggered via JS after 10s. */
+.header-settings-btn.hint {
+            animation: settings-hint 2s ease-in-out 3;
+            color: var(--apple-blue);
+            position: relative;
+        }
+.header-settings-btn.hint::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: var(--radius-lg);
+            background: transparent;
+            box-shadow: 0 0 0 0 rgba(0,113,227,0.5);
+            animation: settings-ring 2s ease-out 3;
+            pointer-events: none;
+        }
+@keyframes settings-hint {
+            0%   { transform: scale(1) rotate(0deg); }
+            15%  { transform: scale(1.25) rotate(25deg); }
+            30%  { transform: scale(0.9) rotate(-10deg); }
+            45%  { transform: scale(1.15) rotate(12deg); }
+            60%  { transform: scale(0.95) rotate(0deg); }
+            75%  { transform: scale(1.08) rotate(0deg); }
+            100% { transform: scale(1) rotate(0deg); color: var(--apple-text-tertiary); }
+        }
+@keyframes settings-ring {
+            0%   { box-shadow: 0 0 0 0 rgba(0,113,227,0.5); }
+            50%  { box-shadow: 0 0 0 8px rgba(0,113,227,0); }
+            100% { box-shadow: 0 0 0 0 rgba(0,113,227,0); }
+        }
+/* Breathing highlight for the new-feature link when menu is open */
+.header-settings-menu a.highlight-link {
+            animation: link-breathe 2.4s ease-in-out infinite;
+        }
+@keyframes link-breathe {
+            0%, 100% { background: transparent; }
+            50% { background: rgba(0,113,227,0.12); }
+        }
+.header-settings-menu {
+            position: absolute; top: calc(100% + 8px); right: 0;
+            min-width: 210px;
+            background: var(--apple-surface-1);
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--apple-shadow-popover);
+            padding: 6px;
+            z-index: 100;
+        }
+.header-settings-menu a {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 12px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            color: var(--apple-text-primary);
+            text-decoration: none;
+            transition: background 0.12s;
+        }
+.header-settings-menu a:hover { background: var(--apple-overlay); }
+.header-settings-sep {
+            height: 1px; background: var(--apple-divider);
+            margin: 6px 10px;
+        }
+.header-settings-info {
+            padding: 7px 12px;
+            font-size: 12px;
+            color: var(--apple-text-secondary);
+            display: flex; align-items: center; gap: 6px;
+            user-select: none;
+        }
+.header-settings-theme-row {
+            cursor: pointer;
+            border-radius: var(--radius-md);
+            transition: background 0.12s;
+        }
+.header-settings-theme-row:hover { background: var(--apple-overlay); }
+.header-settings-theme-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 15px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+.header-settings-theme-icon svg { width: 15px; height: 15px; display: block; }
+.header-settings-link-icon {
+            width: 16px; height: 16px;
+            flex-shrink: 0;
+        }
+/* Theme icon: sun visible in dark (suggests switching to light), moon in light. */
+#settingsThemeIcon .icon-sun { display: block; }
+#settingsThemeIcon .icon-moon { display: none; }
+[data-theme="light"] #settingsThemeIcon .icon-sun { display: none; }
+[data-theme="light"] #settingsThemeIcon .icon-moon { display: block; }
+/* Color-scheme icon: color auto-flips with --data-positive; arrow flips down in red-up. */
+#settingsColorSchemeIcon { color: var(--data-positive); }
+#settingsColorSchemeIcon .cs-arrow { transition: transform 0.25s ease; }
+[data-color-scheme="red_up"] #settingsColorSchemeIcon .cs-arrow { transform: rotate(180deg); }
+
 /* Lift header content above the trend layer. */
 .header-left, .status { position: relative; z-index: 1; }
 .header-left {
@@ -242,6 +369,7 @@ body {
         }
 .nav-links a.active { color: var(--apple-blue); }
 .logo-text h1 {
+            font-family: var(--font-display);
             font-size: 22px;
             font-weight: 700;
             color: var(--apple-text-primary);
@@ -378,14 +506,6 @@ body {
             font-size: 12px;
             color: var(--apple-text-tertiary);
         }
-/* Toggle buttons — segmented control */
-.toggle-btn.active { background: var(--apple-blue); color: #fff; }
-/* Select inputs */
-.token-key-btn.primary {
-            background: var(--apple-blue);
-            border-color: var(--apple-blue);
-            color: #fff;
-        }
 /* Custom date range */
 /* Exchange grid — 1:1 horizontal */
 /* Info chips in controls bar */
@@ -472,12 +592,6 @@ body {
             padding: 32px;
             color: var(--apple-text-secondary);
             font-size: 13px;
-        }
-/* Pagination buttons */
-.page-btn.active {
-            background: var(--apple-blue);
-            color: #fff;
-            border-color: var(--apple-blue);
         }
 /* Responsive breakpoints */
 @media (max-width: 768px) {
@@ -625,12 +739,14 @@ body {
     white-space: pre-line;
 }
 .vix-advice-value {
+            font-family: var(--font-display);
             font-size: 24px;
             font-weight: 700;
             font-variant-numeric: tabular-nums;
             color: var(--apple-text-primary);
         }
 .vix-advice-stat {
+            font-family: var(--font-display);
             font-size: 16px;
             font-weight: 700;
             font-variant-numeric: tabular-nums;
@@ -1139,6 +1255,7 @@ button.market-pulse-card:hover {
 .market-pulse-price {
             display: block;
             margin-top: 9px;
+            font-family: var(--font-display);
             font-size: 17px;
             font-weight: 720;
             font-variant-numeric: tabular-nums;
@@ -1393,6 +1510,7 @@ button.market-pulse-card:hover {
             color: var(--apple-text-tertiary);
         }
 .hm-stat-val {
+            font-family: var(--font-display);
             font-variant-numeric: tabular-nums;
             font-weight: 700;
             font-size: 14px;
@@ -1494,3 +1612,102 @@ button.market-pulse-card:hover {
 .gah-history-item:hover { background: var(--apple-blue-soft); border-color: var(--apple-hover-border); }
 .gah-history-symbol { font-weight: 600; }
 .gah-history-name { color: var(--apple-text-secondary); font-size: 12px; }
+
+/* ─── Shared UI components: buttons & data tables ───
+   Single source of truth for app-wide components. Previously inlined in
+   price-change.html; moved here so every page (incl. the standalone
+   /etf-market) shares them and theme/radius edits apply in one place. */
+/* Buttons */
+.pc-btn {
+            padding: 7px 14px;
+            border: 1px solid var(--apple-divider);
+            background: var(--apple-surface-1);
+            color: var(--apple-text-primary);
+            font-size: 13px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            white-space: nowrap;
+        }
+.pc-btn:hover { border-color: var(--apple-blue); color: var(--apple-text-primary); }
+.pc-btn.primary { background: var(--apple-blue); border-color: var(--apple-blue); color: #fff; }
+.pc-btn.primary:hover { opacity: 0.85; }
+.pc-btn.danger { border-color: var(--data-negative); color: var(--data-negative); }
+.pc-btn.danger:hover { background: var(--data-negative); color: #fff; }
+.pc-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pc-btn-sm { padding: var(--space-xs) 10px; font-size: var(--text-xs); border-radius: var(--radius-md); }
+
+/* Data tables */
+.pc-table-wrap {
+            overflow-x: auto;
+            border-radius: var(--radius-lg);
+            background: var(--apple-surface-1);
+            box-shadow: var(--apple-card-shadow);
+        }
+.pc-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+.pc-table th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--apple-surface-1);
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--apple-text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            text-align: center;
+            border-bottom: 1px solid var(--apple-divider);
+            white-space: nowrap;
+        }
+.pc-table th:first-child {
+            min-width: 70px;
+        }
+.pc-table td {
+            padding: 10px 16px;
+            text-align: right;
+            border-bottom: 1px solid var(--apple-divider);
+            font-variant-numeric: tabular-nums;
+            transition: background-color var(--transition-fast);
+            white-space: nowrap;
+        }
+.pc-table td:first-child {
+            text-align: left;
+            color: var(--apple-text-secondary);
+            font-weight: 500;
+            background: var(--apple-surface-1);
+            position: sticky;
+            left: 0;
+            z-index: 5;
+            box-shadow: var(--apple-sticky-shadow);
+        }
+.pc-table tr:last-child td { border-bottom: none; }
+.pc-table tbody tr:hover td {
+            background: var(--apple-overlay);
+        }
+.pc-table tbody tr:hover td:first-child {
+            background: var(--apple-overlay);
+        }
+.pc-table tbody tr:nth-child(even) td {
+            background: var(--apple-overlay-subtle);
+        }
+.pc-table tbody tr:nth-child(even) td:first-child {
+            background: var(--apple-overlay-subtle);
+        }
+.pc-table tbody tr:nth-child(even):hover td {
+            background: var(--apple-overlay);
+        }
+.pc-table tbody tr:nth-child(even):hover td:first-child {
+            background: var(--apple-overlay);
+        }
+.pc-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--apple-text-tertiary);
+            font-size: 14px;
+        }
+.pc-empty-hint { font-size: 12px; margin-top: 6px; opacity: 0.6; }

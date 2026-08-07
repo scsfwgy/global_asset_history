@@ -99,7 +99,7 @@
     "metaFailed": "失败:"
   },
   "backtest": {
-    "chartTitle": "📈 回测",
+    "chartTitle": "回测",
     "symbol": "定投标的",
     "initialAmount": "初始投入",
     "amountPerTime": "每次投入",
@@ -399,7 +399,7 @@
     "summary": "{{symbol}} · {{period}} · {{count}} 条"
   },
   "crash": {
-    "chartTitle": "📉 暴跌统计 — 多周期暴跌检测与恢复分析",
+    "chartTitle": "暴跌统计 — 多周期暴跌检测与恢复分析",
     "symbol": "股票代码",
     "dropPct": "暴跌幅度",
     "periodType": "K 线周期",
@@ -511,7 +511,7 @@
     "refresh": "刷新",
     "refreshQuotes": "刷新行情",
     "title": "A股ETF 实时行情",
-    "chartTitle": "📊 标普纳指ETF追踪（场内） — A股账户买交易所上市ETF",
+    "chartTitle": "标普纳指ETF追踪（场内） — A股账户买交易所上市ETF",
     "viewRank": "实时排行",
     "viewAggregate": "聚合分析",
     "quoteLoadFailed": "✗ 行情加载失败",
@@ -557,7 +557,7 @@
     "reload": "重新加载"
   },
   "qdii": {
-    "chartTitle": "📋 标普纳指基金追踪（场外） — 支付宝场外 QDII 候选清单",
+    "chartTitle": "标普纳指基金追踪（场外） — 支付宝场外 QDII 候选清单",
     "tabActiveQdii": "QDII主动",
     "candidateFunds": "候选基金",
     "publicAvailable": "公开可买",
@@ -684,7 +684,7 @@
     "regionUsShort": "美"
   },
   "vix": {
-    "chartTitle": "📊 SPY · QQQ · VIX · VXN 对比走势",
+    "chartTitle": "SPY · QQQ · VIX · VXN 对比走势",
     "period1h": "1小时",
     "periodDay": "日",
     "periodWeek": "周",
@@ -771,7 +771,7 @@
     "thresholdLoadFailed": "统计失败："
   },
   "exchangeLoss": {
-    "chartTitle": "💱 USD/CNY 历史汇率",
+    "chartTitle": "USD/CNY 历史汇率",
     "rateHistory": "历史汇率",
     "periodDay": "日",
     "periodWeek": "周",
@@ -806,7 +806,7 @@
     "tooltipOhlc": "开/高/低/收：",
     "aggLabel": "聚合条数",
     "aggNote": "按 N 个交易日聚合：把所选日期范围平均切成每 N 根日 K 一段，逐段统计持有折算损益。",
-    "detailTitle": "📋 持有亏损明细",
+    "detailTitle": "持有亏损明细",
     "detailPeriod": "聚合期",
     "detailStartRate": "起始汇率",
     "detailEndRate": "结束汇率",
@@ -819,7 +819,7 @@
   "fxCalc": {
     "tabLoss": "汇率损失",
     "tabCalc": "汇率计算器",
-    "title": "💱 汇率计算器",
+    "title": "汇率计算器",
     "amount": "金额",
     "baseCurrency": "基准货币",
     "refresh": "刷新",
@@ -846,7 +846,7 @@
     "empty": "输入金额并选择基准货币，查看多币折算结果。"
   },
   "wishes": {
-    "title": "🌟 心愿墙 — 想看什么标的、想要什么功能，留个言",
+    "title": "心愿墙 — 想看什么标的、想要什么功能，留个言",
     "save": "保存",
     "adminPlaceholder": "填入后每条心愿可删除",
     "placeholder": "写下你的心愿（最多 200 字）...",
@@ -914,7 +914,7 @@
     "dramTab": "DRAM持仓",
     "qqqmTab": "QQQM持仓",
     "tqqqCsvTab": "TQQQ CSV",
-    "title": "📚 数据科普",
+    "title": "数据科普",
     "howToBuy": "如何购买美股",
     "quickLearn": "学习入口：",
     "quickHowToBuy": "如何投资美股",

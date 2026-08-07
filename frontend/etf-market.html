@@ -3,7 +3,7 @@
 <head>
     <!-- Google tag (gtag.js) — config lives in js/gtag.js -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-X0YCL6L7J2"></script>
-    <script src="js/gtag.js"></script>
+    <script src="/js/gtag.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="A股ETF实时行情与费率对比工具，追踪纳指100、标普500等场内ETF的价格、涨跌幅、市值、管理费、托管费、溢价率和跟踪误差。China ETF market quotes, ETF premium, fee comparison and tracking error tool.">
@@ -60,7 +60,7 @@
             padding: 0 16px;
         }
         .etf-market-container h2 {
-            font-size: 18px; font-weight: 600; padding: 20px 0 16px;
+            font-size: 18px; font-weight: 600; padding: 16px 0 12px;
         }
         .etf-sortable {
             cursor: pointer;
@@ -82,8 +82,10 @@
             font-size: 11px; font-weight: 600;
             background: rgba(48,209,88,0.15); color: var(--data-positive);
         }
+        /* Refresh toolbar (below the shared header) */
         .etf-refresh-bar {
             display: flex; align-items: center; gap: 10px;
+            padding: 12px 0 2px;
             font-size: 12px; color: var(--apple-text-secondary);
         }
         .etf-refresh-bar .dot {
@@ -97,18 +99,75 @@
 </head>
 <body>
 
-<div class="header">
-    <div class="logo">
-        <span class="header-left"><a href="/">⬅ GlobalAssetHistory</a></span>
+<header class="header">
+    <div class="header-trend" id="headerTrend" aria-hidden="true"></div>
+    <div class="header-left">
+        <div class="logo">
+            <div class="logo-text">
+                <h1>GlobalAssetHistory</h1>
+                <p data-i18n="nav.siteTagline">价值投资，相信长期的力量。回测历史，知晓未来。</p>
+                <div class="header-quick-links" aria-label="学习入口">
+                    <span class="header-quick-label" data-i18n="knowledge.quickLearn">学习入口：</span>
+                    <a class="header-quick-link" href="__LANG_PREFIX__/knowledge/value-investing" data-i18n="knowledge.valueInvesting">何为价值投资</a>
+                    <span class="header-quick-sep" aria-hidden="true">·</span>
+                    <a class="header-quick-link" href="__LANG_PREFIX__/knowledge/how-to-buy-us-stocks" data-i18n="knowledge.quickHowToBuy">如何投资美股</a>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="etf-refresh-bar">
-        <span class="dot" id="refreshDot"></span>
-        <span id="refreshTime">--</span>
-        <button onclick="fetchQuotes()" style="background:var(--apple-surface-1);border:none;color:var(--apple-text-primary);padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer" data-i18n="etf.refresh">刷新</button>
+    <div class="status">
+        <div class="status-row">
+            <div class="header-settings-wrap">
+                <button id="headerSettingsBtn" class="header-settings-btn" data-i18n-attr="title|nav.settings" data-i18n-attr-alt="aria-label|nav.settings" title="设置" aria-label="设置">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </button>
+                <div id="headerSettingsMenu" style="display:none;">
+                    <!-- System: connection status -->
+                    <div class="header-settings-info"><span class="status-dot" id="statusDot"></span> <span id="settingsConnLabel" data-i18n="nav.connecting">连接中...</span></div>
+                    <!-- System: theme -->
+                    <div id="settingsThemeToggle" class="header-settings-info header-settings-theme-row">
+                        <span class="header-settings-theme-icon" id="settingsThemeIcon">
+                            <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                            <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                        </span>
+                        <span id="settingsThemeLabel" data-i18n="settings.theme">深色模式</span>
+                    </div>
+                    <!-- System: color scheme -->
+                    <div id="settingsColorSchemeToggle" class="header-settings-info header-settings-theme-row">
+                        <span class="header-settings-theme-icon" id="settingsColorSchemeIcon">
+                            <svg class="cs-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                        </span>
+                        <span id="settingsColorSchemeLabel" data-i18n="settings.colorScheme">绿涨红跌</span>
+                    </div>
+                    <!-- System: language -->
+                    <div id="settingsLangRow" class="header-settings-info header-settings-theme-row">
+                        <span class="header-settings-theme-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        </span>
+                        <span id="settingsLangLabel">Language</span>
+                    </div>
+                    <!-- System: visit count -->
+                    <div class="header-settings-info" id="settingsVisitCount" data-i18n="settings.visitCountPrefix">访问次数：⋯</div>
+                    <div class="header-settings-sep"></div>
+                    <!-- External links -->
+                    <a href="https://kcn9via7j7oq.feishu.cn/docx/Qi92drlQFor9s7xc0uIcH44ennh" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="header-settings-link-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span data-i18n="settings.linkUsStock">美股投资新途径</span></a>
+                    <a href="https://github.com/scsfwgy/global_asset_history" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 16 16" fill="currentColor" class="header-settings-link-icon"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span data-i18n="settings.linkGithub">Github</span></a>
+                    <a href="https://xhslink.com/m/7GJMAttokzI" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" class="header-settings-link-icon"><rect width="24" height="24" rx="6" fill="#FF2442"/><text x="12" y="16.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle" font-family="-apple-system,Helvetica,Arial,sans-serif">书</text></svg><span data-i18n="settings.linkXiaohongshu">小红书</span></a>
+                    <a href="https://www.tools24.uk/" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="header-settings-link-icon"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><span>开发者工具</span></a>
+                </div>
+            </div>
+        </div>
+        <a class="site-url" id="siteUrlLink" href="__SITE_BASE_URL__" target="_blank" rel="noopener noreferrer">__SITE_BASE_URL__</a>
     </div>
-</div>
+</header>
 
 <div class="etf-market-container">
+    <div class="etf-refresh-bar" id="etfRefreshBar">
+        <span class="dot" id="refreshDot"></span>
+        <span id="refreshTime">--</span>
+        <button id="etfRefreshBtn" class="pc-btn pc-btn-sm" data-i18n="etf.refresh">刷新</button>
+    </div>
+
     <h2 data-i18n="etf.title">A股ETF 实时行情</h2>
 
     <div class="transfer-tabs" id="tabBar">
@@ -145,12 +204,27 @@
 </div>
 
 <script src="/js/i18n.js"></script>
+<script src="/js/site-settings.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/visitor-stats.js"></script>
-<script>
-window.gahRecordVisit("etf").catch(function () {});
-</script>
+<script src="/js/header-trend.js"></script>
 <script src="/js/etf-market.js"></script>
+<script>
+window.gahRecordVisit("etf")
+    .then(function (d) {
+        var el = document.getElementById("settingsVisitCount");
+        if (el) el.textContent = __("settings.visitCountPrefix") + String(d.count);
+    })
+    .catch(function () {
+        fetch("/api/visits")
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var el = document.getElementById("settingsVisitCount");
+                if (el) el.textContent = __("settings.visitCountPrefix") + String(d.count);
+            })
+            .catch(function () {});
+    });
+</script>
 <script>
 (function() {
     function setMeta(name, value) {

@@ -216,6 +216,19 @@
         return new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     }
 
+    /* ── Header connection state (standalone page only) ──
+       The main page drives its own status dot via price-change.js setConnected;
+       this hook fills it on the standalone /etf-market page so the shared
+       header behaves identically. */
+    function _setHeaderConn(ok) {
+        if (document.getElementById("tab-etf")) return; // embedded in main page
+        var dot = document.getElementById("statusDot");
+        var lbl = document.getElementById("settingsConnLabel");
+        if (!dot || !lbl) return;
+        dot.className = "status-dot" + (ok ? " connected" : "");
+        if (typeof __ === "function") lbl.textContent = __(ok ? "status.connected" : "status.disconnected");
+    }
+
     /* ── Fetch real-time quotes ── */
     function fetchQuotes() {
         var symbols = [];
@@ -232,11 +245,13 @@
                 (data.quotes || []).forEach(function (q) { map[q.code] = q; });
                 _quotes = map;
                 renderTable();
+                _setHeaderConn(true);
                 // Phase 2: lazy-load East-Money-dependent valuation data
                 _setProgress(__("etf.updated") + _timeStr() + "  " + __("etf.estLoading"), "#ff9f0a");
                 fetchValuation(symbols);
             })
             .catch(function () {
+                _setHeaderConn(false);
                 _setProgress(__("etf.quoteLoadFailed"), "#ff453a");
                 document.getElementById("etfBody").innerHTML = '<tr><td colspan="14" style="text-align:center;padding:24px;color:var(--data-negative)">' + __("etf.fetchFailed") + C + 'td>' + C + 'tr>';
             });
