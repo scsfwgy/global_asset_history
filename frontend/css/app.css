@@ -523,6 +523,10 @@ body {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
+            /* Wrap content by default so the bar hugs its tabs (like .vix-view-tabs).
+               Mobile media query forces full width for touch scrolling. */
+            width: fit-content;
+            max-width: 100%;
             background: var(--apple-surface-2);
             border-radius: var(--radius-md);
             padding: 3px;
