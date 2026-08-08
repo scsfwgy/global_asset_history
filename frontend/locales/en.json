@@ -188,7 +188,11 @@
     "compareExpand": "Expand params",
     "compareFullscreen": "Desktop fullscreen",
     "compareWebFs": "Browser fullscreen",
-    "compareExit": "Exit fullscreen"
+    "compareExit": "Exit fullscreen",
+    "record": "Record video",
+    "recordRecording": "Recording...",
+    "recordUnsupported": "Video recording is not supported in this browser. Please use the latest Chrome, Edge, or Safari.",
+    "recordNeedRun": "Run a compare first, then record the animation."
   },
   "detail": {
     "title": "Stock Detail",

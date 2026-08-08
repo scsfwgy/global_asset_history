@@ -372,12 +372,22 @@ function hideBacktestLoading() {
   });
 }
 
+// Backtest-scoped error box. The shared #pcError lives inside the hidden
+// #tab-yearly panel when the backtest tab is active, so backtest errors
+// (including compare/record) must render here to be visible at all.
+function btError(msg) {
+  const el = $("btError");
+  if (!el) return;
+  el.style.display = msg ? "block" : "none";
+  if (msg) el.innerHTML = escapeHtml(msg);
+}
+
 async function runBacktest() {
   const assetType = btTypeSelect?.value || "stock";
   const symbol = normalizeAssetSymbol(btSymbolInput?.value || "", assetType);
   if (btSymbolInput) btSymbolInput.value = symbol;
   if (!symbol) {
-    showError(__("backtest.errorNoSymbol"));
+    btError(__("backtest.errorNoSymbol"));
     return;
   }
   saveBacktestSymbol(symbol, assetType);
@@ -395,6 +405,7 @@ async function runBacktest() {
     weekday: parseInt(btWeekday?.value, 10) || 0,
   };
 
+  btError(null);
   try {
     showBacktestLoading();
     const resp = await fetch(BACKTEST_ENDPOINT, {
@@ -411,7 +422,7 @@ async function runBacktest() {
     }
   } catch (e) {
     hideBacktestLoading();
-    showError(__("backtest.errorBacktest") + e.message);
+    btError(__("backtest.errorBacktest") + e.message);
   }
 }
 
@@ -940,9 +951,10 @@ function readCompareRows() {
 
 async function runBacktestCompare() {
   var rows = readCompareRows().filter(function (r) { return normalizeAssetSymbol(r.symbol, r.type); });
-  if (!rows.length) { showError(__("backtest.compareNoSymbols")); return; }
+  if (!rows.length) { btError(__("backtest.compareNoSymbols")); return; }
   var lump = parseFloat($("pcBtCompareAmount")?.value) || 0;
-  if (lump <= 0) { showError(__("backtest.compareAmountInvalid")); return; }
+  if (lump <= 0) { btError(__("backtest.compareAmountInvalid")); return; }
+  btError(null);
   var start = $("pcBtCompareStart")?.value || "";
   // Local today (toISOString would shift a day in some time zones).
   var now = new Date();
@@ -970,11 +982,15 @@ async function runBacktestCompare() {
     renderCompareResults(results, metric, lump, start);
   } catch (e) {
     if (loading) loading.style.display = "none";
-    showError(__("backtest.errorBacktest") + e.message);
+    btError(__("backtest.errorBacktest") + e.message);
   }
 }
 
 var BT_COMPARE_COLORS = ["#2997ff", "#ff9f0a", "#30d158", "#ff375f", "#bf5af2", "#ffd60a", "#64d2ff", "#ac8e68"];
+
+// Snapshot of the last compare render, so the video recorder can replay the
+// exact chart + legend animation offscreen (see recordCompareVideo).
+var _btCompareLast = null;
 
 function renderCompareResults(results, metric, lump, start) {
   var maxPts = getBacktestSampleSize();
@@ -1143,6 +1159,24 @@ function renderBtCompareChart(series, context) {
       '</div>';
   }
 
+  // Keep the last compare state so the video recorder can replay chart + legend.
+  var rootStyle = getComputedStyle(document.documentElement);
+  _btCompareLast = {
+    series: series,
+    built: built,
+    context: context,
+    lump: (context && context.lump) || 0,
+    W: W, H: H, PAD: PAD, cw: cw, ch: ch, maxLen: maxLen,
+    xPos: xPos, yPos: yPos, minV: minV, maxV: maxV,
+    c: c,
+    bg: rootStyle.getPropertyValue("--apple-bg").trim() || "#000000",
+    textTertiary: rootStyle.getPropertyValue("--apple-text-tertiary").trim() || "#999999",
+    textSecondary: rootStyle.getPropertyValue("--apple-text-secondary").trim() || "#cccccc",
+    startLabel: ((context && context.start) || "").slice(0, 7),
+    latest: sorted.length ? sorted[sorted.length - 1].slice(0, 7) : "",
+    sorted: sorted,
+  };
+
   var revealRect = chartEl.querySelector("#btCmpRevealRect");
   var durationMs = getCompareAnimMs();
   var updateLegend = function (progress) {
@@ -1249,3 +1283,324 @@ function renderBtCompareChart(series, context) {
     initCompareToolbar();
   }
 })();
+
+// ─── Compare video recording (chart + legend only) ───────────────────
+// Native MediaRecorder + canvas.captureStream. The chart is rasterized once,
+// then the reveal animation is replayed deterministically on an offscreen
+// canvas, so the video contains exactly the chart and legend — no page
+// chrome, no cursor, no buttons.
+var BT_RECORD_MIN_MS = 3000;    // clamps a 0/1s animation so the video is watchable
+var BT_RECORD_MAX_MS = 30000;
+var BT_RECORD_WIDTH = 1280;
+var BT_RECORD_BITRATE = 6000000;
+// Legend metrics mirror the on-page .bt-cmp-card CSS so the video legend looks
+// like the real one: small fonts, flex gaps, right-aligned %, 14x4 swatch.
+var BT_LEGEND_ITEM_GAP = 18;     // .bt-cmp-card-items gap (horizontal)
+var BT_LEGEND_ROW_GAP = 6;       // .bt-cmp-card-items gap (vertical)
+var BT_LEGEND_FLEX_GAP = 4;      // .bt-cmp-item gap
+var BT_LEGEND_CODE_MR = 6;       // .bt-cmp-code margin-right
+var BT_LEGEND_VAL_MR = 2;        // .bt-live-val margin-right (compare override)
+var BT_LEGEND_SWATCH_W = 14;     // .bt-legend-swatch 14x4, radius 2
+var BT_LEGEND_SWATCH_H = 4;
+var BT_LEGEND_PCT_MIN_W = 58;    // .bt-cmp-pct min-width (right-aligned)
+var BT_LEGEND_PAD_LEFT_PCT = 5.7; // .bt-cmp-card left padding
+var BT_LEGEND_PAD_RIGHT = 16;    // .bt-cmp-card right padding
+var BT_LEGEND_PAD_Y = 6;         // .bt-cmp-card vertical padding
+var BT_LEGEND_TITLE_SIZE = 11;   // .bt-cmp-card-title font-size
+var BT_LEGEND_ITEM_SIZE = 14;    // .bt-cmp-item font-size
+var BT_LEGEND_PCT_SIZE = 12;     // .bt-cmp-pct font-size
+var BT_LEGEND_MARGIN_TOP = 14;   // #btCompareLegend margin-top
+
+function pickCompareRecMime() {
+  if (typeof MediaRecorder === "undefined") return "";
+  // H.264 MP4 first: plays everywhere including iOS. Without an explicit codec,
+  // Chrome would pick VP9-in-mp4 which iOS cannot play, so name avc1 explicitly.
+  var candidates = [
+    "video/mp4;codecs=avc1.42E01E",
+    "video/mp4",
+    "video/webm;codecs=vp9",
+    "video/webm;codecs=vp8",
+    "video/webm",
+  ];
+  for (var i = 0; i < candidates.length; i++) {
+    if (MediaRecorder.isTypeSupported(candidates[i])) return candidates[i];
+  }
+  return "";
+}
+
+function buildCompareAxisSvg(state) {
+  var W = state.W, H = state.H, PAD = state.PAD, c = state.c;
+  var textColor = state.textTertiary, bg = state.bg;
+  var yTicks = 4, yGrid = "";
+  for (var i = 0; i <= yTicks; i++) {
+    var v = state.minV + (state.maxV - state.minV) * i / yTicks;
+    var y = state.yPos(v);
+    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="${c.guide}" stroke-width="0.4"/>`;
+    yGrid += `<text x="${PAD.left - 4}" y="${y + 3}" text-anchor="end" fill="${textColor}" font-size="7">${formatBtPlainAxis(v)}</text>`;
+  }
+  var labelPoints = state.series[0].points;
+  var xTickCount = Math.min(6, labelPoints.length);
+  var xLabels = "";
+  for (var xi = 0; xi < xTickCount; xi++) {
+    var xIdx = Math.round((xi * (labelPoints.length - 1)) / Math.max(1, xTickCount - 1));
+    var labelX = state.xPos(Math.round((xi * (state.maxLen - 1)) / Math.max(1, xTickCount - 1)));
+    xLabels += `<text x="${labelX}" y="${H - 4}" text-anchor="middle" fill="${textColor}" font-size="7">${escapeHtml(labelPoints[xIdx].date.slice(0, 7))}</text>`;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    <rect x="0" y="0" width="${W}" height="${H}" fill="${bg}"/>${yGrid}${xLabels}</svg>`;
+}
+
+function buildCompareLinesSvg(state) {
+  var W = state.W, H = state.H;
+  var paths = state.built.map(function (b) {
+    return `<path d="${smoothPath(b.pts)}" fill="none" stroke="${b.color}" stroke-width="1.6" stroke-linecap="round" opacity="0.95"/>`;
+  }).join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${paths}</svg>`;
+}
+
+function svgToImage(svgString) {
+  var url = URL.createObjectURL(new Blob([svgString], { type: "image/svg+xml;charset=utf-8" }));
+  return new Promise(function (resolve, reject) {
+    var img = new Image();
+    img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = function () { URL.revokeObjectURL(url); reject(new Error("SVG rasterize failed")); };
+    img.src = url;
+  });
+}
+
+// Wrap legend items into rows of maxWidth. Pure layout logic, kept separate
+// so it can be covered by a regression test.
+function layoutCompareLegendItems(items, maxWidth) {
+  var rows = [];
+  var row = [];
+  var rowW = 0;
+  items.forEach(function (item) {
+    var w = item.width + BT_LEGEND_ITEM_GAP;
+    if (row.length && rowW + w > maxWidth) { rows.push(row); row = []; rowW = 0; }
+    row.push(item);
+    rowW += w;
+  });
+  if (row.length) rows.push(row);
+  return rows;
+}
+
+function layoutCompareLegend(ctx, state) {
+  var scale = BT_RECORD_WIDTH / state.W;
+  var chartH = Math.round(state.H * scale);
+  var canvasW = BT_RECORD_WIDTH;
+  var x0 = Math.round(canvasW * BT_LEGEND_PAD_LEFT_PCT / 100);
+  var maxItemsW = canvasW - x0 - BT_LEGEND_PAD_RIGHT;
+  var isProfit = state.context && state.context.metric === "profit";
+  var metricLabel = isProfit ? __("backtest.totalReturn") : __("backtest.totalAssets");
+  var range = (state.startLabel && state.latest) ? (state.startLabel + " ~ " + state.latest) : "";
+  var title = __("backtest.compareCardTitle", {
+    lump: formatBtPlainMoney(state.lump, 0),
+    range: range,
+    metric: metricLabel,
+  });
+  var codeFont = "600 " + BT_LEGEND_ITEM_SIZE + "px -apple-system, system-ui, sans-serif";
+  var valFont = "700 " + BT_LEGEND_ITEM_SIZE + "px -apple-system, system-ui, sans-serif";
+  var pctFont = "600 " + BT_LEGEND_PCT_SIZE + "px -apple-system, system-ui, sans-serif";
+  var items = state.built.map(function (b) {
+    var symbol = String(b.symbol).toUpperCase();
+    var val = formatBtPlainMoney(b.finalValue);
+    var p = state.lump ? (b.finalProfit / state.lump * 100) : 0;
+    var pct = (p >= 0 ? "+" : "") + p.toFixed(2) + "%";
+    ctx.font = codeFont;
+    var codeW = ctx.measureText(symbol).width;
+    ctx.font = valFont;
+    var valW = ctx.measureText(val).width;
+    ctx.font = pctFont;
+    var pctW = Math.max(ctx.measureText(pct).width, BT_LEGEND_PCT_MIN_W);
+    return {
+      symbol: symbol, color: b.color, finalValue: b.finalValue, finalProfit: b.finalProfit,
+      // swatch + flex gap + code + (code margin + gap) + val + (val margin + gap) + pct
+      width: BT_LEGEND_SWATCH_W + BT_LEGEND_FLEX_GAP + codeW +
+             (BT_LEGEND_CODE_MR + BT_LEGEND_FLEX_GAP) + valW +
+             (BT_LEGEND_VAL_MR + BT_LEGEND_FLEX_GAP) + pctW,
+    };
+  });
+  var rows = layoutCompareLegendItems(items, maxItemsW);
+  // Vertical rhythm mirrors the card: padTop, 11px title, 8px card gap, 14px rows.
+  var cardTop = chartH + BT_LEGEND_MARGIN_TOP;
+  var titleCenterY = cardTop + BT_LEGEND_PAD_Y + BT_LEGEND_TITLE_SIZE / 2;
+  var rowsY = cardTop + BT_LEGEND_PAD_Y + BT_LEGEND_TITLE_SIZE +
+              (rows.length ? 8 : 0) + BT_LEGEND_ITEM_SIZE / 2;
+  var legendH = BT_LEGEND_MARGIN_TOP + BT_LEGEND_PAD_Y + BT_LEGEND_TITLE_SIZE +
+                (rows.length ? 8 : 0) +
+                rows.length * BT_LEGEND_ITEM_SIZE + (rows.length - 1) * BT_LEGEND_ROW_GAP +
+                BT_LEGEND_PAD_Y;
+  return {
+    scale: scale, chartH: chartH, canvasW: canvasW, x0: x0, rows: rows,
+    title: title, titleCenterY: titleCenterY, rowsY: rowsY,
+    codeFont: codeFont, valFont: valFont, pctFont: pctFont,
+    legendH: legendH,
+  };
+}
+
+function fillRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  if (typeof ctx.roundRect === "function") ctx.roundRect(x, y, w, h, r);
+  else ctx.rect(x, y, w, h);
+  ctx.fill();
+}
+
+function drawCompareLegend(ctx, state, layout, progress) {
+  var rows = layout.rows;
+  var x0 = layout.x0;
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "left";
+  // Title: 11px tertiary, mirrors .bt-cmp-card-title.
+  ctx.font = BT_LEGEND_TITLE_SIZE + "px -apple-system, system-ui, sans-serif";
+  ctx.fillStyle = state.textTertiary;
+  ctx.fillText(layout.title, x0, layout.titleCenterY);
+  rows.forEach(function (row, r) {
+    var cy = layout.rowsY + r * (BT_LEGEND_ITEM_SIZE + BT_LEGEND_ROW_GAP);
+    var x = x0;
+    row.forEach(function (item) {
+      // 14x4 rounded swatch.
+      ctx.fillStyle = item.color;
+      fillRoundRect(ctx, x, cy - BT_LEGEND_SWATCH_H / 2, BT_LEGEND_SWATCH_W, BT_LEGEND_SWATCH_H, 2);
+      x += BT_LEGEND_SWATCH_W + BT_LEGEND_FLEX_GAP;
+      // Code: 14px/600 secondary.
+      ctx.font = layout.codeFont;
+      ctx.fillStyle = state.textSecondary;
+      ctx.fillText(item.symbol, x, cy);
+      x += ctx.measureText(item.symbol).width + BT_LEGEND_CODE_MR + BT_LEGEND_FLEX_GAP;
+      // Value: 14px/700, colored by sign.
+      var val = formatBtPlainMoney(item.finalValue * progress);
+      ctx.font = layout.valFont;
+      ctx.fillStyle = item.finalValue >= 0 ? state.c.positive : state.c.negative;
+      ctx.fillText(val, x, cy);
+      x += ctx.measureText(val).width + BT_LEGEND_VAL_MR + BT_LEGEND_FLEX_GAP;
+      // %: 12px/600, right-aligned in a 58px min box.
+      var p = state.lump ? (item.finalProfit * progress / state.lump) * 100 : 0;
+      var pct = (p >= 0 ? "+" : "") + p.toFixed(2) + "%";
+      var pctW = Math.max(ctx.measureText(pct).width, BT_LEGEND_PCT_MIN_W);
+      ctx.font = layout.pctFont;
+      ctx.fillStyle = p >= 0 ? state.c.positive : state.c.negative;
+      ctx.textAlign = "right";
+      ctx.fillText(pct, x + pctW, cy);
+      ctx.textAlign = "left";
+      x += pctW + BT_LEGEND_ITEM_GAP;
+    });
+  });
+}
+
+async function recordCompareVideo() {
+  var state = _btCompareLast;
+  var mime = pickCompareRecMime();
+  if (!mime) { btError(__("backtest.recordUnsupported")); return; }
+  if (!state || !state.series.length) { btError(__("backtest.recordNeedRun")); return; }
+
+  var btn = $("btCmpRecord");
+  if (btn) { btn.disabled = true; btn.textContent = __("backtest.recordRecording"); }
+
+  var canvas = document.createElement("canvas");
+  canvas.width = BT_RECORD_WIDTH;
+  var ctx = canvas.getContext("2d");
+  var layout = layoutCompareLegend(ctx, state);
+  canvas.height = layout.chartH + layout.legendH;
+
+  var chunks = [];
+  var aborted = false;
+  var rec = null;
+  try {
+    // Both calls must stay inside the click gesture (required on macOS Safari).
+    var stream = canvas.captureStream(30);
+    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: BT_RECORD_BITRATE });
+    rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = function () {
+      if (btn) { btn.disabled = false; btn.textContent = __("backtest.record"); }
+      if (aborted) return;
+      var blob = new Blob(chunks, { type: mime });
+      var ext = mime.indexOf("mp4") >= 0 ? "mp4" : "webm";
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "backtest-compare-" + Date.now() + "." + ext;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+    };
+    rec.start();
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = __("backtest.record"); }
+    btError(__("backtest.recordUnsupported"));
+    return;
+  }
+
+  try {
+    var imgs = await Promise.all([
+      svgToImage(buildCompareAxisSvg(state)),
+      svgToImage(buildCompareLinesSvg(state)),
+    ]);
+    var axisImg = imgs[0], linesImg = imgs[1];
+    var scale = layout.scale;
+    var chartW = Math.round(state.W * scale);
+    var chartH = layout.chartH;
+    var W = state.W, PAD = state.PAD, cw = state.cw, built = state.built;
+
+    var drawFrame = function (progress) {
+      // Theme background everywhere: the legend area below the chart is plain
+      // canvas, which would otherwise encode as transparent→black.
+      ctx.fillStyle = state.bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Axis + labels stay visible the whole time.
+      ctx.drawImage(axisImg, 0, 0, chartW, chartH);
+      // Reveal the lines left→right with a canvas clip, matching the DOM animation.
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W * progress * scale, chartH);
+      ctx.clip();
+      ctx.drawImage(linesImg, 0, 0, chartW, chartH);
+      ctx.restore();
+      // Endpoint dots travel along each line at the reveal frontier.
+      var revealX = Math.max(PAD.left, Math.min(PAD.left + cw, W * progress));
+      built.forEach(function (b) {
+        if (!b.pts.length) return;
+        var span = b.pts[b.pts.length - 1].x - b.pts[0].x || 1;
+        var f = ((revealX - b.pts[0].x) / span) * (b.pts.length - 1);
+        var i0 = Math.max(0, Math.min(b.pts.length - 2, Math.floor(f)));
+        var frac = f - i0;
+        var x = (b.pts[i0].x + (b.pts[i0 + 1].x - b.pts[i0].x) * frac) * scale;
+        var y = (b.pts[i0].y + (b.pts[i0 + 1].y - b.pts[i0].y) * frac) * scale;
+        ctx.beginPath();
+        ctx.arc(x, y, 3.2 * scale, 0, Math.PI * 2);
+        ctx.fillStyle = b.color;
+        ctx.fill();
+        ctx.lineWidth = 1.5 * scale;
+        ctx.strokeStyle = state.bg;
+        ctx.stroke();
+      });
+      drawCompareLegend(ctx, state, layout, progress);
+    };
+
+    var durMs = Math.max(BT_RECORD_MIN_MS, Math.min(getCompareAnimMs(), BT_RECORD_MAX_MS));
+    var start = performance.now();
+    var tick = function (now) {
+      var progress = Math.min((now - start) / durMs, 1);
+      drawFrame(progress);
+      if (progress < 1) requestAnimationFrame(tick);
+      else rec.stop();
+    };
+    requestAnimationFrame(tick);
+  } catch (e) {
+    aborted = true;
+    if (btn) { btn.disabled = false; btn.textContent = __("backtest.record"); }
+    btError(__("backtest.recordUnsupported"));
+    try { rec.stop(); } catch (_) {}
+  }
+}
+
+function initCompareRecorder() {
+  var btn = $("btCmpRecord");
+  if (!btn) return;
+  btn.addEventListener("click", recordCompareVideo);
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initCompareRecorder);
+} else {
+  initCompareRecorder();
+}
