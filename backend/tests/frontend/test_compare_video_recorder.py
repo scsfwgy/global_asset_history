@@ -58,6 +58,27 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
     # The video draws chart + legend only; page chrome must not be recorded.
     assert "drawCompareLegend" in script
 
+    # Brand watermark appears on both the on-page chart and the recorded video.
+    assert "BT_BRAND_TEXT" in script
+    assert "https://qqq.tools24.uk" in script
+    assert "buildBtBrandSvg" in script
+    # detail chart + compare on-page + recording axis = 3 call sites
+    assert script.count("buildBtBrandSvg(") >= 3
+
+    # Video is rasterized at the native canvas resolution (not upscaled from the
+    # 700x280 SVG), so text stays crisp.
+    assert "buildCompareAxisSvg(state, chartW, chartH)" in script
+    assert "buildCompareLinesSvg(state, chartW, chartH)" in script
+    assert 'width="${chartW}"' in script
+
+    # Reveal progress is clamped to [0,1] so a slightly-early rAF timestamp never
+    # sets a negative rect width.
+    assert "Math.max(0, Math.min((now - start) / durMs, 1))" in script
+
+    # Faint horizontal grid lines shared by the page chart and the video.
+    assert "BT_GRID_STROKE" in script
+    assert script.count("BT_GRID_STROKE") >= 2
+
     # Every frame is pre-filled with the theme background, otherwise the legend
     # area below the chart is transparent→black in light mode.
     assert "ctx.fillStyle = state.bg;" in script

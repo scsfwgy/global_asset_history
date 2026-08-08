@@ -507,7 +507,7 @@ function renderBtChart(equityCurve) {
   for (let i = 0; i <= yTicks; i++) {
     const v = assetYMin + (assetYRange * i) / yTicks;
     const y = assetYPos(v);
-    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="var(--apple-divider)" stroke-width="0.4"/>`;
+    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="var(--apple-divider)" ${BT_GRID_STROKE}/>`;
     const label = formatBtAxisMoney(v);
     yGrid += `<text x="${PAD.left - 4}" y="${y + 3}" text-anchor="end" fill="var(--apple-text-tertiary)" font-size="7">${label}</text>`;
   }
@@ -626,7 +626,9 @@ function renderBtChart(equityCurve) {
         <stop offset="100%" stop-color="#2997ff" stop-opacity="0"/>
       </linearGradient>
     </defs>
-    ${yGrid} ${zeroLine} ${animatedLayer} ${pulseLayer} ${xLabels} ${hoverZones} ${tooltip}
+    ${yGrid} ${zeroLine} ${animatedLayer} ${pulseLayer} ${xLabels}
+    ${buildBtBrandSvg(W, H, PAD, "var(--apple-text-tertiary)")}
+    ${hoverZones} ${tooltip}
   </svg>`;
 
   const svgEl = $("btChart").querySelector("svg");
@@ -709,7 +711,7 @@ function renderBtChart(equityCurve) {
       revealRect.setAttribute("width", "0");
       const start = performance.now();
       const tick = (now) => {
-        const progress = Math.min((now - start) / durationMs, 1);
+        const progress = Math.max(0, Math.min((now - start) / durationMs, 1));
         // Linear: curve, live numbers, and dots move at one steady pace and finish together.
         revealRect.setAttribute("width", String(W * progress));
         setLive(progress);
@@ -988,6 +990,17 @@ async function runBacktestCompare() {
 
 var BT_COMPARE_COLORS = ["#2997ff", "#ff9f0a", "#30d158", "#ff375f", "#bf5af2", "#ffd60a", "#64d2ff", "#ac8e68"];
 
+// Centered brand watermark, shared by the on-page chart and the recorded video.
+var BT_BRAND_TEXT = "https://qqq.tools24.uk";
+
+// Faint horizontal grid lines: barely visible, shared by page and video.
+var BT_GRID_STROKE = 'stroke-width="0.25" opacity="0.5"';
+function buildBtBrandSvg(W, H, PAD, color) {
+  var cx = PAD.left + (W - PAD.left - PAD.right) / 2;
+  var cy = PAD.top + (H - PAD.top - PAD.bottom) / 2;
+  return `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="11" fill="${color}" opacity="0.4" style="pointer-events:none;">${escapeHtml(BT_BRAND_TEXT)}</text>`;
+}
+
 // Snapshot of the last compare render, so the video recorder can replay the
 // exact chart + legend animation offscreen (see recordCompareVideo).
 var _btCompareLast = null;
@@ -1042,7 +1055,7 @@ function renderBtCompareChart(series, context) {
   for (var i = 0; i <= yTicks; i++) {
     var v = yMin + (yRng * i) / yTicks;
     var y = yPos(v);
-    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="var(--apple-divider)" stroke-width="0.4"/>`;
+    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="var(--apple-divider)" ${BT_GRID_STROKE}/>`;
     yGrid += `<text x="${PAD.left - 4}" y="${y + 3}" text-anchor="end" fill="var(--apple-text-tertiary)" font-size="7">${formatBtPlainAxis(v)}</text>`;
   }
 
@@ -1079,6 +1092,7 @@ function renderBtCompareChart(series, context) {
     <g id="btCmpLayer" clip-path="url(#btCmpReveal)">${lines}</g>
     <g id="btCmpPulse">${dots}</g>
     ${xLabels}
+    ${buildBtBrandSvg(W, H, PAD, "var(--apple-text-tertiary)")}
     <line id="btCmpTooltipGuide" x1="0" y1="${PAD.top}" x2="0" y2="${PAD.top + ch}" stroke="${c.guide}" stroke-width="1" stroke-dasharray="4,3" style="display:none;pointer-events:none;"/>
     <rect id="btCmpHoverPlot" x="${PAD.left}" y="${PAD.top}" width="${cw}" height="${ch}" fill="transparent" style="cursor:crosshair"/>
     <g id="btCmpTooltip" style="display:none;pointer-events:none;">
@@ -1213,7 +1227,7 @@ function renderBtCompareChart(series, context) {
     revealRect.setAttribute("width", "0");
     var start = performance.now();
     var tick = function (now) {
-      var progress = Math.min((now - start) / durationMs, 1);
+      var progress = Math.max(0, Math.min((now - start) / durationMs, 1));
       revealRect.setAttribute("width", String(W * progress));
       updateLegend(progress);
       moveDots(progress);
@@ -1292,7 +1306,7 @@ function renderBtCompareChart(series, context) {
 var BT_RECORD_MIN_MS = 3000;    // clamps a 0/1s animation so the video is watchable
 var BT_RECORD_MAX_MS = 30000;
 var BT_RECORD_WIDTH = 1280;
-var BT_RECORD_BITRATE = 6000000;
+var BT_RECORD_BITRATE = 12000000;   // high enough to keep axis text crisp
 // Legend metrics mirror the on-page .bt-cmp-card CSS so the video legend looks
 // like the real one: small fonts, flex gaps, right-aligned %, 14x4 swatch.
 var BT_LEGEND_ITEM_GAP = 18;     // .bt-cmp-card-items gap (horizontal)
@@ -1328,14 +1342,14 @@ function pickCompareRecMime() {
   return "";
 }
 
-function buildCompareAxisSvg(state) {
+function buildCompareAxisSvg(state, chartW, chartH) {
   var W = state.W, H = state.H, PAD = state.PAD, c = state.c;
   var textColor = state.textTertiary, bg = state.bg;
   var yTicks = 4, yGrid = "";
   for (var i = 0; i <= yTicks; i++) {
     var v = state.minV + (state.maxV - state.minV) * i / yTicks;
     var y = state.yPos(v);
-    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="${c.guide}" stroke-width="0.4"/>`;
+    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="${c.guide}" ${BT_GRID_STROKE}/>`;
     yGrid += `<text x="${PAD.left - 4}" y="${y + 3}" text-anchor="end" fill="${textColor}" font-size="7">${formatBtPlainAxis(v)}</text>`;
   }
   var labelPoints = state.series[0].points;
@@ -1346,16 +1360,19 @@ function buildCompareAxisSvg(state) {
     var labelX = state.xPos(Math.round((xi * (state.maxLen - 1)) / Math.max(1, xTickCount - 1)));
     xLabels += `<text x="${labelX}" y="${H - 4}" text-anchor="middle" fill="${textColor}" font-size="7">${escapeHtml(labelPoints[xIdx].date.slice(0, 7))}</text>`;
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-    <rect x="0" y="0" width="${W}" height="${H}" fill="${bg}"/>${yGrid}${xLabels}</svg>`;
+  // Rasterize at the video's native resolution (chartW x chartH) so text and
+  // lines are crisp; the viewBox keeps all coordinates in 700x280 units.
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${chartW}" height="${chartH}" viewBox="0 0 ${W} ${H}">
+    <rect x="0" y="0" width="${W}" height="${H}" fill="${bg}"/>${yGrid}${xLabels}
+    ${buildBtBrandSvg(W, H, PAD, textColor)}</svg>`;
 }
 
-function buildCompareLinesSvg(state) {
+function buildCompareLinesSvg(state, chartW, chartH) {
   var W = state.W, H = state.H;
   var paths = state.built.map(function (b) {
     return `<path d="${smoothPath(b.pts)}" fill="none" stroke="${b.color}" stroke-width="1.6" stroke-linecap="round" opacity="0.95"/>`;
   }).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${paths}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${chartW}" height="${chartH}" viewBox="0 0 ${W} ${H}">${paths}</svg>`;
 }
 
 function svgToImage(svgString) {
@@ -1532,14 +1549,14 @@ async function recordCompareVideo() {
   }
 
   try {
-    var imgs = await Promise.all([
-      svgToImage(buildCompareAxisSvg(state)),
-      svgToImage(buildCompareLinesSvg(state)),
-    ]);
-    var axisImg = imgs[0], linesImg = imgs[1];
     var scale = layout.scale;
     var chartW = Math.round(state.W * scale);
     var chartH = layout.chartH;
+    var imgs = await Promise.all([
+      svgToImage(buildCompareAxisSvg(state, chartW, chartH)),
+      svgToImage(buildCompareLinesSvg(state, chartW, chartH)),
+    ]);
+    var axisImg = imgs[0], linesImg = imgs[1];
     var W = state.W, PAD = state.PAD, cw = state.cw, built = state.built;
 
     var drawFrame = function (progress) {
@@ -1580,7 +1597,7 @@ async function recordCompareVideo() {
     var durMs = Math.max(BT_RECORD_MIN_MS, Math.min(getCompareAnimMs(), BT_RECORD_MAX_MS));
     var start = performance.now();
     var tick = function (now) {
-      var progress = Math.min((now - start) / durMs, 1);
+      var progress = Math.max(0, Math.min((now - start) / durMs, 1));
       drawFrame(progress);
       if (progress < 1) requestAnimationFrame(tick);
       else rec.stop();
