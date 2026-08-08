@@ -73,7 +73,7 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
         "BT_LEGEND_PCT_MIN_W",
         "BT_LEGEND_TITLE_SIZE",
         "BT_LEGEND_ITEM_SIZE",
-        "BT_LEGEND_DISCLAIMER_SIZE",
+        "BT_LEGEND_OVERLAY_ALPHA",
     ):
         assert token in script, token
     assert "var ls = scale" in script
@@ -129,10 +129,14 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
     assert "interpolateBtPointAtX" in script
     assert "maxLen" not in script
 
-    # Every frame is pre-filled with the theme background, otherwise the legend
-    # area below the chart is transparent→black in light mode.
-    assert "ctx.fillStyle = state.bg;" in script
+    # Every frame is pre-filled with the theme background and the legend is
+    # overlaid on the full-height plot instead of reserving a large footer.
+    assert "ctx.fillStyle = videoState.bg;" in script
     assert "ctx.fillRect(0, 0, canvas.width, canvas.height);" in script
+    assert "buildCompareVideoState" in script
+    assert "var chartH = canvasH" in script
+    assert "BT_LEGEND_OVERLAY_ALPHA" in script
+    assert '__("backtest.shareDisclaimer")' not in script
 
     # Backtest errors must render in a visible box: the shared yearly #pcError
     # sits inside the hidden #tab-yearly panel while the backtest tab is active.
@@ -142,7 +146,7 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
 
     # i18n keys exist in both locales.
     for key in ("record", "recordLandscape", "recordPortrait", "recordRecording",
-                "recordUnsupported", "recordNeedRun", "orientation", "shareDisclaimer"):
+                "recordUnsupported", "recordNeedRun", "orientation"):
         assert key in zh_locale["backtest"], key
         assert key in en_locale["backtest"], key
     assert zh_locale["backtest"]["record"] == "录制视频"
@@ -150,6 +154,7 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
     assert zh_locale["backtest"]["recordLandscape"] == "横屏"
     assert zh_locale["backtest"]["recordPortrait"] == "竖屏"
     assert zh_locale["backtest"]["compareCardTitle"].startswith("一次性投入")
-    assert "未来收益" in zh_locale["backtest"]["shareDisclaimer"]
+    assert "shareDisclaimer" not in zh_locale["backtest"]
+    assert "shareDisclaimer" not in en_locale["backtest"]
     assert zh_locale["backtest"]["recordUnsupported"].startswith("当前浏览器不支持录制视频")
     assert en_locale["backtest"]["recordUnsupported"].startswith("Video recording is not supported")

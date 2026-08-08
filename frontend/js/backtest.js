@@ -1452,9 +1452,9 @@ var BT_LEGEND_PAD_Y = 12;
 var BT_LEGEND_TITLE_SIZE = 15;
 var BT_LEGEND_ITEM_SIZE = 16;
 var BT_LEGEND_PCT_SIZE = 14;
-var BT_LEGEND_MARGIN_TOP = 18;
-var BT_LEGEND_DISCLAIMER_SIZE = 12;
 var BT_LEGEND_TITLE_LINE_H = 21;
+var BT_LEGEND_OVERLAY_INSET = 10;
+var BT_LEGEND_OVERLAY_ALPHA = 0.86;
 
 function pickCompareRecMime() {
   if (typeof MediaRecorder === "undefined") return "";
@@ -1514,6 +1514,58 @@ function svgToImage(svgString) {
   });
 }
 
+// Reflow the same data into the video's native aspect ratio. This keeps the
+// chart itself full-frame instead of preserving the shorter on-page plot and
+// spending the remaining pixels on a separate legend area.
+function buildCompareVideoState(state, canvasW, canvasH) {
+  var W = state.W;
+  var H = Math.round(W * canvasH / canvasW);
+  var portrait = canvasH > canvasW;
+  var axisFont = state.axisFont || BT_AXIS_FONT;
+  var yRange = state.maxV - state.minV || 1;
+  var yPad = yRange * 0.03;
+  var yMin = state.minV - yPad;
+  var yMax = state.maxV + yPad;
+  var yRng = yMax - yMin;
+  var yValues = Array.from({ length: 5 }, function (_, i) {
+    return state.minV + (state.maxV - state.minV) * i / 4;
+  });
+  var PAD = buildBtChartPadding(yValues.map(formatBtPlainAxis), axisFont, portrait);
+  var cw = W - PAD.left - PAD.right;
+  var ch = H - PAD.top - PAD.bottom;
+  var xPosMs = function (ms) {
+    return PAD.left + ((ms - state.minDateMs) / state.dateRangeMs) * cw;
+  };
+  var yPos = function (value) {
+    return PAD.top + ch - ((value - yMin) / yRng) * ch;
+  };
+  var isProfit = state.context && state.context.metric === "profit";
+  var built = state.series.map(function (series) {
+    var pts = series.points.map(function (point) {
+      var dateMs = btDateMs(point.date);
+      var metricValue = isProfit ? point.profit : point.value;
+      return {
+        x: xPosMs(dateMs), y: yPos(metricValue), value: point.value,
+        profit: point.profit, dateMs: dateMs,
+      };
+    }).filter(function (point) {
+      return Number.isFinite(point.dateMs);
+    }).sort(function (a, b) {
+      return a.dateMs - b.dateMs;
+    });
+    var last = series.points[series.points.length - 1];
+    return {
+      symbol: series.symbol, color: series.color, pts: pts,
+      finalValue: last ? (isProfit ? last.profit : last.value) : 0,
+      finalProfit: last ? last.profit : 0,
+    };
+  });
+  return Object.assign({}, state, {
+    W: W, H: H, PAD: PAD, cw: cw, ch: ch, portrait: portrait,
+    axisFont: axisFont, xPosMs: xPosMs, yPos: yPos, built: built,
+  });
+}
+
 // Wrap legend items into rows of maxWidth. Pure layout logic, kept separate
 // so it can be covered by a regression test. gap scales with the canvas width.
 function layoutCompareLegendItems(items, maxWidth, gap) {
@@ -1550,9 +1602,10 @@ function wrapCompareLegendTitle(ctx, title, maxWidth) {
 function layoutCompareLegend(ctx, state, canvasW, canvasH) {
   var scale = canvasW / state.W;
   var ls = scale;
-  var chartH = Math.round(state.H * scale);
+  var chartH = canvasH;
   var x0 = Math.round(state.PAD.left * scale);
-  var maxItemsW = canvasW - x0 - Math.round(state.PAD.right * scale);
+  var innerPad = Math.round(BT_LEGEND_PAD_Y * ls);
+  var maxItemsW = canvasW - x0 - Math.round(state.PAD.right * scale) - innerPad * 2;
   var isProfit = state.context && state.context.metric === "profit";
   var metricLabel = isProfit ? __("backtest.totalReturn") : __("backtest.totalAssets");
   var range = (state.startLabel && state.latest) ? (state.startLabel + " ~ " + state.latest) : "";
@@ -1592,24 +1645,26 @@ function layoutCompareLegend(ctx, state, canvasW, canvasH) {
     };
   });
   var rows = layoutCompareLegendItems(items, maxItemsW, gap);
-  // Vertical rhythm mirrors the card: padTop, 11px title, 8px card gap, 14px rows.
-  var cardTop = chartH + Math.round(BT_LEGEND_MARGIN_TOP * ls);
   var padY = Math.round(BT_LEGEND_PAD_Y * ls);
   var rowsGap = rows.length ? Math.round(8 * ls) : 0;
-  var titleFirstY = cardTop + padY + titleLineH / 2;
   var titleBlockH = titleLines.length * titleLineH;
-  var rowsY = cardTop + padY + titleBlockH + rowsGap + itemSize / 2;
   var rowH = Math.round((BT_LEGEND_ITEM_SIZE + BT_LEGEND_ROW_GAP) * ls);
-  var legendH = Math.round(BT_LEGEND_MARGIN_TOP * ls) + padY + titleBlockH + rowsGap +
-                rows.length * itemSize + (rows.length - 1) * Math.round(BT_LEGEND_ROW_GAP * ls) +
-                padY;
-  var footerY = canvasH - Math.round(18 * ls);
+  var overlayInset = Math.round(BT_LEGEND_OVERLAY_INSET * ls);
+  var overlayX = x0;
+  var overlayY = Math.round(state.PAD.top * scale) + overlayInset;
+  var overlayW = canvasW - overlayX - Math.round(state.PAD.right * scale);
+  var overlayH = padY + titleBlockH + rowsGap + rows.length * itemSize +
+                 Math.max(0, rows.length - 1) * Math.round(BT_LEGEND_ROW_GAP * ls) + padY;
+  var contentX = overlayX + padY;
+  var titleFirstY = overlayY + padY + titleLineH / 2;
+  var rowsY = overlayY + padY + titleBlockH + rowsGap + itemSize / 2;
   return {
-    scale: scale, chartH: chartH, canvasW: canvasW, x0: x0, rows: rows,
+    scale: scale, chartH: chartH, canvasW: canvasW, x0: contentX, rows: rows,
     title: title, titleLines: titleLines, titleFirstY: titleFirstY, titleLineH: titleLineH,
     rowsY: rowsY, rowH: rowH,
     codeFont: codeFont, valFont: valFont, pctFont: pctFont,
-    legendH: legendH, legendScale: ls, footerY: footerY,
+    legendH: overlayH, legendScale: ls,
+    overlayX: overlayX, overlayY: overlayY, overlayW: overlayW, overlayH: overlayH,
   };
 }
 
@@ -1624,6 +1679,20 @@ function drawCompareLegend(ctx, state, layout, progress) {
   var rows = layout.rows;
   var x0 = layout.x0;
   var ls = layout.legendScale || 1;
+  ctx.save();
+  ctx.globalAlpha = BT_LEGEND_OVERLAY_ALPHA;
+  ctx.fillStyle = state.bg;
+  fillRoundRect(ctx, layout.overlayX, layout.overlayY, layout.overlayW, layout.overlayH, 10 * ls);
+  ctx.restore();
+  ctx.save();
+  ctx.strokeStyle = state.divider;
+  ctx.lineWidth = Math.max(1, 0.5 * ls);
+  if (typeof ctx.roundRect === "function") {
+    ctx.beginPath();
+    ctx.roundRect(layout.overlayX, layout.overlayY, layout.overlayW, layout.overlayH, 10 * ls);
+    ctx.stroke();
+  }
+  ctx.restore();
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
   var revealX = state.PAD.left + state.cw * progress;
@@ -1665,10 +1734,6 @@ function drawCompareLegend(ctx, state, layout, progress) {
       x += pctW + gap;
     });
   });
-  ctx.font = Math.round(BT_LEGEND_DISCLAIMER_SIZE * ls) + "px -apple-system, system-ui, sans-serif";
-  ctx.fillStyle = state.textTertiary;
-  ctx.textAlign = "left";
-  ctx.fillText(__("backtest.shareDisclaimer"), x0, layout.footerY);
 }
 
 async function recordCompareVideo() {
@@ -1688,7 +1753,8 @@ async function recordCompareVideo() {
   canvas.width = canvasW;
   canvas.height = canvasH;
   var ctx = canvas.getContext("2d");
-  var layout = layoutCompareLegend(ctx, state, canvasW, canvasH);
+  var videoState = buildCompareVideoState(state, canvasW, canvasH);
+  var layout = layoutCompareLegend(ctx, videoState, canvasW, canvasH);
 
   var chunks = [];
   var aborted = false;
@@ -1721,19 +1787,19 @@ async function recordCompareVideo() {
 
   try {
     var scale = layout.scale;
-    var chartW = Math.round(state.W * scale);
-    var chartH = layout.chartH;
+    var chartW = canvasW;
+    var chartH = canvasH;
     var imgs = await Promise.all([
-      svgToImage(buildCompareAxisSvg(state, chartW, chartH)),
-      svgToImage(buildCompareLinesSvg(state, chartW, chartH)),
+      svgToImage(buildCompareAxisSvg(videoState, chartW, chartH)),
+      svgToImage(buildCompareLinesSvg(videoState, chartW, chartH)),
     ]);
     var axisImg = imgs[0], linesImg = imgs[1];
-    var PAD = state.PAD, cw = state.cw, built = state.built;
+    var PAD = videoState.PAD, cw = videoState.cw, built = videoState.built;
 
     var drawFrame = function (progress) {
       // Theme background everywhere: the legend area below the chart is plain
       // canvas, which would otherwise encode as transparent→black.
-      ctx.fillStyle = state.bg;
+      ctx.fillStyle = videoState.bg;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       // Axis + labels stay visible the whole time.
       ctx.drawImage(axisImg, 0, 0, chartW, chartH);
@@ -1756,10 +1822,10 @@ async function recordCompareVideo() {
         ctx.fillStyle = b.color;
         ctx.fill();
         ctx.lineWidth = 1.5 * scale;
-        ctx.strokeStyle = state.bg;
+        ctx.strokeStyle = videoState.bg;
         ctx.stroke();
       });
-      drawCompareLegend(ctx, state, layout, progress);
+      drawCompareLegend(ctx, videoState, layout, progress);
     };
 
     var durMs = Math.max(BT_RECORD_MIN_MS, Math.min(getCompareAnimMs(), BT_RECORD_MAX_MS));

@@ -195,8 +195,7 @@
     "recordPortrait": "Portrait",
     "recordRecording": "Recording...",
     "recordUnsupported": "Video recording is not supported in this browser. Please use the latest Chrome, Edge, or Safari.",
-    "recordNeedRun": "Run a compare first, then record the animation.",
-    "shareDisclaimer": "Past backtests do not predict future returns · qqq.tools24.uk"
+    "recordNeedRun": "Run a compare first, then record the animation."
   },
   "detail": {
     "title": "Stock Detail",

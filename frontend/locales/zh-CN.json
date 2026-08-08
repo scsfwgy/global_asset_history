@@ -191,8 +191,7 @@
     "recordPortrait": "竖屏",
     "recordRecording": "录制中...",
     "recordUnsupported": "当前浏览器不支持录制视频，请使用最新版 Chrome / Edge / Safari。",
-    "recordNeedRun": "请先运行回测对比，再录制动画。",
-    "shareDisclaimer": "历史回测不代表未来收益 · qqq.tools24.uk"
+    "recordNeedRun": "请先运行回测对比，再录制动画。"
   },
   "detail": {
     "title": "股票详情",
