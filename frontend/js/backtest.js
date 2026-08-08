@@ -134,6 +134,94 @@ function sampleEvenly(items, maxPoints) {
   return sampled;
 }
 
+// Shared chart geometry and styling. Detail, compare, page SVG, and recorded
+// SVG all use these tokens so axes do not drift as each view evolves.
+var BT_GRID_STROKE = 'stroke-width="0.35" opacity="0.45"';
+var BT_AXIS_FONT = 9;
+var BT_AXIS_LINE_STROKE = 0.6;
+var BT_AXIS_LINE_OPACITY = 0.65;
+var BT_PRIMARY_LINE_STROKE = 1.8;
+var BT_SECONDARY_LINE_STROKE = 1.4;
+
+function btDateMs(value) {
+  var ms = Date.parse(String(value || "") + "T00:00:00Z");
+  return Number.isFinite(ms) ? ms : NaN;
+}
+
+function formatBtDateTick(ms) {
+  return new Date(ms).toISOString().slice(0, 7);
+}
+
+function buildBtDateTicks(minMs, maxMs, count) {
+  if (!Number.isFinite(minMs) || !Number.isFinite(maxMs)) return [];
+  if (minMs === maxMs || count <= 1) return [{ ms: minMs, label: formatBtDateTick(minMs) }];
+  var ticks = [];
+  for (var i = 0; i < count; i++) {
+    var ms = minMs + ((maxMs - minMs) * i) / (count - 1);
+    var label = formatBtDateTick(ms);
+    if (!ticks.length || ticks[ticks.length - 1].label !== label) ticks.push({ ms: ms, label: label });
+  }
+  return ticks;
+}
+
+function estimateBtTextWidth(text, fontSize) {
+  return Array.from(String(text || "")).reduce(function (sum, ch) {
+    return sum + (/[^\u0000-\u00ff]/.test(ch) ? 1 : 0.6) * fontSize;
+  }, 0);
+}
+
+function buildBtChartPadding(yLabels, fontSize, portrait) {
+  var widest = yLabels.reduce(function (max, label) {
+    return Math.max(max, estimateBtTextWidth(label, fontSize));
+  }, 0);
+  return {
+    top: Math.max(10, Math.ceil(fontSize * 0.9)),
+    right: portrait ? 16 : 20,
+    bottom: Math.ceil(fontSize + 18),
+    left: Math.max(portrait ? 48 : 44, Math.ceil(widest + 10)),
+  };
+}
+
+function buildBtAxes(config) {
+  var yGrid = "", yLabels = "";
+  config.yValues.forEach(function (v) {
+    var y = config.yPos(v);
+    yGrid += `<line x1="${config.PAD.left}" y1="${y}" x2="${config.W - config.PAD.right}" y2="${y}" stroke="${config.gridColor}" ${BT_GRID_STROKE}/>`;
+    yLabels += `<text x="${config.PAD.left - 6}" y="${y + config.fontSize * 0.35}" text-anchor="end" fill="${config.labelColor}" font-size="${config.fontSize}">${config.formatY(v)}</text>`;
+  });
+
+  var plotBottom = config.H - config.PAD.bottom;
+  var axisLines = `<line x1="${config.PAD.left}" y1="${config.PAD.top}" x2="${config.PAD.left}" y2="${plotBottom}" stroke="${config.axisColor}" stroke-width="${BT_AXIS_LINE_STROKE}" opacity="${BT_AXIS_LINE_OPACITY}"/>` +
+    `<line x1="${config.PAD.left}" y1="${plotBottom}" x2="${config.W - config.PAD.right}" y2="${plotBottom}" stroke="${config.axisColor}" stroke-width="${BT_AXIS_LINE_STROKE}" opacity="${BT_AXIS_LINE_OPACITY}"/>`;
+
+  var xLabels = config.xTicks.map(function (tick, index) {
+    var anchor = index === 0 ? "start" : (index === config.xTicks.length - 1 ? "end" : "middle");
+    return `<text x="${config.xPosMs(tick.ms)}" y="${config.H - 5}" text-anchor="${anchor}" fill="${config.labelColor}" font-size="${config.fontSize}">${escapeHtml(tick.label)}</text>`;
+  }).join("");
+
+  return { grid: yGrid, labels: yLabels + xLabels, lines: axisLines };
+}
+
+function interpolateBtPointAtX(points, x) {
+  if (!points || !points.length || x < points[0].x) return null;
+  if (points.length === 1 || x >= points[points.length - 1].x) return points[points.length - 1];
+  var low = 0, high = points.length - 1;
+  while (low + 1 < high) {
+    var mid = Math.floor((low + high) / 2);
+    if (points[mid].x <= x) low = mid;
+    else high = mid;
+  }
+  var left = points[low], right = points[high];
+  var ratio = (x - left.x) / Math.max(0.000001, right.x - left.x);
+  return {
+    x: x,
+    y: left.y + (right.y - left.y) * ratio,
+    value: left.value + (right.value - left.value) * ratio,
+    profit: left.profit + (right.profit - left.profit) * ratio,
+    dateMs: left.dateMs + (right.dateMs - left.dateMs) * ratio,
+  };
+}
+
 let _btCashflows = [];
 let _btEquityByDate = {};
 let _btPage = 1;
@@ -484,8 +572,8 @@ function renderBtChart(equityCurve) {
   }
 
   // All three series share one left Y-axis (amounts); the right axis is removed.
-  // Legend moved to the HTML row above, so the SVG no longer needs top headroom for it.
-  const W = 700, H = 220, PAD = { top: 8, right: 16, bottom: 22, left: 40 };
+  // Geometry and axis styling intentionally match the compare chart.
+  const W = 700, H = 240;
   // One shared axis must cover all three series. Using only total assets clips
   // negative profit and produces a misleading synthetic bottom tick.
   const axisVals = sampledCurve.flatMap((row) => [row.value, row.invested, row.value - row.invested]);
@@ -496,44 +584,41 @@ function renderBtChart(equityCurve) {
   const assetYMin = minAssetVal - assetPad;
   const assetYMax = maxAssetVal + assetPad;
   const assetYRange = assetYMax - assetYMin;
+  const yTickCount = 4;
+  const yValues = Array.from({ length: yTickCount + 1 }, (_, i) => assetYMin + (assetYRange * i) / yTickCount);
+  const yLabels = yValues.map(formatBtAxisMoney);
+  const PAD = buildBtChartPadding(yLabels, BT_AXIS_FONT, false);
   const cw = W - PAD.left - PAD.right;
   const ch = H - PAD.top - PAD.bottom;
-  const xPos = (idx) => PAD.left + (idx / Math.max(1, sampledCurve.length - 1)) * cw;
+  const dateValues = sampledCurve.map((row) => btDateMs(row.date)).filter(Number.isFinite);
+  const minDateMs = Math.min(...dateValues);
+  const maxDateMs = Math.max(...dateValues);
+  const dateRangeMs = maxDateMs - minDateMs || 1;
+  const xPosMs = (ms) => PAD.left + ((ms - minDateMs) / dateRangeMs) * cw;
   const assetYPos = (v) => PAD.top + ch - ((v - assetYMin) / assetYRange) * ch;
-
-  // Left Y-axis: total assets
-  const yTicks = 5;
-  let yGrid = "";
-  for (let i = 0; i <= yTicks; i++) {
-    const v = assetYMin + (assetYRange * i) / yTicks;
-    const y = assetYPos(v);
-    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="var(--apple-divider)" ${BT_GRID_STROKE}/>`;
-    const label = formatBtAxisMoney(v);
-    yGrid += `<text x="${PAD.left - 4}" y="${y + 3}" text-anchor="end" fill="var(--apple-text-tertiary)" font-size="7">${label}</text>`;
-  }
+  const axes = buildBtAxes({
+    W: W, H: H, PAD: PAD, yValues: yValues, yPos: assetYPos,
+    formatY: formatBtAxisMoney,
+    xTicks: buildBtDateTicks(minDateMs, maxDateMs, 6), xPosMs: xPosMs,
+    fontSize: BT_AXIS_FONT,
+    gridColor: "var(--apple-divider)",
+    axisColor: "var(--apple-text-tertiary)",
+    labelColor: "var(--apple-text-tertiary)",
+  });
 
   const zeroY = assetYPos(0);
   const zeroLine = (zeroY >= PAD.top && zeroY <= H - PAD.bottom)
     ? `<line x1="${PAD.left}" y1="${zeroY}" x2="${W - PAD.right}" y2="${zeroY}" stroke="var(--apple-text-tertiary)" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>`
     : "";
 
-  // X-axis labels
-  let xLabels = "";
-  if (sampledCurve.length > 1) {
-    const step = Math.max(1, Math.floor(sampledCurve.length / 8));
-    for (let i = 0; i < sampledCurve.length; i++) {
-      if (i % step === 0 || i === sampledCurve.length - 1)
-        xLabels += `<text x="${xPos(i)}" y="${H - 4}" text-anchor="middle" fill="var(--apple-text-tertiary)" font-size="8">${sampledCurve[i].date.slice(2)}</text>`;
-    }
-  }
-
   const assetPoints = [];
   const investedPoints = [];
   const profitPoints = [];
-  sampledCurve.forEach((row, idx) => {
-    assetPoints.push({ x: xPos(idx), y: assetYPos(row.value) });
-    investedPoints.push({ x: xPos(idx), y: assetYPos(row.invested) });
-    profitPoints.push({ x: xPos(idx), y: assetYPos(row.value - row.invested) });
+  sampledCurve.forEach((row) => {
+    const x = xPosMs(btDateMs(row.date));
+    assetPoints.push({ x: x, y: assetYPos(row.value) });
+    investedPoints.push({ x: x, y: assetYPos(row.invested) });
+    profitPoints.push({ x: x, y: assetYPos(row.value - row.invested) });
   });
 
   const assetCurveD = smoothPath(assetPoints);
@@ -547,13 +632,13 @@ function renderBtChart(equityCurve) {
     ? `${assetCurveD} L ${lastX} ${assetBottomY} L ${firstX} ${assetBottomY} Z`
     : "";
   const assetPath = assetPoints.length
-    ? `<path d="${assetCurveD}" fill="none" stroke="#2997ff" stroke-width="1.5" stroke-linecap="round" opacity="0.9"/>`
+    ? `<path d="${assetCurveD}" fill="none" stroke="#2997ff" stroke-width="${BT_PRIMARY_LINE_STROKE}" stroke-linecap="round" opacity="0.95"/>`
     : "";
   const investedPath = investedPoints.length
-    ? `<path d="${investedCurveD}" fill="none" stroke="${c.invested}" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>`
+    ? `<path d="${investedCurveD}" fill="none" stroke="${c.invested}" stroke-width="${BT_SECONDARY_LINE_STROKE}" stroke-linecap="round" opacity="0.9"/>`
     : "";
   const profitPath = profitPoints.length
-    ? `<path d="${profitCurveD}" fill="none" stroke="${c.positiveAlpha88}" stroke-width="1.2"/>`
+    ? `<path d="${profitCurveD}" fill="none" stroke="${c.positiveAlpha88}" stroke-width="${BT_SECONDARY_LINE_STROKE}" stroke-linecap="round"/>`
     : "";
 
   const hoverZones = sampledCurve.map((row, idx) => {
@@ -564,7 +649,7 @@ function renderBtChart(equityCurve) {
       data-value="${row.value}"
       data-invested="${row.invested}"
       data-profit="${profit}"
-      x="${Math.max(PAD.left, xPos(idx) - 8)}"
+      x="${Math.max(PAD.left, xPosMs(btDateMs(row.date)) - 8)}"
       y="${PAD.top}"
       width="16"
       height="${ch}"
@@ -626,7 +711,7 @@ function renderBtChart(equityCurve) {
         <stop offset="100%" stop-color="#2997ff" stop-opacity="0"/>
       </linearGradient>
     </defs>
-    ${yGrid} ${zeroLine} ${animatedLayer} ${pulseLayer} ${xLabels}
+    ${axes.grid} ${axes.lines} ${zeroLine} ${animatedLayer} ${pulseLayer} ${axes.labels}
     ${buildBtBrandSvg(W, H, PAD, "var(--apple-text-tertiary)")}
     ${hoverZones} ${tooltip}
   </svg>`;
@@ -933,6 +1018,18 @@ function initComparePanel() {
 
   if (addBtn) addBtn.addEventListener("click", function () { addRow(); });
   if (runBtn) runBtn.addEventListener("click", runBacktestCompare);
+
+  // Orientation switch re-renders the chart (and, on record, the video) in the
+  // selected aspect, keeping the recording in sync with what is on screen.
+  var orientSel = $("pcBtCompareOrientation");
+  if (orientSel) {
+    orientSel.addEventListener("change", function () {
+      _btCompareOrientation = orientSel.value;
+      if (_btCompareLastInputs) {
+        renderBtCompareChart(_btCompareLastInputs.series, _btCompareLastInputs.context);
+      }
+    });
+  }
 }
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initComparePanel);
@@ -993,8 +1090,6 @@ var BT_COMPARE_COLORS = ["#2997ff", "#ff9f0a", "#30d158", "#ff375f", "#bf5af2", 
 // Centered brand watermark, shared by the on-page chart and the recorded video.
 var BT_BRAND_TEXT = "https://qqq.tools24.uk";
 
-// Faint horizontal grid lines: barely visible, shared by page and video.
-var BT_GRID_STROKE = 'stroke-width="0.25" opacity="0.5"';
 function buildBtBrandSvg(W, H, PAD, color) {
   var cx = PAD.left + (W - PAD.left - PAD.right) / 2;
   var cy = PAD.top + (H - PAD.top - PAD.bottom) / 2;
@@ -1004,6 +1099,11 @@ function buildBtBrandSvg(W, H, PAD, color) {
 // Snapshot of the last compare render, so the video recorder can replay the
 // exact chart + legend animation offscreen (see recordCompareVideo).
 var _btCompareLast = null;
+// Current compare orientation; drives both the on-page chart geometry and the
+// recorded video, so the two stay in sync. The params-panel selector sets it.
+var _btCompareOrientation = "landscape";
+// Last compare inputs, kept so switching orientation can re-render the chart.
+var _btCompareLastInputs = null;
 
 function renderCompareResults(results, metric, lump, start) {
   var maxPts = getBacktestSampleSize();
@@ -1020,6 +1120,7 @@ function renderCompareResults(results, metric, lump, start) {
     };
   });
   renderBtCompareChart(series, { lump: lump, start: start, metric: metric });
+  _btCompareLastInputs = { series: series, context: { lump: lump, start: start, metric: metric } };
 }
 
 function renderBtCompareChart(series, context) {
@@ -1028,7 +1129,12 @@ function renderBtCompareChart(series, context) {
   var c = getChartColors();
   var isProfit = context && context.metric === "profit";
   var valOf = function (p) { return isProfit ? p.profit : p.value; };
-  var W = 700, H = 280, PAD = { top: 8, right: 16, bottom: 22, left: 40 };
+  // Portrait is a compact share preview, not a vertically stretched landscape
+  // plot. Both orientations use the same visual tokens and real date scale.
+  var portrait = _btCompareOrientation === "portrait";
+  var W = portrait ? 360 : 700;
+  var H = portrait ? 440 : 280;
+  var axisFont = portrait ? 12 : BT_AXIS_FONT;
   var allVals = [];
   series.forEach(function (s) { s.points.forEach(function (p) { allVals.push(valOf(p)); }); });
   // Total-assets comparison should scale to the actual data range. Forcing zero
@@ -1039,59 +1145,70 @@ function renderBtCompareChart(series, context) {
   var range = maxV - minV || 1;
   var pad = range * 0.03;
   var yMin = minV - pad, yMax = maxV + pad, yRng = yMax - yMin;
+  var yTickCount = 4;
+  var yValues = Array.from({ length: yTickCount + 1 }, function (_, i) { return yMin + (yRng * i) / yTickCount; });
+  var yLabels = yValues.map(formatBtPlainAxis);
+  var PAD = buildBtChartPadding(yLabels, axisFont, portrait);
   var cw = W - PAD.left - PAD.right;
   var ch = H - PAD.top - PAD.bottom;
-  var maxLen = Math.max.apply(null, series.map(function (s) { return s.points.length; }));
-  var xPos = function (i) { return PAD.left + (maxLen <= 1 ? 0 : (i / (maxLen - 1)) * cw); };
+  var allDateValues = [];
+  series.forEach(function (s) {
+    s.points.forEach(function (p) {
+      var ms = btDateMs(p.date);
+      if (Number.isFinite(ms)) allDateValues.push(ms);
+    });
+  });
+  var minDateMs = Math.min.apply(null, allDateValues);
+  var maxDateMs = Math.max.apply(null, allDateValues);
+  var dateRangeMs = maxDateMs - minDateMs || 1;
+  var xPosMs = function (ms) { return PAD.left + ((ms - minDateMs) / dateRangeMs) * cw; };
   var yPos = function (v) { return PAD.top + ch - ((v - yMin) / yRng) * ch; };
 
   var built = series.map(function (s) {
-    var pts = s.points.map(function (p, i) { return { x: xPos(i), y: yPos(valOf(p)) }; });
+    var pts = s.points.map(function (p) {
+      var dateMs = btDateMs(p.date);
+      return { x: xPosMs(dateMs), y: yPos(valOf(p)), value: p.value, profit: p.profit, dateMs: dateMs };
+    }).filter(function (p) { return Number.isFinite(p.dateMs); }).sort(function (a, b) { return a.dateMs - b.dateMs; });
     var last = s.points[s.points.length - 1];
     return { symbol: s.symbol, color: s.color, pts: pts, finalValue: last ? valOf(last) : 0, finalProfit: last ? last.profit : 0 };
   });
 
-  var yTicks = 4, yGrid = "";
-  for (var i = 0; i <= yTicks; i++) {
-    var v = yMin + (yRng * i) / yTicks;
-    var y = yPos(v);
-    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="var(--apple-divider)" ${BT_GRID_STROKE}/>`;
-    yGrid += `<text x="${PAD.left - 4}" y="${y + 3}" text-anchor="end" fill="var(--apple-text-tertiary)" font-size="7">${formatBtPlainAxis(v)}</text>`;
-  }
+  var axes = buildBtAxes({
+    W: W, H: H, PAD: PAD, yValues: yValues, yPos: yPos,
+    formatY: formatBtPlainAxis,
+    xTicks: buildBtDateTicks(minDateMs, maxDateMs, portrait ? 5 : 6), xPosMs: xPosMs,
+    fontSize: axisFont,
+    gridColor: "var(--apple-divider)",
+    axisColor: "var(--apple-text-tertiary)",
+    labelColor: "var(--apple-text-tertiary)",
+  });
 
+  var lineStroke = BT_PRIMARY_LINE_STROKE;
   var lines = built.map(function (b) {
-    return `<path d="${smoothPath(b.pts)}" fill="none" stroke="${b.color}" stroke-width="1.6" stroke-linecap="round" opacity="0.95"/>`;
+    return `<path d="${smoothPath(b.pts)}" fill="none" stroke="${b.color}" stroke-width="${lineStroke}" stroke-linecap="round" opacity="0.95"/>`;
   }).join("");
 
   var dots = built.map(function (b, i) {
     var last = b.pts[b.pts.length - 1];
     if (!last) return "";
-    return `<circle id="btCmpDot-${i}" cx="${last.x}" cy="${last.y}" r="3.2" fill="${b.color}" stroke="var(--apple-bg)" stroke-width="1.5"><animate attributeName="r" values="3.2;5.4;3.2" dur="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.5;1" dur="1.6s" repeatCount="indefinite"/></circle>`;
+    return `<circle id="btCmpDot-${i}" cx="${last.x}" cy="${last.y}" r="3.2" fill="${b.color}" stroke="var(--apple-bg)" stroke-width="1.5" style="display:none"><animate attributeName="r" values="3.2;5.4;3.2" dur="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.5;1" dur="1.6s" repeatCount="indefinite"/></circle>`;
   }).join("");
 
-  // Date range spans all symbols (earliest start ~ latest end), not just the first.
+  // Date range spans all symbols (earliest start ~ latest end).
   var allDates = [];
   series.forEach(function (s) { s.points.forEach(function (p) { allDates.push(p.date); }); });
   var sorted = allDates.slice().sort();
 
-  // X-axis labels use the first series' sampled dates on the shared timeline.
-  var xLabels = "";
-  var labelPoints = series[0].points;
-  var xTickCount = Math.min(6, labelPoints.length);
-  for (var xi = 0; xi < xTickCount; xi++) {
-    var xIdx = Math.round((xi * (labelPoints.length - 1)) / Math.max(1, xTickCount - 1));
-    var labelX = xPos(Math.round((xi * (maxLen - 1)) / Math.max(1, xTickCount - 1)));
-    xLabels += `<text x="${labelX}" y="${H - 4}" text-anchor="middle" fill="var(--apple-text-tertiary)" font-size="7">${escapeHtml(labelPoints[xIdx].date.slice(0, 7))}</text>`;
-  }
-
-  chartEl.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
+  chartEl.setAttribute("data-orientation", portrait ? "portrait" : "landscape");
+  chartEl.innerHTML = `<svg class="bt-cmp-chart-svg" viewBox="0 0 ${W} ${H}">
     <defs>
       <clipPath id="btCmpReveal"><rect id="btCmpRevealRect" x="0" y="0" width="0" height="${H}"></rect></clipPath>
     </defs>
-    ${yGrid}
+    ${axes.grid}
+    ${axes.lines}
     <g id="btCmpLayer" clip-path="url(#btCmpReveal)">${lines}</g>
     <g id="btCmpPulse">${dots}</g>
-    ${xLabels}
+    ${axes.labels}
     ${buildBtBrandSvg(W, H, PAD, "var(--apple-text-tertiary)")}
     <line id="btCmpTooltipGuide" x1="0" y1="${PAD.top}" x2="0" y2="${PAD.top + ch}" stroke="${c.guide}" stroke-width="1" stroke-dasharray="4,3" style="display:none;pointer-events:none;"/>
     <rect id="btCmpHoverPlot" x="${PAD.left}" y="${PAD.top}" width="${cw}" height="${ch}" fill="transparent" style="cursor:crosshair"/>
@@ -1107,22 +1224,25 @@ function renderBtCompareChart(series, context) {
   var tipBg = svgEl.querySelector("#btCmpTooltipBg");
   var tipRows = svgEl.querySelector("#btCmpTooltipRows");
   var hoverPlot = svgEl.querySelector("#btCmpHoverPlot");
-  function showCmpTip(idx, guideX) {
+  function showCmpTip(guideX) {
     if (!tipEl) return;
-    var dateLabel = series[0].points[idx] ? series[0].points[idx].date : "";
+    var targetMs = minDateMs + ((guideX - PAD.left) / Math.max(1, cw)) * dateRangeMs;
+    var dateLabel = new Date(targetMs).toISOString().slice(0, 10);
     var rows = '<text x="10" y="16" fill="' + c.tooltipText + '" font-size="11" font-weight="600">' + escapeHtml(dateLabel) + '</text>';
-    series.forEach(function (s, si) {
-      var p = s.points[idx];
+    var visibleRows = 0;
+    built.forEach(function (b) {
+      var p = interpolateBtPointAtX(b.pts, guideX);
       if (!p) return;
-      var ry = 16 + (si + 1) * 16;
+      visibleRows += 1;
+      var ry = 16 + visibleRows * 16;
       var profitColor = p.profit >= 0 ? c.positive : c.negative;
-      rows += '<rect x="10" y="' + (ry - 8) + '" width="8" height="3" rx="1" fill="' + s.color + '"/>';
-      rows += '<text x="22" y="' + (ry - 5) + '" fill="' + c.tooltipText + '" font-size="10">' + escapeHtml(s.symbol) + '</text>';
+      rows += '<rect x="10" y="' + (ry - 8) + '" width="8" height="3" rx="1" fill="' + b.color + '"/>';
+      rows += '<text x="22" y="' + (ry - 5) + '" fill="' + c.tooltipText + '" font-size="10">' + escapeHtml(b.symbol) + '</text>';
       rows += '<text x="64" y="' + (ry - 5) + '" fill="' + c.tooltipText + '" font-size="10">' + formatBtPlainAxis(p.value) + '</text>';
       rows += '<text x="130" y="' + (ry - 5) + '" fill="' + profitColor + '" font-size="10">' + (p.profit >= 0 ? "+" : "") + formatBtPlainAxis(p.profit) + '</text>';
     });
     if (tipRows) tipRows.innerHTML = rows;
-    if (tipBg) tipBg.setAttribute("height", String(18 + series.length * 16 + 8));
+    if (tipBg) tipBg.setAttribute("height", String(18 + visibleRows * 16 + 8));
     var tipX = Math.min(Math.max(guideX + 12, PAD.left), W - PAD.right - 200);
     tipEl.setAttribute("transform", "translate(" + tipX + ", " + (PAD.top + 4) + ")");
     if (tipGuide) {
@@ -1139,8 +1259,7 @@ function renderBtCompareChart(series, context) {
       point.y = event.clientY;
       var local = point.matrixTransform(svgEl.getScreenCTM().inverse());
       var guideX = Math.max(PAD.left, Math.min(PAD.left + cw, local.x));
-      var idx = Math.max(0, Math.min(maxLen - 1, Math.round(((guideX - PAD.left) / cw) * (maxLen - 1))));
-      showCmpTip(idx, guideX);
+      showCmpTip(guideX);
     });
     hoverPlot.addEventListener("mouseleave", function () {
       if (tipEl) tipEl.style.display = "none";
@@ -1150,6 +1269,7 @@ function renderBtCompareChart(series, context) {
 
   var legendEl = $("btCompareLegend");
   if (legendEl && context) {
+    legendEl.setAttribute("data-orientation", portrait ? "portrait" : "landscape");
     var metricLabel = context.metric === "profit" ? __("backtest.totalReturn") : __("backtest.totalAssets");
     var startLabel = (context.start || "").slice(0, 7);
     var latest = sorted.length ? sorted[sorted.length - 1].slice(0, 7) : "";
@@ -1180,10 +1300,14 @@ function renderBtCompareChart(series, context) {
     built: built,
     context: context,
     lump: (context && context.lump) || 0,
-    W: W, H: H, PAD: PAD, cw: cw, ch: ch, maxLen: maxLen,
-    xPos: xPos, yPos: yPos, minV: minV, maxV: maxV,
+    W: W, H: H, PAD: PAD, cw: cw, ch: ch, axisFont: axisFont,
+    lineStroke: lineStroke,
+    xPosMs: xPosMs, yPos: yPos, minV: minV, maxV: maxV,
+    minDateMs: minDateMs, maxDateMs: maxDateMs, dateRangeMs: dateRangeMs,
+    portrait: portrait,
     c: c,
     bg: rootStyle.getPropertyValue("--apple-bg").trim() || "#000000",
+    divider: rootStyle.getPropertyValue("--apple-divider").trim() || "rgba(255,255,255,0.12)",
     textTertiary: rootStyle.getPropertyValue("--apple-text-tertiary").trim() || "#999999",
     textSecondary: rootStyle.getPropertyValue("--apple-text-secondary").trim() || "#cccccc",
     startLabel: ((context && context.start) || "").slice(0, 7),
@@ -1194,29 +1318,30 @@ function renderBtCompareChart(series, context) {
   var revealRect = chartEl.querySelector("#btCmpRevealRect");
   var durationMs = getCompareAnimMs();
   var updateLegend = function (progress) {
+    var revealX = PAD.left + cw * progress;
     built.forEach(function (b, i) {
+      var snapshot = interpolateBtPointAtX(b.pts, revealX);
       var el = $("btCmpVal-" + i);
-      if (el) el.textContent = formatBtPlainMoney(b.finalValue * progress);
+      var currentValue = snapshot ? (isProfit ? snapshot.profit : snapshot.value) : null;
+      if (el) el.textContent = currentValue === null ? "—" : formatBtPlainMoney(currentValue);
       var pct = $("btCmpPct-" + i);
       if (pct) {
-        var p = context && context.lump ? (b.finalProfit * progress / context.lump) * 100 : 0;
-        pct.textContent = (p >= 0 ? "+" : "") + p.toFixed(2) + "%";
-        pct.style.color = p >= 0 ? "var(--data-positive)" : "var(--data-negative)";
+        var p = snapshot && context && context.lump ? (snapshot.profit / context.lump) * 100 : null;
+        pct.textContent = p === null ? "—" : (p >= 0 ? "+" : "") + p.toFixed(2) + "%";
+        pct.style.color = p === null ? "var(--apple-text-tertiary)" : (p >= 0 ? "var(--data-positive)" : "var(--data-negative)");
       }
     });
   };
   var moveDots = function (progress) {
-    var revealX = Math.max(PAD.left, Math.min(PAD.left + cw, W * progress));
+    var revealX = PAD.left + cw * progress;
     built.forEach(function (b, i) {
       var el = $("btCmpDot-" + i);
-      if (!el || b.pts.length < 2) return;
-      var span = b.pts[b.pts.length - 1].x - b.pts[0].x || 1;
-      var f = ((revealX - b.pts[0].x) / span) * (b.pts.length - 1);
-      var i0 = Math.max(0, Math.min(b.pts.length - 2, Math.floor(f)));
-      var frac = f - i0;
-      var y = b.pts[i0].y + (b.pts[i0 + 1].y - b.pts[i0].y) * frac;
-      el.setAttribute("cx", revealX);
-      el.setAttribute("cy", y);
+      if (!el) return;
+      var snapshot = interpolateBtPointAtX(b.pts, revealX);
+      if (!snapshot) { el.style.display = "none"; return; }
+      el.style.display = "";
+      el.setAttribute("cx", snapshot.x);
+      el.setAttribute("cy", snapshot.y);
     });
   };
   if (durationMs <= 0) {
@@ -1228,7 +1353,7 @@ function renderBtCompareChart(series, context) {
     var start = performance.now();
     var tick = function (now) {
       var progress = Math.max(0, Math.min((now - start) / durationMs, 1));
-      revealRect.setAttribute("width", String(W * progress));
+      revealRect.setAttribute("width", String(PAD.left + cw * progress));
       updateLegend(progress);
       moveDots(progress);
       if (progress < 1) requestAnimationFrame(tick);
@@ -1305,25 +1430,31 @@ function renderBtCompareChart(series, context) {
 // chrome, no cursor, no buttons.
 var BT_RECORD_MIN_MS = 3000;    // clamps a 0/1s animation so the video is watchable
 var BT_RECORD_MAX_MS = 30000;
-var BT_RECORD_WIDTH = 1280;
+var BT_RECORD_HOLD_MS = 1800;
+// Standard social/video aspect ratios. The SVG viewBox remains the logical
+// layout; these physical pixels only add density, not smaller typography.
+var BT_RECORD_LANDSCAPE_W = 1920;
+var BT_RECORD_LANDSCAPE_H = 1080;
+var BT_RECORD_PORTRAIT_W = 1080;
+var BT_RECORD_PORTRAIT_H = 1920;
 var BT_RECORD_BITRATE = 12000000;   // high enough to keep axis text crisp
-// Legend metrics mirror the on-page .bt-cmp-card CSS so the video legend looks
-// like the real one: small fonts, flex gaps, right-aligned %, 14x4 swatch.
-var BT_LEGEND_ITEM_GAP = 18;     // .bt-cmp-card-items gap (horizontal)
-var BT_LEGEND_ROW_GAP = 6;       // .bt-cmp-card-items gap (vertical)
-var BT_LEGEND_FLEX_GAP = 4;      // .bt-cmp-item gap
-var BT_LEGEND_CODE_MR = 6;       // .bt-cmp-code margin-right
-var BT_LEGEND_VAL_MR = 2;        // .bt-live-val margin-right (compare override)
-var BT_LEGEND_SWATCH_W = 14;     // .bt-legend-swatch 14x4, radius 2
-var BT_LEGEND_SWATCH_H = 4;
-var BT_LEGEND_PCT_MIN_W = 58;    // .bt-cmp-pct min-width (right-aligned)
-var BT_LEGEND_PAD_LEFT_PCT = 5.7; // .bt-cmp-card left padding
-var BT_LEGEND_PAD_RIGHT = 16;    // .bt-cmp-card right padding
-var BT_LEGEND_PAD_Y = 6;         // .bt-cmp-card vertical padding
-var BT_LEGEND_TITLE_SIZE = 11;   // .bt-cmp-card-title font-size
-var BT_LEGEND_ITEM_SIZE = 14;    // .bt-cmp-item font-size
-var BT_LEGEND_PCT_SIZE = 12;     // .bt-cmp-pct font-size
-var BT_LEGEND_MARGIN_TOP = 14;   // #btCompareLegend margin-top
+// Legend metrics mirror the on-page .bt-cmp-card hierarchy while keeping text
+// comfortably readable after social platforms resize or recompress the video.
+var BT_LEGEND_ITEM_GAP = 12;
+var BT_LEGEND_ROW_GAP = 10;
+var BT_LEGEND_FLEX_GAP = 5;
+var BT_LEGEND_CODE_MR = 6;
+var BT_LEGEND_VAL_MR = 3;
+var BT_LEGEND_SWATCH_W = 16;
+var BT_LEGEND_SWATCH_H = 5;
+var BT_LEGEND_PCT_MIN_W = 58;
+var BT_LEGEND_PAD_Y = 12;
+var BT_LEGEND_TITLE_SIZE = 15;
+var BT_LEGEND_ITEM_SIZE = 16;
+var BT_LEGEND_PCT_SIZE = 14;
+var BT_LEGEND_MARGIN_TOP = 18;
+var BT_LEGEND_DISCLAIMER_SIZE = 12;
+var BT_LEGEND_TITLE_LINE_H = 21;
 
 function pickCompareRecMime() {
   if (typeof MediaRecorder === "undefined") return "";
@@ -1343,34 +1474,32 @@ function pickCompareRecMime() {
 }
 
 function buildCompareAxisSvg(state, chartW, chartH) {
-  var W = state.W, H = state.H, PAD = state.PAD, c = state.c;
-  var textColor = state.textTertiary, bg = state.bg;
-  var yTicks = 4, yGrid = "";
-  for (var i = 0; i <= yTicks; i++) {
-    var v = state.minV + (state.maxV - state.minV) * i / yTicks;
-    var y = state.yPos(v);
-    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="${c.guide}" ${BT_GRID_STROKE}/>`;
-    yGrid += `<text x="${PAD.left - 4}" y="${y + 3}" text-anchor="end" fill="${textColor}" font-size="7">${formatBtPlainAxis(v)}</text>`;
-  }
-  var labelPoints = state.series[0].points;
-  var xTickCount = Math.min(6, labelPoints.length);
-  var xLabels = "";
-  for (var xi = 0; xi < xTickCount; xi++) {
-    var xIdx = Math.round((xi * (labelPoints.length - 1)) / Math.max(1, xTickCount - 1));
-    var labelX = state.xPos(Math.round((xi * (state.maxLen - 1)) / Math.max(1, xTickCount - 1)));
-    xLabels += `<text x="${labelX}" y="${H - 4}" text-anchor="middle" fill="${textColor}" font-size="7">${escapeHtml(labelPoints[xIdx].date.slice(0, 7))}</text>`;
-  }
-  // Rasterize at the video's native resolution (chartW x chartH) so text and
-  // lines are crisp; the viewBox keeps all coordinates in 700x280 units.
+  var W = state.W, H = state.H, PAD = state.PAD;
+  var textColor = state.textTertiary, labelColor = state.textSecondary, bg = state.bg;
+  var axisFont = state.axisFont || BT_AXIS_FONT;
+  var yValues = Array.from({ length: 5 }, function (_, i) {
+    return state.minV + (state.maxV - state.minV) * i / 4;
+  });
+  var axes = buildBtAxes({
+    W: W, H: H, PAD: PAD, yValues: yValues, yPos: state.yPos,
+    formatY: formatBtPlainAxis,
+    xTicks: buildBtDateTicks(state.minDateMs, state.maxDateMs, state.portrait ? 5 : 6),
+    xPosMs: state.xPosMs,
+    fontSize: axisFont,
+    gridColor: state.divider,
+    axisColor: labelColor,
+    labelColor: labelColor,
+  });
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${chartW}" height="${chartH}" viewBox="0 0 ${W} ${H}">
-    <rect x="0" y="0" width="${W}" height="${H}" fill="${bg}"/>${yGrid}${xLabels}
+    <rect x="0" y="0" width="${W}" height="${H}" fill="${bg}"/>${axes.grid}${axes.lines}${axes.labels}
     ${buildBtBrandSvg(W, H, PAD, textColor)}</svg>`;
 }
 
 function buildCompareLinesSvg(state, chartW, chartH) {
   var W = state.W, H = state.H;
+  var stroke = state.lineStroke || BT_PRIMARY_LINE_STROKE;
   var paths = state.built.map(function (b) {
-    return `<path d="${smoothPath(b.pts)}" fill="none" stroke="${b.color}" stroke-width="1.6" stroke-linecap="round" opacity="0.95"/>`;
+    return `<path d="${smoothPath(b.pts)}" fill="none" stroke="${b.color}" stroke-width="${stroke}" stroke-linecap="round" opacity="0.95"/>`;
   }).join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${chartW}" height="${chartH}" viewBox="0 0 ${W} ${H}">${paths}</svg>`;
 }
@@ -1386,13 +1515,14 @@ function svgToImage(svgString) {
 }
 
 // Wrap legend items into rows of maxWidth. Pure layout logic, kept separate
-// so it can be covered by a regression test.
-function layoutCompareLegendItems(items, maxWidth) {
+// so it can be covered by a regression test. gap scales with the canvas width.
+function layoutCompareLegendItems(items, maxWidth, gap) {
+  gap = gap || BT_LEGEND_ITEM_GAP;
   var rows = [];
   var row = [];
   var rowW = 0;
   items.forEach(function (item) {
-    var w = item.width + BT_LEGEND_ITEM_GAP;
+    var w = item.width + gap;
     if (row.length && rowW + w > maxWidth) { rows.push(row); row = []; rowW = 0; }
     row.push(item);
     rowW += w;
@@ -1401,12 +1531,28 @@ function layoutCompareLegendItems(items, maxWidth) {
   return rows;
 }
 
-function layoutCompareLegend(ctx, state) {
-  var scale = BT_RECORD_WIDTH / state.W;
+function wrapCompareLegendTitle(ctx, title, maxWidth) {
+  var parts = String(title || "").split(" · ");
+  var lines = [], line = "";
+  parts.forEach(function (part) {
+    var candidate = line ? line + " · " + part : part;
+    if (line && ctx.measureText(candidate).width > maxWidth) {
+      lines.push(line);
+      line = part;
+    } else {
+      line = candidate;
+    }
+  });
+  if (line) lines.push(line);
+  return lines.length ? lines : [""];
+}
+
+function layoutCompareLegend(ctx, state, canvasW, canvasH) {
+  var scale = canvasW / state.W;
+  var ls = scale;
   var chartH = Math.round(state.H * scale);
-  var canvasW = BT_RECORD_WIDTH;
-  var x0 = Math.round(canvasW * BT_LEGEND_PAD_LEFT_PCT / 100);
-  var maxItemsW = canvasW - x0 - BT_LEGEND_PAD_RIGHT;
+  var x0 = Math.round(state.PAD.left * scale);
+  var maxItemsW = canvasW - x0 - Math.round(state.PAD.right * scale);
   var isProfit = state.context && state.context.metric === "profit";
   var metricLabel = isProfit ? __("backtest.totalReturn") : __("backtest.totalAssets");
   var range = (state.startLabel && state.latest) ? (state.startLabel + " ~ " + state.latest) : "";
@@ -1415,9 +1561,17 @@ function layoutCompareLegend(ctx, state) {
     range: range,
     metric: metricLabel,
   });
-  var codeFont = "600 " + BT_LEGEND_ITEM_SIZE + "px -apple-system, system-ui, sans-serif";
-  var valFont = "700 " + BT_LEGEND_ITEM_SIZE + "px -apple-system, system-ui, sans-serif";
-  var pctFont = "600 " + BT_LEGEND_PCT_SIZE + "px -apple-system, system-ui, sans-serif";
+  var itemSize = Math.round(BT_LEGEND_ITEM_SIZE * ls);
+  var pctSize = Math.round(BT_LEGEND_PCT_SIZE * ls);
+  var titleSize = Math.round(BT_LEGEND_TITLE_SIZE * ls);
+  var titleLineH = Math.round(BT_LEGEND_TITLE_LINE_H * ls);
+  var codeFont = "600 " + itemSize + "px -apple-system, system-ui, sans-serif";
+  var valFont = "700 " + itemSize + "px -apple-system, system-ui, sans-serif";
+  var pctFont = "600 " + pctSize + "px -apple-system, system-ui, sans-serif";
+  var titleFont = titleSize + "px -apple-system, system-ui, sans-serif";
+  ctx.font = titleFont;
+  var titleLines = wrapCompareLegendTitle(ctx, title, maxItemsW);
+  var gap = BT_LEGEND_ITEM_GAP * ls;
   var items = state.built.map(function (b) {
     var symbol = String(b.symbol).toUpperCase();
     var val = formatBtPlainMoney(b.finalValue);
@@ -1428,30 +1582,34 @@ function layoutCompareLegend(ctx, state) {
     ctx.font = valFont;
     var valW = ctx.measureText(val).width;
     ctx.font = pctFont;
-    var pctW = Math.max(ctx.measureText(pct).width, BT_LEGEND_PCT_MIN_W);
+    var pctW = Math.max(ctx.measureText(pct).width, BT_LEGEND_PCT_MIN_W * ls);
     return {
-      symbol: symbol, color: b.color, finalValue: b.finalValue, finalProfit: b.finalProfit,
+      symbol: symbol, color: b.color, finalValue: b.finalValue, finalProfit: b.finalProfit, built: b,
       // swatch + flex gap + code + (code margin + gap) + val + (val margin + gap) + pct
-      width: BT_LEGEND_SWATCH_W + BT_LEGEND_FLEX_GAP + codeW +
-             (BT_LEGEND_CODE_MR + BT_LEGEND_FLEX_GAP) + valW +
-             (BT_LEGEND_VAL_MR + BT_LEGEND_FLEX_GAP) + pctW,
+      width: (BT_LEGEND_SWATCH_W + BT_LEGEND_FLEX_GAP + BT_LEGEND_CODE_MR +
+              BT_LEGEND_FLEX_GAP + BT_LEGEND_VAL_MR + BT_LEGEND_FLEX_GAP) * ls +
+             codeW + valW + pctW,
     };
   });
-  var rows = layoutCompareLegendItems(items, maxItemsW);
+  var rows = layoutCompareLegendItems(items, maxItemsW, gap);
   // Vertical rhythm mirrors the card: padTop, 11px title, 8px card gap, 14px rows.
-  var cardTop = chartH + BT_LEGEND_MARGIN_TOP;
-  var titleCenterY = cardTop + BT_LEGEND_PAD_Y + BT_LEGEND_TITLE_SIZE / 2;
-  var rowsY = cardTop + BT_LEGEND_PAD_Y + BT_LEGEND_TITLE_SIZE +
-              (rows.length ? 8 : 0) + BT_LEGEND_ITEM_SIZE / 2;
-  var legendH = BT_LEGEND_MARGIN_TOP + BT_LEGEND_PAD_Y + BT_LEGEND_TITLE_SIZE +
-                (rows.length ? 8 : 0) +
-                rows.length * BT_LEGEND_ITEM_SIZE + (rows.length - 1) * BT_LEGEND_ROW_GAP +
-                BT_LEGEND_PAD_Y;
+  var cardTop = chartH + Math.round(BT_LEGEND_MARGIN_TOP * ls);
+  var padY = Math.round(BT_LEGEND_PAD_Y * ls);
+  var rowsGap = rows.length ? Math.round(8 * ls) : 0;
+  var titleFirstY = cardTop + padY + titleLineH / 2;
+  var titleBlockH = titleLines.length * titleLineH;
+  var rowsY = cardTop + padY + titleBlockH + rowsGap + itemSize / 2;
+  var rowH = Math.round((BT_LEGEND_ITEM_SIZE + BT_LEGEND_ROW_GAP) * ls);
+  var legendH = Math.round(BT_LEGEND_MARGIN_TOP * ls) + padY + titleBlockH + rowsGap +
+                rows.length * itemSize + (rows.length - 1) * Math.round(BT_LEGEND_ROW_GAP * ls) +
+                padY;
+  var footerY = canvasH - Math.round(18 * ls);
   return {
     scale: scale, chartH: chartH, canvasW: canvasW, x0: x0, rows: rows,
-    title: title, titleCenterY: titleCenterY, rowsY: rowsY,
+    title: title, titleLines: titleLines, titleFirstY: titleFirstY, titleLineH: titleLineH,
+    rowsY: rowsY, rowH: rowH,
     codeFont: codeFont, valFont: valFont, pctFont: pctFont,
-    legendH: legendH,
+    legendH: legendH, legendScale: ls, footerY: footerY,
   };
 }
 
@@ -1465,43 +1623,52 @@ function fillRoundRect(ctx, x, y, w, h, r) {
 function drawCompareLegend(ctx, state, layout, progress) {
   var rows = layout.rows;
   var x0 = layout.x0;
+  var ls = layout.legendScale || 1;
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
-  // Title: 11px tertiary, mirrors .bt-cmp-card-title.
-  ctx.font = BT_LEGEND_TITLE_SIZE + "px -apple-system, system-ui, sans-serif";
-  ctx.fillStyle = state.textTertiary;
-  ctx.fillText(layout.title, x0, layout.titleCenterY);
+  var revealX = state.PAD.left + state.cw * progress;
+  ctx.font = Math.round(BT_LEGEND_TITLE_SIZE * ls) + "px -apple-system, system-ui, sans-serif";
+  ctx.fillStyle = state.textSecondary;
+  layout.titleLines.forEach(function (line, index) {
+    ctx.fillText(line, x0, layout.titleFirstY + index * layout.titleLineH);
+  });
+  var gap = BT_LEGEND_ITEM_GAP * ls;
   rows.forEach(function (row, r) {
-    var cy = layout.rowsY + r * (BT_LEGEND_ITEM_SIZE + BT_LEGEND_ROW_GAP);
+    var cy = layout.rowsY + r * layout.rowH;
     var x = x0;
     row.forEach(function (item) {
       // 14x4 rounded swatch.
+      var sw = BT_LEGEND_SWATCH_W * ls, sh = BT_LEGEND_SWATCH_H * ls;
       ctx.fillStyle = item.color;
-      fillRoundRect(ctx, x, cy - BT_LEGEND_SWATCH_H / 2, BT_LEGEND_SWATCH_W, BT_LEGEND_SWATCH_H, 2);
-      x += BT_LEGEND_SWATCH_W + BT_LEGEND_FLEX_GAP;
+      fillRoundRect(ctx, x, cy - sh / 2, sw, sh, 2 * ls);
+      x += sw + BT_LEGEND_FLEX_GAP * ls;
       // Code: 14px/600 secondary.
       ctx.font = layout.codeFont;
       ctx.fillStyle = state.textSecondary;
       ctx.fillText(item.symbol, x, cy);
-      x += ctx.measureText(item.symbol).width + BT_LEGEND_CODE_MR + BT_LEGEND_FLEX_GAP;
-      // Value: 14px/700, colored by sign.
-      var val = formatBtPlainMoney(item.finalValue * progress);
+      x += ctx.measureText(item.symbol).width + BT_LEGEND_CODE_MR * ls + BT_LEGEND_FLEX_GAP * ls;
+      var snapshot = interpolateBtPointAtX(item.built.pts, revealX);
+      var metricValue = snapshot ? (state.context && state.context.metric === "profit" ? snapshot.profit : snapshot.value) : null;
+      var val = metricValue === null ? "—" : formatBtPlainMoney(metricValue);
       ctx.font = layout.valFont;
-      ctx.fillStyle = item.finalValue >= 0 ? state.c.positive : state.c.negative;
+      ctx.fillStyle = metricValue === null ? state.textTertiary : (metricValue >= 0 ? state.c.positive : state.c.negative);
       ctx.fillText(val, x, cy);
-      x += ctx.measureText(val).width + BT_LEGEND_VAL_MR + BT_LEGEND_FLEX_GAP;
-      // %: 12px/600, right-aligned in a 58px min box.
-      var p = state.lump ? (item.finalProfit * progress / state.lump) * 100 : 0;
-      var pct = (p >= 0 ? "+" : "") + p.toFixed(2) + "%";
-      var pctW = Math.max(ctx.measureText(pct).width, BT_LEGEND_PCT_MIN_W);
+      x += ctx.measureText(val).width + BT_LEGEND_VAL_MR * ls + BT_LEGEND_FLEX_GAP * ls;
+      var p = snapshot && state.lump ? (snapshot.profit / state.lump) * 100 : null;
+      var pct = p === null ? "—" : (p >= 0 ? "+" : "") + p.toFixed(2) + "%";
       ctx.font = layout.pctFont;
-      ctx.fillStyle = p >= 0 ? state.c.positive : state.c.negative;
+      var pctW = Math.max(ctx.measureText(pct).width, BT_LEGEND_PCT_MIN_W * ls);
+      ctx.fillStyle = p === null ? state.textTertiary : (p >= 0 ? state.c.positive : state.c.negative);
       ctx.textAlign = "right";
       ctx.fillText(pct, x + pctW, cy);
       ctx.textAlign = "left";
-      x += pctW + BT_LEGEND_ITEM_GAP;
+      x += pctW + gap;
     });
   });
+  ctx.font = Math.round(BT_LEGEND_DISCLAIMER_SIZE * ls) + "px -apple-system, system-ui, sans-serif";
+  ctx.fillStyle = state.textTertiary;
+  ctx.textAlign = "left";
+  ctx.fillText(__("backtest.shareDisclaimer"), x0, layout.footerY);
 }
 
 async function recordCompareVideo() {
@@ -1510,14 +1677,18 @@ async function recordCompareVideo() {
   if (!mime) { btError(__("backtest.recordUnsupported")); return; }
   if (!state || !state.series.length) { btError(__("backtest.recordNeedRun")); return; }
 
+  var portrait = _btCompareOrientation === "portrait";
+  var canvasW = portrait ? BT_RECORD_PORTRAIT_W : BT_RECORD_LANDSCAPE_W;
+  var canvasH = portrait ? BT_RECORD_PORTRAIT_H : BT_RECORD_LANDSCAPE_H;
+
   var btn = $("btCmpRecord");
   if (btn) { btn.disabled = true; btn.textContent = __("backtest.recordRecording"); }
 
   var canvas = document.createElement("canvas");
-  canvas.width = BT_RECORD_WIDTH;
+  canvas.width = canvasW;
+  canvas.height = canvasH;
   var ctx = canvas.getContext("2d");
-  var layout = layoutCompareLegend(ctx, state);
-  canvas.height = layout.chartH + layout.legendH;
+  var layout = layoutCompareLegend(ctx, state, canvasW, canvasH);
 
   var chunks = [];
   var aborted = false;
@@ -1535,7 +1706,7 @@ async function recordCompareVideo() {
       var url = URL.createObjectURL(blob);
       var a = document.createElement("a");
       a.href = url;
-      a.download = "backtest-compare-" + Date.now() + "." + ext;
+      a.download = "backtest-compare-" + (portrait ? "portrait-" : "") + Date.now() + "." + ext;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -1557,7 +1728,7 @@ async function recordCompareVideo() {
       svgToImage(buildCompareLinesSvg(state, chartW, chartH)),
     ]);
     var axisImg = imgs[0], linesImg = imgs[1];
-    var W = state.W, PAD = state.PAD, cw = state.cw, built = state.built;
+    var PAD = state.PAD, cw = state.cw, built = state.built;
 
     var drawFrame = function (progress) {
       // Theme background everywhere: the legend area below the chart is plain
@@ -1569,20 +1740,17 @@ async function recordCompareVideo() {
       // Reveal the lines left→right with a canvas clip, matching the DOM animation.
       ctx.save();
       ctx.beginPath();
-      ctx.rect(0, 0, W * progress * scale, chartH);
+      var revealX = PAD.left + cw * progress;
+      ctx.rect(0, 0, revealX * scale, chartH);
       ctx.clip();
       ctx.drawImage(linesImg, 0, 0, chartW, chartH);
       ctx.restore();
       // Endpoint dots travel along each line at the reveal frontier.
-      var revealX = Math.max(PAD.left, Math.min(PAD.left + cw, W * progress));
       built.forEach(function (b) {
-        if (!b.pts.length) return;
-        var span = b.pts[b.pts.length - 1].x - b.pts[0].x || 1;
-        var f = ((revealX - b.pts[0].x) / span) * (b.pts.length - 1);
-        var i0 = Math.max(0, Math.min(b.pts.length - 2, Math.floor(f)));
-        var frac = f - i0;
-        var x = (b.pts[i0].x + (b.pts[i0 + 1].x - b.pts[i0].x) * frac) * scale;
-        var y = (b.pts[i0].y + (b.pts[i0 + 1].y - b.pts[i0].y) * frac) * scale;
+        var snapshot = interpolateBtPointAtX(b.pts, revealX);
+        if (!snapshot) return;
+        var x = snapshot.x * scale;
+        var y = snapshot.y * scale;
         ctx.beginPath();
         ctx.arc(x, y, 3.2 * scale, 0, Math.PI * 2);
         ctx.fillStyle = b.color;
@@ -1596,11 +1764,16 @@ async function recordCompareVideo() {
 
     var durMs = Math.max(BT_RECORD_MIN_MS, Math.min(getCompareAnimMs(), BT_RECORD_MAX_MS));
     var start = performance.now();
+    var holdStart = 0;
     var tick = function (now) {
       var progress = Math.max(0, Math.min((now - start) / durMs, 1));
       drawFrame(progress);
       if (progress < 1) requestAnimationFrame(tick);
-      else rec.stop();
+      else {
+        if (!holdStart) holdStart = now;
+        if (now - holdStart < BT_RECORD_HOLD_MS) requestAnimationFrame(tick);
+        else rec.stop();
+      }
     };
     requestAnimationFrame(tick);
   } catch (e) {

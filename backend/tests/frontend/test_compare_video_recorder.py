@@ -24,6 +24,32 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
     assert "recordCompareVideo" in script
     assert "initCompareRecorder" in script
 
+    # Orientation lives in the compare params panel and drives BOTH the on-page
+    # chart geometry and the recording, so the video stays in sync with the chart.
+    assert 'id="pcBtCompareOrientation"' in page
+    assert "btCmpRecOrientation" not in page
+    assert "_btCompareOrientation" in script
+    assert "_btCompareLastInputs" in script
+    for token in (
+        "BT_RECORD_PORTRAIT_W",
+        "BT_RECORD_PORTRAIT_H",
+        "BT_RECORD_LANDSCAPE_W",
+        "BT_RECORD_LANDSCAPE_H",
+        "_btCompareOrientation === \"portrait\"",
+        'var W = portrait ? 360 : 700',
+        'var H = portrait ? 440 : 280',
+        'data-orientation',
+        "state.axisFont",
+        "renderBtCompareChart(_btCompareLastInputs.series, _btCompareLastInputs.context)",
+    ):
+        assert token in script, token
+    assert "BT_RECORD_PORTRAIT_W = 1080" in script
+    assert "BT_RECORD_PORTRAIT_H = 1920" in script
+    assert "BT_RECORD_LANDSCAPE_W = 1920" in script
+    assert "BT_RECORD_LANDSCAPE_H = 1080" in script
+    assert '#btCompareChart[data-orientation="portrait"]' in page
+    assert '#btCompareChart[data-orientation="landscape"]' in page
+
     # Native capture path: no canvas-to-video library, no backend.
     for token in (
         "canvas.captureStream(",
@@ -33,22 +59,26 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
         "buildCompareAxisSvg",
         "buildCompareLinesSvg",
         "layoutCompareLegendItems",
-        "BT_RECORD_WIDTH",
+        "BT_RECORD_LANDSCAPE_W",
         "BT_RECORD_MIN_MS",
+        "BT_RECORD_HOLD_MS",
     ):
         assert token in script, token
 
-    # Video legend mirrors the on-page .bt-cmp-card CSS (small fonts, flex gaps,
-    # 58px right-aligned %, 5.7% left padding).
+    # Video legend uses logical chart units, then scales once to the native
+    # canvas. Text measurements must not be multiplied by the scale a second time.
     for token in (
         "BT_LEGEND_ITEM_GAP",
         "BT_LEGEND_FLEX_GAP",
         "BT_LEGEND_PCT_MIN_W",
-        "BT_LEGEND_PAD_LEFT_PCT",
         "BT_LEGEND_TITLE_SIZE",
         "BT_LEGEND_ITEM_SIZE",
+        "BT_LEGEND_DISCLAIMER_SIZE",
     ):
         assert token in script, token
+    assert "var ls = scale" in script
+    assert "codeW + valW + pctW" in script
+    assert "codeW +\n             (BT_LEGEND_CODE_MR" not in script
 
     # H.264 MP4 (plays everywhere incl. iOS) must be preferred over webm; the
     # explicit avc1 codec keeps Chrome from emitting VP9-in-mp4.
@@ -79,6 +109,26 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
     assert "BT_GRID_STROKE" in script
     assert script.count("BT_GRID_STROKE") >= 2
 
+    # Detail, compare, and recorder share the same quiet axis builder and line
+    # tokens. The first/last X labels use edge-safe anchors.
+    assert script.count("buildBtAxes({") >= 3
+    assert "BT_PRIMARY_LINE_STROKE" in script
+    assert "BT_SECONDARY_LINE_STROKE" in script
+    assert "BT_AXIS_FONT" in script
+    assert "BT_AXIS_LINE_STROKE" in script
+    assert "labelColor = state.textSecondary" in script
+    assert 'stroke-width="${BT_AXIS_LINE_STROKE}"' in script
+    assert 'index === 0 ? "start"' in script
+    assert 'config.xTicks.length - 1 ? "end"' in script
+
+    # Multi-symbol curves are aligned on real dates, not independent point indexes.
+    assert "btDateMs" in script
+    assert "xPosMs" in script
+    assert "minDateMs" in script
+    assert "dateRangeMs" in script
+    assert "interpolateBtPointAtX" in script
+    assert "maxLen" not in script
+
     # Every frame is pre-filled with the theme background, otherwise the legend
     # area below the chart is transparent→black in light mode.
     assert "ctx.fillStyle = state.bg;" in script
@@ -91,10 +141,15 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
     assert "showError(" not in script
 
     # i18n keys exist in both locales.
-    for key in ("record", "recordRecording", "recordUnsupported", "recordNeedRun"):
+    for key in ("record", "recordLandscape", "recordPortrait", "recordRecording",
+                "recordUnsupported", "recordNeedRun", "orientation", "shareDisclaimer"):
         assert key in zh_locale["backtest"], key
         assert key in en_locale["backtest"], key
     assert zh_locale["backtest"]["record"] == "录制视频"
     assert en_locale["backtest"]["record"] == "Record video"
+    assert zh_locale["backtest"]["recordLandscape"] == "横屏"
+    assert zh_locale["backtest"]["recordPortrait"] == "竖屏"
+    assert zh_locale["backtest"]["compareCardTitle"].startswith("一次性投入")
+    assert "未来收益" in zh_locale["backtest"]["shareDisclaimer"]
     assert zh_locale["backtest"]["recordUnsupported"].startswith("当前浏览器不支持录制视频")
     assert en_locale["backtest"]["recordUnsupported"].startswith("Video recording is not supported")

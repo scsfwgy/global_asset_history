@@ -1684,6 +1684,32 @@
             text-align: right;
         }
 
+        #btCompareLegend[data-orientation="portrait"] {
+            width: min(100%, 420px);
+            margin-right: auto;
+            margin-left: auto;
+        }
+
+        #btCompareLegend[data-orientation="portrait"] .bt-cmp-card {
+            display: block;
+            padding: 8px 0;
+        }
+
+        #btCompareLegend[data-orientation="portrait"] .bt-cmp-card-title {
+            margin-bottom: 10px;
+            font-size: 13px;
+            line-height: 1.45;
+            white-space: normal;
+        }
+
+        #btCompareLegend[data-orientation="portrait"] .bt-cmp-card-items {
+            gap: 10px 18px;
+        }
+
+        #btCompareLegend[data-orientation="portrait"] .bt-cmp-item {
+            font-size: 15px;
+        }
+
         #btTabCompare.bt-cmp-webfs,
         #btTabCompare:fullscreen {
             background: var(--apple-bg);
@@ -1699,12 +1725,32 @@
             flex-direction: column;
         }
 
-        #btTabCompare.bt-cmp-webfs #btCompareChart svg,
-        #btTabCompare:fullscreen #btCompareChart svg {
-            height: 78vh;
-            width: auto;
-            max-width: 100%;
+        #btCompareChart .bt-cmp-chart-svg {
+            display: block;
+            height: auto;
             margin: 0 auto;
+        }
+
+        #btCompareChart[data-orientation="landscape"] .bt-cmp-chart-svg {
+            width: 100%;
+        }
+
+        #btCompareChart[data-orientation="portrait"] .bt-cmp-chart-svg {
+            width: min(100%, 420px);
+        }
+
+        #btTabCompare.bt-cmp-webfs #btCompareChart[data-orientation="landscape"] .bt-cmp-chart-svg,
+        #btTabCompare:fullscreen #btCompareChart[data-orientation="landscape"] .bt-cmp-chart-svg {
+            width: auto;
+            height: min(72vh, 760px);
+            max-width: 100%;
+        }
+
+        #btTabCompare.bt-cmp-webfs #btCompareChart[data-orientation="portrait"] .bt-cmp-chart-svg,
+        #btTabCompare:fullscreen #btCompareChart[data-orientation="portrait"] .bt-cmp-chart-svg {
+            width: auto;
+            height: min(70vh, 720px);
+            max-width: 100%;
         }
 
         .pc-bt-compare-symbols-line {
@@ -3830,6 +3876,11 @@
                     </select>
                     <span class="pc-bt-label" data-i18n="backtest.animSeconds">动画秒数</span>
                     <input type="number" id="pcBtCompareAnim" class="pc-bt-input" value="20" min="0" max="30" step="0.5">
+                    <span class="pc-bt-label" data-i18n="backtest.orientation">图表方向</span>
+                    <select id="pcBtCompareOrientation" class="pc-bt-input" style="width:90px;">
+                        <option value="landscape" data-i18n="backtest.recordLandscape">横屏</option>
+                        <option value="portrait" data-i18n="backtest.recordPortrait">竖屏</option>
+                    </select>
                     <button id="pcBtCompareRun" class="pc-btn primary" style="padding:7px 14px;" data-i18n="backtest.compareRun">运行对比</button>
                 </div>
                 <div class="pc-bt-compare-symbols-line">
