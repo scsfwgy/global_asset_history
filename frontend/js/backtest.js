@@ -117,6 +117,12 @@ function getBacktestAnimMs() {
   return raw * 1000;
 }
 
+function getCompareAnimMs() {
+  const raw = parseFloat($("pcBtCompareAnim")?.value);
+  if (!Number.isFinite(raw) || raw < 0) return 20000;
+  return raw * 1000;
+}
+
 function sampleEvenly(items, maxPoints) {
   if (!Array.isArray(items) || items.length <= maxPoints) return items || [];
   const sampled = [];
@@ -208,6 +214,29 @@ function formatBtNumber(value, maximumFractionDigits) {
   return number.toLocaleString(
     typeof __lang === "function" ? __lang() : undefined,
     { minimumFractionDigits: 0, maximumFractionDigits }
+  );
+}
+
+// Currency-free formatting: multi-currency compare must not show a single currency symbol.
+function formatBtPlainNumber(value, digits) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "—";
+  const d = digits == null ? 2 : digits;
+  return number.toLocaleString(
+    typeof __lang === "function" ? __lang() : undefined,
+    { minimumFractionDigits: d, maximumFractionDigits: d }
+  );
+}
+
+function formatBtPlainMoney(value) {
+  return "$" + formatBtPlainAxis(value);
+}
+
+function formatBtPlainAxis(value) {
+  const number = Number(value) || 0;
+  return number.toLocaleString(
+    typeof __lang === "function" ? __lang() : undefined,
+    { notation: "compact", maximumFractionDigits: 1 }
   );
 }
 
@@ -386,6 +415,24 @@ async function runBacktest() {
   }
 }
 
+// Catmull-Rom -> cubic Bezier smoothing: one flowing path, no jagged segments.
+function smoothPath(points) {
+  if (!points.length) return "";
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] || points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
+
 function renderBtChart(equityCurve) {
   if (!equityCurve || equityCurve.length === 0) return;
   const c = getChartColors();
@@ -427,12 +474,14 @@ function renderBtChart(equityCurve) {
 
   // All three series share one left Y-axis (amounts); the right axis is removed.
   // Legend moved to the HTML row above, so the SVG no longer needs top headroom for it.
-  const W = 700, H = 220, PAD = { top: 14, right: 16, bottom: 30, left: 56 };
-  const assetVals = sampledCurve.map((row) => row.value);
-  const minAssetVal = Math.min(...assetVals, 0);
-  const maxAssetVal = Math.max(...assetVals, 0);
+  const W = 700, H = 220, PAD = { top: 8, right: 16, bottom: 22, left: 40 };
+  // One shared axis must cover all three series. Using only total assets clips
+  // negative profit and produces a misleading synthetic bottom tick.
+  const axisVals = sampledCurve.flatMap((row) => [row.value, row.invested, row.value - row.invested]);
+  const minAssetVal = Math.min(...axisVals);
+  const maxAssetVal = Math.max(...axisVals);
   const assetRange = maxAssetVal - minAssetVal || 1;
-  const assetPad = assetRange * 0.1;
+  const assetPad = assetRange * 0.03;
   const assetYMin = minAssetVal - assetPad;
   const assetYMax = maxAssetVal + assetPad;
   const assetYRange = assetYMax - assetYMin;
@@ -447,9 +496,9 @@ function renderBtChart(equityCurve) {
   for (let i = 0; i <= yTicks; i++) {
     const v = assetYMin + (assetYRange * i) / yTicks;
     const y = assetYPos(v);
-    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="var(--apple-divider)" stroke-width="1"/>`;
+    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="var(--apple-divider)" stroke-width="0.4"/>`;
     const label = formatBtAxisMoney(v);
-    yGrid += `<text x="${PAD.left - 6}" y="${y + 4}" text-anchor="end" fill="var(--apple-text-tertiary)" font-size="11">${label}</text>`;
+    yGrid += `<text x="${PAD.left - 4}" y="${y + 3}" text-anchor="end" fill="var(--apple-text-tertiary)" font-size="7">${label}</text>`;
   }
 
   const zeroY = assetYPos(0);
@@ -463,7 +512,7 @@ function renderBtChart(equityCurve) {
     const step = Math.max(1, Math.floor(sampledCurve.length / 8));
     for (let i = 0; i < sampledCurve.length; i++) {
       if (i % step === 0 || i === sampledCurve.length - 1)
-        xLabels += `<text x="${xPos(i)}" y="${H - 8}" text-anchor="middle" fill="var(--apple-text-tertiary)" font-size="11">${sampledCurve[i].date.slice(2)}</text>`;
+        xLabels += `<text x="${xPos(i)}" y="${H - 4}" text-anchor="middle" fill="var(--apple-text-tertiary)" font-size="8">${sampledCurve[i].date.slice(2)}</text>`;
     }
   }
 
@@ -475,24 +524,6 @@ function renderBtChart(equityCurve) {
     investedPoints.push({ x: xPos(idx), y: assetYPos(row.invested) });
     profitPoints.push({ x: xPos(idx), y: assetYPos(row.value - row.invested) });
   });
-
-  // Catmull-Rom -> cubic Bezier smoothing: one flowing path, no jagged segments.
-  function smoothPath(points) {
-    if (!points.length) return "";
-    let d = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const p0 = points[i - 1] || points[i];
-      const p1 = points[i];
-      const p2 = points[i + 1];
-      const p3 = points[i + 2] || p2;
-      const cp1x = p1.x + (p2.x - p0.x) / 6;
-      const cp1y = p1.y + (p2.y - p0.y) / 6;
-      const cp2x = p2.x - (p3.x - p1.x) / 6;
-      const cp2y = p2.y - (p3.y - p1.y) / 6;
-      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
-    }
-    return d;
-  }
 
   const assetCurveD = smoothPath(assetPoints);
   const investedCurveD = smoothPath(investedPoints);
@@ -813,4 +844,408 @@ function renderBacktestResult(symbol, result) {
     _btPage = Math.max(1, Math.ceil(_btCashflows.length / _btPageSize));
     renderBacktestCashflowPage();
   });
+})();
+
+// ─── Backtest Compare (secondary tab) ───────────────────────────────
+
+// Sub-tab switching: 回测详情 / 回测对比.
+(function () {
+  var tabs = document.querySelectorAll("#btSubTabs .transfer-tab");
+  if (!tabs.length) return;
+  function selectBtSubTab(sub) {
+    var detail = $("btTabDetail");
+    var compare = $("btTabCompare");
+    if (detail) detail.style.display = sub === "detail" ? "" : "none";
+    if (compare) compare.style.display = sub === "compare" ? "" : "none";
+    document.querySelectorAll(".bt-action-detail").forEach(function (e) { e.style.display = sub === "detail" ? "" : "none"; });
+    document.querySelectorAll(".bt-action-compare").forEach(function (e) { e.style.display = sub === "compare" ? "inline-flex" : "none"; });
+    tabs.forEach(function (btn) {
+      var on = btn.dataset.btTab === sub;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-selected", on ? "true" : "false");
+    });
+  }
+  tabs.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      selectBtSubTab(btn.dataset.btTab === "compare" ? "compare" : "detail");
+    });
+  });
+})();
+
+// Compare symbol rows.
+function initComparePanel() {
+  var container = $("pcBtCompareSymbols");
+  if (!container) return;
+  var addBtn = $("pcBtCompareAdd");
+  var runBtn = $("pcBtCompareRun");
+
+  function typeOptions() {
+    return [
+      ["stock", "yearly.assetTypeStock"],
+      ["hk_stock", "yearly.assetTypeHkStock"],
+      ["global_stock", "yearly.assetTypeGlobalStock"],
+      ["crypto", "yearly.assetTypeCrypto"],
+      ["cn_stock", "yearly.assetTypeCnStock"],
+    ].map(function (item) {
+      return `<option value="${item[0]}">${__(item[1])}</option>`;
+    }).join("");
+  }
+
+  function bindRow(div) {
+    div.querySelector(".cmp-del").addEventListener("click", function () { div.remove(); });
+    // Reuse the detail tab's autocomplete. price-change.js exposes it from its
+    // DOMContentLoaded init; if this row is created before that, wait for the ready event.
+    var sym = div.querySelector(".cmp-sym");
+    var typeSel = div.querySelector(".cmp-type");
+    function bindAc() { if (typeof window.attachAutocomplete === "function") window.attachAutocomplete(sym, typeSel); }
+    if (typeof window.attachAutocomplete === "function") bindAc();
+    else window.addEventListener("gah-autocomplete-ready", bindAc, { once: true });
+  }
+
+  function addRow(symbol) {
+    var div = document.createElement("div");
+    div.className = "pc-bt-compare-row";
+    div.innerHTML = `
+      <input type="text" class="pc-bt-input cmp-sym" placeholder="QQQ" maxlength="30" style="width:120px;text-transform:uppercase;">
+      <select class="pc-bt-input cmp-type" style="width:110px;">${typeOptions()}</select>
+      <button type="button" class="pc-btn pc-btn-sm cmp-del">${__("backtest.compareRemove")}</button>
+    `;
+    container.appendChild(div);
+    bindRow(div);
+    if (symbol) div.querySelector(".cmp-sym").value = symbol;
+    return div;
+  }
+
+  ["QQQ", "SMH", "GOOGL"].forEach(function (s) { addRow(s); });
+
+  if (addBtn) addBtn.addEventListener("click", function () { addRow(); });
+  if (runBtn) runBtn.addEventListener("click", runBacktestCompare);
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initComparePanel);
+} else {
+  initComparePanel();
+}
+
+function readCompareRows() {
+  var container = $("pcBtCompareSymbols");
+  if (!container) return [];
+  return Array.from(container.querySelectorAll(".pc-bt-compare-row")).map(function (row) {
+    return {
+      symbol: (row.querySelector(".cmp-sym")?.value || "").trim(),
+      type: row.querySelector(".cmp-type")?.value || "stock",
+    };
+  });
+}
+
+async function runBacktestCompare() {
+  var rows = readCompareRows().filter(function (r) { return normalizeAssetSymbol(r.symbol, r.type); });
+  if (!rows.length) { showError(__("backtest.compareNoSymbols")); return; }
+  var lump = parseFloat($("pcBtCompareAmount")?.value) || 0;
+  if (lump <= 0) { showError(__("backtest.compareAmountInvalid")); return; }
+  var start = $("pcBtCompareStart")?.value || "";
+  // Local today (toISOString would shift a day in some time zones).
+  var now = new Date();
+  var end = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  var metric = $("pcBtCompareMetric")?.value || "value";
+  var loading = $("btCompareLoading");
+  if (loading) loading.style.display = "flex";
+  try {
+    var results = await Promise.all(rows.map(async function (row) {
+      var symbol = normalizeAssetSymbol(row.symbol, row.type);
+      var resp = await fetch(BACKTEST_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symbol: symbol, type: row.type, initial_amount: lump, amount: 0,
+          start_date: start, end_date: end,
+          frequency: "once",
+        }),
+      });
+      var data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "HTTP " + resp.status);
+      return { symbol: symbol, type: row.type, data: data };
+    }));
+    if (loading) loading.style.display = "none";
+    renderCompareResults(results, metric, lump, start);
+  } catch (e) {
+    if (loading) loading.style.display = "none";
+    showError(__("backtest.errorBacktest") + e.message);
+  }
+}
+
+var BT_COMPARE_COLORS = ["#2997ff", "#ff9f0a", "#30d158", "#ff375f", "#bf5af2", "#ffd60a", "#64d2ff", "#ac8e68"];
+
+function renderCompareResults(results, metric, lump, start) {
+  var maxPts = getBacktestSampleSize();
+  var series = results.map(function (r, i) {
+    var curve = r.data.equity_curve || [];
+    var sampled = sampleEvenly(curve, maxPts);
+    var points = sampled.map(function (p) {
+      return { date: p.date, value: p.value, profit: p.value - p.invested };
+    });
+    return {
+      symbol: r.symbol,
+      color: BT_COMPARE_COLORS[i % BT_COMPARE_COLORS.length],
+      points: points,
+    };
+  });
+  renderBtCompareChart(series, { lump: lump, start: start, metric: metric });
+}
+
+function renderBtCompareChart(series, context) {
+  var chartEl = $("btCompareChart");
+  if (!chartEl || !series.length) return;
+  var c = getChartColors();
+  var isProfit = context && context.metric === "profit";
+  var valOf = function (p) { return isProfit ? p.profit : p.value; };
+  var W = 700, H = 280, PAD = { top: 8, right: 16, bottom: 22, left: 40 };
+  var allVals = [];
+  series.forEach(function (s) { s.points.forEach(function (p) { allVals.push(valOf(p)); }); });
+  // Total-assets comparison should scale to the actual data range. Forcing zero
+  // onto the axis creates a large empty band below one-time-investment curves.
+  var domainVals = isProfit ? allVals.concat([0]) : allVals;
+  var minV = Math.min.apply(null, domainVals);
+  var maxV = Math.max.apply(null, domainVals);
+  var range = maxV - minV || 1;
+  var pad = range * 0.03;
+  var yMin = minV - pad, yMax = maxV + pad, yRng = yMax - yMin;
+  var cw = W - PAD.left - PAD.right;
+  var ch = H - PAD.top - PAD.bottom;
+  var maxLen = Math.max.apply(null, series.map(function (s) { return s.points.length; }));
+  var xPos = function (i) { return PAD.left + (maxLen <= 1 ? 0 : (i / (maxLen - 1)) * cw); };
+  var yPos = function (v) { return PAD.top + ch - ((v - yMin) / yRng) * ch; };
+
+  var built = series.map(function (s) {
+    var pts = s.points.map(function (p, i) { return { x: xPos(i), y: yPos(valOf(p)) }; });
+    var last = s.points[s.points.length - 1];
+    return { symbol: s.symbol, color: s.color, pts: pts, finalValue: last ? valOf(last) : 0, finalProfit: last ? last.profit : 0 };
+  });
+
+  var yTicks = 4, yGrid = "";
+  for (var i = 0; i <= yTicks; i++) {
+    var v = yMin + (yRng * i) / yTicks;
+    var y = yPos(v);
+    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="var(--apple-divider)" stroke-width="0.4"/>`;
+    yGrid += `<text x="${PAD.left - 4}" y="${y + 3}" text-anchor="end" fill="var(--apple-text-tertiary)" font-size="7">${formatBtPlainAxis(v)}</text>`;
+  }
+
+  var lines = built.map(function (b) {
+    return `<path d="${smoothPath(b.pts)}" fill="none" stroke="${b.color}" stroke-width="1.6" stroke-linecap="round" opacity="0.95"/>`;
+  }).join("");
+
+  var dots = built.map(function (b, i) {
+    var last = b.pts[b.pts.length - 1];
+    if (!last) return "";
+    return `<circle id="btCmpDot-${i}" cx="${last.x}" cy="${last.y}" r="3.2" fill="${b.color}" stroke="var(--apple-bg)" stroke-width="1.5"><animate attributeName="r" values="3.2;5.4;3.2" dur="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.5;1" dur="1.6s" repeatCount="indefinite"/></circle>`;
+  }).join("");
+
+  // Date range spans all symbols (earliest start ~ latest end), not just the first.
+  var allDates = [];
+  series.forEach(function (s) { s.points.forEach(function (p) { allDates.push(p.date); }); });
+  var sorted = allDates.slice().sort();
+
+  // X-axis labels use the first series' sampled dates on the shared timeline.
+  var xLabels = "";
+  var labelPoints = series[0].points;
+  var xTickCount = Math.min(6, labelPoints.length);
+  for (var xi = 0; xi < xTickCount; xi++) {
+    var xIdx = Math.round((xi * (labelPoints.length - 1)) / Math.max(1, xTickCount - 1));
+    var labelX = xPos(Math.round((xi * (maxLen - 1)) / Math.max(1, xTickCount - 1)));
+    xLabels += `<text x="${labelX}" y="${H - 4}" text-anchor="middle" fill="var(--apple-text-tertiary)" font-size="7">${escapeHtml(labelPoints[xIdx].date.slice(0, 7))}</text>`;
+  }
+
+  chartEl.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
+    <defs>
+      <clipPath id="btCmpReveal"><rect id="btCmpRevealRect" x="0" y="0" width="0" height="${H}"></rect></clipPath>
+    </defs>
+    ${yGrid}
+    <g id="btCmpLayer" clip-path="url(#btCmpReveal)">${lines}</g>
+    <g id="btCmpPulse">${dots}</g>
+    ${xLabels}
+    <line id="btCmpTooltipGuide" x1="0" y1="${PAD.top}" x2="0" y2="${PAD.top + ch}" stroke="${c.guide}" stroke-width="1" stroke-dasharray="4,3" style="display:none;pointer-events:none;"/>
+    <rect id="btCmpHoverPlot" x="${PAD.left}" y="${PAD.top}" width="${cw}" height="${ch}" fill="transparent" style="cursor:crosshair"/>
+    <g id="btCmpTooltip" style="display:none;pointer-events:none;">
+      <rect id="btCmpTooltipBg" x="0" y="0" width="200" height="60" rx="8" fill="${c.tooltipBg}" stroke="${c.tooltipBorder}"/>
+      <g id="btCmpTooltipRows"></g>
+    </g>
+  </svg>`;
+
+  var svgEl = chartEl.querySelector("svg");
+  var tipEl = svgEl.querySelector("#btCmpTooltip");
+  var tipGuide = svgEl.querySelector("#btCmpTooltipGuide");
+  var tipBg = svgEl.querySelector("#btCmpTooltipBg");
+  var tipRows = svgEl.querySelector("#btCmpTooltipRows");
+  var hoverPlot = svgEl.querySelector("#btCmpHoverPlot");
+  function showCmpTip(idx, guideX) {
+    if (!tipEl) return;
+    var dateLabel = series[0].points[idx] ? series[0].points[idx].date : "";
+    var rows = '<text x="10" y="16" fill="' + c.tooltipText + '" font-size="11" font-weight="600">' + escapeHtml(dateLabel) + '</text>';
+    series.forEach(function (s, si) {
+      var p = s.points[idx];
+      if (!p) return;
+      var ry = 16 + (si + 1) * 16;
+      var profitColor = p.profit >= 0 ? c.positive : c.negative;
+      rows += '<rect x="10" y="' + (ry - 8) + '" width="8" height="3" rx="1" fill="' + s.color + '"/>';
+      rows += '<text x="22" y="' + (ry - 5) + '" fill="' + c.tooltipText + '" font-size="10">' + escapeHtml(s.symbol) + '</text>';
+      rows += '<text x="64" y="' + (ry - 5) + '" fill="' + c.tooltipText + '" font-size="10">' + formatBtPlainAxis(p.value) + '</text>';
+      rows += '<text x="130" y="' + (ry - 5) + '" fill="' + profitColor + '" font-size="10">' + (p.profit >= 0 ? "+" : "") + formatBtPlainAxis(p.profit) + '</text>';
+    });
+    if (tipRows) tipRows.innerHTML = rows;
+    if (tipBg) tipBg.setAttribute("height", String(18 + series.length * 16 + 8));
+    var tipX = Math.min(Math.max(guideX + 12, PAD.left), W - PAD.right - 200);
+    tipEl.setAttribute("transform", "translate(" + tipX + ", " + (PAD.top + 4) + ")");
+    if (tipGuide) {
+      tipGuide.setAttribute("x1", String(guideX));
+      tipGuide.setAttribute("x2", String(guideX));
+      tipGuide.style.display = "";
+    }
+    tipEl.style.display = "";
+  }
+  if (hoverPlot) {
+    hoverPlot.addEventListener("mousemove", function (event) {
+      var point = svgEl.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      var local = point.matrixTransform(svgEl.getScreenCTM().inverse());
+      var guideX = Math.max(PAD.left, Math.min(PAD.left + cw, local.x));
+      var idx = Math.max(0, Math.min(maxLen - 1, Math.round(((guideX - PAD.left) / cw) * (maxLen - 1))));
+      showCmpTip(idx, guideX);
+    });
+    hoverPlot.addEventListener("mouseleave", function () {
+      if (tipEl) tipEl.style.display = "none";
+      if (tipGuide) tipGuide.style.display = "none";
+    });
+  }
+
+  var legendEl = $("btCompareLegend");
+  if (legendEl && context) {
+    var metricLabel = context.metric === "profit" ? __("backtest.totalReturn") : __("backtest.totalAssets");
+    var startLabel = (context.start || "").slice(0, 7);
+    var latest = sorted.length ? sorted[sorted.length - 1].slice(0, 7) : "";
+    var titleText = __("backtest.compareCardTitle", {
+      lump: formatBtPlainMoney(context.lump, 0),
+      range: (startLabel && latest) ? (startLabel + " ~ " + latest) : "",
+      metric: metricLabel,
+    });
+    legendEl.innerHTML =
+      '<div class="bt-cmp-card">' +
+        '<div class="bt-cmp-card-title">' + escapeHtml(titleText) + '</div>' +
+        '<div class="bt-cmp-card-items">' +
+          built.map(function (b, i) {
+            var vc = b.finalValue >= 0 ? "bt-val-positive" : "bt-val-negative";
+            return '<span class="bt-cmp-item"><span class="bt-legend-swatch" style="background:' + b.color + '"></span>' +
+              '<span class="bt-cmp-code">' + escapeHtml(b.symbol) + '</span>' +
+              '<b id="btCmpVal-' + i + '" class="bt-live-val ' + vc + '">' + formatBtPlainMoney(0) + '</b>' +
+              '<span id="btCmpPct-' + i + '" class="bt-cmp-pct">0.00%</span></span>';
+          }).join("") +
+        '</div>' +
+      '</div>';
+  }
+
+  var revealRect = chartEl.querySelector("#btCmpRevealRect");
+  var durationMs = getCompareAnimMs();
+  var updateLegend = function (progress) {
+    built.forEach(function (b, i) {
+      var el = $("btCmpVal-" + i);
+      if (el) el.textContent = formatBtPlainMoney(b.finalValue * progress);
+      var pct = $("btCmpPct-" + i);
+      if (pct) {
+        var p = context && context.lump ? (b.finalProfit * progress / context.lump) * 100 : 0;
+        pct.textContent = (p >= 0 ? "+" : "") + p.toFixed(2) + "%";
+        pct.style.color = p >= 0 ? "var(--data-positive)" : "var(--data-negative)";
+      }
+    });
+  };
+  var moveDots = function (progress) {
+    var revealX = Math.max(PAD.left, Math.min(PAD.left + cw, W * progress));
+    built.forEach(function (b, i) {
+      var el = $("btCmpDot-" + i);
+      if (!el || b.pts.length < 2) return;
+      var span = b.pts[b.pts.length - 1].x - b.pts[0].x || 1;
+      var f = ((revealX - b.pts[0].x) / span) * (b.pts.length - 1);
+      var i0 = Math.max(0, Math.min(b.pts.length - 2, Math.floor(f)));
+      var frac = f - i0;
+      var y = b.pts[i0].y + (b.pts[i0 + 1].y - b.pts[i0].y) * frac;
+      el.setAttribute("cx", revealX);
+      el.setAttribute("cy", y);
+    });
+  };
+  if (durationMs <= 0) {
+    revealRect.setAttribute("width", String(W));
+    updateLegend(1);
+    moveDots(1);
+  } else {
+    revealRect.setAttribute("width", "0");
+    var start = performance.now();
+    var tick = function (now) {
+      var progress = Math.min((now - start) / durationMs, 1);
+      revealRect.setAttribute("width", String(W * progress));
+      updateLegend(progress);
+      moveDots(progress);
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+}
+
+// ─── Compare toolbar: collapse params + fullscreen ───
+(function () {
+  function initCompareToolbar() {
+    // Collapse the compare parameter area for an immersive chart view.
+    var collapse = $("btCmpToggleParams");
+    var wrap = $("btCmpParamsWrap");
+    function setCompareParamsCollapsed(collapsed) {
+      if (wrap) wrap.style.display = collapsed ? "none" : "";
+      document.querySelectorAll('[data-cmp-action="collapse"]').forEach(function (btn) {
+        btn.textContent = __(collapsed ? "backtest.compareExpand" : "backtest.compareCollapse");
+      });
+    }
+    if (collapse && wrap) {
+      collapse.addEventListener("click", function () {
+        setCompareParamsCollapsed(wrap.style.display !== "none");
+      });
+    }
+    document.querySelectorAll('[data-cmp-action="collapse"]').forEach(function (btn) {
+      btn.addEventListener("click", function () { setCompareParamsCollapsed(wrap && wrap.style.display !== "none"); });
+    });
+    // In-browser fullscreen: overlay the compare panel without entering OS fullscreen.
+    var webFs = $("btCmpWebFs");
+    function setWebFullscreen(on) {
+      var el = $("btTabCompare");
+      if (!el) return;
+      el.classList.toggle("bt-cmp-webfs", on);
+      if (webFs) webFs.textContent = __(on ? "backtest.compareExit" : "backtest.compareWebFs");
+      document.body.style.overflow = on ? "hidden" : "";
+    }
+    if (webFs) {
+      webFs.addEventListener("click", function () {
+        var el = $("btTabCompare");
+        setWebFullscreen(!(el && el.classList.contains("bt-cmp-webfs")));
+      });
+    }
+    document.querySelectorAll('[data-cmp-action="webfs"]').forEach(function (btn) {
+      btn.addEventListener("click", function () { setWebFullscreen(false); });
+    });
+    // Desktop fullscreen via the Fullscreen API.
+    var fs = $("btCmpFullscreen");
+    function toggleDesktopFullscreen() {
+      var el = $("btTabCompare");
+      if (!el) return;
+      if (!document.fullscreenElement) {
+        (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el);
+      } else {
+        (document.exitFullscreen || document.webkitExitFullscreen || function () {}).call(document);
+      }
+    }
+    if (fs) fs.addEventListener("click", toggleDesktopFullscreen);
+    document.querySelectorAll('[data-cmp-action="desktopfs"]').forEach(function (btn) {
+      btn.addEventListener("click", toggleDesktopFullscreen);
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initCompareToolbar);
+  } else {
+    initCompareToolbar();
+  }
 })();

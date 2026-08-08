@@ -754,6 +754,8 @@ function setBacktestParamsCollapsed(collapsed) {
   var toggle = $("btParamsToggle");
   _btParamsCollapsed = Boolean(collapsed);
   if (panel) panel.style.display = _btParamsCollapsed ? "none" : "block";
+  var history = $("btHistory");
+  if (history) history.style.display = _btParamsCollapsed ? "none" : "block";
   if (toggle) {
     toggle.textContent = __(_btParamsCollapsed ? "detail.expandParams" : "detail.collapseParams");
     toggle.setAttribute("aria-expanded", String(!_btParamsCollapsed));
@@ -1058,6 +1060,10 @@ async function init() {
   attachAutocomplete(document.getElementById('downloadSymbolInput'), document.getElementById('downloadTypeSelect'));
   attachAutocomplete(document.getElementById('btSymbolInput'), document.getElementById('btTypeSelect'));
   attachAutocomplete(document.getElementById('crashSymbol'), document.getElementById('crashType'));
+
+  // Expose for dynamically-created inputs (e.g. backtest compare rows).
+  window.attachAutocomplete = attachAutocomplete;
+  window.dispatchEvent(new Event('gah-autocomplete-ready'));
 }
 
 document.addEventListener("DOMContentLoaded", init);

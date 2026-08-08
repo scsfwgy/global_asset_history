@@ -151,7 +151,7 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 | 股票详情 | `/detail` | `price-detail.js` | `detail`、`fundamentals-history` |
 | 美股对比 | `/stock-compare` | `stock-compare.js` | `symbol-search`、`stock-compare` |
 | 数据下载 | `/download` | `data-download.js` | `symbol-search`、`history-download` |
-| 投资回测 | `/backtest` | `backtest.js` | `backtest` |
+| 投资回测（详情 + 多标的对比） | `/backtest` | `backtest.js` | `backtest`（详情单标的多序列；对比面板并行调用同接口多标的动画对比） |
 | 暴跌统计 | `/crash` | `crash-stats.js` | `crash-stats`、`crash-chart` |
 | 场内 ETF | `/etf` | `etf-market.js` | `/api/etf-market/quote`、`valuation`、`history` |
 | 场外 QDII | `/qdii-funds` | `qdii-funds.js` | `/api/etf-market/qdii-funds`、`qdii-funds/<code>/holdings` |

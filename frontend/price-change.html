@@ -1604,6 +1604,128 @@
 
         .pc-bt-input:focus { border-color: var(--apple-blue); outline: 2px solid var(--apple-blue); outline-offset: 1px; }
 
+        .pc-bt-subtabs-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .pc-bt-subtabs-row .pc-bt-subtabs { margin: 0; }
+
+        .bt-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+        }
+
+        .bt-action-compare { display: none; }
+
+        .bt-cmp-fullscreen-controls {
+            display: none;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        #btTabCompare.bt-cmp-webfs .bt-cmp-fullscreen-controls,
+        #btTabCompare:fullscreen .bt-cmp-fullscreen-controls {
+            display: flex;
+        }
+
+        .bt-cmp-toolbar {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+
+        .bt-cmp-card {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 20px;
+            padding: 6px 16px 6px 5.7%;
+        }
+
+        .bt-cmp-card-title {
+            font-size: 11px;
+            color: var(--apple-text-tertiary);
+            white-space: nowrap;
+        }
+
+        .bt-cmp-card-items {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 18px;
+        }
+
+        .bt-cmp-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .bt-cmp-code {
+            color: var(--apple-text-secondary);
+            margin-right: 6px;
+            font-weight: 600;
+        }
+
+        .bt-cmp-pct {
+            font-size: 12px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            min-width: 58px;
+            display: inline-block;
+            text-align: right;
+        }
+
+        #btTabCompare.bt-cmp-webfs,
+        #btTabCompare:fullscreen {
+            background: var(--apple-bg);
+            padding: 24px;
+            overflow: auto;
+        }
+
+        #btTabCompare.bt-cmp-webfs {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #btTabCompare.bt-cmp-webfs #btCompareChart svg,
+        #btTabCompare:fullscreen #btCompareChart svg {
+            height: 78vh;
+            width: auto;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .pc-bt-compare-symbols-line {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        #pcBtCompareSymbols {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        #pcBtCompareSymbols .pc-bt-compare-row {
+            border-bottom: 0;
+            padding: 4px 0;
+        }
+
         .pc-bt-check {
             display: inline-flex;
             align-items: center;
@@ -1668,6 +1790,14 @@
             font-weight: 700;
             color: var(--apple-text);
             font-variant-numeric: tabular-nums;
+            min-width: 58px;
+            display: inline-block;
+            text-align: right;
+        }
+
+        .bt-cmp-item .bt-live-val {
+            min-width: 0;
+            margin-right: 2px;
         }
 
         .bt-live-val.bt-val-positive {
@@ -3566,11 +3696,20 @@
         <!-- Backtest -->
         <div class="tab-panel" id="tab-backtest">
         <div id="pcBacktest" class="pc-monthly">
-            <div class="pc-monthly-header">
-                <span class="pc-chart-title" data-i18n="backtest.chartTitle">回测</span>
-                <button class="pd-bar-chart-toggle" id="btParamsToggle" type="button"
-                        aria-controls="btParamsPanel" aria-expanded="true" data-i18n="detail.collapseParams">收起参数</button>
+            <div class="pc-bt-subtabs-row">
+                <div class="transfer-tabs pc-bt-subtabs" id="btSubTabs" role="tablist">
+                    <button class="transfer-tab active" data-bt-tab="detail" role="tab" aria-selected="true" data-i18n="backtest.tabDetail">回测详情</button>
+                    <button class="transfer-tab" data-bt-tab="compare" role="tab" aria-selected="false" data-i18n="backtest.tabCompare">回测对比</button>
+                </div>
+                <div class="bt-actions">
+                    <button class="pc-btn pc-btn-sm bt-action-detail" id="btParamsToggle" type="button"
+                            aria-controls="btParamsPanel" aria-expanded="true" data-i18n="detail.collapseParams">收起参数</button>
+                    <button class="pc-btn pc-btn-sm bt-action-compare" id="btCmpToggleParams" data-i18n="backtest.compareCollapse">收起参数</button>
+                    <button class="pc-btn pc-btn-sm bt-action-compare" id="btCmpWebFs" data-i18n="backtest.compareWebFs">浏览器内全屏</button>
+                    <button class="pc-btn pc-btn-sm bt-action-compare" id="btCmpFullscreen" data-i18n="backtest.compareFullscreen">电脑全屏</button>
+                </div>
             </div>
+            <div id="btTabDetail">
             <div id="btParamsPanel">
             <div class="pc-bt-row">
                 <span class="pc-bt-label" data-i18n="backtest.symbol">定投标的</span>
@@ -3668,6 +3807,40 @@
                         <button class="pc-btn pc-btn-sm" id="pcBtLastPage" data-i18n="backtest.lastPage">末页</button>
                     </div>
                 </div>
+            </div>
+            </div><!-- /btTabDetail -->
+            <div id="btTabCompare" style="display:none;">
+                <div class="bt-cmp-fullscreen-controls" aria-label="回测对比全屏控制">
+                    <button type="button" class="pc-btn pc-btn-sm bt-cmp-inline-action" data-cmp-action="collapse" data-i18n="backtest.compareCollapse">收起参数</button>
+                    <button type="button" class="pc-btn pc-btn-sm bt-cmp-inline-action" data-cmp-action="webfs" data-i18n="backtest.compareExit">退出浏览器内全屏</button>
+                    <button type="button" class="pc-btn pc-btn-sm bt-cmp-inline-action" data-cmp-action="desktopfs" data-i18n="backtest.compareExit">退出电脑全屏</button>
+                </div>
+                <div id="btCmpParamsWrap">
+                <div class="pc-bt-row">
+                    <span class="pc-bt-label" data-i18n="backtest.compareLump">投入金额</span>
+                    <input type="number" id="pcBtCompareAmount" class="pc-bt-input" value="10000" min="0" step="1000">
+                    <span class="pc-bt-label" data-i18n="backtest.startDate">开始日期</span>
+                    <input type="date" id="pcBtCompareStart" class="pc-bt-input" value="2020-01-01">
+                    <span class="pc-bt-label" data-i18n="backtest.compareMetric">曲线</span>
+                    <select id="pcBtCompareMetric" class="pc-bt-input" style="width:110px;">
+                        <option value="value" data-i18n="backtest.totalAssets">总资产</option>
+                        <option value="profit" data-i18n="backtest.totalReturn">总收益</option>
+                    </select>
+                    <span class="pc-bt-label" data-i18n="backtest.animSeconds">动画秒数</span>
+                    <input type="number" id="pcBtCompareAnim" class="pc-bt-input" value="20" min="0" max="30" step="0.5">
+                    <button id="pcBtCompareRun" class="pc-btn primary" style="padding:7px 14px;" data-i18n="backtest.compareRun">运行对比</button>
+                </div>
+                <div class="pc-bt-compare-symbols-line">
+                    <div id="pcBtCompareSymbols"></div>
+                    <button id="pcBtCompareAdd" class="pc-btn pc-btn-sm" data-i18n="backtest.compareAdd">+ 添加标的</button>
+                </div>
+                </div>
+                <div class="pc-loading" id="btCompareLoading" style="display:none;margin-top:10px;">
+                    <div class="spinner"></div>
+                    <span data-i18n="backtest.fetching">加载中...</span>
+                </div>
+                <div id="btCompareLegend" style="margin-top:14px;"></div>
+                <div id="btCompareChart"></div>
             </div>
         </div>
 
