@@ -62,6 +62,8 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
         "BT_RECORD_LANDSCAPE_W",
         "BT_RECORD_MIN_MS",
         "BT_RECORD_HOLD_MS",
+        "BT_RECORD_FPS",
+        "BT_RECORD_TIMESLICE_MS",
     ):
         assert token in script, token
 
@@ -88,6 +90,17 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
     # The video draws chart + legend only; page chrome must not be recorded.
     assert "drawCompareLegend" in script
 
+    # Endpoint dots keep the same breathing animation in the SVG preview and
+    # the fixed-frame video, including during the final hold.
+    for token in ("BT_DOT_BASE_RADIUS", "BT_DOT_PULSE_RADIUS",
+                  "BT_DOT_PULSE_MS", "BT_DOT_MIN_OPACITY", "getBtDotPulse"):
+        assert token in script, token
+    assert "var pulse = getBtDotPulse(outputFrame * 1000 / BT_RECORD_FPS)" in script
+    assert "ctx.arc(x, y, pulse.radius * scale" in script
+    assert "ctx.globalAlpha = pulse.opacity" in script
+    assert "drawFrame(1, animationFrames + holdIndex)" in script
+    assert 'values="${BT_DOT_BASE_RADIUS};${BT_DOT_PULSE_RADIUS};${BT_DOT_BASE_RADIUS}"' in script
+
     # Brand watermark appears on both the on-page chart and the recorded video.
     assert "BT_BRAND_TEXT" in script
     assert "https://qqq.tools24.uk" in script
@@ -101,9 +114,24 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
     assert "buildCompareLinesSvg(state, chartW, chartH)" in script
     assert 'width="${chartW}"' in script
 
-    # Reveal progress is clamped to [0,1] so a slightly-early rAF timestamp never
-    # sets a negative rect width.
-    assert "Math.max(0, Math.min((now - start) / durMs, 1))" in script
+    # Recording advances by exact frame number and manually submits each painted
+    # frame. A slow main thread may lengthen the export, but must not jump the
+    # animation forward using elapsed wall-clock time.
+    recorder = script[script.index("async function recordCompareVideo()"):
+                      script.index("function initCompareRecorder()")]
+    assert "canvas.captureStream(0)" in recorder
+    assert 'typeof captureTrack.requestFrame === "function"' in recorder
+    assert "captureTrack.requestFrame()" in recorder
+    assert "frameIndex / animationFrames" in recorder
+    assert "setTimeout(tick" in recorder
+    assert "requestAnimationFrame" not in recorder
+    assert "(now - start) / durMs" not in recorder
+    assert "if (now - nextFrameAt > frameInterval) nextFrameAt = now" in recorder
+
+    # Rasterization and the initial paint complete before MediaRecorder starts,
+    # so the exported file cannot begin with a random blank interval.
+    assert recorder.index("await Promise.all") < recorder.index("rec.start(BT_RECORD_TIMESLICE_MS)")
+    assert recorder.index("drawFrame(0, 0)") < recorder.index("rec.start(BT_RECORD_TIMESLICE_MS)")
 
     # Faint horizontal grid lines shared by the page chart and the video.
     assert "BT_GRID_STROKE" in script
@@ -129,10 +157,11 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
     assert "interpolateBtPointAtX" in script
     assert "maxLen" not in script
 
-    # Every frame is pre-filled with the theme background and the legend is
-    # overlaid on the full-height plot instead of reserving a large footer.
-    assert "ctx.fillStyle = videoState.bg;" in script
-    assert "ctx.fillRect(0, 0, canvas.width, canvas.height);" in script
+    # The opaque axis image restores the full frame in one draw; the revealed
+    # line layer uses a source crop instead of redrawing all transparent pixels.
+    assert "restores the whole frame without a separate full-canvas clear" in recorder
+    assert "ctx.fillRect(0, 0, canvas.width, canvas.height);" not in recorder
+    assert "ctx.drawImage(linesImg, 0, 0, revealPx, chartH, 0, 0, revealPx, chartH)" in recorder
     assert "buildCompareVideoState" in script
     assert "var chartH = canvasH" in script
     assert "BT_LEGEND_OVERLAY_ALPHA" in script
@@ -146,7 +175,7 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
 
     # i18n keys exist in both locales.
     for key in ("record", "recordLandscape", "recordPortrait", "recordRecording",
-                "recordUnsupported", "recordNeedRun", "orientation"):
+                "recordUnsupported", "recordNeedRun", "recordHidden", "orientation"):
         assert key in zh_locale["backtest"], key
         assert key in en_locale["backtest"], key
     assert zh_locale["backtest"]["record"] == "录制视频"
@@ -158,3 +187,11 @@ def test_compare_recorder_uses_offscreen_canvas_and_native_mediarecorder():
     assert "shareDisclaimer" not in en_locale["backtest"]
     assert zh_locale["backtest"]["recordUnsupported"].startswith("当前浏览器不支持录制视频")
     assert en_locale["backtest"]["recordUnsupported"].startswith("Video recording is not supported")
+    assert "保持当前页面可见" in zh_locale["backtest"]["recordHidden"]
+    assert "visible while recording" in en_locale["backtest"]["recordHidden"]
+
+    # Hidden/background tabs pause rAF and timers. The recorder must stop instead
+    # of resuming later with a discontinuous timeline.
+    assert 'document.addEventListener("visibilitychange", visibilityHandler)' in recorder
+    assert 'document.removeEventListener("visibilitychange", visibilityHandler)' in recorder
+    assert 'btError(__("backtest.recordHidden"))' in recorder

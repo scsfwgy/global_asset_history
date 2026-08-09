@@ -203,7 +203,8 @@
     "recordPortrait": "Portrait",
     "recordRecording": "Recording...",
     "recordUnsupported": "Video recording is not supported in this browser. Please use the latest Chrome, Edge, or Safari.",
-    "recordNeedRun": "Run a compare first, then record the animation."
+    "recordNeedRun": "Run a compare first, then record the animation.",
+    "recordHidden": "Keep this page visible while recording. This recording was stopped; please record it again."
   },
   "detail": {
     "title": "Stock Detail",

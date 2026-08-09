@@ -142,6 +142,10 @@ var BT_AXIS_LINE_STROKE = 0.6;
 var BT_AXIS_LINE_OPACITY = 0.65;
 var BT_PRIMARY_LINE_STROKE = 1.8;
 var BT_SECONDARY_LINE_STROKE = 1.4;
+var BT_DOT_BASE_RADIUS = 3.2;
+var BT_DOT_PULSE_RADIUS = 5.4;
+var BT_DOT_PULSE_MS = 1600;
+var BT_DOT_MIN_OPACITY = 0.5;
 
 function btDateMs(value) {
   var ms = Date.parse(String(value || "") + "T00:00:00Z");
@@ -219,6 +223,15 @@ function interpolateBtPointAtX(points, x) {
     value: left.value + (right.value - left.value) * ratio,
     profit: left.profit + (right.profit - left.profit) * ratio,
     dateMs: left.dateMs + (right.dateMs - left.dateMs) * ratio,
+  };
+}
+
+function getBtDotPulse(elapsedMs) {
+  var phase = ((Math.max(0, elapsedMs) % BT_DOT_PULSE_MS) / BT_DOT_PULSE_MS);
+  var wave = phase <= 0.5 ? phase * 2 : (1 - phase) * 2;
+  return {
+    radius: BT_DOT_BASE_RADIUS + (BT_DOT_PULSE_RADIUS - BT_DOT_BASE_RADIUS) * wave,
+    opacity: 1 - (1 - BT_DOT_MIN_OPACITY) * wave,
   };
 }
 
@@ -1191,7 +1204,7 @@ function renderBtCompareChart(series, context) {
   var dots = built.map(function (b, i) {
     var last = b.pts[b.pts.length - 1];
     if (!last) return "";
-    return `<circle id="btCmpDot-${i}" cx="${last.x}" cy="${last.y}" r="3.2" fill="${b.color}" stroke="var(--apple-bg)" stroke-width="1.5" style="display:none"><animate attributeName="r" values="3.2;5.4;3.2" dur="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.5;1" dur="1.6s" repeatCount="indefinite"/></circle>`;
+    return `<circle id="btCmpDot-${i}" cx="${last.x}" cy="${last.y}" r="${BT_DOT_BASE_RADIUS}" fill="${b.color}" stroke="var(--apple-bg)" stroke-width="1.5" style="display:none"><animate attributeName="r" values="${BT_DOT_BASE_RADIUS};${BT_DOT_PULSE_RADIUS};${BT_DOT_BASE_RADIUS}" dur="${BT_DOT_PULSE_MS / 1000}s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;${BT_DOT_MIN_OPACITY};1" dur="${BT_DOT_PULSE_MS / 1000}s" repeatCount="indefinite"/></circle>`;
   }).join("");
 
   // Date range spans all symbols (earliest start ~ latest end).
@@ -1438,6 +1451,8 @@ var BT_RECORD_LANDSCAPE_H = 1080;
 var BT_RECORD_PORTRAIT_W = 1080;
 var BT_RECORD_PORTRAIT_H = 1920;
 var BT_RECORD_BITRATE = 12000000;   // high enough to keep axis text crisp
+var BT_RECORD_FPS = 30;
+var BT_RECORD_TIMESLICE_MS = 1000;
 // Legend metrics mirror the on-page .bt-cmp-card hierarchy while keeping text
 // comfortably readable after social platforms resize or recompress the video.
 var BT_LEGEND_ITEM_GAP = 12;
@@ -1752,37 +1767,30 @@ async function recordCompareVideo() {
   var canvas = document.createElement("canvas");
   canvas.width = canvasW;
   canvas.height = canvasH;
-  var ctx = canvas.getContext("2d");
+  var ctx = canvas.getContext("2d", { alpha: false });
   var videoState = buildCompareVideoState(state, canvasW, canvasH);
   var layout = layoutCompareLegend(ctx, videoState, canvasW, canvasH);
 
   var chunks = [];
   var aborted = false;
   var rec = null;
-  try {
-    // Both calls must stay inside the click gesture (required on macOS Safari).
-    var stream = canvas.captureStream(30);
-    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: BT_RECORD_BITRATE });
-    rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
-    rec.onstop = function () {
-      if (btn) { btn.disabled = false; btn.textContent = __("backtest.record"); }
-      if (aborted) return;
-      var blob = new Blob(chunks, { type: mime });
-      var ext = mime.indexOf("mp4") >= 0 ? "mp4" : "webm";
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement("a");
-      a.href = url;
-      a.download = "backtest-compare-" + (portrait ? "portrait-" : "") + Date.now() + "." + ext;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
-    };
-    rec.start();
-  } catch (e) {
+  var stream = null;
+  var captureTrack = null;
+  var manualFrames = false;
+  var frameTimer = 0;
+  var visibilityHandler = null;
+
+  function resetRecordButton() {
     if (btn) { btn.disabled = false; btn.textContent = __("backtest.record"); }
-    btError(__("backtest.recordUnsupported"));
-    return;
+  }
+
+  function cleanupRecorder() {
+    if (frameTimer) clearTimeout(frameTimer);
+    frameTimer = 0;
+    if (visibilityHandler) document.removeEventListener("visibilitychange", visibilityHandler);
+    visibilityHandler = null;
+    if (stream) stream.getTracks().forEach(function (track) { track.stop(); });
+    resetRecordButton();
   }
 
   try {
@@ -1796,57 +1804,137 @@ async function recordCompareVideo() {
     var axisImg = imgs[0], linesImg = imgs[1];
     var PAD = videoState.PAD, cw = videoState.cw, built = videoState.built;
 
-    var drawFrame = function (progress) {
-      // Theme background everywhere: the legend area below the chart is plain
-      // canvas, which would otherwise encode as transparent→black.
-      ctx.fillStyle = videoState.bg;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      // Axis + labels stay visible the whole time.
+    var drawFrame = function (progress, outputFrame) {
+      // The axis image contains an opaque theme background, so this one draw
+      // restores the whole frame without a separate full-canvas clear.
       ctx.drawImage(axisImg, 0, 0, chartW, chartH);
-      // Reveal the lines left→right with a canvas clip, matching the DOM animation.
-      ctx.save();
-      ctx.beginPath();
+      // Copy only the revealed source rectangle. Drawing the entire transparent
+      // line layer and clipping it costs substantially more at 1080p.
       var revealX = PAD.left + cw * progress;
-      ctx.rect(0, 0, revealX * scale, chartH);
-      ctx.clip();
-      ctx.drawImage(linesImg, 0, 0, chartW, chartH);
-      ctx.restore();
+      var revealPx = Math.max(0, Math.min(chartW, Math.ceil(revealX * scale)));
+      if (revealPx > 0) {
+        ctx.drawImage(linesImg, 0, 0, revealPx, chartH, 0, 0, revealPx, chartH);
+      }
       // Endpoint dots travel along each line at the reveal frontier.
+      var pulse = getBtDotPulse(outputFrame * 1000 / BT_RECORD_FPS);
       built.forEach(function (b) {
         var snapshot = interpolateBtPointAtX(b.pts, revealX);
         if (!snapshot) return;
         var x = snapshot.x * scale;
         var y = snapshot.y * scale;
+        ctx.save();
+        ctx.globalAlpha = pulse.opacity;
         ctx.beginPath();
-        ctx.arc(x, y, 3.2 * scale, 0, Math.PI * 2);
+        ctx.arc(x, y, pulse.radius * scale, 0, Math.PI * 2);
         ctx.fillStyle = b.color;
         ctx.fill();
         ctx.lineWidth = 1.5 * scale;
         ctx.strokeStyle = videoState.bg;
         ctx.stroke();
+        ctx.restore();
       });
       drawCompareLegend(ctx, videoState, layout, progress);
     };
 
-    var durMs = Math.max(BT_RECORD_MIN_MS, Math.min(getCompareAnimMs(), BT_RECORD_MAX_MS));
-    var start = performance.now();
-    var holdStart = 0;
-    var tick = function (now) {
-      var progress = Math.max(0, Math.min((now - start) / durMs, 1));
-      drawFrame(progress);
-      if (progress < 1) requestAnimationFrame(tick);
-      else {
-        if (!holdStart) holdStart = now;
-        if (now - holdStart < BT_RECORD_HOLD_MS) requestAnimationFrame(tick);
-        else rec.stop();
-      }
+    // Finish all asynchronous SVG rasterization and paint a valid first frame
+    // before MediaRecorder starts, preventing an unpredictable blank lead-in.
+    drawFrame(0, 0);
+
+    // Manual frame submission keeps capture aligned 1:1 with completed canvas
+    // paints. Fall back to the browser's automatic capture on older engines.
+    stream = canvas.captureStream(0);
+    captureTrack = stream.getVideoTracks()[0] || null;
+    manualFrames = !!(captureTrack && typeof captureTrack.requestFrame === "function");
+    if (!manualFrames) {
+      stream.getTracks().forEach(function (track) { track.stop(); });
+      stream = canvas.captureStream(BT_RECORD_FPS);
+      captureTrack = stream.getVideoTracks()[0] || null;
+    }
+
+    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: BT_RECORD_BITRATE });
+    rec.ondataavailable = function (event) {
+      if (event.data && event.data.size) chunks.push(event.data);
     };
-    requestAnimationFrame(tick);
+    rec.onerror = function () {
+      aborted = true;
+      try {
+        if (rec.state !== "inactive") rec.stop();
+        else cleanupRecorder();
+      } catch (_) {
+        cleanupRecorder();
+      }
+      btError(__("backtest.recordUnsupported"));
+    };
+    rec.onstop = function () {
+      cleanupRecorder();
+      if (aborted) return;
+      var blob = new Blob(chunks, { type: mime });
+      var ext = mime.indexOf("mp4") >= 0 ? "mp4" : "webm";
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "backtest-compare-" + (portrait ? "portrait-" : "") + Date.now() + "." + ext;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+    };
+
+    visibilityHandler = function () {
+      if (!document.hidden || !rec || rec.state === "inactive") return;
+      aborted = true;
+      try { rec.stop(); } catch (_) { cleanupRecorder(); }
+      btError(__("backtest.recordHidden"));
+    };
+    document.addEventListener("visibilitychange", visibilityHandler);
+    rec.start(BT_RECORD_TIMESLICE_MS);
+
+    var durMs = Math.max(BT_RECORD_MIN_MS, Math.min(getCompareAnimMs(), BT_RECORD_MAX_MS));
+    var frameInterval = 1000 / BT_RECORD_FPS;
+    var animationFrames = Math.max(1, Math.round(durMs / frameInterval));
+    var holdFrames = Math.max(1, Math.round(BT_RECORD_HOLD_MS / frameInterval));
+    var frameIndex = 0;
+    var holdIndex = 0;
+    var nextFrameAt = performance.now();
+
+    function submitFrame() {
+      if (manualFrames && captureTrack) captureTrack.requestFrame();
+    }
+
+    // Submit the already-painted first frame, then advance by frame number rather
+    // than wall-clock progress. A busy encoder may make recording take longer,
+    // but it can no longer skip several seconds of chart motion to catch up.
+    submitFrame();
+    var tick = function () {
+      if (aborted || !rec || rec.state === "inactive") return;
+      if (document.hidden) { visibilityHandler(); return; }
+
+      if (frameIndex < animationFrames) {
+        frameIndex += 1;
+        drawFrame(frameIndex / animationFrames, frameIndex);
+      } else if (holdIndex < holdFrames) {
+        holdIndex += 1;
+        drawFrame(1, animationFrames + holdIndex);
+      } else {
+        rec.stop();
+        return;
+      }
+      submitFrame();
+
+      // Never burst multiple catch-up frames after a stall; that overloads the
+      // encoder again. Resume a steady cadence and allow output duration to grow.
+      var now = performance.now();
+      if (now - nextFrameAt > frameInterval) nextFrameAt = now;
+      nextFrameAt += frameInterval;
+      frameTimer = setTimeout(tick, Math.max(0, nextFrameAt - performance.now()));
+    };
+    nextFrameAt += frameInterval;
+    frameTimer = setTimeout(tick, frameInterval);
   } catch (e) {
     aborted = true;
-    if (btn) { btn.disabled = false; btn.textContent = __("backtest.record"); }
+    cleanupRecorder();
     btError(__("backtest.recordUnsupported"));
-    try { rec.stop(); } catch (_) {}
+    try { if (rec && rec.state !== "inactive") rec.stop(); } catch (_) {}
   }
 }
 
