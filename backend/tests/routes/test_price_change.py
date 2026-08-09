@@ -287,6 +287,15 @@ class TestYearlyEndpoint:
         mock_fetch.return_value = {
             "years": ["2024", "2023"],
             "data": {"AAPL": {"2024": 10.0, "2023": 5.0}},
+            "drawdowns": {
+                "AAPL": {
+                    "2024": {
+                        "max_drawdown": -8.0,
+                        "peak_date": "2024-03-01",
+                        "trough_date": "2024-04-01",
+                    },
+                },
+            },
             "meta": {"AAPL": {"symbol": "AAPL", "type": "stock", "error": None}},
         }
         resp = client.post(
@@ -297,6 +306,7 @@ class TestYearlyEndpoint:
         data = resp.get_json()
         assert "years" in data
         assert "data" in data
+        assert data["drawdowns"]["AAPL"]["2024"]["max_drawdown"] == -8.0
         assert "meta" in data
         assert "AAPL" in data["data"]
         diagnose("yearly response years", data["years"])
@@ -392,8 +402,20 @@ class TestMonthlyBatchEndpoint:
     @patch("routes.price_change.fetch_monthly_returns_batch")
     def test_valid_request(self, mock_fetch, client):
         mock_fetch.return_value = {
-            "AAPL": [{"month": i, "return": 1.0} for i in range(1, 13)],
-            "GOOGL": [{"month": i, "return": 2.0} for i in range(1, 13)],
+            "data": {
+                "AAPL": [
+                    {"month": i, "return": 1.0, "max_drawdown": -2.0}
+                    for i in range(1, 13)
+                ],
+                "GOOGL": [
+                    {"month": i, "return": 2.0, "max_drawdown": -3.0}
+                    for i in range(1, 13)
+                ],
+            },
+            "drawdowns": {
+                "AAPL": {"2025": {"max_drawdown": -10.0}},
+                "GOOGL": {"2025": {"max_drawdown": -12.0}},
+            },
         }
         resp = client.post(
             f"{BASE}/monthly-batch",
@@ -409,6 +431,7 @@ class TestMonthlyBatchEndpoint:
         data = resp.get_json()
         assert data["year"] == 2025
         assert "AAPL" in data["data"]
+        assert data["drawdowns"]["AAPL"]["2025"]["max_drawdown"] == -10.0
         track_coverage(MOD, 2)
 
     def test_missing_symbols(self, client):

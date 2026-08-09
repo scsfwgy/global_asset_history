@@ -230,11 +230,13 @@ def _fetch_daily_series_cached(symbol: str, asset_type: str, force_refresh: bool
     return _set_cached_daily_series(symbol, asset_type, series)
 
 
-def _fetch_one_yearly(entry: Dict[str, str]) -> Tuple[str, Dict[str, float], Dict]:
+def _fetch_one_yearly(
+    entry: Dict[str, str],
+) -> Tuple[str, Dict[str, float], Dict[str, Dict], Dict]:
     symbol, asset_type = _normalize_symbol_entry(entry)
 
     if not symbol:
-        return symbol, {}, {
+        return symbol, {}, {}, {
             "symbol": symbol,
             "type": asset_type,
             "source": None,
@@ -246,15 +248,28 @@ def _fetch_one_yearly(entry: Dict[str, str]) -> Tuple[str, Dict[str, float], Dic
     if asset_type in _DAILY_SERIES_FETCHERS:
         series = _fetch_daily_series_cached(symbol, asset_type)
         yearly = {} if series.error else _compute_yearly_returns(series.timestamps, series.closes)
+        drawdowns = (
+            {}
+            if series.error
+            else {
+                str(row["year"]): row
+                for row in _compute_period_drawdowns(
+                    series.timestamps,
+                    series.closes,
+                    period="year",
+                    include_previous_close=True,
+                )
+            }
+        )
         meta = _series_meta(symbol, asset_type, series)
         if not yearly and not meta["error"]:
             meta["error"] = "insufficient data"
-        return symbol, yearly, meta
+        return symbol, yearly, drawdowns, meta
 
     fetcher = _FETCHERS.get(asset_type)
     if fetcher is None:
         now = datetime.now(timezone.utc).isoformat()
-        return symbol, {}, {
+        return symbol, {}, {}, {
             "symbol": symbol,
             "type": asset_type,
             "source": None,
@@ -266,7 +281,7 @@ def _fetch_one_yearly(entry: Dict[str, str]) -> Tuple[str, Dict[str, float], Dic
     try:
         yearly = fetcher(symbol)
         now = datetime.now(timezone.utc).isoformat()
-        return symbol, yearly, {
+        return symbol, yearly, {}, {
             "symbol": symbol,
             "type": asset_type,
             "source": "custom",
@@ -277,7 +292,7 @@ def _fetch_one_yearly(entry: Dict[str, str]) -> Tuple[str, Dict[str, float], Dic
     except Exception as e:
         logger.exception("Custom fetcher failed for %s (%s): %s", symbol, asset_type, e)
         now = datetime.now(timezone.utc).isoformat()
-        return symbol, {}, {
+        return symbol, {}, {}, {
             "symbol": symbol,
             "type": asset_type,
             "source": "custom",
@@ -290,6 +305,7 @@ def _fetch_one_yearly(entry: Dict[str, str]) -> Tuple[str, Dict[str, float], Dic
 def fetch_yearly_returns(symbols: List[Dict[str, str]]) -> dict:
     """Fetch yearly returns for a list of symbols."""
     data: Dict[str, Dict[str, float]] = {}
+    drawdowns: Dict[str, Dict[str, Dict]] = {}
     meta: Dict[str, Dict] = {}
     all_years: set = set()
     normalized_entries = []
@@ -311,17 +327,20 @@ def fetch_yearly_returns(symbols: List[Dict[str, str]]) -> dict:
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         futures = [executor.submit(_fetch_one_yearly, entry) for entry in normalized_entries]
         for future in as_completed(futures):
-            symbol, yearly, symbol_meta = future.result()
+            symbol, yearly, symbol_drawdowns, symbol_meta = future.result()
             data[symbol] = yearly
+            drawdowns[symbol] = symbol_drawdowns
             meta[symbol] = symbol_meta
             all_years.update(yearly.keys())
 
     ordered_data = {}
+    ordered_drawdowns = {}
     ordered_meta = {}
     for entry in normalized_entries:
         symbol = entry["symbol"]
         yearly = data.get(symbol, {})
         ordered_data[symbol] = yearly
+        ordered_drawdowns[symbol] = drawdowns.get(symbol, {})
         ordered_meta[symbol] = meta.get(symbol, {
             "symbol": symbol,
             "type": entry["type"],
@@ -334,6 +353,7 @@ def fetch_yearly_returns(symbols: List[Dict[str, str]]) -> dict:
     return {
         "years": sorted(all_years, reverse=True),
         "data": ordered_data,
+        "drawdowns": ordered_drawdowns,
         "meta": ordered_meta,
     }
 
@@ -345,12 +365,12 @@ def fetch_monthly_returns(symbol: str, asset_type: str, year: int) -> list:
     clean_sym = normalize_asset_symbol(symbol, clean_type)
 
     if clean_type not in _DAILY_SERIES_FETCHERS:
-        return _compute_monthly_returns([], [], year)
+        return _build_monthly_return_rows([], [], year)
 
     series = _fetch_daily_series_cached(clean_sym, clean_type)
     if series.error:
-        return _compute_monthly_returns([], [], year)
-    return _compute_monthly_returns(series.timestamps, series.closes, year)
+        return _build_monthly_return_rows([], [], year)
+    return _build_monthly_return_rows(series.timestamps, series.closes, year)
 
 
 def fetch_daily_returns(symbol: str, asset_type: str, year: int, month: int) -> list:
@@ -623,9 +643,10 @@ def fetch_market_pulse() -> Dict:
     }
 
 
-def fetch_monthly_returns_batch(symbols: List[Dict[str, str]], year: int) -> Dict[str, list]:
+def fetch_monthly_returns_batch(symbols: List[Dict[str, str]], year: int) -> Dict:
     """Fetch monthly returns for multiple symbols in a given year."""
     data: Dict[str, list] = {}
+    drawdowns: Dict[str, Dict[str, Dict]] = {}
     for entry in symbols:
         try:
             asset_type = entry.get("type", "stock").strip().lower()
@@ -633,8 +654,28 @@ def fetch_monthly_returns_batch(symbols: List[Dict[str, str]], year: int) -> Dic
         except (KeyError, AttributeError):
             continue
         if symbol:
-            data[symbol] = fetch_monthly_returns(symbol, asset_type, year)
-    return data
+            series = _fetch_daily_series_cached(symbol, asset_type)
+            if series.error or not series.timestamps or not series.closes:
+                data[symbol] = _build_monthly_return_rows([], [], year)
+                drawdowns[symbol] = {}
+                continue
+
+            data[symbol] = _build_monthly_return_rows(
+                series.timestamps,
+                series.closes,
+                year,
+            )
+            drawdowns[symbol] = {
+                str(row["year"]): row
+                for row in _compute_period_drawdowns(
+                    series.timestamps,
+                    series.closes,
+                    period="year",
+                    include_previous_close=True,
+                )
+                if row["year"] == year
+            }
+    return {"data": data, "drawdowns": drawdowns}
 
 
 def _avg(values: List[float]) -> Optional[float]:
@@ -1353,12 +1394,23 @@ def _with_chart_detail(item: Dict, extremes: Optional[Dict], candle: Optional[Di
     return result
 
 
-def _compute_yearly_drawdowns(
+def _compute_period_drawdowns(
     timestamps: List[int],
     closes: List[Optional[float]],
+    *,
+    period: str,
+    include_previous_close: bool,
 ) -> List[Dict]:
-    """Compute the deepest peak-to-trough decline within each calendar year."""
-    points_by_year: Dict[int, List[Tuple[date, float]]] = {}
+    """Compute close-to-close max drawdown for calendar years or months.
+
+    Return heatmaps measure each period from the previous period-end close.
+    ``include_previous_close`` adds that boundary point so a gap down at the
+    start of a year or month is included in the displayed period's risk.
+    """
+    if period not in {"year", "month"}:
+        raise ValueError("period must be year or month")
+
+    dated_points: List[Tuple[date, float]] = []
     for timestamp, close in zip(timestamps, closes):
         if close is None:
             continue
@@ -1369,11 +1421,30 @@ def _compute_yearly_drawdowns(
         if not math.isfinite(numeric_close) or numeric_close <= 0:
             continue
         point_date = datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
-        points_by_year.setdefault(point_date.year, []).append((point_date, numeric_close))
+        dated_points.append((point_date, numeric_close))
+
+    dated_points.sort(key=lambda point: point[0])
+    grouped_points: Dict[Tuple[int, Optional[int]], List[Tuple[date, float]]] = {}
+    previous_point: Optional[Tuple[date, float]] = None
+    for point in dated_points:
+        point_date = point[0]
+        key = (
+            (point_date.year, point_date.month)
+            if period == "month"
+            else (point_date.year, None)
+        )
+        if key not in grouped_points:
+            grouped_points[key] = (
+                [previous_point]
+                if include_previous_close and previous_point is not None
+                else []
+            )
+        grouped_points[key].append(point)
+        previous_point = point
 
     rows = []
-    for year in sorted(points_by_year, reverse=True):
-        points = sorted(points_by_year[year], key=lambda point: point[0])
+    for year, month in sorted(grouped_points, reverse=True):
+        points = grouped_points[(year, month)]
         peak_date, peak_close = points[0]
         max_drawdown = 0.0
         max_peak_date = None
@@ -1389,13 +1460,58 @@ def _compute_yearly_drawdowns(
                 max_peak_date = peak_date
                 trough_date = point_date
 
-        rows.append({
+        row = {
             "year": year,
             "max_drawdown": round(max_drawdown, 2),
             "peak_date": max_peak_date.isoformat() if max_peak_date else None,
             "trough_date": trough_date.isoformat() if trough_date else None,
+        }
+        if month is not None:
+            row["month"] = month
+        rows.append(row)
+    return rows
+
+
+def _build_monthly_return_rows(
+    timestamps: List[int],
+    closes: List[Optional[float]],
+    year: int,
+) -> List[Dict]:
+    """Attach boundary-aware max drawdown to each monthly return row."""
+    returns = _compute_monthly_returns(timestamps, closes, year)
+    drawdowns = {
+        row["month"]: row
+        for row in _compute_period_drawdowns(
+            timestamps,
+            closes,
+            period="month",
+            include_previous_close=True,
+        )
+        if row["year"] == year
+    }
+    rows = []
+    for item in returns:
+        drawdown = drawdowns.get(item["month"], {})
+        rows.append({
+            **item,
+            "max_drawdown": drawdown.get("max_drawdown"),
+            "peak_date": drawdown.get("peak_date"),
+            "trough_date": drawdown.get("trough_date"),
         })
     return rows
+
+
+def _compute_yearly_drawdowns(
+    timestamps: List[int],
+    closes: List[Optional[float]],
+) -> List[Dict]:
+    """Compute the deepest peak-to-trough decline within each calendar year."""
+    return _compute_period_drawdowns(
+        timestamps,
+        closes,
+        period="year",
+        include_previous_close=False,
+    )
 
 
 def _compute_yearly_runups(

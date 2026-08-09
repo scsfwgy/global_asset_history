@@ -63,12 +63,12 @@ function renderMonthlyCard(symbol, type, year, months) {
   grid.innerHTML = months
     .map((m) => {
       const val = m.return;
-      const formatted = val !== null ? formatPct(val) : "—";
       const colors = val !== null ? cellColor(val, -50, 50) : { bg: "var(--apple-surface-2)", text: "var(--apple-text-tertiary)" };
       const cls = val !== null ? "pc-month-block" : "pc-month-block is-empty";
-      return `<div class="${cls}" data-month="${m.month}" style="background:${colors.bg};">
+      const title = metricCellTitle(val, m);
+      return `<div class="${cls}" data-month="${m.month}" title="${escapeHtml(title)}" style="background:${colors.bg};">
         <div class="pc-month-num">${__("yearly.monthLabel", {m: m.month})}</div>
-        <div class="pc-month-val" style="color:${colors.text};">${formatted}</div>
+        <div class="pc-month-val" style="color:${colors.text};">${metricCellMarkup(val, m)}</div>
       </div>`;
     })
     .join("");

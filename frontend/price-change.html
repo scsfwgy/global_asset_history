@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="gQoncVBJIUyqz2ofHIIyuMzasJ2FH0GCSVkiHka2UPk">
     <meta name="baidu-site-verification" content="codeva-gO1f6pEBdE">
-    <meta name="description" content="GlobalAssetHistory 是跨资产历史收益查询与定投回测工具，支持美股、ETF、数字货币、A股指数的历年涨跌幅、月度走势、日线钻取、暴跌统计和投资回测。Historical asset returns and DCA backtest tool.">
+    <meta name="description" content="GlobalAssetHistory 是跨资产历史收益与风险查询、定投回测工具，支持美股、ETF、数字货币、A股指数的历年涨跌幅、最大回撤、月度走势、日线钻取、暴跌统计和投资回测。Historical asset returns, drawdowns and DCA backtest tool.">
     <meta name="keywords" content="历史涨跌幅,历年涨跌幅,定投回测,投资回测,美股历史收益,ETF历史收益,数字货币历史收益,A股指数,收益率热力图,多资产收益分析,historical asset returns,DCA backtest tool,investment backtesting,ETF historical returns,stock return heatmap,crypto historical returns,multi asset return analysis">
     <meta name="author" content="GlobalAssetHistory">
     <meta name="robots" content="index,follow">
@@ -20,7 +20,7 @@
     <meta property="og:site_name" content="GlobalAssetHistory">
     <meta property="og:locale" content="zh_CN">
     <meta property="og:title" content="GlobalAssetHistory - 历史涨跌幅与定投回测工具">
-    <meta property="og:description" content="查询美股、ETF、数字货币与A股指数的历年涨跌幅，按年/月/日钻取历史收益，并用日线数据做定投回测。">
+    <meta property="og:description" content="查询美股、ETF、数字货币与A股指数的历年涨跌幅和最大回撤，按年/月/日钻取历史收益，并用日线数据做定投回测。">
     <meta property="og:url" content="__SITE_BASE_URL__/">
     <meta property="og:image" content="__SITE_BASE_URL__/doc/screenshot/yearly-heatmap.png">
     <meta name="twitter:card" content="summary_large_image">
@@ -55,7 +55,7 @@
       "applicationCategory": "FinanceApplication",
       "operatingSystem": "Web",
       "inLanguage": ["zh-CN", "en"],
-      "description": "跨资产历史收益查询与定投回测工具，支持美股、ETF、数字货币和A股指数的历年涨跌幅、月度走势、日线钻取和投资回测。",
+      "description": "跨资产历史收益与风险查询、定投回测工具，支持美股、ETF、数字货币和A股指数的历年涨跌幅、最大回撤、月度走势、日线钻取和投资回测。",
       "featureList": [
         "历年涨跌幅热力图",
         "美股、ETF、数字货币和A股指数收益查询",
@@ -3319,6 +3319,13 @@
                 <datalist id="pcYearList"></datalist>
             </div>
             <div class="control-group">
+                <span class="control-label" data-i18n="yearly.cellDisplay">单元格</span>
+                <select id="pcMetricDisplay" class="pc-type-select">
+                    <option value="combined" data-i18n="yearly.displayCombined">收益 + 回撤</option>
+                    <option value="return" data-i18n="yearly.displayReturnOnly">仅收益</option>
+                </select>
+            </div>
+            <div class="control-group">
                 <span class="control-label" data-i18n="yearly.colorRange">着色范围</span>
                 <input type="number" id="pcMinRange" class="pc-range-input" value="-50" placeholder="min"> %
                 <span style="color: var(--apple-text-tertiary); font-size: 12px;">~</span>
@@ -3346,7 +3353,7 @@
         <div class="pc-table-wrap" id="pcTableWrap">
             <div class="pc-empty" id="pcEmpty">
                 <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.45; margin-bottom:8px; color: var(--apple-text-tertiary);"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
-                <div data-i18n="yearly.emptyPrompt">添加代码并点击"查询"查看历年涨跌幅</div>
+                <div data-i18n="yearly.emptyPrompt">添加代码并点击"查询"查看历年涨跌幅与最大回撤</div>
                 <div class="pc-empty-hint" data-i18n="yearly.emptyHint">支持美股和数字货币，着色范围默认 -50% ~ +50%</div>
             </div>
             <table class="pc-table" id="pcTable" style="display:none;">
@@ -3359,9 +3366,21 @@
         <div id="pcChartWrap" class="pc-monthly" style="display:none;">
             <div class="pc-monthly-header">
                 <span class="pc-chart-title" data-i18n="yearly.chartTitle">历年涨跌幅走势</span>
-                <button id="pcChartClose" class="pc-btn pc-btn-sm" data-i18n="chart.close">关闭</button>
+                <div class="pc-chart-actions">
+                    <div class="pc-chart-scale-toggle" role="group" data-i18n-attr="aria-label|chart.scaleMode">
+                        <button id="pcChartScaleFocus" class="pc-chart-scale-btn active" type="button" data-i18n="chart.focusScale">聚焦范围</button>
+                        <button id="pcChartScaleFull" class="pc-chart-scale-btn" type="button" data-i18n="chart.fullScale">完整范围</button>
+                    </div>
+                    <button id="pcChartClose" class="pc-btn pc-btn-sm" data-i18n="chart.close">关闭</button>
+                </div>
             </div>
-            <div id="pcChartSvg"></div>
+            <div id="pcChartScaleNote" class="pc-chart-scale-note" aria-live="polite"></div>
+            <div id="pcChartPlot" class="pc-chart-plot">
+                <div id="pcChartSvg"></div>
+                <div id="pcChartTooltip" class="pc-chart-tooltip" role="tooltip" hidden></div>
+            </div>
+            <div id="pcChartLegend" class="pc-chart-legend"></div>
+            <div class="pc-chart-legend-hint" data-i18n="chart.legendHint">点击聚焦；再次点击恢复全部；按 Ctrl / ⌘ 可多选</div>
         </div>
 
         <!-- Monthly breakdown container (multiple cards stacked) -->

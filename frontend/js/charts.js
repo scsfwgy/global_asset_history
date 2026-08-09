@@ -1,4 +1,4 @@
-/** SVG chart renderers for yearly and monthly trend views. */
+/** SVG chart renderers for yearly and monthly return/drawdown trend views. */
 
 const LINE_COLORS = [
   "#2997ff", "#e8a43e", "#30d158", "#ff453a", "#5ac8fa",
@@ -7,305 +7,504 @@ const LINE_COLORS = [
 ];
 
 let _chartData = null;
+let _chartDrawdowns = null;
 let _chartSymbols = null;
-let _chartHidden = []; // indices of hidden series
+let _chartHidden = []; // original series indices hidden in the yearly chart
+let _chartScaleMode = "focus";
+let _activeChartRender = null;
 
-function renderMultiLineChart(data, symbolsList, hiddenIndices) {
-  // Build series list
-  const allSeries = [];
-  let allYears = new Set();
+function chartNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
 
-  for (const s of symbolsList) {
-    const yearly = data[s.symbol];
-    if (!yearly) continue;
-    const pts = Object.entries(yearly)
-      .map(([y, v]) => ({ year: parseInt(y, 10), value: v }))
-      .filter((p) => p.value != null)
-      .sort((a, b) => a.year - b.year);
-    if (pts.length < 2) continue;
-    allSeries.push({ symbol: s.symbol, name: s.name || s.symbol, points: pts });
-    pts.forEach((p) => allYears.add(p.year));
+function chartQuantile(sortedValues, percentile) {
+  if (!sortedValues.length) return 0;
+  const index = (sortedValues.length - 1) * percentile;
+  const lower = Math.floor(index);
+  const upper = Math.ceil(index);
+  if (lower === upper) return sortedValues[lower];
+  return sortedValues[lower] + (sortedValues[upper] - sortedValues[lower]) * (index - lower);
+}
+
+/**
+ * Use a wide Tukey fence in focus mode. Normal variation remains visible, while
+ * isolated crypto/leveraged-asset spikes no longer flatten every other series.
+ */
+function computeChartRange(values, mode) {
+  const clean = values.map(chartNumber).filter((value) => value !== null).sort((a, b) => a - b);
+  if (!clean.length) clean.push(0);
+
+  const rawMin = Math.min(clean[0], 0);
+  const rawMax = Math.max(clean[clean.length - 1], 0);
+  let coreMin = rawMin;
+  let coreMax = rawMax;
+
+  if (mode === "focus" && clean.length >= 8) {
+    const q1 = chartQuantile(clean, 0.25);
+    const q3 = chartQuantile(clean, 0.75);
+    const iqr = q3 - q1;
+    if (iqr > 0) {
+      const fenceMin = Math.min(q1 - iqr * 3, 0);
+      const fenceMax = Math.max(q3 + iqr * 3, 0);
+      const focusedSpan = fenceMax - fenceMin;
+      const rawSpan = rawMax - rawMin;
+      if (rawSpan > focusedSpan * 1.25) {
+        coreMin = Math.max(rawMin, fenceMin);
+        coreMax = Math.min(rawMax, fenceMax);
+      }
+    }
   }
 
-  if (allSeries.length === 0) return;
+  const coreRange = coreMax - coreMin || Math.max(Math.abs(coreMax), 1);
+  const padding = coreRange * 0.1;
+  const min = coreMin - padding;
+  const max = coreMax + padding;
+  return {
+    min,
+    max,
+    range: max - min || 1,
+    clipped: clean.filter((value) => value < min || value > max).length,
+  };
+}
 
-  // Separate visible vs hidden
-  const visibleSeries = allSeries.filter((_, i) => !hiddenIndices.includes(i));
-  const hiddenSet = new Set(hiddenIndices);
+function chartClamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
 
-  // Compute Y range from VISIBLE series only
-  let allVals = [];
-  visibleSeries.forEach((s) => s.points.forEach((p) => allVals.push(p.value)));
-  if (allVals.length === 0) allVals = [0];
-  const minVal = Math.min(...allVals, 0);
-  const maxVal = Math.max(...allVals, 0);
-  const range = maxVal - minVal || 1;
-  const pad = range * 0.1;
-  const yMin = minVal - pad;
-  const yMax = maxVal + pad;
-  const yRange = yMax - yMin;
+function chartMetricValue(point, metric) {
+  return metric === "drawdown" ? drawdownValue(point.drawdown) : chartNumber(point.value);
+}
 
-  // Dynamic left padding based on max label width
-  const maxAbsLabel = Math.max(Math.abs(yMin), Math.abs(yMax));
-  const labelChars = maxAbsLabel.toFixed(1).length + 1; // "+XXX.X%"
-  const PAD_LEFT = Math.max(48, labelChars * 7 + 8);
-  const W = 700, H = 220, PAD = { top: 20, right: 16, bottom: 30, left: PAD_LEFT };
-  const cw = W - PAD.left - PAD.right;
-  const ch = H - PAD.top - PAD.bottom;
+function chartPointAttributes(series, point, x, panel) {
+  const drawdown = drawdownValue(point.drawdown);
+  const peak = point.drawdown && point.drawdown.peak_date ? point.drawdown.peak_date : "";
+  const trough = point.drawdown && point.drawdown.trough_date ? point.drawdown.trough_date : "";
+  const aria = series.name + " " + point.label + " " + metricCellTitle(point.value, point.drawdown);
+  return [
+    'class="pc-chart-point"',
+    'data-chart-point="1"',
+    `data-chart-panel="${panel}"`,
+    `data-chart-x="${x}"`,
+    `data-symbol="${escapeHtml(series.name)}"`,
+    `data-period="${escapeHtml(point.label)}"`,
+    `data-return="${point.value == null ? "" : point.value}"`,
+    `data-drawdown="${drawdown == null ? "" : drawdown}"`,
+    `data-peak="${escapeHtml(peak)}"`,
+    `data-trough="${escapeHtml(trough)}"`,
+    'tabindex="0"',
+    'role="graphics-symbol"',
+    `aria-label="${escapeHtml(aria)}"`,
+  ].join(" ");
+}
 
-  // Sorted years across all series (for x-axis)
-  const years = Array.from(allYears).sort((a, b) => a - b);
-  const xPos = (y) => PAD.left + ((y - years[0]) / (years[years.length - 1] - years[0] || 1)) * cw;
-  const yPos = (v) => PAD.top + ch - ((v - yMin) / yRange) * ch;
+function panelGrid(range, geometry, label) {
+  const { left, right, plotTop, plotBottom, width } = geometry;
+  const plotHeight = plotBottom - plotTop;
+  const yPos = (value) => plotBottom - ((value - range.min) / range.range) * plotHeight;
+  const ticks = 4;
+  let markup = `<text x="${left}" y="${geometry.top + 12}" fill="var(--apple-text-secondary)" font-size="11" font-weight="600">${escapeHtml(label)}</text>`;
+  for (let i = 0; i <= ticks; i++) {
+    const value = range.min + (range.range * i) / ticks;
+    const y = yPos(value);
+    markup += `<line x1="${left}" y1="${y}" x2="${width - right}" y2="${y}" stroke="var(--apple-divider)" stroke-width="1"/>`;
+    markup += `<text x="${left - 7}" y="${y + 4}" text-anchor="end" fill="var(--apple-text-tertiary)" font-size="10">${value.toFixed(1)}%</text>`;
+  }
   const zeroY = yPos(0);
-
-  // Y-axis grid
-  const yTicks = 5;
-  let yGrid = "";
-  for (let i = 0; i <= yTicks; i++) {
-    const v = yMin + (yRange * i) / yTicks;
-    const y = yPos(v);
-    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="var(--apple-divider)" stroke-width="1"/>`;
-    yGrid += `<text x="${PAD.left - 6}" y="${y + 4}" text-anchor="end" fill="var(--apple-text-tertiary)" font-size="11">${v.toFixed(1)}%</text>`;
+  if (zeroY >= plotTop && zeroY <= plotBottom) {
+    markup += `<line x1="${left}" y1="${zeroY}" x2="${width - right}" y2="${zeroY}" stroke="var(--apple-text-tertiary)" stroke-width="1" stroke-dasharray="4,3" opacity="0.65"/>`;
   }
+  return { markup, yPos };
+}
 
-  // Zero line
-  const zeroLine = (zeroY >= PAD.top && zeroY <= H - PAD.bottom)
-    ? `<line x1="${PAD.left}" y1="${zeroY}" x2="${W - PAD.right}" y2="${zeroY}" stroke="var(--apple-text-tertiary)" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>`
-    : "";
+function renderReturnPanel(allSeries, visibleSeries, range, geometry, xPos, prefix) {
+  const grid = panelGrid(range, geometry, __("chart.returnPanel"));
+  let seriesMarkup = "";
 
-  // X-axis labels
-  let xLabels = "";
-  if (years.length > 1) {
-    const step = Math.max(1, Math.floor(years.length / 8));
-    for (let i = 0; i < years.length; i++) {
-      if (i % step === 0 || i === years.length - 1) {
-        xLabels += `<text x="${xPos(years[i])}" y="${H - 8}" text-anchor="middle" fill="var(--apple-text-tertiary)" font-size="11">${years[i]}</text>`;
+  visibleSeries.forEach((series) => {
+    const color = LINE_COLORS[series.index % LINE_COLORS.length];
+    const points = series.points.filter((point) => chartMetricValue(point, "return") !== null);
+    let lines = "";
+    let dots = "";
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const first = points[i];
+      const second = points[i + 1];
+      lines += `<line x1="${xPos(first.period)}" y1="${grid.yPos(chartClamp(first.value, range.min, range.max))}" x2="${xPos(second.period)}" y2="${grid.yPos(chartClamp(second.value, range.min, range.max))}" stroke="${color}" stroke-width="1.5" stroke-linecap="round" opacity="0.78"/>`;
+    }
+
+    points.forEach((point) => {
+      const value = chartNumber(point.value);
+      const clipped = value < range.min || value > range.max;
+      const x = xPos(point.period);
+      const y = grid.yPos(chartClamp(value, range.min, range.max));
+      const attrs = chartPointAttributes(series, point, x, "return");
+      if (clipped) {
+        const direction = value > range.max ? -1 : 1;
+        dots += `<path d="M ${x - 3.5} ${y + direction * 5} L ${x} ${y} L ${x + 3.5} ${y + direction * 5} Z" fill="${color}"/>`;
       }
-    }
-  }
-
-  // Only render visible series
-  let seriesGroups = "";
-  visibleSeries.forEach((series, vi) => {
-    const color = LINE_COLORS[vi % LINE_COLORS.length];
-    const pts = series.points;
-    let gLines = "";
-    let gDots = "";
-    for (let i = 0; i < pts.length - 1; i++) {
-      const x1 = xPos(pts[i].year), y1 = yPos(pts[i].value);
-      const x2 = xPos(pts[i + 1].year), y2 = yPos(pts[i + 1].value);
-      gLines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="1" stroke-linecap="round" opacity="0.75"/>`;
-    }
-    pts.forEach((p) => {
-      gDots += `<circle cx="${xPos(p.year)}" cy="${yPos(p.value)}" r="1.8" fill="${color}" stroke="var(--apple-bg)" stroke-width="0.5"/>`;
+      dots += `<circle cx="${x}" cy="${y}" r="${clipped ? 3 : 2.3}" fill="${color}" stroke="var(--apple-bg)" stroke-width="0.8" ${attrs}/>`;
     });
-    // Use original series index for stable id but only show if visible
-    const oi = allSeries.indexOf(series);
-    seriesGroups += `<g id="cs-${oi}">${gLines}${gDots}</g>`;
+    seriesMarkup += `<g id="${prefix}-${series.index}" data-chart-series="${series.index}">${lines}${dots}</g>`;
   });
 
-  // Legend (includes ALL series, hidden ones are greyed out)
-  let legend = "";
-  allSeries.forEach((series, idx) => {
-    const isHidden = hiddenSet.has(idx);
-    const color = LINE_COLORS[idx % LINE_COLORS.length];
-    const label = series.name;
-    const lx = 10 + (idx % 5) * 140;
-    const ly = H + 14 + Math.floor(idx / 5) * 18;
-    const barOpacity = isHidden ? 0.25 : 1;
-    const txtOpacity = isHidden ? 0.3 : 0.85;
-    const decoration = isHidden ? "line-through" : "none";
-    legend += `<g data-legend="${idx}" style="cursor:pointer;">
-      <rect x="${lx - 4}" y="${ly - 14}" width="130" height="22" rx="4" fill="rgba(0,0,0,0.001)"/>
-      <rect class="cl-bar" x="${lx}" y="${ly - 7}" width="10" height="3" rx="1.5" fill="${color}" opacity="${barOpacity}"/>
-      <text class="cl-label" x="${lx + 14}" y="${ly + 1}" fill="var(--apple-text-secondary)" font-size="11" opacity="${txtOpacity}" text-decoration="${decoration}">${label}</text>
-    </g>`;
+  return grid.markup + seriesMarkup;
+}
+
+function renderDrawdownPanel(allSeries, visibleSeries, range, geometry, xPos, prefix) {
+  const grid = panelGrid(range, geometry, __("chart.drawdownPanel"));
+  const zeroY = grid.yPos(chartClamp(0, range.min, range.max));
+  const count = Math.max(visibleSeries.length, 1);
+  const step = Math.min(3.2, 15 / count);
+  let seriesMarkup = "";
+
+  visibleSeries.forEach((series, visibleIndex) => {
+    const color = LINE_COLORS[series.index % LINE_COLORS.length];
+    const offset = (visibleIndex - (count - 1) / 2) * step;
+    let bars = "";
+    series.points.forEach((point) => {
+      const value = chartMetricValue(point, "drawdown");
+      if (value === null) return;
+      const clipped = value < range.min || value > range.max;
+      const baseX = xPos(point.period);
+      const x = baseX + offset;
+      const y = grid.yPos(chartClamp(value, range.min, range.max));
+      const attrs = chartPointAttributes(series, point, baseX, "drawdown");
+      bars += `<line x1="${x}" y1="${zeroY}" x2="${x}" y2="${y}" stroke="${color}" stroke-width="${Math.max(1.4, step * 0.65)}" opacity="0.72"/>`;
+      if (clipped) {
+        bars += `<path d="M ${x - 3} ${y - 4} L ${x} ${y} L ${x + 3} ${y - 4} Z" fill="${color}"/>`;
+      }
+      bars += `<circle cx="${x}" cy="${y}" r="${clipped ? 2.8 : 1.9}" fill="${color}" stroke="var(--apple-bg)" stroke-width="0.7" ${attrs}/>`;
+    });
+    seriesMarkup += `<g id="${prefix}-${series.index}" data-chart-series="${series.index}">${bars}</g>`;
   });
 
-  const svgH = legend ? H + 20 + Math.ceil(allSeries.length / 5) * 18 : H;
+  return grid.markup + seriesMarkup;
+}
 
-  $("pcChartSvg").innerHTML = `<svg viewBox="0 0 ${W} ${svgH}" style="width:100%;height:auto;display:block;">
-    ${yGrid}
-    ${zeroLine}
-    ${seriesGroups}
-    ${xLabels}
-    ${legend}
-  </svg>`;
+function chartXAxis(periods, geometry, xPos, periodLabel) {
+  if (periods.length < 2) return "";
+  const maxLabels = 9;
+  const step = Math.max(1, Math.ceil(periods.length / maxLabels));
+  let labels = "";
+  periods.forEach((period, index) => {
+    if (index % step !== 0 && index !== periods.length - 1) return;
+    labels += `<text x="${xPos(period)}" y="${geometry.bottom - 7}" text-anchor="middle" fill="var(--apple-text-tertiary)" font-size="10">${escapeHtml(periodLabel(period))}</text>`;
+  });
+  return labels;
+}
 
-  $("pcChartWrap").style.display = "";
+function updateChartScaleControls() {
+  const focusButton = $("pcChartScaleFocus");
+  const fullButton = $("pcChartScaleFull");
+  if (focusButton) {
+    focusButton.classList.toggle("active", _chartScaleMode === "focus");
+    focusButton.setAttribute("aria-pressed", String(_chartScaleMode === "focus"));
+  }
+  if (fullButton) {
+    fullButton.classList.toggle("active", _chartScaleMode === "full");
+    fullButton.setAttribute("aria-pressed", String(_chartScaleMode === "full"));
+  }
+}
 
-  // Attach legend interactions (click on <g>, which covers bar + text + hit rect)
-  allSeries.forEach((_, idx) => {
-    const g = $("pcChartSvg").querySelector(`g[data-legend="${idx}"]`);
-    if (!g) return;
+function setChartScaleMode(mode) {
+  if (!["focus", "full"].includes(mode) || mode === _chartScaleMode) return;
+  _chartScaleMode = mode;
+  updateChartScaleControls();
+  if (_activeChartRender) _activeChartRender();
+}
 
-    // Click → toggle hidden, re-render
-    g.addEventListener("click", (e) => {
-      e.stopPropagation();
-      let newHidden;
-      if (_chartHidden.includes(idx)) {
-        newHidden = _chartHidden.filter((i) => i !== idx);
+function setChartSeriesOpacity(activeIndex, hiddenSet) {
+  const svg = $("pcChartSvg")?.querySelector("svg");
+  if (!svg) return;
+  svg.querySelectorAll("[data-chart-series]").forEach((group) => {
+    const index = Number(group.dataset.chartSeries);
+    group.style.opacity = activeIndex == null || index === activeIndex || hiddenSet.has(index) ? "1" : "0.12";
+  });
+}
+
+function renderChartLegend(allSeries, hiddenIndices, setHidden, rerender) {
+  const container = $("pcChartLegend");
+  if (!container) return;
+  const hiddenSet = new Set(hiddenIndices);
+  const visibleIndices = allSeries.map((series) => series.index).filter((index) => !hiddenSet.has(index));
+  const focusedIndex = visibleIndices.length === 1 ? visibleIndices[0] : null;
+
+  const buttons = allSeries.map((series) => {
+    const color = LINE_COLORS[series.index % LINE_COLORS.length];
+    const classes = ["pc-chart-legend-btn"];
+    if (hiddenSet.has(series.index)) classes.push("is-hidden");
+    if (focusedIndex === series.index) classes.push("is-focused");
+    return `<button type="button" class="${classes.join(" ")}" data-chart-legend="${series.index}">
+      <span class="pc-chart-legend-swatch" style="background:${color};"></span>
+      <span>${escapeHtml(series.name)}</span>
+    </button>`;
+  }).join("");
+  container.innerHTML = `<button type="button" class="pc-chart-show-all" data-chart-show-all>${escapeHtml(__("chart.showAll"))}</button>${buttons}`;
+
+  container.querySelector("[data-chart-show-all]")?.addEventListener("click", () => {
+    setHidden([]);
+    rerender();
+  });
+
+  container.querySelectorAll("[data-chart-legend]").forEach((button) => {
+    const index = Number(button.dataset.chartLegend);
+    button.addEventListener("click", (event) => {
+      let nextHidden;
+      if (event.ctrlKey || event.metaKey) {
+        const next = new Set(hiddenSet);
+        if (next.has(index)) next.delete(index);
+        else next.add(index);
+        nextHidden = next.size === allSeries.length ? [] : Array.from(next);
+      } else if (focusedIndex === index) {
+        nextHidden = [];
       } else {
-        newHidden = [..._chartHidden, idx];
+        nextHidden = allSeries.map((series) => series.index).filter((seriesIndex) => seriesIndex !== index);
       }
-      _chartHidden = newHidden;
-      renderMultiLineChart(_chartData, _chartSymbols, _chartHidden);
+      setHidden(nextHidden);
+      rerender();
     });
+    button.addEventListener("mouseenter", () => setChartSeriesOpacity(index, hiddenSet));
+    button.addEventListener("mouseleave", () => setChartSeriesOpacity(null, hiddenSet));
+  });
+}
 
-    // Hover → highlight only this series
-    g.addEventListener("mouseenter", () => {
-      const svgEl = $("pcChartSvg").querySelector("svg");
-      allSeries.forEach((_, i) => {
-        if (i === idx || _chartHidden.includes(i)) return;
-        const g2 = svgEl.querySelector(`#cs-${i}`);
-        if (g2) g2.style.opacity = "0.12";
-      });
-    });
+function positionChartTooltip(event, target) {
+  const plot = $("pcChartPlot");
+  const tooltip = $("pcChartTooltip");
+  if (!plot || !tooltip) return;
+  const plotRect = plot.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const clientX = event && Number.isFinite(event.clientX) ? event.clientX : targetRect.left + targetRect.width / 2;
+  const clientY = event && Number.isFinite(event.clientY) ? event.clientY : targetRect.top;
+  const desiredLeft = clientX - plotRect.left + plot.scrollLeft + 12;
+  const desiredTop = clientY - plotRect.top - tooltip.offsetHeight - 12;
+  tooltip.style.left = Math.max(8, Math.min(desiredLeft, plot.scrollWidth - tooltip.offsetWidth - 8)) + "px";
+  tooltip.style.top = Math.max(8, desiredTop) + "px";
+}
 
-    g.addEventListener("mouseleave", () => {
-      const svgEl = $("pcChartSvg").querySelector("svg");
-      allSeries.forEach((_, i) => {
-        if (_chartHidden.includes(i)) return;
-        const g2 = svgEl.querySelector(`#cs-${i}`);
-        if (g2) g2.style.opacity = "1";
-      });
-    });
+function showChartTooltip(event, target) {
+  const tooltip = $("pcChartTooltip");
+  const crosshair = $("pcChartSvg")?.querySelector("#pcChartCrosshair");
+  if (!tooltip) return;
+  const returnValue = chartNumber(target.dataset.return);
+  const drawdown = chartNumber(target.dataset.drawdown);
+  const peak = target.dataset.peak;
+  const trough = target.dataset.trough;
+  let html = `<div class="pc-chart-tooltip-title">${escapeHtml(target.dataset.symbol)} · ${escapeHtml(target.dataset.period)}</div>`;
+  html += `<div class="pc-chart-tooltip-row"><span class="pc-chart-tooltip-label">${escapeHtml(__("yearly.returnLabel"))}</span><span class="pc-chart-tooltip-value">${escapeHtml(formatPct(returnValue))}</span></div>`;
+  if (showDrawdownInCells()) {
+    html += `<div class="pc-chart-tooltip-row"><span class="pc-chart-tooltip-label">${escapeHtml(__("yearly.maxDrawdown"))}</span><span class="pc-chart-tooltip-value">${escapeHtml(formatPct(drawdown))}</span></div>`;
+    if (peak && trough) {
+      html += `<div class="pc-chart-tooltip-range">${escapeHtml(__("yearly.drawdownRange", {peak, trough}))}</div>`;
+    }
+  }
+  tooltip.innerHTML = html;
+  tooltip.hidden = false;
+  positionChartTooltip(event, target);
+  if (crosshair) {
+    crosshair.setAttribute("x1", target.dataset.chartX);
+    crosshair.setAttribute("x2", target.dataset.chartX);
+    crosshair.style.visibility = "visible";
+  }
+}
+
+function hideChartTooltip() {
+  const tooltip = $("pcChartTooltip");
+  const crosshair = $("pcChartSvg")?.querySelector("#pcChartCrosshair");
+  if (tooltip) tooltip.hidden = true;
+  if (crosshair) crosshair.style.visibility = "hidden";
+}
+
+function bindChartTooltip() {
+  const svg = $("pcChartSvg")?.querySelector("svg");
+  if (!svg) return;
+  svg.querySelectorAll("[data-chart-point]").forEach((point) => {
+    point.addEventListener("mouseenter", (event) => showChartTooltip(event, point));
+    point.addEventListener("mousemove", (event) => positionChartTooltip(event, point));
+    point.addEventListener("mouseleave", hideChartTooltip);
+    point.addEventListener("focus", (event) => showChartTooltip(event, point));
+    point.addEventListener("blur", hideChartTooltip);
+    point.addEventListener("click", (event) => showChartTooltip(event, point));
+  });
+  svg.addEventListener("mouseleave", hideChartTooltip);
+}
+
+function renderTrendChart(options) {
+  const { allSeries, periods, periodLabel, hiddenIndices, setHidden, prefix, rerender } = options;
+  if (!allSeries.length || !periods.length) return;
+
+  const hiddenSet = new Set(hiddenIndices);
+  let visibleSeries = allSeries.filter((series) => !hiddenSet.has(series.index));
+  if (!visibleSeries.length) visibleSeries = allSeries;
+
+  const returnValues = [];
+  const drawdownValues = [];
+  visibleSeries.forEach((series) => series.points.forEach((point) => {
+    const returnValue = chartMetricValue(point, "return");
+    const drawdown = chartMetricValue(point, "drawdown");
+    if (returnValue !== null) returnValues.push(returnValue);
+    if (drawdown !== null) drawdownValues.push(drawdown);
+  }));
+
+  const combined = showDrawdownInCells() && drawdownValues.length > 0;
+  const returnRange = computeChartRange(returnValues, _chartScaleMode);
+  const rawDrawdownRange = computeChartRange(drawdownValues, _chartScaleMode);
+  const drawdownMin = Math.max(-100, Math.min(rawDrawdownRange.min, -0.1));
+  const drawdownRange = {
+    ...rawDrawdownRange,
+    min: drawdownMin,
+    max: 0,
+    range: Math.abs(drawdownMin) || 1,
+  };
+  const maxAbsLabel = Math.max(
+    Math.abs(returnRange.min), Math.abs(returnRange.max),
+    combined ? Math.abs(drawdownRange.min) : 0,
+  );
+  const left = Math.max(52, maxAbsLabel.toFixed(1).length * 6.5 + 14);
+  const width = 700;
+  const right = 18;
+  const returnHeight = 220;
+  const drawdownTop = returnHeight + 8;
+  const drawdownHeight = combined ? 142 : 0;
+  const svgHeight = combined ? drawdownTop + drawdownHeight : returnHeight;
+  const returnGeometry = {
+    top: 0, bottom: returnHeight, plotTop: 23,
+    plotBottom: returnHeight - (combined ? 10 : 29), left, right, width,
+  };
+  const drawdownGeometry = {
+    top: drawdownTop, bottom: svgHeight, plotTop: drawdownTop + 23,
+    plotBottom: svgHeight - 29, left, right, width,
+  };
+  const minPeriod = periods[0];
+  const maxPeriod = periods[periods.length - 1];
+  const chartWidth = width - left - right;
+  const xPos = (period) => left + ((period - minPeriod) / (maxPeriod - minPeriod || 1)) * chartWidth;
+
+  let markup = renderReturnPanel(allSeries, visibleSeries, returnRange, returnGeometry, xPos, prefix + "-return");
+  if (combined) {
+    markup += renderDrawdownPanel(allSeries, visibleSeries, drawdownRange, drawdownGeometry, xPos, prefix + "-drawdown");
+  }
+  const xGeometry = combined ? drawdownGeometry : returnGeometry;
+  markup += chartXAxis(periods, xGeometry, xPos, periodLabel);
+  markup += `<line id="pcChartCrosshair" x1="0" y1="${returnGeometry.plotTop}" x2="0" y2="${xGeometry.plotBottom}" stroke="var(--apple-text-tertiary)" stroke-width="1" stroke-dasharray="3,3" opacity="0.55" style="visibility:hidden;pointer-events:none;"/>`;
+
+  $("pcChartSvg").innerHTML = `<svg viewBox="0 0 ${width} ${svgHeight}" style="width:100%;height:auto;display:block;">${markup}</svg>`;
+  $("pcChartWrap").style.display = "";
+  updateChartScaleControls();
+
+  const clippedCount = returnRange.clipped + (combined ? drawdownRange.clipped : 0);
+  const note = $("pcChartScaleNote");
+  if (note) {
+    note.textContent = _chartScaleMode === "focus" && clippedCount > 0
+      ? __("chart.focusedOutliers", {n: clippedCount})
+      : "";
+  }
+
+  renderChartLegend(allSeries, hiddenIndices, setHidden, rerender);
+  bindChartTooltip();
+}
+
+function renderMultiLineChart(data, symbolsList, hiddenIndices, drawdowns) {
+  const allSeries = [];
+  const allPeriods = new Set();
+  for (const symbolEntry of symbolsList) {
+    const yearly = data[symbolEntry.symbol];
+    if (!yearly) continue;
+    const points = Object.entries(yearly)
+      .map(([year, value]) => {
+        const numericYear = parseInt(year, 10);
+        const drawdown = drawdowns && drawdowns[symbolEntry.symbol]
+          ? drawdowns[symbolEntry.symbol][String(year)]
+          : null;
+        return {period: numericYear, label: String(numericYear), value: chartNumber(value), drawdown};
+      })
+      .filter((point) => point.value !== null)
+      .sort((first, second) => first.period - second.period);
+    if (points.length < 2) continue;
+    const index = allSeries.length;
+    allSeries.push({index, symbol: symbolEntry.symbol, name: symbolEntry.name || symbolEntry.symbol, points});
+    points.forEach((point) => allPeriods.add(point.period));
+  }
+  if (!allSeries.length) return;
+
+  _chartData = data;
+  _chartDrawdowns = drawdowns || {};
+  _chartSymbols = symbolsList;
+  const periods = Array.from(allPeriods).sort((a, b) => a - b);
+  const rerender = () => renderMultiLineChart(_chartData, _chartSymbols, _chartHidden, _chartDrawdowns);
+  _activeChartRender = rerender;
+  const title = document.querySelector("#pcChartWrap .pc-chart-title");
+  if (title) title.textContent = __("yearly.chartTitle");
+  renderTrendChart({
+    allSeries,
+    periods,
+    periodLabel: (period) => String(period),
+    hiddenIndices: hiddenIndices || [],
+    setHidden: (next) => { _chartHidden = next; },
+    prefix: "yearly-series",
+    rerender,
   });
 }
 
 // ─── Monthly batch view (symbols × months table for a specific year) ───
 
-function renderMonthlyChart(year, symKeys, monthMap, annualReturns) {
+function renderMonthlyChart(year, symKeys, monthMap, monthDrawdownMap) {
   const nameLookup = {};
-  for (const s of symbols) nameLookup[s.symbol] = s.name || s.symbol;
+  for (const symbolEntry of symbols) nameLookup[symbolEntry.symbol] = symbolEntry.name || symbolEntry.symbol;
 
   const allSeries = [];
-  for (const sym of symKeys) {
-    const pts = [];
-    for (let m = 1; m <= 12; m++) {
-      const val = monthMap[sym][m];
-      if (val !== null) pts.push({ month: m, value: val });
-    }
-    if (pts.length > 0) {
-      allSeries.push({ symbol: sym, name: nameLookup[sym] || sym, points: pts });
-    }
-  }
-
-  if (allSeries.length === 0) return;
-
-  const hiddenSet = new Set(_mChartHidden);
-  const visibleSeries = allSeries.filter((_, i) => !hiddenSet.has(i));
-
-  const W = 700, H = 220, PAD = { top: 20, right: 16, bottom: 30, left: 48 };
-
-  const allVals = [];
-  visibleSeries.forEach(s => s.points.forEach(p => allVals.push(p.value)));
-  if (allVals.length === 0) {
-    // All hidden — show empty chart
-  }
-  const minVal = Math.min(...allVals, 0);
-  const maxVal = Math.max(...allVals, 0);
-  const range = maxVal - minVal || 1;
-  const yMin = minVal - range * 0.1;
-  const yMax = maxVal + range * 0.1;
-  const yRange = yMax - yMin;
-  const cw = W - PAD.left - PAD.right;
-  const ch = H - PAD.top - PAD.bottom;
-  const xPos = (m) => PAD.left + ((m - 1) / 11) * cw;
-  const yPos = (v) => PAD.top + ch - ((v - yMin) / yRange) * ch;
-
-  // Y-axis grid
-  const yTicks = 5;
-  let yGrid = "";
-  for (let i = 0; i <= yTicks; i++) {
-    const v = yMin + (yRange * i) / yTicks;
-    const y = yPos(v);
-    yGrid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="var(--apple-divider)" stroke-width="1"/>`;
-    yGrid += `<text x="${PAD.left - 6}" y="${y + 4}" text-anchor="end" fill="var(--apple-text-tertiary)" font-size="11">${v.toFixed(1)}%</text>`;
-  }
-  const zeroY = yPos(0);
-  const zeroLine = (zeroY >= PAD.top && zeroY <= H - PAD.bottom)
-    ? `<line x1="${PAD.left}" y1="${zeroY}" x2="${W - PAD.right}" y2="${zeroY}" stroke="var(--apple-text-tertiary)" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>` : "";
-
-  // X-axis: month labels
-  let xLabels = "";
-  for (let m = 1; m <= 12; m++) {
-    xLabels += `<text x="${xPos(m)}" y="${H - 8}" text-anchor="middle" fill="var(--apple-text-tertiary)" font-size="11">${__("yearly.monthLabel", {m: m})}</text>`;
-  }
-
-  // Legend — all series, hidden ones greyed out
-  let legend = "";
-  allSeries.forEach((series, idx) => {
-    const isHidden = hiddenSet.has(idx);
-    const color = LINE_COLORS[idx % LINE_COLORS.length];
-    const lx = 10 + (idx % 5) * 140;
-    const ly = H + 14 + Math.floor(idx / 5) * 18;
-    const barOpacity = isHidden ? 0.25 : 1;
-    const txtOpacity = isHidden ? 0.3 : 0.85;
-    const decoration = isHidden ? "line-through" : "none";
-    legend += `<g data-legend="${idx}" style="cursor:pointer;">
-      <rect x="${lx - 4}" y="${ly - 14}" width="130" height="22" rx="4" fill="rgba(0,0,0,0.001)"/>
-      <rect x="${lx}" y="${ly - 7}" width="10" height="3" rx="1.5" fill="${color}" opacity="${barOpacity}"/>
-      <text x="${lx + 14}" y="${ly + 1}" fill="var(--apple-text-secondary)" font-size="11" opacity="${txtOpacity}" text-decoration="${decoration}">${series.name}</text>
-    </g>`;
-  });
-
-  // Series groups (lines + dots), per-series for hover interaction
-  let seriesGroups = "";
-  visibleSeries.forEach((series, vi) => {
-    const realIdx = allSeries.indexOf(series);
-    const color = LINE_COLORS[vi % LINE_COLORS.length];
-    let gLines = "", gDots = "";
-    for (let i = 0; i < series.points.length - 1; i++) {
-      const x1 = xPos(series.points[i].month), y1 = yPos(series.points[i].value);
-      const x2 = xPos(series.points[i + 1].month), y2 = yPos(series.points[i + 1].value);
-      gLines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/>`;
-    }
-    series.points.forEach(p => {
-      gDots += `<circle cx="${xPos(p.month)}" cy="${yPos(p.value)}" r="2.5" fill="${color}" stroke="var(--apple-bg)" stroke-width="0.8"/>`;
-    });
-    seriesGroups += `<g id="ms-${realIdx}">${gLines}${gDots}</g>`;
-  });
-
-  const svgH = legend ? H + 20 + Math.ceil(allSeries.length / 5) * 18 : H;
-  $("pcChartSvg").innerHTML = `<svg viewBox="0 0 ${W} ${svgH}" style="width:100%;height:auto;display:block;">
-    ${yGrid} ${zeroLine} ${seriesGroups} ${xLabels} ${legend}
-  </svg>`;
-
-  // Update chart header & show
-  const titleEl = document.querySelector("#pcChartWrap .pc-chart-title");
-  if (titleEl) titleEl.textContent = year + " " + __("chart.monthlyTrend");
-  $("pcChartWrap").style.display = "";
-
-  // Attach legend interactions
-  const svgEl = $("pcChartSvg").querySelector("svg");
-  allSeries.forEach((_, idx) => {
-    const g = svgEl?.querySelector(`g[data-legend="${idx}"]`);
-    if (!g) return;
-
-    g.addEventListener("click", (e) => {
-      e.stopPropagation();
-      _mChartHidden = _mChartHidden.includes(idx)
-        ? _mChartHidden.filter(i => i !== idx)
-        : [..._mChartHidden, idx];
-      renderMonthlyChart(year, symKeys, monthMap, annualReturns);
-    });
-
-    g.addEventListener("mouseenter", () => {
-      allSeries.forEach((_, i) => {
-        if (i === idx || _mChartHidden.includes(i)) return;
-        const g2 = svgEl?.querySelector(`#ms-${i}`);
-        if (g2) g2.style.opacity = "0.12";
+  for (const symbol of symKeys) {
+    const points = [];
+    for (let month = 1; month <= 12; month++) {
+      const value = chartNumber(monthMap[symbol][month]);
+      if (value === null) continue;
+      points.push({
+        period: month,
+        label: __("yearly.monthLabel", {m: month}),
+        value,
+        drawdown: monthDrawdownMap[symbol] && monthDrawdownMap[symbol][month],
       });
-    });
+    }
+    if (points.length) {
+      allSeries.push({index: allSeries.length, symbol, name: nameLookup[symbol] || symbol, points});
+    }
+  }
+  if (!allSeries.length) return;
 
-    g.addEventListener("mouseleave", () => {
-      allSeries.forEach((_, i) => {
-        if (_mChartHidden.includes(i)) return;
-        const g2 = svgEl?.querySelector(`#ms-${i}`);
-        if (g2) g2.style.opacity = "1";
-      });
-    });
+  const periods = Array.from({length: 12}, (_, index) => index + 1);
+  const rerender = () => renderMonthlyChart(year, symKeys, monthMap, monthDrawdownMap);
+  _activeChartRender = rerender;
+  const title = document.querySelector("#pcChartWrap .pc-chart-title");
+  if (title) title.textContent = year + " " + __("chart.monthlyTrend");
+  renderTrendChart({
+    allSeries,
+    periods,
+    periodLabel: (period) => __("yearly.monthLabel", {m: period}),
+    hiddenIndices: _mChartHidden,
+    setHidden: (next) => { _mChartHidden = next; },
+    prefix: "monthly-series",
+    rerender,
   });
+}
+
+function initYearlyChartControls() {
+  const focusButton = $("pcChartScaleFocus");
+  const fullButton = $("pcChartScaleFull");
+  if (focusButton && !focusButton.dataset.bound) {
+    focusButton.dataset.bound = "1";
+    focusButton.addEventListener("click", () => setChartScaleMode("focus"));
+  }
+  if (fullButton && !fullButton.dataset.bound) {
+    fullButton.dataset.bound = "1";
+    fullButton.addEventListener("click", () => setChartScaleMode("full"));
+  }
+  updateChartScaleControls();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initYearlyChartControls);
+} else {
+  initYearlyChartControls();
 }

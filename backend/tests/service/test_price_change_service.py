@@ -483,6 +483,51 @@ class TestFetchReturnDetail:
             },
         ]
 
+    def test_period_drawdown_includes_previous_close_as_boundary(self):
+        dates = [
+            datetime(2023, 12, 29, tzinfo=timezone.utc),
+            datetime(2024, 1, 2, tzinfo=timezone.utc),
+            datetime(2024, 1, 31, tzinfo=timezone.utc),
+            datetime(2024, 2, 1, tzinfo=timezone.utc),
+            datetime(2024, 2, 29, tzinfo=timezone.utc),
+        ]
+
+        yearly = svc._compute_period_drawdowns(
+            [int(item.timestamp()) for item in dates],
+            [100.0, 80.0, 90.0, 72.0, 81.0],
+            period="year",
+            include_previous_close=True,
+        )
+        monthly = svc._compute_period_drawdowns(
+            [int(item.timestamp()) for item in dates],
+            [100.0, 80.0, 90.0, 72.0, 81.0],
+            period="month",
+            include_previous_close=True,
+        )
+
+        assert yearly[0] == {
+            "year": 2024,
+            "max_drawdown": -28.0,
+            "peak_date": "2023-12-29",
+            "trough_date": "2024-02-01",
+        }
+        assert monthly[:2] == [
+            {
+                "year": 2024,
+                "month": 2,
+                "max_drawdown": -20.0,
+                "peak_date": "2024-01-31",
+                "trough_date": "2024-02-01",
+            },
+            {
+                "year": 2024,
+                "month": 1,
+                "max_drawdown": -20.0,
+                "peak_date": "2023-12-29",
+                "trough_date": "2024-01-02",
+            },
+        ]
+
     def test_yearly_runup_resets_trough_each_calendar_year(self):
         dates = [
             datetime(2023, 1, 2, tzinfo=timezone.utc),
@@ -1021,8 +1066,14 @@ class TestFetchYearlyReturns:
         result = svc.fetch_yearly_returns([{"symbol": "AAPL", "type": "stock"}])
         assert "years" in result
         assert "data" in result
+        assert "drawdowns" in result
         assert "meta" in result
         assert "AAPL" in result["data"]
+        assert "AAPL" in result["drawdowns"]
+        assert all(
+            "max_drawdown" in row
+            for row in result["drawdowns"]["AAPL"].values()
+        )
         assert result["meta"]["AAPL"]["error"] is None
         diagnose("AAPL meta", result["meta"]["AAPL"])
         track_coverage(MOD, 3)
@@ -1073,6 +1124,7 @@ class TestFetchYearlyReturns:
         """Empty list returns empty data."""
         result = svc.fetch_yearly_returns([])
         assert result["data"] == {}
+        assert result["drawdowns"] == {}
         assert result["meta"] == {}
         assert result["years"] == []
         track_coverage(MOD, 1)
@@ -1129,7 +1181,8 @@ class TestFetchMonthlyReturns:
         mock_fetch_daily_series.return_value = three_year_series
         result = svc.fetch_monthly_returns("AAPL", "stock", 2024)
         assert len(result) == 12
-        assert all("month" in r and "return" in r for r in result)
+        assert all("month" in r and "return" in r and "max_drawdown" in r for r in result)
+        assert all("peak_date" in r and "trough_date" in r for r in result)
         diagnose("monthly results sample", [(r["month"], r["return"]) for r in result[:3]])
         track_coverage(MOD, 2)
 
@@ -1139,6 +1192,7 @@ class TestFetchMonthlyReturns:
         result = svc.fetch_monthly_returns("XXX", "futures", 2024)
         assert len(result) == 12
         assert all(r["return"] is None for r in result)
+        assert all(r["max_drawdown"] is None for r in result)
         track_coverage(MOD, 1)
 
     def test_error_series(self, mock_fetch_daily_series, error_series):
@@ -1147,6 +1201,7 @@ class TestFetchMonthlyReturns:
         result = svc.fetch_monthly_returns("AAPL", "stock", 2024)
         assert len(result) == 12
         assert all(r["return"] is None for r in result)
+        assert all(r["max_drawdown"] is None for r in result)
         track_coverage(MOD, 1)
 
 
@@ -1196,9 +1251,11 @@ class TestFetchMonthlyReturnsBatch:
             {"symbol": "GOOGL", "type": "stock"},
         ]
         result = svc.fetch_monthly_returns_batch(symbols, 2024)
-        assert "AAPL" in result
-        assert "GOOGL" in result
-        assert len(result["AAPL"]) == 12
+        assert "AAPL" in result["data"]
+        assert "GOOGL" in result["data"]
+        assert len(result["data"]["AAPL"]) == 12
+        assert "2024" in result["drawdowns"]["AAPL"]
+        assert "max_drawdown" in result["drawdowns"]["AAPL"]["2024"]
         track_coverage(MOD, 2)
 
 

@@ -11,7 +11,7 @@ GlobalAssetHistory 是一个跨资产历史收益查询、市场分析与投资�
 | 功能 | 路径 | 主要能力 |
 | --- | --- | --- |
 | 市场热力图 | `/heatmap` | 全球大盘情绪；美股、港股、全球热门股票、数字货币和 A 股 Treemap；支持日/周/月/季/年周期和成交额/市值/涨跌幅权重 |
-| 历年涨跌幅 | `/yearly` | 多资产年度收益热力表、年度走势、年 → 月 → 日钻取、预设组合和 CSV 导出 |
+| 历年涨跌幅 | `/yearly` | 多资产年度/月度收益与最大回撤热力表、聚焦/完整坐标的收益-回撤双面板趋势图、年 → 月 → 日钻取、预设组合和 CSV 导出 |
 | 股票详情 | `/detail` | 收益概览、CAGR、波动率、回撤与修复、收益质量、收益日历、复权 OHLC 图、估值快照及美股历史 PE/PB/ROE |
 | 美股对比 | `/stock-compare` | 同时比较 2–8 只美股的年度综合收益、涨跌幅、税后分红、最大回撤和二维聚合结果 |
 | 数据下载 | `/download` | 按代码或名称搜索标的，预览并下载多周期 OHLCV JSON；周/月/年数据由日线聚合 |
@@ -50,7 +50,7 @@ GlobalAssetHistory 是一个跨资产历史收益查询、市场分析与投资�
 | 图表 | 原生 SVG，自实现折线图、热力图和 Treemap 布局 |
 | 数据请求 | `requests`、`curl_cffi`（可用时模拟浏览器 TLS） |
 | 缓存 | L1 进程内存 + L2 Upstash Redis/Vercel KV + L3 JSON 快照 |
-| 测试 | pytest，当前收集 484 个测试 |
+| 测试 | pytest，当前收集 495 个测试 |
 | 部署 | Vercel 静态资源 + Python Serverless Function |
 
 ### 后端模块
@@ -197,9 +197,9 @@ Redis 两套变量会自动识别，优先使用 `UPSTASH_*`。
 | GET | `/config` | 站点、资产组和颜色配置 |
 | GET | `/symbol-search` | 按代码或名称搜索受支持标的 |
 | GET | `/market-pulse` | 上证、KOSPI、标普500、纳指100和 BTC 最新价格及日涨跌幅 |
-| POST | `/yearly` | 多资产年度收益 |
-| POST | `/monthly` | 单资产月度收益 |
-| POST | `/monthly-batch` | 多资产批量月度收益 |
+| POST | `/yearly` | 多资产年度收益与最大回撤 |
+| POST | `/monthly` | 单资产月度收益与最大回撤 |
+| POST | `/monthly-batch` | 多资产批量月度收益与最大回撤 |
 | POST | `/daily` | 单资产指定月份日收益 |
 | POST | `/detail` | 单标的收益概览、质量、估值和日/月/年明细 |
 | POST | `/fundamentals-history` | 美股历史 PE、PB 和年度 ROE |

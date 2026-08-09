@@ -14,6 +14,7 @@ let symbols = []; // [{symbol, type}, ...]
 let PRESETS = []; // [{key, label, symbols}, ...] loaded from backend
 let _currentSymKeys = []; // symbols currently shown in table columns
 let _lastYearlyData = null; // {years, data} from last fetch, for line charts
+let _lastMonthlyData = null; // {year, data, drawdowns} from last monthly batch
 let _mChartHidden = []; // hidden series indices for monthly chart
 let _sortBy = null; // symbol key currently sorted (null = default year desc)
 let _sortDir = "desc"; // "asc" or "desc"
@@ -46,6 +47,7 @@ const statusText = $("settingsConnLabel");
 
 const yearSelect = $("pcYearSelect");
 const yearList = $("pcYearList");
+const metricDisplay = $("pcMetricDisplay");
 
 // ─── Backtest DOM refs ───
 const btWrap = $("pcBacktest");
@@ -258,6 +260,55 @@ function formatPct(val) {
   return `${sign}${val.toFixed(2)}%`;
 }
 
+function drawdownValue(entry) {
+  if (Number.isFinite(entry)) return Number(entry);
+  const value = entry && entry.max_drawdown;
+  return Number.isFinite(value) ? Number(value) : null;
+}
+
+function showDrawdownInCells() {
+  return !metricDisplay || metricDisplay.value !== "return";
+}
+
+function metricCellMarkup(returnValue, drawdownEntry) {
+  const returnText = formatPct(returnValue);
+  if (!showDrawdownInCells() || returnValue == null) {
+    return `<span class="pc-cell-return">${escapeHtml(returnText)}</span>`;
+  }
+  const drawdown = drawdownValue(drawdownEntry);
+  return `<span class="pc-return-stack">
+    <span class="pc-cell-return">${escapeHtml(returnText)}</span>
+    <span class="pc-cell-drawdown">${escapeHtml(__("yearly.drawdownShort"))} ${escapeHtml(formatPct(drawdown))}</span>
+  </span>`;
+}
+
+function metricCellTitle(returnValue, drawdownEntry) {
+  const parts = [__("yearly.returnLabel") + ": " + formatPct(returnValue)];
+  if (!showDrawdownInCells()) return parts[0];
+  const drawdown = drawdownValue(drawdownEntry);
+  let drawdownText = __("yearly.maxDrawdown") + ": " + formatPct(drawdown);
+  if (drawdownEntry && drawdownEntry.peak_date && drawdownEntry.trough_date) {
+    drawdownText += " (" + __("yearly.drawdownRange", {
+      peak: drawdownEntry.peak_date,
+      trough: drawdownEntry.trough_date,
+    }) + ")";
+  }
+  parts.push(drawdownText);
+  return parts.join(" · ");
+}
+
+function compoundedAnnualReturn(months) {
+  let product = 1;
+  let hasData = false;
+  for (const month of months || []) {
+    if (month.return !== null && month.return !== undefined) {
+      product *= 1 + month.return / 100;
+      hasData = true;
+    }
+  }
+  return hasData ? roundTo((product - 1) * 100, 2) : null;
+}
+
 // ─── API call ───
 
 async function fetchData() {
@@ -281,9 +332,11 @@ async function fetchData() {
   if (btWrap) btWrap.style.display = "none";
   if (btResult) btResult.style.display = "none";
   _chartData = null;
+  _chartDrawdowns = null;
   _chartSymbols = null;
   _chartHidden = [];
   _lastYearlyData = null;
+  _lastMonthlyData = null;
 
   showError(null);
   setLoading(true);
@@ -331,6 +384,7 @@ async function fetchData() {
 
 function renderTable(result) {
   const { years, data } = result;
+  const drawdowns = result.drawdowns || {};
 
   if (!years || years.length === 0 || Object.keys(data).length === 0) {
     empty.innerHTML =
@@ -411,9 +465,10 @@ function renderTable(result) {
       for (const sym of symKeys) {
         const val = data[sym] && data[sym][year];
         const pct = val != null ? val : null;
-        const formatted = pct !== null ? formatPct(pct) : "—";
         const colors = pct !== null ? cellColor(pct, minVal, maxVal) : { bg: "transparent", text: "var(--apple-text-tertiary)" };
-        cells += `<td class="pc-cell" data-symbol="${sym}" data-year="${year}" data-type="${typeLookup[sym]}" style="background:${colors.bg};color:${colors.text};cursor:pointer;">${formatted}</td>`;
+        const drawdown = drawdowns[sym] && drawdowns[sym][year];
+        const title = metricCellTitle(pct, drawdown);
+        cells += `<td class="pc-cell" data-symbol="${sym}" data-year="${year}" data-type="${typeLookup[sym]}" title="${escapeHtml(title)}" style="background:${colors.bg};color:${colors.text};cursor:pointer;">${metricCellMarkup(pct, drawdown)}</td>`;
       }
       return `<tr>${cells}</tr>`;
     })
@@ -429,15 +484,16 @@ function renderTable(result) {
         _sortBy = sym;
         _sortDir = "desc";
       }
-      renderTable({ years, data }); // re-render with sort
+      renderTable(result); // re-render with sort
     });
   });
 
   // Multi-line chart
   _chartData = data;
+  _chartDrawdowns = drawdowns;
   _chartSymbols = activeSymbols;
   _chartHidden = [];
-  renderMultiLineChart(data, activeSymbols, []);
+  renderMultiLineChart(data, activeSymbols, [], drawdowns);
 
   // Populate backtest options and show the section
   try { populateBacktestOptions(); } catch (btErr) { console.error("bt opt fail:", btErr); }
@@ -516,6 +572,7 @@ async function fetchMonthlyBatch(year) {
   if (mc) mc.innerHTML = "";
   renderMetaInfo(null);
   _lastYearlyData = null;
+  _lastMonthlyData = null;
   _lastFetchFn = function () { fetchMonthlyBatch(year); };
 
   try {
@@ -532,6 +589,7 @@ async function fetchMonthlyBatch(year) {
 
     const result = await resp.json();
     setConnected(true);
+    _lastMonthlyData = result;
     _lastFetchTime = Date.now();
     saveState();
     updateFreshness();
@@ -548,6 +606,7 @@ async function fetchMonthlyBatch(year) {
 
 function renderMonthlyTable(result) {
   const { year, data } = result;
+  const drawdowns = result.drawdowns || {};
 
   const symKeys = Object.keys(data).filter(k => data[k] && data[k].some(m => m.return !== null));
   if (symKeys.length === 0) {
@@ -577,25 +636,19 @@ function renderMonthlyTable(result) {
 
   // Build monthMap[sym][month] = return
   const monthMap = {};
+  const monthDrawdownMap = {};
   for (const sym of symKeys) {
     monthMap[sym] = {};
+    monthDrawdownMap[sym] = {};
     for (const m of data[sym]) {
       monthMap[sym][m.month] = m.return;
+      monthDrawdownMap[sym][m.month] = m;
     }
-  }
-
-  // Annual return from monthly data (compounded)
-  function annualReturn(months) {
-    let product = 1, hasData = false;
-    for (const m of months) {
-      if (m.return !== null) { product *= (1 + m.return / 100); hasData = true; }
-    }
-    return hasData ? roundTo((product - 1) * 100, 2) : null;
   }
 
   const annualReturns = {};
   for (const sym of symKeys) {
-    annualReturns[sym] = annualReturn(data[sym]);
+    annualReturns[sym] = compoundedAnnualReturn(data[sym]);
   }
 
   // Body rows: 12 months then annual total
@@ -604,9 +657,9 @@ function renderMonthlyTable(result) {
     let cells = `<td>${__("yearly.monthLabel", {m: m})}</td>`;
     for (const sym of symKeys) {
       const val = monthMap[sym][m];
-      const formatted = val !== null ? formatPct(val) : "—";
       const clr = val !== null ? cellColor(val, minVal, maxVal) : { bg: "transparent", text: "var(--apple-text-tertiary)" };
-      cells += `<td style="background:${clr.bg};color:${clr.text};">${formatted}</td>`;
+      const drawdown = monthDrawdownMap[sym][m];
+      cells += `<td title="${escapeHtml(metricCellTitle(val, drawdown))}" style="background:${clr.bg};color:${clr.text};">${metricCellMarkup(val, drawdown)}</td>`;
     }
     rows.push(`<tr>${cells}</tr>`);
   }
@@ -615,9 +668,9 @@ function renderMonthlyTable(result) {
   let annualCells = `<td style="font-weight:600;">${__("yearly.annualTotal")}</td>`;
   for (const sym of symKeys) {
     const val = annualReturns[sym];
-    const formatted = val !== null ? formatPct(val) : "—";
     const clr = val !== null ? cellColor(val, minVal, maxVal) : { bg: "transparent", text: "var(--apple-text-tertiary)" };
-    annualCells += `<td style="background:${clr.bg};color:${clr.text};font-weight:600;">${formatted}</td>`;
+    const drawdown = drawdowns[sym] && drawdowns[sym][String(year)];
+    annualCells += `<td title="${escapeHtml(metricCellTitle(val, drawdown))}" style="background:${clr.bg};color:${clr.text};font-weight:600;">${metricCellMarkup(val, drawdown)}</td>`;
   }
   rows.push(`<tr style="border-top:2px solid var(--apple-divider);">${annualCells}</tr>`);
 
@@ -635,7 +688,7 @@ function renderMonthlyTable(result) {
 
   // Render monthly trend chart (reset hidden state)
   _mChartHidden = [];
-  renderMonthlyChart(year, symKeys, monthMap, annualReturns);
+  renderMonthlyChart(year, symKeys, monthMap, monthDrawdownMap);
 }
 
 function roundTo(val, decimals) {
@@ -652,6 +705,7 @@ function saveState() {
       minRange: minRange.value,
       maxRange: maxRange.value,
       selectedYear: yearSelect ? yearSelect.value : "",
+      metricDisplay: metricDisplay ? metricDisplay.value : "combined",
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (_) { /* quota exceeded or private browsing — silently ignore */ }
@@ -672,6 +726,9 @@ function restoreState() {
     if (state.minRange != null) minRange.value = state.minRange;
     if (state.maxRange != null) maxRange.value = state.maxRange;
     if (state.selectedYear && yearSelect) yearSelect.value = state.selectedYear;
+    if (metricDisplay && ["combined", "return"].includes(state.metricDisplay)) {
+      metricDisplay.value = state.metricDisplay;
+    }
     return symbols.length > 0;
   } catch (_) {
     return false;
@@ -698,33 +755,80 @@ function updateFreshness() {
 // ─── CSV export ───
 
 function exportCSV() {
-  if (!_lastYearlyData || !_lastYearlyData.years || !_lastYearlyData.data) return;
-  var data = _lastYearlyData.data;
-  var years = _lastYearlyData.years;
+  var result = _lastMonthlyData || _lastYearlyData;
+  if (!result || !result.data) return;
+  var data = result.data;
+  var combined = showDrawdownInCells();
 
   // Determine active symbols
   var activeSymbols = symbols.filter(function (s) {
     var d = data[s.symbol];
-    return d && Object.keys(d).length > 0;
+    return d && (Array.isArray(d) ? d.some(function (m) { return m.return != null; }) : Object.keys(d).length > 0);
   });
   if (activeSymbols.length === 0) return;
 
   var symKeys = activeSymbols.map(function (s) { return s.symbol; });
-
-  // Build CSV: BOM for Excel Chinese compatibility
   var rows = [];
-  rows.push(__("yearly.colYear") + "," + symKeys.join(","));
-
-  years.forEach(function (year) {
-    var cells = [String(year)];
-    symKeys.forEach(function (sym) {
-      var val = data[sym] && data[sym][year];
-      cells.push(val != null ? val.toFixed(2) : "");
-    });
-    rows.push(cells.join(","));
+  var headers = [
+    _lastMonthlyData ? String(_lastMonthlyData.year) : __("yearly.colYear"),
+  ];
+  symKeys.forEach(function (sym) {
+    headers.push(combined ? sym + " " + __("yearly.returnShort") : sym);
+    if (combined) headers.push(sym + " " + __("yearly.maxDrawdown"));
   });
+  rows.push(headers);
 
-  var csv = "﻿" + rows.join("\n");
+  if (_lastMonthlyData) {
+    for (var month = 1; month <= 12; month++) {
+      var monthCells = [__("yearly.monthLabel", {m: month})];
+      symKeys.forEach(function (sym) {
+        var entry = (data[sym] || []).find(function (item) { return item.month === month; });
+        monthCells.push(entry && entry.return != null ? entry.return.toFixed(2) : "");
+        if (combined) {
+          var monthlyDrawdown = drawdownValue(entry);
+          monthCells.push(monthlyDrawdown != null ? monthlyDrawdown.toFixed(2) : "");
+        }
+      });
+      rows.push(monthCells);
+    }
+    var annualCells = [__("yearly.annualTotal")];
+    symKeys.forEach(function (sym) {
+      var annualReturn = compoundedAnnualReturn(data[sym]);
+      annualCells.push(annualReturn != null ? annualReturn.toFixed(2) : "");
+      if (combined) {
+        var annualEntry = _lastMonthlyData.drawdowns
+          && _lastMonthlyData.drawdowns[sym]
+          && _lastMonthlyData.drawdowns[sym][String(_lastMonthlyData.year)];
+        var annualDrawdown = drawdownValue(annualEntry);
+        annualCells.push(annualDrawdown != null ? annualDrawdown.toFixed(2) : "");
+      }
+    });
+    rows.push(annualCells);
+  } else {
+    (_lastYearlyData.years || []).forEach(function (year) {
+      var cells = [String(year)];
+      symKeys.forEach(function (sym) {
+        var val = data[sym] && data[sym][year];
+        cells.push(val != null ? val.toFixed(2) : "");
+        if (combined) {
+          var entry = _lastYearlyData.drawdowns
+            && _lastYearlyData.drawdowns[sym]
+            && _lastYearlyData.drawdowns[sym][year];
+          var drawdown = drawdownValue(entry);
+          cells.push(drawdown != null ? drawdown.toFixed(2) : "");
+        }
+      });
+      rows.push(cells);
+    });
+  }
+
+  function csvCell(value) {
+    var text = String(value == null ? "" : value);
+    return /[",\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+  }
+  var csv = "﻿" + rows.map(function (row) {
+    return row.map(csvCell).join(",");
+  }).join("\n");
   var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   var url = URL.createObjectURL(blob);
   var a = document.createElement("a");
@@ -789,6 +893,16 @@ async function init() {
   var csvBtn = $("pcExportCsv");
   if (csvBtn) csvBtn.addEventListener("click", exportCSV);
 
+  if (metricDisplay) {
+    metricDisplay.addEventListener("change", function () {
+      saveState();
+      var monthlyContainer = $("pcMonthlyContainer");
+      if (monthlyContainer) monthlyContainer.innerHTML = "";
+      if (_lastYearlyData) renderTable(_lastYearlyData);
+      else if (_lastMonthlyData) renderMonthlyTable(_lastMonthlyData);
+    });
+  }
+
   var paramsToggle = $("pcYearlyParamsToggle");
   if (paramsToggle) {
     paramsToggle.addEventListener("click", function () {
@@ -830,6 +944,7 @@ async function init() {
     if (mc) mc.innerHTML = "";
     $("pcChartWrap").style.display = "none";
     _chartData = null;
+    _chartDrawdowns = null;
     _chartSymbols = null;
     _chartHidden = [];
     _lastYearlyData = null;

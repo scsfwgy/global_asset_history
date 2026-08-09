@@ -658,6 +658,11 @@ body {
     .site-url { align-self: flex-start; }
     .controls-bar { flex-direction: column; align-items: stretch; }
     .control-group { justify-content: space-between; }
+    #pcYearlyParamsPanel .control-group {
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
     /* Transfer section responsive */
     .transfer-tabs { width: 100%; }
     .transfer-table-wrap { padding: 0 16px 16px; }
@@ -1729,6 +1734,178 @@ button.market-pulse-card:hover {
             box-shadow: var(--apple-sticky-shadow);
         }
 .pc-table tr:last-child td { border-bottom: none; }
+.pc-return-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 3px;
+            line-height: 1.15;
+            white-space: nowrap;
+        }
+.pc-cell-return {
+            display: block;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+.pc-cell-drawdown {
+            display: block;
+            color: currentColor;
+            font-size: 10px;
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+            opacity: 0.76;
+        }
+.pc-month-block .pc-return-stack {
+            align-items: center;
+        }
+.pc-month-block .pc-cell-return {
+            font-size: 14px;
+        }
+.pc-chart-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+.pc-chart-scale-toggle {
+            display: inline-flex;
+            padding: 2px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            background: var(--apple-surface-2);
+        }
+.pc-chart-scale-btn {
+            padding: 5px 9px;
+            border: 0;
+            border-radius: calc(var(--radius-md) - 2px);
+            background: transparent;
+            color: var(--apple-text-tertiary);
+            cursor: pointer;
+            font: inherit;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+.pc-chart-scale-btn.active {
+            background: var(--apple-surface-1);
+            color: var(--apple-text-primary);
+            box-shadow: var(--apple-card-shadow);
+        }
+.pc-chart-scale-note {
+            min-height: 16px;
+            margin: -8px 0 6px;
+            color: var(--apple-text-tertiary);
+            font-size: 11px;
+        }
+.pc-chart-plot {
+            position: relative;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+#pcChartSvg svg { min-width: 100%; }
+.pc-chart-point {
+            cursor: crosshair;
+            outline: none;
+        }
+.pc-chart-point:focus {
+            filter: drop-shadow(0 0 3px var(--apple-blue));
+        }
+.pc-chart-tooltip {
+            position: absolute;
+            z-index: 20;
+            width: max-content;
+            max-width: 250px;
+            padding: 9px 11px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            background: var(--apple-surface-1);
+            color: var(--apple-text-primary);
+            box-shadow: var(--apple-sticky-shadow);
+            font-size: 11px;
+            line-height: 1.55;
+            pointer-events: none;
+        }
+.pc-chart-tooltip[hidden] { display: none; }
+.pc-chart-tooltip-title {
+            margin-bottom: 3px;
+            font-weight: 700;
+        }
+.pc-chart-tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+        }
+.pc-chart-tooltip-label { color: var(--apple-text-tertiary); }
+.pc-chart-tooltip-value { font-variant-numeric: tabular-nums; }
+.pc-chart-tooltip-range {
+            margin-top: 3px;
+            color: var(--apple-text-secondary);
+        }
+.pc-chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin-top: 8px;
+        }
+.pc-chart-legend-btn,
+.pc-chart-show-all {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 28px;
+            padding: 4px 9px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-full);
+            background: var(--apple-surface-1);
+            color: var(--apple-text-secondary);
+            cursor: pointer;
+            font: inherit;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+.pc-chart-legend-btn:hover,
+.pc-chart-show-all:hover,
+.pc-chart-legend-btn.is-focused {
+            border-color: var(--apple-blue);
+            color: var(--apple-text-primary);
+        }
+.pc-chart-legend-btn.is-hidden {
+            opacity: 0.38;
+            text-decoration: line-through;
+        }
+.pc-chart-legend-swatch {
+            width: 12px;
+            height: 3px;
+            border-radius: 999px;
+            flex: 0 0 auto;
+        }
+.pc-chart-legend-hint {
+            margin-top: 7px;
+            color: var(--apple-text-tertiary);
+            font-size: 10px;
+        }
+@media (max-width: 768px) {
+            #pcChartWrap .pc-monthly-header {
+                align-items: flex-start;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            #pcChartWrap .pc-chart-title { flex: 1 0 100%; }
+            .pc-chart-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+            #pcChartSvg { min-width: 620px; }
+            .pc-chart-legend {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding-bottom: 4px;
+                scrollbar-width: none;
+            }
+            .pc-chart-legend::-webkit-scrollbar { display: none; }
+            .pc-chart-legend-btn,
+            .pc-chart-show-all { flex: 0 0 auto; }
+        }
 .pc-table tbody tr:hover td {
             background: var(--apple-overlay);
         }

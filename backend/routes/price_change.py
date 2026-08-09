@@ -131,7 +131,11 @@ def get_yearly_returns():
         {"symbols": [{"symbol": "AAPL", "type": "stock"}, ...]}
 
     Returns:
-        {"years": [...], "data": {"SYMBOL": {"year": pct, ...}, ...}}
+        {
+            "years": [...],
+            "data": {"SYMBOL": {"year": pct, ...}, ...},
+            "drawdowns": {"SYMBOL": {"year": {"max_drawdown": pct, ...}}},
+        }
     """
     body = request.get_json(silent=True) or {}
     symbols = body.get("symbols", [])
@@ -155,7 +159,11 @@ def get_monthly_returns():
         {"symbol": "AAPL", "type": "stock", "year": 2024}
 
     Returns:
-        {"symbol": "AAPL", "year": 2024, "months": [{"month": 1, "return": 5.2}, ...]}
+        {
+            "symbol": "AAPL",
+            "year": 2024,
+            "months": [{"month": 1, "return": 5.2, "max_drawdown": -3.1}, ...],
+        }
     """
     body = request.get_json(silent=True) or {}
     asset_type = body.get("type", "stock").strip().lower()
@@ -186,7 +194,11 @@ def get_monthly_returns_batch():
         {"symbols": [{"symbol": "AAPL", "type": "stock"}, ...], "year": 2025}
 
     Returns:
-        {"year": 2025, "data": {"AAPL": [{"month": 1, "return": 5.2}, ...], ...}}
+        {
+            "year": 2025,
+            "data": {"AAPL": [{"month": 1, "return": 5.2, "max_drawdown": -3.1}, ...]},
+            "drawdowns": {"AAPL": {"2025": {"max_drawdown": -12.3, ...}}},
+        }
     """
     body = request.get_json(silent=True) or {}
     symbols = body.get("symbols", [])
@@ -202,7 +214,7 @@ def get_monthly_returns_batch():
 
     try:
         result = fetch_monthly_returns_batch(symbols, year)
-        return jsonify({"year": year, "data": result})
+        return jsonify({"year": year, **result})
     except Exception as e:
         logger.exception("Failed to fetch monthly returns batch: %s", e)
         return jsonify({"error": str(e)}), 500
