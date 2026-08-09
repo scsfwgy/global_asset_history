@@ -24,7 +24,7 @@
 PYTHONPATH=backend backend/.venv/bin/python3 -m pytest backend/tests -q
 ```
 
-当前测试套件收集 495 个测试，覆盖计算、服务、路由、基本面、数据下载、ETF/QDII、持仓解析、SEO、统计、运行日志和交付流程。
+当前测试套件收集 496 个测试，覆盖计算、服务、路由、基本面、数据下载、ETF/QDII、持仓解析、SEO、统计、运行日志和交付流程。
 
 ### 2. 产品交付门禁（强制）
 
@@ -147,7 +147,7 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 | 功能 | 页面路径 | 主要前端模块 | 主要 API |
 | --- | --- | --- | --- |
 | 市场热力图 | `/heatmap` | `heatmap.js` | `market-pulse`、`heatmap` |
-| 历年涨跌幅（收益 + 最大回撤双指标及双面板趋势图） | `/yearly` | `price-change.js`、`drilldown.js`、`charts.js` | `yearly`、`monthly-batch`、`daily` |
+| 历年涨跌幅（收益 + 最大回撤双指标、回撤风险分级着色及双面板趋势图） | `/yearly` | `price-change.js`、`drilldown.js`、`charts.js` | `yearly`、`monthly-batch`、`daily` |
 | 股票详情 | `/detail` | `price-detail.js` | `detail`、`fundamentals-history` |
 | 美股对比 | `/stock-compare` | `stock-compare.js` | `symbol-search`、`stock-compare` |
 | 数据下载 | `/download` | `data-download.js` | `symbol-search`、`history-download` |

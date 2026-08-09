@@ -59,6 +59,30 @@ def test_drawdown_copy_is_complete_in_both_languages():
     assert "max drawdowns" in en["emptyPrompt"]
 
 
+def test_drawdown_risk_levels_follow_global_negative_color_semantics():
+    yearly = _source("frontend/js/price-change.js")
+    chart = _source("frontend/js/charts.js")
+    styles = _source("frontend/css/app.css")
+
+    assert "function drawdownRiskClass(value)" in yearly
+    assert 'value >= -5) return "pc-drawdown-neutral"' in yearly
+    assert 'value >= -10) return "pc-drawdown-mild"' in yearly
+    assert 'value >= -20) return "pc-drawdown-moderate"' in yearly
+    assert 'value >= -35) return "pc-drawdown-severe"' in yearly
+    assert 'return "pc-drawdown-extreme"' in yearly
+    assert 'pc-cell-drawdown ${drawdownClass}' in yearly
+    assert 'pc-chart-tooltip-value ${drawdownRiskClass(drawdown)}' in chart
+    for class_name in (
+        ".pc-drawdown-neutral",
+        ".pc-drawdown-mild",
+        ".pc-drawdown-moderate",
+        ".pc-drawdown-severe",
+        ".pc-drawdown-extreme",
+    ):
+        assert class_name in styles
+    assert "var(--data-negative)" in styles
+
+
 def test_yearly_chart_exposes_focus_scale_tooltip_and_external_legend():
     page = _source("frontend/price-change.html")
     styles = _source("frontend/css/app.css")

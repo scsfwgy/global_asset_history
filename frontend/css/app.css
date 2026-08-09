@@ -1749,11 +1749,26 @@ button.market-pulse-card:hover {
         }
 .pc-cell-drawdown {
             display: block;
-            color: currentColor;
             font-size: 10px;
             font-weight: 500;
             font-variant-numeric: tabular-nums;
-            opacity: 0.76;
+        }
+.pc-drawdown-neutral {
+            color: var(--apple-text-tertiary);
+        }
+.pc-drawdown-mild {
+            color: color-mix(in srgb, var(--data-negative) 45%, var(--apple-text-tertiary));
+        }
+.pc-drawdown-moderate {
+            color: color-mix(in srgb, var(--data-negative) 65%, var(--apple-text-secondary));
+        }
+.pc-drawdown-severe {
+            color: color-mix(in srgb, var(--data-negative) 82%, var(--apple-text-primary));
+            font-weight: 600;
+        }
+.pc-drawdown-extreme {
+            color: var(--data-negative);
+            font-weight: 700;
         }
 .pc-month-block .pc-return-stack {
             align-items: center;

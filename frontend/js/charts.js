@@ -295,7 +295,7 @@ function showChartTooltip(event, target) {
   let html = `<div class="pc-chart-tooltip-title">${escapeHtml(target.dataset.symbol)} · ${escapeHtml(target.dataset.period)}</div>`;
   html += `<div class="pc-chart-tooltip-row"><span class="pc-chart-tooltip-label">${escapeHtml(__("yearly.returnLabel"))}</span><span class="pc-chart-tooltip-value">${escapeHtml(formatPct(returnValue))}</span></div>`;
   if (showDrawdownInCells()) {
-    html += `<div class="pc-chart-tooltip-row"><span class="pc-chart-tooltip-label">${escapeHtml(__("yearly.maxDrawdown"))}</span><span class="pc-chart-tooltip-value">${escapeHtml(formatPct(drawdown))}</span></div>`;
+    html += `<div class="pc-chart-tooltip-row"><span class="pc-chart-tooltip-label">${escapeHtml(__("yearly.maxDrawdown"))}</span><span class="pc-chart-tooltip-value ${drawdownRiskClass(drawdown)}">${escapeHtml(formatPct(drawdown))}</span></div>`;
     if (peak && trough) {
       html += `<div class="pc-chart-tooltip-range">${escapeHtml(__("yearly.drawdownRange", {peak, trough}))}</div>`;
     }

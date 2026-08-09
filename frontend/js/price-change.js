@@ -266,6 +266,14 @@ function drawdownValue(entry) {
   return Number.isFinite(value) ? Number(value) : null;
 }
 
+function drawdownRiskClass(value) {
+  if (!Number.isFinite(value) || value >= -5) return "pc-drawdown-neutral";
+  if (value >= -10) return "pc-drawdown-mild";
+  if (value >= -20) return "pc-drawdown-moderate";
+  if (value >= -35) return "pc-drawdown-severe";
+  return "pc-drawdown-extreme";
+}
+
 function showDrawdownInCells() {
   return !metricDisplay || metricDisplay.value !== "return";
 }
@@ -276,9 +284,10 @@ function metricCellMarkup(returnValue, drawdownEntry) {
     return `<span class="pc-cell-return">${escapeHtml(returnText)}</span>`;
   }
   const drawdown = drawdownValue(drawdownEntry);
+  const drawdownClass = drawdownRiskClass(drawdown);
   return `<span class="pc-return-stack">
     <span class="pc-cell-return">${escapeHtml(returnText)}</span>
-    <span class="pc-cell-drawdown">${escapeHtml(__("yearly.drawdownShort"))} ${escapeHtml(formatPct(drawdown))}</span>
+    <span class="pc-cell-drawdown ${drawdownClass}">${escapeHtml(__("yearly.drawdownShort"))} ${escapeHtml(formatPct(drawdown))}</span>
   </span>`;
 }
 
