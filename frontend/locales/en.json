@@ -975,6 +975,8 @@
   "seo": {
     "indexTitle": "GlobalAssetHistory — Historical Returns & DCA Backtest Tool",
     "indexDescription": "Explore historical yearly, monthly, and daily returns for US stocks, ETFs, crypto, and A-share indices. Run DCA backtests with daily data.",
+    "heatmapTitle": "Global Market Heatmap for Stocks, ETFs and Crypto — GlobalAssetHistory",
+    "heatmapDescription": "Explore daily, weekly, monthly, quarterly, and yearly returns across US, Hong Kong, global and A-share stocks plus crypto, sized by turnover, market cap, or return.",
     "yearlyTitle": "Historical Annual Returns for Stocks, ETFs and Indices — GlobalAssetHistory",
     "yearlyDescription": "Explore annual returns and maximum drawdowns for US stocks, ETFs, crypto and A-share indices with a yearly risk-return heatmap and CSV export.",
     "backtestTitle": "Investment Return & DCA Calculator — GlobalAssetHistory",

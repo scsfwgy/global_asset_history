@@ -25,6 +25,7 @@ from service.price_change.config import get_site_base_url
 from service.price_change import cache_store, diagnostics
 from service.price_change.price_change_service import _fetch_daily_series_cached
 from seo_data import QQQM_TOP_HOLDINGS
+from seo_rendering import prune_route_document
 
 app = Flask(__name__, static_folder=None)
 CORS(app)
@@ -86,7 +87,7 @@ KNOWLEDGE_ARTICLES = {
         "subtab": "how-to-buy",
         "en_indexable": True,
         "published": "2026-06-15",
-        "updated": "2026-07-03",
+        "updated": "2026-08-11",
         "title": {
             "zh-CN": "如何用稳定币购买美股和ETF - GlobalAssetHistory",
             "en": "How to Buy US Stocks and ETFs with Stablecoins — GlobalAssetHistory",
@@ -105,7 +106,7 @@ KNOWLEDGE_ARTICLES = {
         "subtab": "value-investing",
         "en_indexable": True,
         "published": "2026-07-09",
-        "updated": "2026-07-09",
+        "updated": "2026-08-11",
         "title": {
             "zh-CN": "何为价值投资 - GlobalAssetHistory",
             "en": "What Is Value Investing — GlobalAssetHistory",
@@ -124,7 +125,7 @@ KNOWLEDGE_ARTICLES = {
         "subtab": "etf-intro",
         "en_indexable": True,
         "published": "2026-06-15",
-        "updated": "2026-07-13",
+        "updated": "2026-08-11",
         "title": {
             "zh-CN": "核心美股ETF指南：SPY、VOO、QQQ、SMH、DRAM、EWY - GlobalAssetHistory",
             "en": "Core US ETF Guide: SPY, VOO, QQQ, SMH, DRAM, EWY — GlobalAssetHistory",
@@ -143,7 +144,7 @@ KNOWLEDGE_ARTICLES = {
         "subtab": "nasdaq-etf",
         "en_indexable": True,
         "published": "2026-07-11",
-        "updated": "2026-07-13",
+        "updated": "2026-08-11",
         "title": {
             "zh-CN": "纳指ETF指南：QQQ、QQQM、IQQ、QNDX与衍生产品 - GlobalAssetHistory",
             "en": "Nasdaq ETF Guide: QQQ, QQQM, IQQ, QNDX and Variants — GlobalAssetHistory",
@@ -162,7 +163,7 @@ KNOWLEDGE_ARTICLES = {
         "subtab": "event-myth",
         "en_indexable": True,
         "published": "2026-06-15",
-        "updated": "2026-07-03",
+        "updated": "2026-08-11",
         "title": {
             "zh-CN": "美股数据魔咒统计：世界杯、选举、总统周期和奥运会 - GlobalAssetHistory",
             "en": "Market Data Myths: World Cup, Elections, Presidential Cycle, Olympics — GlobalAssetHistory",
@@ -182,7 +183,7 @@ KNOWLEDGE_ARTICLES = {
         "section": "US Fear Index",
         "en_indexable": True,
         "published": "2026-08-02",
-        "updated": "2026-08-02",
+        "updated": "2026-08-11",
         "title": {
             "zh-CN": "VIX和VXN高位适合买入SPY与QQQ吗？历史相关性研究 - GlobalAssetHistory",
             "en": "Do High VIX and VXN Levels Signal a Time to Buy SPY and QQQ? — GlobalAssetHistory",
@@ -201,7 +202,7 @@ KNOWLEDGE_ARTICLES = {
         "subtab": "terms",
         "en_indexable": True,
         "published": "2026-06-15",
-        "updated": "2026-07-03",
+        "updated": "2026-08-11",
         "title": {
             "zh-CN": "美股、A股ETF和基金专业术语表 - GlobalAssetHistory",
             "en": "US Stock and ETF Glossary — GlobalAssetHistory",
@@ -220,7 +221,7 @@ KNOWLEDGE_ARTICLES = {
         "subtab": "svol",
         "en_indexable": True,
         "published": "2026-07-13",
-        "updated": "2026-07-13",
+        "updated": "2026-08-11",
         "title": {
             "zh-CN": "Simplify波动率溢价ETF：SVOL净值、走势与表现 - GlobalAssetHistory",
             "en": "SVOL Volatility Premium ETF: NAV, Performance and Risk — GlobalAssetHistory",
@@ -239,7 +240,7 @@ KNOWLEDGE_ARTICLES = {
         "subtab": "china-sp500",
         "en_indexable": True,
         "published": "2026-07-13",
-        "updated": "2026-07-13",
+        "updated": "2026-08-11",
         "title": {
             "zh-CN": "中国版标普500是什么？沪深300、中证A500与上证50对比 - GlobalAssetHistory",
             "en": "What Is China's Equivalent of the S&P 500? — GlobalAssetHistory",
@@ -258,7 +259,7 @@ KNOWLEDGE_ARTICLES = {
         "subtab": "dram",
         "en_indexable": True,
         "published": "2026-07-13",
-        "updated": "2026-07-13",
+        "updated": "2026-08-11",
         "title": {"zh-CN": "DRAM持仓与官方CSV下载指南 - GlobalAssetHistory", "en": "DRAM Holdings & Official CSV Guide — GlobalAssetHistory"},
         "description": {"zh-CN": "查看 Roundhill Memory ETF 的主要持仓、暴露类型、数据口径和官方 DRAM 持仓下载入口。", "en": "Review Roundhill Memory ETF holdings, exposure types, data caveats, and the official DRAM holdings download source."},
         "keywords": {"zh-CN": "DRAM持仓,Roundhill Memory ETF,DRAM CSV,内存ETF", "en": "DRAM holdings,Roundhill Memory ETF,DRAM CSV,memory ETF"},
@@ -268,7 +269,7 @@ KNOWLEDGE_ARTICLES = {
         "subtab": "qqqm",
         "en_indexable": True,
         "published": "2026-07-13",
-        "updated": "2026-07-13",
+        "updated": "2026-08-11",
         "title": {"zh-CN": "QQQM持仓与行业配置 - GlobalAssetHistory", "en": "QQQM Holdings & Sector Allocation — GlobalAssetHistory"},
         "description": {"zh-CN": "查看 QQQM 前十大持仓、行业配置、集中度、费率与有日期的数据来源。", "en": "Explore QQQM top holdings, sector allocation, concentration, fees, and dated official sources."},
         "keywords": {"zh-CN": "QQQM持仓,QQQM行业配置,纳斯达克100ETF", "en": "QQQM holdings,QQQM sector allocation,Nasdaq 100 ETF"},
@@ -278,7 +279,7 @@ KNOWLEDGE_ARTICLES = {
         "subtab": "tqqq-csv",
         "en_indexable": True,
         "published": "2026-07-13",
-        "updated": "2026-07-13",
+        "updated": "2026-08-11",
         "title": {"zh-CN": "TQQQ历史价格CSV下载 - GlobalAssetHistory", "en": "TQQQ Historical Prices CSV Download — GlobalAssetHistory"},
         "description": {"zh-CN": "下载 TQQQ 历史日线复权价格 CSV，支持日期筛选，并查看杠杆 ETF 数据口径。", "en": "Download TQQQ historical daily adjusted prices as CSV with date filtering and leveraged ETF methodology notes."},
         "keywords": {"zh-CN": "TQQQ历史价格,TQQQ CSV,TQQQ下载", "en": "TQQQ historical prices,TQQQ CSV,TQQQ download"},
@@ -290,6 +291,7 @@ KNOWLEDGE_LEGACY_PATHS = {
     for legacy in meta.get("legacy_paths", [])
 }
 INDEXABLE_TOOL_PATHS = {
+    "/heatmap",
     "/yearly",
     "/detail",
     "/stock-compare",
@@ -305,8 +307,101 @@ INDEXABLE_PATHS = {
 # Real last-modified dates per page group. Update these ONLY when the page's
 # HTML/content actually changes — Google discounts <lastmod> if it always shows
 # "today". Knowledge articles use the per-article "updated" field instead.
-INDEX_LASTMOD = "2026-08-09"
-ETF_MARKET_LASTMOD = "2026-08-07"
+INDEX_LASTMOD = "2026-08-11"
+ETF_MARKET_LASTMOD = "2026-08-11"
+
+TOOL_SEO_KEYS = {
+    "/": "index",
+    "/heatmap": "heatmap",
+    "/yearly": "yearly",
+    "/detail": "detail",
+    "/stock-compare": "stockCompare",
+    "/download": "download",
+    "/backtest": "backtest",
+    "/tools/qqq-return-calculator": "qqqCalculator",
+    "/crash": "crash",
+    "/etf": "etf",
+    "/etf/nasdaq100": "etf",
+    "/etf/sp500": "etf",
+    "/etf/global_others": "etf",
+    "/qdii-funds": "qdii",
+    "/vix": "vix",
+    "/exchange-loss": "exchangeLoss",
+    "/wishes": "wishes",
+    "/settings": "index",
+}
+
+TAB_BY_PATH = {
+    "/": "heatmap",
+    "/heatmap": "heatmap",
+    "/yearly": "yearly",
+    "/detail": "detail",
+    "/stock-compare": "stock-compare",
+    "/download": "download",
+    "/backtest": "backtest",
+    "/tools/qqq-return-calculator": "backtest",
+    "/crash": "crash",
+    "/etf": "etf",
+    "/etf/nasdaq100": "etf",
+    "/etf/sp500": "etf",
+    "/etf/global_others": "etf",
+    "/qdii-funds": "qdii-funds",
+    "/vix": "vix",
+    "/exchange-loss": "exchange-loss",
+    "/wishes": "wishes",
+    "/settings": "yearly",
+}
+
+TAB_I18N_KEYS = {
+    "heatmap": "heatmap",
+    "yearly": "yearlyReturns",
+    "detail": "returnDetail",
+    "stock-compare": "stockCompare",
+    "download": "dataDownload",
+    "backtest": "backtest",
+    "crash": "crashStats",
+    "etf": "etfTracking",
+    "qdii-funds": "qdiiFunds",
+    "vix": "vixIndex",
+    "exchange-loss": "exchangeLoss",
+    "knowledge": "knowledge",
+    "wishes": "wishes",
+}
+
+KNOWLEDGE_SUBTAB_I18N_KEYS = {
+    "how-to-buy": "knowledge.howToBuy",
+    "value-investing": "knowledge.valueInvesting",
+    "etf-intro": "knowledge.etfIntro",
+    "nasdaq-etf": "knowledge.nasdaqEtf",
+    "event-myth": "knowledge.eventMyth",
+    "terms": "knowledge.terms",
+    "dram": "knowledge.dramTab",
+    "qqqm": "knowledge.qqqmTab",
+    "tqqq-csv": "knowledge.tqqqCsvTab",
+    "svol": "knowledge.svolTab",
+    "china-sp500": "knowledge.chinaSp500Tab",
+}
+
+COMMON_PAGE_SCRIPTS = {
+    "i18n.js", "feature-updates.js", "api.js", "history.js",
+    "visitor-stats.js", "site-settings.js",
+}
+
+TAB_PAGE_SCRIPTS = {
+    "heatmap": {"heatmap.js", "header-trend.js"},
+    "yearly": {"price-change.js", "charts.js", "drilldown.js"},
+    "detail": {"price-detail.js"},
+    "stock-compare": {"stock-compare.js"},
+    "download": {"data-download.js"},
+    "backtest": {"price-change.js", "charts.js", "backtest.js"},
+    "crash": {"crash-stats.js"},
+    "etf": {"etf-market.js"},
+    "qdii-funds": {"qdii-funds.js"},
+    "vix": {"vix-chart.js"},
+    "exchange-loss": {"exchange-loss.js", "fx-calculator.js"},
+    "knowledge": set(),
+    "wishes": {"wishes.js"},
+}
 
 
 def site_url() -> str:
@@ -359,9 +454,121 @@ def _canonical_content_path(base_path: str, filename: str) -> str:
         return KNOWLEDGE_LEGACY_PATHS[base_path]
     if base_path in KNOWLEDGE_ARTICLES:
         return base_path
-    if base_path in INDEXABLE_TOOL_PATHS:
+    if base_path in TOOL_SEO_KEYS:
         return base_path
     return "/"
+
+
+def _page_heading(title: str) -> str:
+    return re.sub(r"\s+(?:-|—)\s+GlobalAssetHistory$", "", title).strip()
+
+
+def _page_tab(base_path: str, page_path: str) -> str:
+    if page_path in KNOWLEDGE_ARTICLES:
+        if page_path == "/knowledge/vix-vxn-investing-signal":
+            return "vix"
+        return "knowledge"
+    return TAB_BY_PATH.get(base_path, TAB_BY_PATH.get(page_path, "heatmap"))
+
+
+def _knowledge_panel(page_path: str, lang: str) -> tuple[str | None, str | None]:
+    if page_path not in KNOWLEDGE_ARTICLES:
+        return None, None
+    subtab = KNOWLEDGE_ARTICLES[page_path]["subtab"]
+    panel_subtab = "vix-vxn-study" if page_path == "/knowledge/vix-vxn-investing-signal" else subtab
+    suffix = "-en" if lang == "en" else ""
+    return f"kb-{panel_subtab}{suffix}", panel_subtab
+
+
+def _page_json_ld(
+    *, page_path: str, page_url: str, title: str, description: str,
+    image_url: str, html_lang: str, lang: str,
+) -> dict:
+    base_url = site_url()
+    organization_id = f"{base_url}/#organization"
+    website_id = f"{base_url}/#website"
+    graph = [
+        {
+            "@type": "Organization",
+            "@id": organization_id,
+            "name": "GlobalAssetHistory",
+            "url": base_url,
+            "sameAs": ["https://github.com/scsfwgy/global_asset_history"],
+        },
+        {
+            "@type": "WebSite",
+            "@id": website_id,
+            "name": "GlobalAssetHistory",
+            "url": base_url,
+            "publisher": {"@id": organization_id},
+            "inLanguage": ["zh-CN", "en"],
+        },
+    ]
+    if page_path in KNOWLEDGE_ARTICLES:
+        article = KNOWLEDGE_ARTICLES[page_path]
+        graph.append({
+            "@type": "Article",
+            "@id": f"{page_url}#article",
+            "headline": _page_heading(title),
+            "description": description,
+            "url": page_url,
+            "image": image_url,
+            "author": {"@id": organization_id},
+            "publisher": {"@id": organization_id},
+            "isPartOf": {"@id": website_id},
+            "mainEntityOfPage": page_url,
+            "inLanguage": html_lang,
+            "datePublished": article.get("published", INDEX_LASTMOD),
+            "dateModified": article.get("updated", INDEX_LASTMOD),
+            "articleSection": article.get("section", "Knowledge Base"),
+            "keywords": article["keywords"][lang],
+        })
+    else:
+        graph.append({
+            "@type": "WebApplication",
+            "@id": f"{page_url}#application",
+            "name": _page_heading(title),
+            "url": page_url,
+            "description": description,
+            "applicationCategory": "FinanceApplication",
+            "operatingSystem": "Web",
+            "isPartOf": {"@id": website_id},
+            "inLanguage": html_lang,
+            "offers": {"@type": "Offer", "price": "0", "priceCurrency": "CNY"},
+        })
+    crumbs = [
+        {"@type": "ListItem", "position": 1, "name": "GlobalAssetHistory", "item": f"{base_url}/{lang[:2]}/"},
+    ]
+    if page_path != "/":
+        crumbs.append({"@type": "ListItem", "position": 2, "name": _page_heading(title), "item": page_url})
+    graph.append({"@type": "BreadcrumbList", "itemListElement": crumbs})
+
+    if page_path == "/us-etf/qqqm":
+        graph.append({
+            "@type": "Dataset",
+            "name": "QQQM Top 10 Holdings Snapshot",
+            "description": description,
+            "dateModified": "2026-07-10",
+            "creator": {"@id": organization_id},
+            "distribution": {
+                "@type": "DataDownload",
+                "encodingFormat": "text/csv",
+                "contentUrl": f"{base_url}/datasets/qqqm-holdings.csv",
+            },
+        })
+    elif page_path == "/us-etf/tqqq/historical-prices":
+        graph.append({
+            "@type": "Dataset",
+            "name": "TQQQ Adjusted Historical Daily Prices",
+            "description": description,
+            "creator": {"@id": organization_id},
+            "distribution": {
+                "@type": "DataDownload",
+                "encodingFormat": "text/csv",
+                "contentUrl": f"{base_url}/datasets/tqqq-historical-prices.csv",
+            },
+        })
+    return {"@context": "https://schema.org", "@graph": graph}
 
 
 def _replace_json_ld(html: str, data: dict) -> str:
@@ -419,26 +626,20 @@ def serve_frontend_html(filename: str):
         title = article["title"][lang]
         desc = article["description"][lang]
         keywords = article["keywords"][lang]
-        image_url = f"{base_url}/doc/screenshot/yearly-heatmap.png"
+        image_url = f"{base_url}/doc/screenshot/yearly-chart.png"
         og_type = "article"
-    elif page_path in INDEXABLE_TOOL_PATHS:
-        seo_key = {
-            "/yearly": "yearly",
-            "/detail": "detail",
-            "/stock-compare": "stockCompare",
-            "/backtest": "backtest",
-            "/tools/qqq-return-calculator": "qqqCalculator",
-        }[page_path]
+    elif page_path in TOOL_SEO_KEYS:
+        seo_key = TOOL_SEO_KEYS[page_path]
         title = _locale_value(locale, f"seo.{seo_key}Title", "GlobalAssetHistory")
         desc = _locale_value(locale, f"seo.{seo_key}Description", "")
         keywords = _locale_value(locale, "seo.indexKeywords", "")
-        image_url = f"{base_url}/doc/screenshot/yearly-heatmap.png"
+        image_url = f"{base_url}/doc/screenshot/yearly-chart.png"
         og_type = "website"
     else:
         title = _locale_value(locale, "seo.indexTitle", "GlobalAssetHistory")
         desc = _locale_value(locale, "seo.indexDescription", "")
         keywords = _locale_value(locale, "seo.indexKeywords", "")
-        image_url = f"{base_url}/doc/screenshot/yearly-heatmap.png"
+        image_url = f"{base_url}/doc/screenshot/yearly-chart.png"
         og_type = "website"
 
     html = re.sub(r"<title>.*?</title>", f"<title>{title}</title>", html, count=1, flags=re.S)
@@ -452,47 +653,73 @@ def serve_frontend_html(filename: str):
     html = _replace_meta_content(html, r'property="og:description"', desc)
     html = _replace_meta_content(html, r'property="og:url"', page_url)
     html = _replace_meta_content(html, r'property="og:image"', image_url)
+    html = _replace_meta_content(html, r'property="og:image:alt"', _page_heading(title))
     html = _replace_meta_content(html, r'property="og:locale"', og_locale)
     html = _replace_meta_content(html, r'name="twitter:title"', title)
     html = _replace_meta_content(html, r'name="twitter:description"', desc)
     html = _replace_meta_content(html, r'name="twitter:image"', image_url)
+    html = _replace_meta_content(html, r'name="twitter:image:alt"', _page_heading(title))
     html = re.sub(r'(<link rel="canonical" href=")[^"]*(")', rf'\g<1>{page_url}\2', html, count=1)
     html = re.sub(r'(<link rel="alternate" hreflang="zh-CN" href=")[^"]*(")', rf'\g<1>{base_url}/zh{page_path}\2', html, count=1)
     html = re.sub(r'(<link rel="alternate" hreflang="en" href=")[^"]*(")', rf'\g<1>{base_url}/en{page_path}\2', html, count=1)
     html = re.sub(r'(<link rel="alternate" hreflang="x-default" href=")[^"]*(")', rf'\g<1>{base_url}/zh{page_path}\2', html, count=1)
     html = html.replace("__LANG_PREFIX__", prefix)
 
-    if page_path in KNOWLEDGE_ARTICLES:
-        article = KNOWLEDGE_ARTICLES[page_path]
-        html = _replace_json_ld(html, {
-            "@context": "https://schema.org",
-            "@type": "Article",
-            "headline": title,
-            "description": desc,
-            "url": page_url,
-            "image": image_url,
-            "author": {
-                "@type": "Organization",
-                "name": "GlobalAssetHistory",
-            },
-            "publisher": {
-                "@type": "Organization",
-                "name": "GlobalAssetHistory",
-            },
-            "mainEntityOfPage": page_url,
-            "inLanguage": html_lang,
-            "datePublished": article.get("published", INDEX_LASTMOD),
-            "dateModified": article.get("updated", INDEX_LASTMOD),
-            "articleSection": article.get("section", "Knowledge Base"),
-            "keywords": article["keywords"][lang],
-        })
-    elif filename == "etf-market.html":
-        html = re.sub(r'("name":\s*)"[^"]*"', rf'\1{_json_script_value(title)}', html, count=1)
-        html = re.sub(r'("url":\s*)"[^"]*/etf-market"', rf'\1{_json_script_value(page_url)}', html, count=1)
-        html = re.sub(r'("description":\s*)"[^"]*"', rf'\1{_json_script_value(desc)}', html, count=1)
+    if filename == "etf-market.html":
+        html = _replace_json_ld(html, _page_json_ld(
+            page_path=page_path,
+            page_url=page_url,
+            title=title,
+            description=desc,
+            image_url=image_url,
+            html_lang=html_lang,
+            lang=lang,
+        ))
     else:
-        html = re.sub(r'("url":\s*)"[^"]*/"', rf'\1{_json_script_value(page_url)}', html, count=1)
-        html = re.sub(r'("description":\s*)"[^"]*"', rf'\1{_json_script_value(desc)}', html, count=1)
+        html = _replace_json_ld(html, _page_json_ld(
+            page_path=page_path,
+            page_url=page_url,
+            title=title,
+            description=desc,
+            image_url=image_url,
+            html_lang=html_lang,
+            lang=lang,
+        ))
+        primary_tab = _page_tab(base_request_path, page_path)
+        panel_id, knowledge_subtab = _knowledge_panel(page_path, lang)
+        kept_tabs = {primary_tab}
+        if page_path == "/knowledge/vix-vxn-investing-signal":
+            kept_tabs.add("knowledge")
+        allowed_scripts = COMMON_PAGE_SCRIPTS | TAB_PAGE_SCRIPTS.get(primary_tab, set())
+        html = prune_route_document(
+            html,
+            primary_tab=primary_tab,
+            kept_tabs=kept_tabs,
+            knowledge_panel_id=panel_id,
+            knowledge_subtab=knowledge_subtab,
+            knowledge_subtab_heading=(
+                _locale_value(
+                    locale,
+                    KNOWLEDGE_SUBTAB_I18N_KEYS[knowledge_subtab],
+                    _page_heading(title),
+                )
+                if knowledge_subtab in KNOWLEDGE_SUBTAB_I18N_KEYS
+                else None
+            ),
+            active_tab_heading=(
+                None
+                if (
+                    page_path in KNOWLEDGE_ARTICLES
+                    and page_path != "/knowledge/vix-vxn-investing-signal"
+                )
+                else _locale_value(
+                    locale,
+                    f"tab.{TAB_I18N_KEYS.get(primary_tab, 'heatmap')}",
+                    _page_heading(title),
+                )
+            ),
+            allowed_local_scripts=allowed_scripts,
+        )
 
     response = Response(html, mimetype="text/html")
     # HTML must revalidate so it can advertise the newest content-versioned
@@ -711,6 +938,31 @@ def robots_txt():
     return Response(body, mimetype="text/plain")
 
 
+@app.route("/llms.txt")
+def llms_txt():
+    base_url = site_url()
+    body = "\n".join([
+        "# GlobalAssetHistory",
+        "",
+        "> Bilingual historical return, drawdown, ETF, market heatmap, and backtest research tools.",
+        "",
+        "## Canonical pages",
+        f"- [Global market heatmap]({base_url}/en/heatmap)",
+        f"- [Historical annual returns]({base_url}/en/yearly)",
+        f"- [Investment and DCA backtest]({base_url}/en/backtest)",
+        f"- [Knowledge articles]({base_url}/en/knowledge/value-investing)",
+        f"- [Sitemap]({base_url}/sitemap.xml)",
+        "",
+        "## Public datasets",
+        f"- [QQQM top holdings CSV]({base_url}/datasets/qqqm-holdings.csv)",
+        f"- [TQQQ adjusted daily prices CSV]({base_url}/datasets/tqqq-historical-prices.csv)",
+        "",
+        "Content is educational and not individualized investment advice.",
+        "",
+    ])
+    return Response(body, mimetype="text/plain")
+
+
 @app.route("/sitemap.xml")
 def sitemap_xml():
     langs = [("zh", "zh-CN"), ("en", "en")]
@@ -753,6 +1005,7 @@ def sitemap_xml():
     return Response(body, mimetype="application/xml")
 
 
+@app.route("/datasets/qqqm-holdings.csv")
 @app.route("/api/assets/QQQM/holdings.csv")
 def qqqm_holdings_csv():
     """Download the dated top-10 QQQM snapshot displayed on the landing page."""
@@ -768,6 +1021,7 @@ def qqqm_holdings_csv():
     )
 
 
+@app.route("/datasets/tqqq-historical-prices.csv")
 @app.route("/api/assets/TQQQ/history.csv")
 def tqqq_history_csv():
     """Generate a machine-readable TQQQ daily price export."""

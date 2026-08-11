@@ -24,7 +24,7 @@
 PYTHONPATH=backend backend/.venv/bin/python3 -m pytest backend/tests -q
 ```
 
-当前测试套件收集 496 个测试，覆盖计算、服务、路由、基本面、数据下载、ETF/QDII、持仓解析、SEO、统计、运行日志和交付流程。
+当前测试套件收集 507 个测试，覆盖计算、服务、路由、基本面、数据下载、ETF/QDII、持仓解析、SEO、统计、运行日志和交付流程。
 
 ### 2. 产品交付门禁（强制）
 
@@ -118,7 +118,8 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 
 ### Flask 模块
 
-- `backend/app.py`：应用入口、前端响应、SEO、健康检查、诊断、访问和点击统计
+- `backend/app.py`：应用入口、前端响应、SEO/GEO、健康检查、诊断、访问和点击统计
+- `backend/seo_rendering.py`：根据请求路径裁剪 `price-change.html`，仅保留当前面板、语言文章和必要脚本，并增强语义标签
 - `price_change_bp` (`/api/price-change`)：标的搜索、收益、详情、基本面历史、美股对比、数据下载、回测、暴跌、热力图、VIX/VXN、汇率（`exchange-loss` / `exchange-rates`）
 - `etf_market_bp` (`/api/etf-market`)：ETF 报价和估值、ETF 历史、QDII 基金、QDII 定期报告持仓
 - `wishes_bp` (`/api/wishes`)：验证码、心愿提交和管理
@@ -203,10 +204,14 @@ Flask 会根据请求语言和路径动态替换：
 - title、description、keywords、robots
 - canonical 和 hreflang
 - Open Graph、Twitter Card
-- Website/Article JSON-LD
+- Organization、WebSite、WebApplication、Article、BreadcrumbList 与 Dataset JSON-LD
 - `X-Robots-Tag`
 
 `/zh/...` 和 `/en/...` 是 sitemap 中的 canonical 版本。无语言前缀 URL 不进入 sitemap。可索引工具由 `INDEXABLE_TOOL_PATHS` 管理；知识文章和专题 ETF 页面由 `KNOWLEDGE_ARTICLES` 管理。其他内部工具通常为 `noindex,follow`。
+
+`price-change.html` 是统一内容源，但 Flask 响应必须通过 `seo_rendering.py` 按路由裁剪，避免每个 URL 输出全部 Tab、双语文章和无关脚本。每个公开页面应有且仅有一个页面级 H1；品牌名称使用 `.site-brand-name`。工具页将当前激活 Tab 渲染为 H1，知识文章将当前文章子 Tab（VIX 专题为一级 Tab）渲染为 H1；不要为 SEO 另加占空间的标题卡、作者日期或说明块。邀请链接仍需保留 `rel="sponsored nofollow"` 关系标记。
+
+公开、可引用的数据集放在 `/datasets/*`，不要放在被 `robots.txt` 整体屏蔽的 `/api/*` 下；兼容旧 API 路径时可同时注册别名。机器发现入口由 `/llms.txt` 提供，新增该类动态资源时必须同步 `vercel.json`。
 
 旧知识路径保留兼容，但必须 canonical 到新路径并保持 `noindex,follow`。新增知识文章、专题 ETF 页面或可索引工具需同步处理：
 

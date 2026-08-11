@@ -891,9 +891,13 @@ async function init() {
   }
 
   // Restore previous state from localStorage (before applying config defaults)
-  var hadState = restoreState();
+  var hasYearlyPanel = Boolean(
+    symInput && typeSelect && addBtn && clearBtn && refreshBtn
+    && minRange && maxRange && tags && table && empty
+  );
+  var hadState = hasYearlyPanel ? restoreState() : false;
   // Only apply config defaults for fields NOT restored
-  if (!hadState) {
+  if (hasYearlyPanel && !hadState) {
     minRange.value = cfg.colorRange.min;
     maxRange.value = cfg.colorRange.max;
   }
@@ -933,41 +937,50 @@ async function init() {
   }
 
   // Add button
-  addBtn.addEventListener("click", () => {
-    addSymbol(symInput.value, typeSelect.value);
-    saveState();
-  });
+  if (addBtn && symInput && typeSelect) {
+    addBtn.addEventListener("click", () => {
+      addSymbol(symInput.value, typeSelect.value);
+      saveState();
+    });
+  }
 
-  symInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { addSymbol(symInput.value, typeSelect.value); saveState(); }
-  });
+  if (symInput && typeSelect) {
+    symInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { addSymbol(symInput.value, typeSelect.value); saveState(); }
+    });
+  }
 
-  clearBtn.addEventListener("click", () => {
-    symbols = [];
-    renderTags();
-    _sortBy = null; _sortDir = "desc";
-    _lastFetchTime = null;
-    saveState();
-    updateFreshness();
-    const mc = $("pcMonthlyContainer");
-    if (mc) mc.innerHTML = "";
-    $("pcChartWrap").style.display = "none";
-    _chartData = null;
-    _chartDrawdowns = null;
-    _chartSymbols = null;
-    _chartHidden = [];
-    _lastYearlyData = null;
-    if (yearSelect) yearSelect.value = "";
-    renderMetaInfo(null);
-    table.style.display = "none";
-    empty.style.display = "block";
-  });
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      symbols = [];
+      renderTags();
+      _sortBy = null; _sortDir = "desc";
+      _lastFetchTime = null;
+      saveState();
+      updateFreshness();
+      const mc = $("pcMonthlyContainer");
+      if (mc) mc.innerHTML = "";
+      const chartWrap = $("pcChartWrap");
+      if (chartWrap) chartWrap.style.display = "none";
+      _chartData = null;
+      _chartDrawdowns = null;
+      _chartSymbols = null;
+      _chartHidden = [];
+      _lastYearlyData = null;
+      if (yearSelect) yearSelect.value = "";
+      renderMetaInfo(null);
+      if (table) table.style.display = "none";
+      if (empty) empty.style.display = "block";
+    });
+  }
 
-  refreshBtn.addEventListener("click", fetchData);
+  if (refreshBtn) refreshBtn.addEventListener("click", fetchData);
 
   // Chart close button
-  $("pcChartClose").addEventListener("click", () => {
-    $("pcChartWrap").style.display = "none";
+  var chartClose = $("pcChartClose");
+  if (chartClose) chartClose.addEventListener("click", () => {
+    var chartWrap = $("pcChartWrap");
+    if (chartWrap) chartWrap.style.display = "none";
   });
 
   // Backtest buttons
@@ -987,7 +1000,7 @@ async function init() {
   });
 
   // Populate year options and set default
-  populateYearOptions();
+  if (hasYearlyPanel) populateYearOptions();
 
   // Year select: Enter triggers query, Escape reverts to "历年汇总"
   if (yearSelect) {
@@ -999,17 +1012,19 @@ async function init() {
   }
 
   // Render preset chips after loading presets
-  renderPresetChips();
-  updateBacktestFrequencyUI();
+  if (hasYearlyPanel) renderPresetChips();
+  if (typeof updateBacktestFrequencyUI === "function") updateBacktestFrequencyUI();
 
   const today = new Date().toISOString().slice(0, 10);
   if (btEndDate && !btEndDate.value) btEndDate.value = today;
 
   // Enter key also triggers search in min/max fields; save on blur
-  minRange.addEventListener("keydown", (e) => { if (e.key === "Enter") fetchData(); });
-  maxRange.addEventListener("keydown", (e) => { if (e.key === "Enter") fetchData(); });
-  minRange.addEventListener("change", saveState);
-  maxRange.addEventListener("change", saveState);
+  if (minRange && maxRange) {
+    minRange.addEventListener("keydown", (e) => { if (e.key === "Enter") fetchData(); });
+    maxRange.addEventListener("keydown", (e) => { if (e.key === "Enter") fetchData(); });
+    minRange.addEventListener("change", saveState);
+    maxRange.addEventListener("change", saveState);
+  }
 
   // ── Autocomplete: build search index from all presets ──
   var _acIndex = [];

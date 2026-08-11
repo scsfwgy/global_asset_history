@@ -37,7 +37,8 @@ GlobalAssetHistory 是一个跨资产历史收益查询、市场分析与投资�
 - 中文、英文界面和语言前缀 URL。
 - 深色/浅色主题、绿涨红跌/红涨绿跌切换，以及桌面端和移动端适配。
 - 版本化功能更新弹窗集中展示近期更新；用户确认后同一版本不再提醒。
-- 金融知识文章、独立工具落地页、Article JSON-LD、Open Graph 和多语言 SEO。
+- 金融知识文章、独立工具落地页、按路由裁剪的服务端 HTML、Article/Dataset JSON-LD、Open Graph 和多语言 SEO/GEO。
+- `llms.txt` 与不受 `/api/` robots 规则影响的公开 CSV 数据集，便于搜索引擎和生成式搜索系统发现、理解与引用。
 - 访问次数、匿名用户、网站/设备语言、Tab 浏览、设置操作和外链点击统计。
 - 心愿墙管理员操作和受 Token 保护的站点统计页。
 
@@ -50,12 +51,13 @@ GlobalAssetHistory 是一个跨资产历史收益查询、市场分析与投资�
 | 图表 | 原生 SVG，自实现折线图、热力图和 Treemap 布局 |
 | 数据请求 | `requests`、`curl_cffi`（可用时模拟浏览器 TLS） |
 | 缓存 | L1 进程内存 + L2 Upstash Redis/Vercel KV + L3 JSON 快照 |
-| 测试 | pytest，当前收集 496 个测试 |
+| 测试 | pytest，当前收集 507 个测试 |
 | 部署 | Vercel 静态资源 + Python Serverless Function |
 
 ### 后端模块
 
-- `backend/app.py`：Flask 入口、页面托管、SEO、健康检查和站点统计
+- `backend/app.py`：Flask 入口、页面托管、SEO/GEO、健康检查和站点统计
+- `backend/seo_rendering.py`：按路由裁剪单页 HTML，只输出当前面板、文章语言和必要脚本
 - `backend/routes/price_change.py`：标的搜索、收益、详情、基本面历史、美股对比、数据下载、回测、暴跌、热力图和 VIX/VXN API
 - `backend/routes/etf_market.py`：场内 ETF 报价/估值、ETF 历史、QDII 基金和定期报告持仓 API
 - `backend/routes/wishes.py`：心愿墙 API
@@ -236,7 +238,7 @@ Redis 两套变量会自动识别，优先使用 `UPSTASH_*`。
 | PATCH | `/<wish_id>/reply` | 管理员回复 |
 | DELETE | `/<wish_id>` | 管理员删除 |
 
-其他系统接口包括 `/api/health`、`/api/diag`、`/api/visits`、`/api/track`、专题 CSV 下载和管理员统计页 `/api/stats?token=...`。
+其他系统接口包括 `/api/health`、`/api/diag`、`/api/visits`、`/api/track`、专题 CSV 下载和管理员统计页 `/api/stats?token=...`。公开数据集使用 `/datasets/qqqm-holdings.csv` 与 `/datasets/tqqq-historical-prices.csv`；原 `/api/assets/...` 地址继续兼容。
 
 ## Vercel 部署
 
@@ -244,7 +246,7 @@ Redis 两套变量会自动识别，优先使用 `UPSTASH_*`。
 
 - `frontend/` 为静态输出目录
 - `api/index.py` 为 Flask Serverless 入口
-- `/api/*`、页面路径、语言路径、`robots.txt` 和 `sitemap.xml` rewrite 到 Flask
+- `/api/*`、`/datasets/*`、页面路径、语言路径、`robots.txt`、`sitemap.xml` 和 `llms.txt` rewrite 到 Flask
 - Function 使用 512 MB 内存、30 秒超时
 - 默认区域为香港 `hkg1`
 
@@ -262,9 +264,11 @@ Redis 提供跨实例共享缓存和原子计数。未配置时，项目会降�
 - `title`、description、keywords 和 robots
 - Open Graph 与 Twitter Card
 - `zh-CN`、`en`、`x-default` hreflang
-- Website/Article JSON-LD
-- `robots.txt`、`sitemap.xml` 和 `X-Robots-Tag`
+- Organization、WebSite、WebApplication、Article、BreadcrumbList 与 Dataset JSON-LD
+- `robots.txt`、`sitemap.xml`、`llms.txt` 和 `X-Robots-Tag`
 - 旧知识文章路径 canonical 到新路径并设为 `noindex,follow`
+
+Flask 会在响应阶段按路由裁剪主站单页文档：只保留当前功能面板、当前语言文章和必要脚本。工具页直接复用当前激活 Tab 作为唯一 H1；知识文章复用当前文章子 Tab（VIX 专题复用一级 Tab）作为 H1。页面不额外插入占空间的 SEO 标题卡或作者日期说明块，源文件仍是统一的 UI 内容定义；邀请链接通过 `rel="sponsored nofollow"` 保留机器可读的关系标记。
 
 Sitemap 只列语言前缀的 canonical URL，避免无前缀页面造成重复收录。
 
@@ -282,6 +286,7 @@ Sitemap 只列语言前缀的 canonical URL，避免无前缀页面造成重复�
 ├── api/index.py                    # Vercel Python Function 入口
 ├── backend/
 │   ├── app.py                      # Flask 应用、页面、SEO、统计
+│   ├── seo_rendering.py            # 路由级 HTML 裁剪与语义增强
 │   ├── config/
 │   ├── data/                       # ETF/QDII/净值历史快照
 │   ├── routes/                     # 三个业务 Blueprint

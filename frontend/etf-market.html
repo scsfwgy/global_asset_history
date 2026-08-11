@@ -21,10 +21,14 @@
     <meta property="og:description" content="查看纳指100、标普500等A股场内ETF的实时行情、总市值、费率合计、溢价率和30日跟踪误差。">
     <meta property="og:url" content="__SITE_BASE_URL__/etf-market">
     <meta property="og:image" content="__SITE_BASE_URL__/doc/screenshot/yearly-chart.png">
+    <meta property="og:image:width" content="2784">
+    <meta property="og:image:height" content="1304">
+    <meta property="og:image:alt" content="GlobalAssetHistory ETF 行情与费率图表">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="A股ETF实时行情与费率对比 - GlobalAssetHistory">
     <meta name="twitter:description" content="纳指100、标普500等场内ETF实时行情、费率、溢价率和跟踪误差对比。">
     <meta name="twitter:image" content="__SITE_BASE_URL__/doc/screenshot/yearly-chart.png">
+    <meta name="twitter:image:alt" content="GlobalAssetHistory ETF 行情与费率图表">
     <script>
       window.__GAH_SITE_BASE_URL__ = "__SITE_BASE_URL__";
     </script>
@@ -59,7 +63,7 @@
             margin: 0 auto;
             padding: 0 16px;
         }
-        .etf-market-container h2 {
+        .etf-market-container > h1 {
             font-size: 18px; font-weight: 600; padding: 16px 0 12px;
         }
         .etf-sortable {
@@ -104,7 +108,7 @@
     <div class="header-left">
         <div class="logo">
             <div class="logo-text">
-                <h1>GlobalAssetHistory</h1>
+                <div class="site-brand-name">GlobalAssetHistory</div>
                 <p data-i18n="nav.siteTagline">价值投资，相信长期的力量。回测历史，知晓未来。</p>
                 <div class="header-quick-links" aria-label="学习入口">
                     <span class="header-quick-label" data-i18n="knowledge.quickLearn">学习入口：</span>
@@ -161,14 +165,16 @@
     </div>
 </header>
 
-<div class="etf-market-container">
+<main class="etf-market-container">
+    <section class="seo-page-intro" aria-labelledby="seo-page-title">
+        <h1 id="seo-page-title" data-i18n="etf.title">A股ETF 实时行情</h1>
+        <p class="seo-page-summary" data-i18n="seo.etfMarketDescription">查看纳指100、标普500等A股场内ETF的实时行情、总市值、费率合计、溢价率和30日跟踪误差。</p>
+    </section>
     <div class="etf-refresh-bar" id="etfRefreshBar">
         <span class="dot" id="refreshDot"></span>
         <span id="refreshTime">--</span>
         <button id="etfRefreshBtn" class="pc-btn pc-btn-sm" data-i18n="etf.refresh">刷新</button>
     </div>
-
-    <h2 data-i18n="etf.title">A股ETF 实时行情</h2>
 
     <div class="transfer-tabs" id="tabBar">
         <button class="transfer-tab active" data-tab="nasdaq100" data-i18n="etf.tabNasdaq">纳指100</button>
@@ -201,7 +207,7 @@
             </tbody>
         </table>
     </div>
-</div>
+</main>
 
 <script src="/js/i18n.js"></script>
 <script src="/js/site-settings.js"></script>

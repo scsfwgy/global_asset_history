@@ -11,7 +11,9 @@ These guard against regressions in search-engine indexing signals:
 - Article JSON-LD must include datePublished and a real dateModified.
 """
 
+import json
 import os
+import re
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -47,6 +49,17 @@ def _sitemap_urls(client):
     assert resp.mimetype == "application/xml"
     root = ET.fromstring(resp.get_data(as_text=True))
     return root.findall(f"{SITEMAP_NS}url")
+
+
+def _json_ld(client, path):
+    html = client.get(path).get_data(as_text=True)
+    match = re.search(
+        r'<script type="application/ld\+json">\s*(.*?)\s*</script>',
+        html,
+        flags=re.DOTALL,
+    )
+    assert match, f"missing JSON-LD on {path}"
+    return json.loads(match.group(1))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -170,9 +183,12 @@ class TestHtmlMeta:
     def test_home_og_image_path_is_hosted_path(self, client):
         html = client.get("/zh/").get_data(as_text=True)
         assert (
-            'og:image" content="https://test.local/doc/screenshot/yearly-heatmap.png"'
+            'og:image" content="https://test.local/doc/screenshot/yearly-chart.png"'
             in html
         )
+        assert 'property="og:image:width" content="2784"' in html
+        assert 'property="og:image:height" content="1304"' in html
+        assert 'property="og:image:alt"' in html
 
     @pytest.mark.parametrize(
         "path",
@@ -232,12 +248,112 @@ class TestHtmlMeta:
 
     def test_tool_navigation_uses_crawlable_language_links(self, client):
         html = client.get("/en/backtest").get_data(as_text=True)
-        assert '<a class="tab-btn" href="/en/yearly"' in html
-        assert '<a class="tab-btn" href="/en/backtest"' in html
+        assert '<a href="/en/yearly" data-tab="yearly"' in html
+        assert '<h1 data-tab="backtest" class="tab-btn active" aria-current="page"' in html
+        assert '>Backtest</h1>' in html
         assert html.count('class="header-quick-link"') == 2
         assert '<a class="header-quick-link" href="/en/knowledge/value-investing"' in html
         assert '<a class="header-quick-link" href="/en/knowledge/how-to-buy-us-stocks"' in html
         assert "__LANG_PREFIX__" not in html
+
+    @pytest.mark.parametrize(
+        "path,active_panel,excluded_panel,required_script,excluded_script",
+        [
+            ("/zh/yearly", "tab-yearly", "tab-detail", "price-change.js", "price-detail.js"),
+            ("/en/detail", "tab-detail", "tab-backtest", "price-detail.js", "backtest.js"),
+            ("/zh/backtest", "tab-backtest", "tab-vix", "backtest.js", "vix-chart.js"),
+        ],
+    )
+    def test_tool_routes_only_ship_the_active_panel_and_scripts(
+        self,
+        client,
+        path,
+        active_panel,
+        excluded_panel,
+        required_script,
+        excluded_script,
+    ):
+        html = client.get(path).get_data(as_text=True)
+        assert f'id="{active_panel}"' in html
+        assert f'id="{excluded_panel}"' not in html
+        assert f'/js/{required_script}' in html
+        assert f'/js/{excluded_script}' not in html
+        assert html.count("<h1") == 1
+        assert len(html.encode("utf-8")) < 220_000
+
+    def test_common_bundle_supplies_helpers_used_by_focused_routes(self, client):
+        script = client.get("/js/api.js").get_data(as_text=True)
+        assert "function normalizeAssetSymbol" in script
+        assert "function escapeHtml" in script
+
+    def test_route_documents_are_unique_and_have_specific_headings(self, client):
+        yearly = client.get("/zh/yearly").get_data(as_text=True)
+        detail = client.get("/zh/detail").get_data(as_text=True)
+        heatmap = client.get("/zh/heatmap").get_data(as_text=True)
+
+        assert yearly != detail != heatmap
+        assert '>历年涨跌幅</h1>' in yearly
+        assert '>股票详情</h1>' in detail
+        assert '>热力图</h1>' in heatmap
+        assert 'class="seo-page-intro"' not in yearly
+        assert 'class="seo-page-intro"' not in detail
+        assert 'class="seo-page-intro"' not in heatmap
+
+    def test_article_route_only_ships_selected_language_and_article(self, client):
+        html = client.get("/zh/knowledge/value-investing").get_data(as_text=True)
+        assert 'id="kb-value-investing"' in html
+        assert 'id="kb-value-investing-en"' not in html
+        assert 'id="kb-how-to-buy"' not in html
+        assert html.count("<article") == 1
+        assert html.count("<h1") == 1
+        assert '>何为价值投资</h1>' in html
+        assert 'class="seo-page-intro' not in html
+        assert 'GlobalAssetHistory 编辑团队' not in html
+        assert '<time datetime="2026-08-11">' not in html
+        assert 'class="seo-editorial-note"' not in html
+
+        css = client.get("/css/app.css").get_data(as_text=True)
+        assert "#tab-knowledge #kbSubTabs" in css
+        assert "margin-left: 0 !important" in css
+
+    def test_noindex_route_has_matching_header_meta_and_self_canonical(self, client):
+        resp = client.get("/zh/download")
+        html = resp.get_data(as_text=True)
+        assert resp.headers["X-Robots-Tag"] == "noindex,follow"
+        assert 'name="robots" content="noindex,follow"' in html
+        assert '<link rel="canonical" href="https://test.local/zh/download"' in html
+        assert '>数据下载</h1>' in html
+
+    def test_heatmap_is_indexable_and_listed_in_sitemap(self, client):
+        response = client.get("/zh/heatmap")
+        html = response.get_data(as_text=True)
+        assert response.headers["X-Robots-Tag"] == "index,follow"
+        assert 'data-route-focused="true"' in html
+        assert "dataset.routeFocused === 'true'" in html
+        locs = [url.findtext(f"{SITEMAP_NS}loc") for url in _sitemap_urls(client)]
+        assert f"{SITE_URL}/zh/heatmap" in locs
+        assert f"{SITE_URL}/en/heatmap" in locs
+
+    def test_affiliate_links_keep_machine_relationship_labels(self, client):
+        html = client.get("/zh/knowledge/how-to-buy-us-stocks").get_data(as_text=True)
+        assert '>如何购买美股</h1>' in html
+        assert 'class="seo-page-intro' not in html
+        assert 'class="seo-disclosure"' not in html
+        assert "站点可能获得平台奖励" not in html
+        assert 'rel="sponsored nofollow noopener noreferrer"' in html
+
+        english = client.get("/en/knowledge/value-investing").get_data(as_text=True)
+        assert '>Value Investing</h1>' in english
+        assert '>何为价值投资</h1>' not in english
+
+    def test_json_ld_graph_covers_entity_breadcrumb_and_public_dataset(self, client):
+        graph = _json_ld(client, "/en/us-etf/qqqm")["@graph"]
+        types = {node["@type"] for node in graph}
+        assert {"Organization", "WebSite", "Article", "BreadcrumbList", "Dataset"} <= types
+        dataset = next(node for node in graph if node["@type"] == "Dataset")
+        assert dataset["distribution"]["contentUrl"] == (
+            "https://test.local/datasets/qqqm-holdings.csv"
+        )
 
     def test_yearly_data_waits_for_explicit_query(self, client):
         script = client.get("/js/price-change.js").get_data(as_text=True)
@@ -248,6 +364,9 @@ class TestHtmlMeta:
         preset_end = script.index("function renderPresetChips", preset_start)
         assert "fetchData()" not in script[preset_start:preset_end]
         assert 'refreshBtn.addEventListener("click", fetchData)' in script
+        assert (
+            'typeof updateBacktestFrequencyUI === "function"' in script
+        )
 
     def test_vix_uses_candles_for_spy_qqq_and_lines_for_fear_indexes(self, client):
         script = client.get("/js/vix-chart.js").get_data(as_text=True)
@@ -546,7 +665,7 @@ class TestHtmlMeta:
             'data-i18n-attr="aria-label|detail.fundamentalsHistoryAria"'
             in html
         )
-        assert INDEX_LASTMOD == "2026-08-09"
+        assert INDEX_LASTMOD == "2026-08-11"
 
         zh_locale = client.get("/locales/zh-CN.json").get_json()["detail"]
         en_locale = client.get("/locales/en.json").get_json()["detail"]
@@ -631,13 +750,26 @@ class TestHtmlMeta:
         assert needle in html
 
     def test_qqqm_holdings_csv_is_dated_and_downloadable(self, client):
-        resp = client.get("/api/assets/QQQM/holdings.csv")
+        resp = client.get("/datasets/qqqm-holdings.csv")
         assert resp.status_code == 200
         assert resp.mimetype == "text/csv"
         assert "attachment;" in resp.headers["Content-Disposition"]
         body = resp.get_data(as_text=True)
         assert "ticker,company,weight,as_of,source" in body
         assert "NVDA,NVIDIA Corp,8.01%,2026-07-10,Invesco" in body
+
+        legacy = client.get("/api/assets/QQQM/holdings.csv")
+        assert legacy.get_data() == resp.get_data()
+
+    def test_llms_txt_links_canonical_pages_and_public_datasets(self, client):
+        resp = client.get("/llms.txt")
+        body = resp.get_data(as_text=True)
+        assert resp.status_code == 200
+        assert resp.mimetype == "text/plain"
+        assert "# GlobalAssetHistory" in body
+        assert f"{SITE_URL}/en/yearly" in body
+        assert f"{SITE_URL}/datasets/qqqm-holdings.csv" in body
+        assert f"{SITE_URL}/datasets/tqqq-historical-prices.csv" in body
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -670,13 +802,20 @@ class TestHistoricalCsv:
             volumes=[1000, 1200],
         )
         monkeypatch.setattr("app._fetch_daily_series_cached", lambda symbol, asset_type: series)
-        resp = client.get("/api/assets/TQQQ/history.csv?start=2024-01-02&end=2024-01-02")
+        resp = client.get(
+            "/datasets/tqqq-historical-prices.csv?start=2024-01-02&end=2024-01-02"
+        )
         assert resp.status_code == 200
         assert resp.mimetype == "text/csv"
         body = resp.get_data(as_text=True)
         assert "date,open,high,low,adjusted_close,volume,source" in body
         assert "2024-01-02,50.5,52.0,50.0,51.75,1200,test-source" in body
         assert "2024-01-01" not in body
+
+        legacy = client.get(
+            "/api/assets/TQQQ/history.csv?start=2024-01-02&end=2024-01-02"
+        )
+        assert legacy.get_data() == resp.get_data()
 
     def test_tqqq_csv_rejects_invalid_date_range_without_fetching(self, client, monkeypatch):
         def unexpected_fetch(*_):

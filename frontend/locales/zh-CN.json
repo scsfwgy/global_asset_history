@@ -971,6 +971,8 @@
   "seo": {
     "indexTitle": "GlobalAssetHistory - 历史涨跌幅与定投回测工具",
     "indexDescription": "查询美股、ETF、数字货币与A股指数的历年涨跌幅，按年/月/日钻取历史收益，并用日线数据做定投回测。",
+    "heatmapTitle": "全球市场热力图：美股、港股、全球股票与加密货币 - GlobalAssetHistory",
+    "heatmapDescription": "用可交互热力图查看美股、港股、全球股票、数字货币与A股的日、周、月、季和年度涨跌幅，并按成交额、市值或收益调整方块面积。",
     "yearlyTitle": "美股、ETF与指数历年涨跌幅查询 - GlobalAssetHistory",
     "yearlyDescription": "查询美股、ETF、数字货币与A股指数的历年涨跌幅和最大回撤，查看年度收益风险热力图并导出 CSV。",
     "backtestTitle": "投资收益与定投回测计算器 - GlobalAssetHistory",

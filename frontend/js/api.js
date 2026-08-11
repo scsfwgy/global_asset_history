@@ -26,6 +26,29 @@ const WISHES_ENDPOINT = `${API_BASE}/api/wishes`;
 const WISH_CAPTCHA_ENDPOINT = `${API_BASE}/api/wishes/captcha`;
 const WISH_VERIFY_ADMIN_ENDPOINT = `${API_BASE}/api/wishes/verify-admin`;
 
+// Shared symbol normalization for route-specific bundles. Individual pages no
+// longer need to load the full yearly-return module just to normalize a code.
+function normalizeAssetSymbol(symbol, type) {
+  const clean = String(symbol || "").trim().toUpperCase();
+  if (type !== "hk_stock" || !clean || clean.startsWith("^")) return clean;
+  const code = clean.endsWith(".HK") ? clean.slice(0, -3) : clean;
+  if (!/^\d{1,5}$/.test(code)) return clean;
+  const numeric = parseInt(code, 10);
+  const yahooCode = numeric < 10000 ? String(numeric).padStart(4, "0") : String(numeric);
+  return `${yahooCode}.HK`;
+}
+
+// Shared escaping helper for route-specific bundles such as heatmap.js. Keep
+// this in the common API script so focused pages do not depend on yearly UI.
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 // Share the immutable application-config request across feature modules.  The
 // page uses classic scripts, so a promise on window is the simplest way to
 // prevent each tab from issuing its own GET /config during startup.
