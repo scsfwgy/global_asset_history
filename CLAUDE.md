@@ -24,7 +24,7 @@
 PYTHONPATH=backend backend/.venv/bin/python3 -m pytest backend/tests -q
 ```
 
-当前测试套件收集 507 个测试，覆盖计算、服务、路由、基本面、数据下载、ETF/QDII、持仓解析、SEO、统计、运行日志和交付流程。
+当前测试套件收集 510 个测试，覆盖计算、服务、路由、基本面、数据下载、ETF/QDII、持仓解析、SEO、统计、运行日志和交付流程。
 
 ### 2. 产品交付门禁（强制）
 

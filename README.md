@@ -1,8 +1,12 @@
 # GlobalAssetHistory — 全球资产历史收益分析工具
 
-GlobalAssetHistory 是一个跨资产历史收益查询、市场分析与投资研究站点，覆盖美股、港股、全球股票、数字货币、A 股指数、场内 ETF 和 QDII 基金。
+GlobalAssetHistory 是一个 Apache-2.0 开源、可自行部署的跨资产历史收益查询、市场分析与投资研究站点，覆盖美股、港股、全球股票、数字货币、A 股指数、场内 ETF 和 QDII 基金。
 
 项目采用轻量架构：Flask 提供 API、动态页面与 SEO 响应，前端使用原生 HTML/CSS/JavaScript 和 SVG，不需要 Node.js 或前端构建步骤。生产环境面向 Vercel Serverless Functions。
+
+线上站点：[qqq.tools24.uk](https://qqq.tools24.uk) · [参与贡献](CONTRIBUTING.md) · [安全政策](SECURITY.md) · [AI 路线图](ROADMAP.md)
+
+> 本项目用于研究和教育，不构成个性化投资建议、收益承诺或自动交易服务。市场数据可能延迟、缺失或被修订，重要决策请以交易所、发行人或其他权威来源为准。
 
 ## 功能总览
 
@@ -51,7 +55,7 @@ GlobalAssetHistory 是一个跨资产历史收益查询、市场分析与投资�
 | 图表 | 原生 SVG，自实现折线图、热力图和 Treemap 布局 |
 | 数据请求 | `requests`、`curl_cffi`（可用时模拟浏览器 TLS） |
 | 缓存 | L1 进程内存 + L2 Upstash Redis/Vercel KV + L3 JSON 快照 |
-| 测试 | pytest，当前收集 507 个测试 |
+| 测试 | pytest，当前收集 510 个测试 |
 | 部署 | Vercel 静态资源 + Python Serverless Function |
 
 ### 后端模块
@@ -79,6 +83,8 @@ GlobalAssetHistory 是一个跨资产历史收益查询、市场分析与投资�
 | QDII 基金 | East Money 移动端接口 | Redis/本地快照兜底 |
 
 核心日线缓存成功结果保留 6 小时，错误结果保留 5 分钟。ETF 历史、净值和 QDII 数据的主要 TTL 为 4 小时。
+
+Apache-2.0 仅覆盖项目贡献者原创的软件与文档，不会重新许可第三方 API、行情、基金快照、商标或内容。使用、缓存或再分发相关数据前，请阅读[第三方数据与内容说明](THIRD_PARTY_DATA.md)并核对来源方条款。
 
 ## 本地启动
 
@@ -308,6 +314,10 @@ Sitemap 只列语言前缀的 canonical URL，避免无前缀页面造成重复�
 └── vercel.json
 ```
 
-## License
+## 开源许可与贡献
 
-MIT
+项目原创代码和文档采用 [Apache License 2.0](LICENSE) 开源。第三方数据与内容不因本项目许可证而改变其权利状态，详见[第三方数据与内容说明](THIRD_PARTY_DATA.md)。
+
+欢迎提交缺陷修复、新数据源、测试、文档与无障碍改进。开始前请阅读[贡献指南](CONTRIBUTING.md)；安全漏洞请通过[私密渠道](SECURITY.md)报告，不要创建公开 issue。
+
+项目正在规划开源的数据适配器维护助手和可审计的双语自然语言研究层。设计原则、交付物、评估方式与明确排除的用途见 [AI 路线图](ROADMAP.md)。
