@@ -1068,6 +1068,15 @@ def etf_market():
     return serve_frontend_html("etf-market.html")
 
 
+@app.route("/platform/tools24/privacy")
+@app.route("/platform/tools24/privacy/")
+def tools24_privacy():
+    """Serve the public privacy policy for the Tools24 mobile application."""
+    response = send_from_directory(str(FRONTEND_DIR), "tools24-privacy.html")
+    response.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
+    return response
+
+
 @app.route("/yearly")
 @app.route("/detail")
 @app.route("/stock-compare")

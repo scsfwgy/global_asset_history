@@ -7,6 +7,8 @@
     { "source": "/llms.txt", "destination": "/api/index" },
     { "source": "/sitemap.xml", "destination": "/api/index" },
     { "source": "/datasets/(.*)", "destination": "/api/index" },
+    { "source": "/platform/tools24/privacy", "destination": "/api/index" },
+    { "source": "/platform/tools24/privacy/", "destination": "/api/index" },
     { "source": "/etf-market", "destination": "/api/index" },
     { "source": "/us-etf/dram", "destination": "/api/index" },
     { "source": "/us-etf/qqqm", "destination": "/api/index" },
