@@ -307,7 +307,7 @@ INDEXABLE_PATHS = {
 # Real last-modified dates per page group. Update these ONLY when the page's
 # HTML/content actually changes — Google discounts <lastmod> if it always shows
 # "today". Knowledge articles use the per-article "updated" field instead.
-INDEX_LASTMOD = "2026-08-11"
+INDEX_LASTMOD = "2026-08-14"
 ETF_MARKET_LASTMOD = "2026-08-11"
 
 TOOL_SEO_KEYS = {
@@ -1077,6 +1077,15 @@ def tools24_privacy():
     return response
 
 
+@app.route("/platform/tools24")
+@app.route("/platform/tools24/")
+def tools24_product():
+    """Serve the public product page for the Tools24 Android application."""
+    response = send_from_directory(str(FRONTEND_DIR), "tools24.html")
+    response.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
+    return response
+
+
 @app.route("/yearly")
 @app.route("/detail")
 @app.route("/stock-compare")
@@ -1510,7 +1519,10 @@ _LANDING_HOSTS = {"tools24.uk", "www.tools24.uk"}
 
 @app.route("/")
 def index():
-    if request.host in _LANDING_HOSTS:
+    # Ignore a local development port so the dedicated homepage can be
+    # previewed with e.g. www.tools24.uk:8730 as well as on production hosts.
+    request_hostname = request.host.partition(":")[0].lower()
+    if request_hostname in _LANDING_HOSTS:
         return (FRONTEND_DIR / "landing.html").read_text(encoding="utf-8")
     return serve_frontend_html("price-change.html")
 
