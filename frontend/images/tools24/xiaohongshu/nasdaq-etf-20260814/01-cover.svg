@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#050816"/><stop offset=".52" stop-color="#0a1b55"/><stop offset="1" stop-color="#4b20d1"/></linearGradient>
+    <linearGradient id="accent" x1="0" x2="1"><stop stop-color="#16c7ff"/><stop offset="1" stop-color="#8b5cff"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="22"/></filter>
+  </defs>
+  <rect width="1200" height="1600" fill="url(#bg)"/>
+  <circle cx="1050" cy="270" r="260" fill="#5539ff" opacity=".22" filter="url(#glow)"/>
+  <circle cx="140" cy="1310" r="320" fill="#00bff3" opacity=".18" filter="url(#glow)"/>
+  <path d="M0 1290 C220 1120 380 1230 560 1030 S930 680 1200 760" fill="none" stroke="#20d2ff" stroke-width="8" opacity=".55"/>
+  <path d="M0 1360 C240 1220 420 1320 620 1110 S980 780 1200 860" fill="none" stroke="#8c68ff" stroke-width="5" opacity=".7"/>
+  <text x="82" y="140" fill="#55d9ff" font-size="40" font-weight="700" font-family="-apple-system,PingFang SC,sans-serif">场内纳指100 ETF 数据拆解</text>
+  <text x="76" y="360" fill="white" font-size="152" font-weight="900" font-family="-apple-system,PingFang SC,sans-serif">12只纳指ETF</text>
+  <text x="82" y="500" fill="white" font-size="86" font-weight="850" font-family="-apple-system,PingFang SC,sans-serif">同样跟踪纳指100</text>
+  <rect x="78" y="585" width="1044" height="250" rx="42" fill="url(#accent)" opacity=".96"/>
+  <text x="600" y="690" text-anchor="middle" fill="white" font-size="58" font-weight="800" font-family="-apple-system,PingFang SC,sans-serif">1万元对应溢价</text>
+  <text x="600" y="780" text-anchor="middle" fill="white" font-size="68" font-weight="900" font-family="-apple-system,PingFang SC,sans-serif">为什么可能接近1000元？</text>
+  <g transform="translate(82 985)">
+    <rect width="1036" height="290" rx="34" fill="#07112b" stroke="#4188ff" stroke-width="2" opacity=".88"/>
+    <text x="54" y="82" fill="#a9b8d8" font-size="38" font-family="-apple-system,PingFang SC,sans-serif">不只看涨跌，还要一起看</text>
+    <text x="54" y="162" fill="white" font-size="52" font-weight="800" font-family="-apple-system,PingFang SC,sans-serif">溢价 · 费率 · 规模 · 收益差</text>
+    <text x="54" y="234" fill="#55d9ff" font-size="36" font-weight="650" font-family="-apple-system,PingFang SC,sans-serif">一张图看懂“相同指数，不同成本”</text>
+  </g>
+  <text x="82" y="1510" fill="#aeb8d0" font-size="30" font-family="-apple-system,PingFang SC,sans-serif">数据快照：2026-08-14 盘后｜仅作数据研究，不构成投资建议</text>
+</svg>

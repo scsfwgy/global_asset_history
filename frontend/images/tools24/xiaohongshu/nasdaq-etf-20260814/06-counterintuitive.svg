@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#110c20"/><stop offset="1" stop-color="#362064"/></linearGradient></defs>
+  <rect width="1200" height="1600" fill="url(#bg)"/>
+  <text x="70" y="120" fill="#c5a7ff" font-size="34" font-weight="700" font-family="-apple-system,PingFang SC,sans-serif">06｜数据里最反常识的3组对照</text>
+  <text x="70" y="245" fill="white" font-size="84" font-weight="900" font-family="-apple-system,PingFang SC,sans-serif">没有一个指标能单独选基</text>
+  <g font-family="-apple-system,PingFang SC,sans-serif">
+    <g transform="translate(70 350)"><rect width="1060" height="300" rx="42" fill="#2b2250" stroke="#9374ff" stroke-width="3"/><text x="45" y="75" fill="#b9a8ff" font-size="34" font-weight="800">规模最大</text><text x="45" y="145" fill="white" font-size="52" font-weight="900">159941 广发｜382.71亿</text><text x="45" y="215" fill="#d7cdec" font-size="35">但固定费率 1.00%，当时溢价 11.42%</text><text x="45" y="265" fill="#ff9cb6" font-size="29">“大”不代表“便宜”</text></g>
+    <g transform="translate(70 700)"><rect width="1060" height="300" rx="42" fill="#173843" stroke="#49e0bf" stroke-width="3"/><text x="45" y="75" fill="#74e8ce" font-size="34" font-weight="800">费率最低档</text><text x="45" y="145" fill="white" font-size="52" font-weight="900">159696 易方达｜0.60%</text><text x="45" y="215" fill="#c4dedc" font-size="35">但当时溢价 9.62%，30日万元收益差 -119元</text><text x="45" y="265" fill="#74e8ce" font-size="29">“低费”不代表“当下成本最低”</text></g>
+    <g transform="translate(70 1050)"><rect width="1060" height="300" rx="42" fill="#4a263b" stroke="#ff719f" stroke-width="3"/><text x="45" y="75" fill="#ff9dbb" font-size="34" font-weight="800">溢价相对最低</text><text x="45" y="145" fill="white" font-size="52" font-weight="900">159513 大成｜8.59%</text><text x="45" y="215" fill="#e7cbd4" font-size="35">但固定费率处于最高档：1.00%</text><text x="45" y="265" fill="#ff9dbb" font-size="29">“现在便宜些”不代表“长期成本最低”</text></g>
+  </g>
+  <text x="70" y="1455" fill="white" font-size="40" font-weight="800" font-family="-apple-system,PingFang SC,sans-serif">正确姿势：把溢价、费率、规模、收益差放一起看</text>
+  <text x="70" y="1545" fill="#998aac" font-size="27" font-family="-apple-system,PingFang SC,sans-serif">2026-08-14盘后快照｜仅作数据研究，不构成投资建议</text>
+</svg>

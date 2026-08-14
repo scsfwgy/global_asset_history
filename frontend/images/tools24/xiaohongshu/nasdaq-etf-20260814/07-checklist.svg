@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#04151a"/><stop offset="1" stop-color="#124c51"/></linearGradient><linearGradient id="cta" x2="1"><stop stop-color="#12caa1"/><stop offset="1" stop-color="#21a8ff"/></linearGradient></defs>
+  <rect width="1200" height="1600" fill="url(#bg)"/>
+  <text x="70" y="120" fill="#79efd5" font-size="34" font-weight="700" font-family="-apple-system,PingFang SC,sans-serif">07｜买场内纳指ETF前</text>
+  <text x="70" y="245" fill="white" font-size="92" font-weight="900" font-family="-apple-system,PingFang SC,sans-serif">先做这份检查</text>
+  <g font-family="-apple-system,PingFang SC,sans-serif">
+    <g transform="translate(70 350)"><circle cx="50" cy="50" r="50" fill="#16cba5"/><text x="50" y="68" text-anchor="middle" fill="white" font-size="52" font-weight="900">✓</text><text x="130" y="42" fill="white" font-size="45" font-weight="850">先看实时溢价率</text><text x="130" y="91" fill="#b6d8d6" font-size="30">不是昨天截图，也不是别人文章里的数字</text></g>
+    <g transform="translate(70 535)"><circle cx="50" cy="50" r="50" fill="#16cba5"/><text x="50" y="68" text-anchor="middle" fill="white" font-size="52" font-weight="900">✓</text><text x="130" y="42" fill="white" font-size="45" font-weight="850">确认管理费 + 托管费</text><text x="130" y="91" fill="#b6d8d6" font-size="30">长期成本会持续发生</text></g>
+    <g transform="translate(70 720)"><circle cx="50" cy="50" r="50" fill="#16cba5"/><text x="50" y="68" text-anchor="middle" fill="white" font-size="52" font-weight="900">✓</text><text x="130" y="42" fill="white" font-size="45" font-weight="850">结合规模和成交额</text><text x="130" y="91" fill="#b6d8d6" font-size="30">别只看基金名字和代码</text></g>
+    <g transform="translate(70 905)"><circle cx="50" cy="50" r="50" fill="#16cba5"/><text x="50" y="68" text-anchor="middle" fill="white" font-size="52" font-weight="900">✓</text><text x="130" y="42" fill="white" font-size="45" font-weight="850">观察实际跟踪结果</text><text x="130" y="91" fill="#b6d8d6" font-size="30">同一指数，收益也可能不同</text></g>
+    <g transform="translate(70 1090)"><circle cx="50" cy="50" r="50" fill="#16cba5"/><text x="50" y="68" text-anchor="middle" fill="white" font-size="52" font-weight="900">✓</text><text x="130" y="42" fill="white" font-size="45" font-weight="850">检查数据日期与口径</text><text x="130" y="91" fill="#b6d8d6" font-size="30">净值更新、跨市场交易日都可能影响结果</text></g>
+  </g>
+  <rect x="70" y="1290" width="1060" height="185" rx="40" fill="url(#cta)"/>
+  <text x="600" y="1365" text-anchor="middle" fill="white" font-size="38" font-weight="700" font-family="-apple-system,PingFang SC,sans-serif">一句话总结</text>
+  <text x="600" y="1430" text-anchor="middle" fill="white" font-size="46" font-weight="900" font-family="-apple-system,PingFang SC,sans-serif">别只选“最便宜”，要选“综合更合适”</text>
+  <text x="70" y="1545" fill="#83aaa9" font-size="27" font-family="-apple-system,PingFang SC,sans-serif">数据会变化｜本文仅作信息整理，不构成任何投资建议</text>
+</svg>

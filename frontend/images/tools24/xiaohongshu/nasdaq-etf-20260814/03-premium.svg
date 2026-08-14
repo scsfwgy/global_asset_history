@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#140913"/><stop offset="1" stop-color="#311044"/></linearGradient><linearGradient id="hot" x2="1"><stop stop-color="#ff4e71"/><stop offset="1" stop-color="#ff9b4a"/></linearGradient></defs>
+  <rect width="1200" height="1600" fill="url(#bg)"/>
+  <text x="70" y="120" fill="#ff9bb5" font-size="34" font-weight="700" font-family="-apple-system,PingFang SC,sans-serif">03｜最值得先看的风险</text>
+  <text x="70" y="245" fill="white" font-size="88" font-weight="900" font-family="-apple-system,PingFang SC,sans-serif">12只全部高溢价</text>
+  <rect x="70" y="315" width="1060" height="250" rx="42" fill="url(#hot)"/>
+  <text x="600" y="420" text-anchor="middle" fill="white" font-size="76" font-weight="900" font-family="-apple-system,PingFang SC,sans-serif">8.59% — 11.42%</text>
+  <text x="600" y="505" text-anchor="middle" fill="white" font-size="38" font-weight="700" font-family="-apple-system,PingFang SC,sans-serif">按页面口径，每万元约 859 — 1,142 元</text>
+  <g font-family="-apple-system,PingFang SC,sans-serif">
+    <text x="70" y="665" fill="#78efc6" font-size="42" font-weight="850">当时溢价相对较低</text>
+    <g transform="translate(70 710)"><rect width="1060" height="110" rx="26" fill="#123b38"/><text x="34" y="70" fill="white" font-size="39" font-weight="700">159513  大成</text><text x="1005" y="70" text-anchor="end" fill="#64e8ba" font-size="46" font-weight="900">8.59%</text></g>
+    <g transform="translate(70 840)"><rect width="1060" height="110" rx="26" fill="#123b38"/><text x="34" y="70" fill="white" font-size="39" font-weight="700">159632  华安</text><text x="1005" y="70" text-anchor="end" fill="#64e8ba" font-size="46" font-weight="900">8.63%</text></g>
+    <g transform="translate(70 970)"><rect width="1060" height="110" rx="26" fill="#123b38"/><text x="34" y="70" fill="white" font-size="39" font-weight="700">513110  华泰柏瑞</text><text x="1005" y="70" text-anchor="end" fill="#64e8ba" font-size="46" font-weight="900">8.65%</text></g>
+    <text x="70" y="1175" fill="#ff8da8" font-size="42" font-weight="850">当时溢价相对较高</text>
+    <text x="70" y="1245" fill="white" font-size="38">159941 广发  11.42%</text><text x="760" y="1245" fill="white" font-size="38">513100 国泰  11.19%</text>
+    <text x="70" y="1315" fill="white" font-size="38">159501 嘉实  10.92%</text>
+  </g>
+  <rect x="70" y="1370" width="1060" height="120" rx="28" fill="#4b1930" stroke="#ff587d"/>
+  <text x="600" y="1442" text-anchor="middle" fill="white" font-size="35" font-weight="750" font-family="-apple-system,PingFang SC,sans-serif">溢价会随行情和净值更新变化，买前一定重新确认</text>
+  <text x="70" y="1545" fill="#ae849c" font-size="27" font-family="-apple-system,PingFang SC,sans-serif">2026-08-14盘后快照｜仅作数据研究，不构成投资建议</text>
+</svg>

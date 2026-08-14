@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#06131b"/><stop offset="1" stop-color="#08363f"/></linearGradient></defs>
+  <rect width="1200" height="1600" fill="url(#bg)"/>
+  <text x="70" y="120" fill="#73e8d0" font-size="34" font-weight="700" font-family="-apple-system,PingFang SC,sans-serif">04｜长期持有要看的固定成本</text>
+  <text x="70" y="245" fill="white" font-size="86" font-weight="900" font-family="-apple-system,PingFang SC,sans-serif">年费率分成4档</text>
+  <text x="70" y="310" fill="#9ec9ca" font-size="32" font-family="-apple-system,PingFang SC,sans-serif">管理费 + 托管费｜每档刚好3只</text>
+  <g font-family="-apple-system,PingFang SC,sans-serif">
+    <g transform="translate(70 380)"><rect width="1060" height="220" rx="38" fill="#0b5548"/><text x="40" y="80" fill="#7affd5" font-size="62" font-weight="900">0.60%</text><text x="40" y="145" fill="white" font-size="37" font-weight="700">159501 嘉实　159696 易方达　513870 富国</text><text x="40" y="193" fill="#a7e6d4" font-size="28">每万元理论年固定费用约60元</text></g>
+    <g transform="translate(70 630)"><rect width="1060" height="220" rx="38" fill="#164c69"/><text x="40" y="80" fill="#75dfff" font-size="62" font-weight="900">0.65%</text><text x="40" y="145" fill="white" font-size="37" font-weight="700">159660 汇添富　159659 招商　513390 博时</text><text x="40" y="193" fill="#acd8e8" font-size="28">每万元理论年固定费用约65元</text></g>
+    <g transform="translate(70 880)"><rect width="1060" height="220" rx="38" fill="#3a3971"/><text x="40" y="80" fill="#b9a8ff" font-size="62" font-weight="900">0.80%</text><text x="40" y="145" fill="white" font-size="37" font-weight="700">513300 华夏　159632 华安　513100 国泰</text><text x="40" y="193" fill="#c9c2e8" font-size="28">每万元理论年固定费用约80元</text></g>
+    <g transform="translate(70 1130)"><rect width="1060" height="220" rx="38" fill="#5c303c"/><text x="40" y="80" fill="#ff9eb6" font-size="62" font-weight="900">1.00%</text><text x="40" y="145" fill="white" font-size="37" font-weight="700">513110 华泰柏瑞　159513 大成　159941 广发</text><text x="40" y="193" fill="#e8c0cb" font-size="28">每万元理论年固定费用约100元</text></g>
+  </g>
+  <text x="70" y="1435" fill="white" font-size="39" font-weight="750" font-family="-apple-system,PingFang SC,sans-serif">费率最低 ≠ 当下买入成本最低</text>
+  <text x="70" y="1495" fill="#74e5cf" font-size="30" font-family="-apple-system,PingFang SC,sans-serif">还要同时看溢价、流动性和实际跟踪结果</text>
+  <text x="70" y="1550" fill="#76979b" font-size="26" font-family="-apple-system,PingFang SC,sans-serif">2026-08-14盘后快照｜仅作数据研究，不构成投资建议</text>
+</svg>

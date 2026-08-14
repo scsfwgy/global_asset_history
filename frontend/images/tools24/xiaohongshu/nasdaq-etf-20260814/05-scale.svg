@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#07101e"/><stop offset="1" stop-color="#12296b"/></linearGradient><linearGradient id="bar" x2="1"><stop stop-color="#2ad6ff"/><stop offset="1" stop-color="#7b63ff"/></linearGradient></defs>
+  <rect width="1200" height="1600" fill="url(#bg)"/>
+  <text x="70" y="120" fill="#74dfff" font-size="34" font-weight="700" font-family="-apple-system,PingFang SC,sans-serif">05｜产品体量</text>
+  <text x="70" y="245" fill="white" font-size="88" font-weight="900" font-family="-apple-system,PingFang SC,sans-serif">规模最大的5只</text>
+  <text x="70" y="315" fill="#9cafcf" font-size="32" font-family="-apple-system,PingFang SC,sans-serif">单位：亿元｜建议再配合成交额观察流动性</text>
+  <g font-family="-apple-system,PingFang SC,sans-serif">
+    <text x="70" y="455" fill="white" font-size="38" font-weight="750">159941 广发</text><rect x="70" y="485" width="990" height="70" rx="20" fill="#172956"/><rect x="70" y="485" width="990" height="70" rx="20" fill="url(#bar)"/><text x="1090" y="537" text-anchor="end" fill="white" font-size="38" font-weight="900">382.71</text>
+    <text x="70" y="665" fill="white" font-size="38" font-weight="750">513100 国泰</text><rect x="70" y="695" width="990" height="70" rx="20" fill="#172956"/><rect x="70" y="695" width="554" height="70" rx="20" fill="url(#bar)"/><text x="1090" y="747" text-anchor="end" fill="white" font-size="38" font-weight="900">214.29</text>
+    <text x="70" y="875" fill="white" font-size="38" font-weight="750">513300 华夏</text><rect x="70" y="905" width="990" height="70" rx="20" fill="#172956"/><rect x="70" y="905" width="376" height="70" rx="20" fill="url(#bar)"/><text x="1090" y="957" text-anchor="end" fill="white" font-size="38" font-weight="900">145.48</text>
+    <text x="70" y="1085" fill="white" font-size="38" font-weight="750">159501 嘉实</text><rect x="70" y="1115" width="990" height="70" rx="20" fill="#172956"/><rect x="70" y="1115" width="369" height="70" rx="20" fill="url(#bar)"/><text x="1090" y="1167" text-anchor="end" fill="white" font-size="38" font-weight="900">142.85</text>
+    <text x="70" y="1295" fill="white" font-size="38" font-weight="750">159632 华安</text><rect x="70" y="1325" width="990" height="70" rx="20" fill="#172956"/><rect x="70" y="1325" width="321" height="70" rx="20" fill="url(#bar)"/><text x="1090" y="1377" text-anchor="end" fill="white" font-size="38" font-weight="900">124.06</text>
+  </g>
+  <text x="70" y="1485" fill="#75ddff" font-size="38" font-weight="750" font-family="-apple-system,PingFang SC,sans-serif">规模大 ≠ 费率低 ≠ 溢价低</text>
+  <text x="70" y="1545" fill="#8294b8" font-size="27" font-family="-apple-system,PingFang SC,sans-serif">2026-08-14盘后快照｜仅作数据研究，不构成投资建议</text>
+</svg>
