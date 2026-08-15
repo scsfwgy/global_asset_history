@@ -3,22 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Tools24 是一款面向 Android 的日常工具箱，集合扫码、二维码生成、指南针、水平仪、速度与海拔、单位换算、房贷计算等 25+ 项实用工具。现通过 Google Play 邀请用户参与内测。">
-    <meta name="keywords" content="Tools24,Android工具箱,扫码,二维码生成,指南针,水平仪,单位换算,Google Play内测">
+    <meta name="description" content="Tools24 Android 工具箱官方网站。一个应用装下扫码、二维码生成、指南针、水平仪、单位换算等 25+ 项实用工具，支持直接下载 APK 或通过 Google Play 安装。">
+    <meta name="keywords" content="Tools24,Android工具箱,APK下载,扫码,二维码生成,指南针,水平仪,单位换算,Google Play">
     <meta name="author" content="tools24.uk">
     <meta name="robots" content="index,follow">
-    <link rel="canonical" href="https://www.tools24.uk/platform/tools24">
+    <link rel="canonical" href="https://www.tools24.uk/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="tools24.uk">
-    <meta property="og:title" content="Tools24 Android 工具箱 — 邀请参与内测">
-    <meta property="og:description" content="一个应用，装下日常所需。25+ 项快捷、测量、设备与生活工具，现已开放 Google Play 内测。">
-    <meta property="og:url" content="https://www.tools24.uk/platform/tools24">
+    <meta property="og:title" content="Tools24 Android 工具箱 — 官方网站">
+    <meta property="og:description" content="一个应用，装下日常所需。25+ 项快捷、测量、设备与生活工具，提供 APK 与 Google Play 下载。">
+    <meta property="og:url" content="https://www.tools24.uk/">
     <meta property="og:image" content="https://www.tools24.uk/images/tools24/feature-graphic.jpg">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Tools24 Android 工具箱 — 邀请参与内测">
-    <meta name="twitter:description" content="一个应用，装下日常所需。25+ 项工具，现已开放 Google Play 内测。">
+    <meta name="twitter:title" content="Tools24 Android 工具箱 — 官方网站">
+    <meta name="twitter:description" content="一个应用，装下日常所需。25+ 项工具，提供 APK 与 Google Play 下载。">
     <meta name="twitter:image" content="https://www.tools24.uk/images/tools24/feature-graphic.jpg">
-    <title>Tools24 Android 工具箱 — 邀请参与内测</title>
+    <title>Tools24 Android 工具箱 — 官方网站</title>
     <style>
         :root {
             --bg: #f7f9fc;
@@ -83,6 +83,9 @@
             text-decoration: none;
             font-size: 14px;
         }
+        .topnav { display: flex; align-items: center; gap: 24px; }
+        .topnav a { color: var(--secondary); text-decoration: none; font-size: 14px; }
+        .topnav a:hover { color: var(--blue); }
         .back-link:hover { color: var(--blue); }
         .hero {
             min-height: 660px;
@@ -203,6 +206,22 @@
         .app-chip strong, .app-chip span { display: block; }
         .app-chip strong { font-size: 14px; }
         .app-chip span { color: var(--muted); font-size: 11px; }
+        .download-card {
+            position: absolute;
+            left: -7%;
+            bottom: 9%;
+            width: 166px;
+            padding: 14px;
+            border: 1px solid rgba(255,255,255,.75);
+            border-radius: 22px;
+            background: color-mix(in srgb, var(--surface) 94%, transparent);
+            box-shadow: 0 18px 42px rgba(20, 58, 112, .2);
+            text-align: center;
+            backdrop-filter: blur(16px);
+        }
+        .download-card img { width: 138px; height: 138px; display: block; border-radius: 10px; background: #fff; }
+        .download-card strong { display: block; margin-top: 8px; font-size: 12px; }
+        .download-card span { display: block; color: var(--muted); font-size: 10px; }
         section { padding: 88px 0; }
         .section-heading { max-width: 680px; margin-bottom: 38px; }
         .section-heading h2 { margin: 0 0 10px; font-size: clamp(32px, 5vw, 46px); letter-spacing: -.04em; line-height: 1.15; }
@@ -255,6 +274,20 @@
         .invite h2 { margin: 0 0 12px; font-size: clamp(30px, 4vw, 44px); line-height: 1.18; letter-spacing: -.04em; }
         .invite p { max-width: 640px; margin: 0; color: #bdcbe0; }
         .invite .button-primary { white-space: nowrap; }
+        .download-panel {
+            display: flex;
+            align-items: center;
+            gap: 22px;
+        }
+        .download-panel img {
+            width: 142px;
+            height: 142px;
+            padding: 7px;
+            border-radius: 18px;
+            background: #fff;
+        }
+        .download-actions { display: grid; gap: 10px; min-width: 190px; }
+        .download-actions .button-secondary { color: #fff; border-color: rgba(255,255,255,.26); background: rgba(255,255,255,.08); }
         footer {
             padding: 0 0 42px;
             display: flex;
@@ -275,11 +308,13 @@
             .feature-grid { grid-template-columns: 1fr 1fr; }
             .invite { grid-template-columns: 1fr; text-align: center; }
             .invite p { margin-inline: auto; }
+            .download-panel { justify-content: center; }
         }
         @media (max-width: 560px) {
             .shell { width: min(100% - 28px, 1120px); }
             .topbar { height: 64px; }
             .brand span { display: none; }
+            .topnav a:not(:last-child) { display: none; }
             .hero { min-height: 0; padding: 52px 0 64px; }
             h1 { font-size: 46px; }
             h1 { overflow-wrap: anywhere; }
@@ -287,7 +322,8 @@
             .actions { align-items: stretch; flex-direction: column; }
             .device-stage { min-height: 450px; }
             .phone { width: 230px; }
-            .app-chip { left: 0; bottom: 10%; }
+            .download-card { left: -2%; bottom: 5%; width: 142px; padding: 10px; }
+            .download-card img { width: 120px; height: 120px; }
             section { padding: 64px 0; }
             .feature-grid { grid-template-columns: 1fr; }
             .feature-card { min-height: 180px; }
@@ -295,6 +331,7 @@
             .gallery { grid-template-columns: repeat(5, 76vw); gap: 16px; overflow-x: auto; padding: 4px 14px 24px; margin-inline: -14px; scroll-snap-type: x mandatory; }
             .shot, .shot:nth-child(2), .shot:nth-child(4) { grid-column: auto; margin-top: 0; scroll-snap-align: center; }
             .invite { margin: 42px 0 64px; padding: 38px 24px; }
+            .download-panel { flex-direction: column; }
             footer { flex-direction: column; align-items: flex-start; }
         }
         @media (prefers-reduced-motion: reduce) {
@@ -310,38 +347,44 @@
       "operatingSystem": "Android",
       "applicationCategory": "UtilitiesApplication",
       "description": "集合快捷、测量、设备与生活工具的 Android 日常工具箱。",
-      "url": "https://www.tools24.uk/platform/tools24",
-      "installUrl": "https://play.google.com/apps/testing/com.maxhall.tools24"
+      "url": "https://www.tools24.uk/",
+      "downloadUrl": "__TOOLS24_DOWNLOAD_URL_JSON__",
+      "installUrl": "https://play.google.com/store/apps/details?id=com.maxhall.tools24"
     }
     </script>
     <!-- Cloudflare Web Analytics --><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "4e8e800522184f89be4da06c18ab5d0a"}'></script><!-- End Cloudflare Web Analytics -->
 </head>
 <body>
     <header class="shell topbar">
-        <a class="brand" href="/" aria-label="返回 tools24.uk 首页">
+        <a class="brand" href="/" aria-label="Tools24 首页">
             <img src="/images/tools24/app-icon.png" alt="" width="38" height="38">
             <span>Tools24</span>
         </a>
-        <a class="back-link" href="/">← 返回 tools24.uk</a>
+        <nav class="topnav" aria-label="主要导航">
+            <a href="#features">功能</a>
+            <a href="#screenshots">界面</a>
+            <a href="#download">下载</a>
+        </nav>
     </header>
 
     <main>
         <div class="shell hero">
             <div>
-                <div class="eyebrow">ANDROID 内测招募中</div>
+                <div class="eyebrow">TOOLS24 FOR ANDROID</div>
                 <h1>一个应用，<span class="gradient-text">装下日常所需。</span></h1>
                 <p class="hero-copy">Tools24 把扫码、测量、设备信息和生活计算等 25+ 项工具收进一个清爽的 Android 应用。需要时快速打开，用完即走。</p>
                 <div class="actions">
-                    <a class="button button-primary" href="https://play.google.com/apps/testing/com.maxhall.tools24" target="_blank" rel="sponsored nofollow noopener">加入 Google Play 内测 →</a>
-                    <a class="button button-secondary" href="#features">看看有哪些工具</a>
+                    <a class="button button-primary" href="__TOOLS24_DOWNLOAD_URL_ATTRIBUTE__">直接下载 APK ↓</a>
+                    <a class="button button-secondary" href="https://play.google.com/store/apps/details?id=com.maxhall.tools24" target="_blank" rel="sponsored nofollow noopener">Google Play 下载</a>
                 </div>
-                <p class="beta-note">免费参与 · 通过 Google Play 获取测试版本与后续更新</p>
+                <p class="beta-note">当前版本 V__TOOLS24_VERSION_TEXT__ · Android 安装包</p>
             </div>
             <div class="device-stage" aria-label="Tools24 应用首页预览">
                 <div class="phone"><img src="/images/tools24/screenshot-home.png" alt="Tools24 正式版工具中心首页，展示扫码、二维码生成、手电筒、屏幕灯等收藏工具" width="1440" height="3200"></div>
-                <div class="app-chip" aria-hidden="true">
-                    <img src="/images/tools24/app-icon.png" alt="" width="48" height="48">
-                    <div><strong>Tools24</strong><span>25+ 项实用工具</span></div>
+                <div class="download-card">
+                    <img src="/api/tools24/download-qr.svg" alt="Tools24 最新 APK 下载二维码" width="138" height="138">
+                    <strong>手机扫码下载</strong>
+                    <span>二维码始终指向最新版</span>
                 </div>
             </div>
         </div>
@@ -359,7 +402,7 @@
             </div>
         </section>
 
-        <section class="gallery-wrap">
+        <section id="screenshots" class="gallery-wrap">
             <div class="shell">
                 <div class="section-heading">
                     <h2>清楚、直接、不绕路</h2>
@@ -376,12 +419,18 @@
         </section>
 
         <div class="shell">
-            <section class="invite">
+            <section id="download" class="invite">
                 <div>
-                    <h2>一起把 Tools24 打磨得更好</h2>
-                    <p>内测用户可以提前体验新版本。欢迎在真实设备上试用，并把崩溃、兼容性问题或你最想加入的工具告诉我们。</p>
+                    <h2>现在就把 Tools24 装进手机</h2>
+                    <p>扫描二维码或直接下载官方 APK，也可以前往 Google Play 安装。二维码会随正式包地址自动更新。</p>
                 </div>
-                <a class="button button-primary" href="https://play.google.com/apps/testing/com.maxhall.tools24" target="_blank" rel="sponsored nofollow noopener">现在加入内测 →</a>
+                <div class="download-panel">
+                    <img src="/api/tools24/download-qr.svg" alt="扫描二维码下载 Tools24 最新 APK" loading="lazy" width="142" height="142">
+                    <div class="download-actions">
+                        <a class="button button-primary" href="__TOOLS24_DOWNLOAD_URL_ATTRIBUTE__">下载 APK V__TOOLS24_VERSION_TEXT__</a>
+                        <a class="button button-secondary" href="https://play.google.com/store/apps/details?id=com.maxhall.tools24" target="_blank" rel="sponsored nofollow noopener">前往 Google Play</a>
+                    </div>
+                </div>
             </section>
         </div>
     </main>
@@ -390,7 +439,7 @@
         <span>© 2026 tools24.uk</span>
         <nav aria-label="页脚导航">
             <a href="/platform/tools24/privacy">隐私政策</a>
-            <a href="/">所有项目</a>
+            <a href="https://play.google.com/store/apps/details?id=com.maxhall.tools24" target="_blank" rel="sponsored nofollow noopener">Google Play</a>
         </nav>
     </footer>
 </body>

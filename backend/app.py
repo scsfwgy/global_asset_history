@@ -14,6 +14,8 @@ from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
+import qrcode
+from qrcode.image.svg import SvgPathImage
 from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
 
@@ -21,6 +23,8 @@ from routes.price_change import price_change_bp
 from routes.wishes import wishes_bp
 from routes.etf_market import etf_market_bp
 from service import visitor_stats
+from service.tools24_release import get_release as get_tools24_release
+from service.tools24_release import set_release as set_tools24_release
 from service.price_change.config import get_site_base_url
 from service.price_change import cache_store, diagnostics
 from service.price_change.price_change_service import _fetch_daily_series_cached
@@ -307,7 +311,7 @@ INDEXABLE_PATHS = {
 # Real last-modified dates per page group. Update these ONLY when the page's
 # HTML/content actually changes — Google discounts <lastmod> if it always shows
 # "today". Knowledge articles use the per-article "updated" field instead.
-INDEX_LASTMOD = "2026-08-14"
+INDEX_LASTMOD = "2026-08-15"
 ETF_MARKET_LASTMOD = "2026-08-11"
 
 TOOL_SEO_KEYS = {
@@ -1077,12 +1081,81 @@ def tools24_privacy():
     return response
 
 
+def _render_tools24_product():
+    """Render the official site with the currently configured APK release."""
+    release = get_tools24_release()
+    document = (FRONTEND_DIR / "tools24.html").read_text(encoding="utf-8")
+    document = document.replace(
+        "__TOOLS24_DOWNLOAD_URL_ATTRIBUTE__",
+        html.escape(release["download_url"], quote=True),
+    )
+    document = document.replace(
+        '"__TOOLS24_DOWNLOAD_URL_JSON__"',
+        json.dumps(release["download_url"], ensure_ascii=False),
+    )
+    document = document.replace(
+        "__TOOLS24_VERSION_TEXT__",
+        html.escape(release["version"]),
+    )
+    response = Response(document, mimetype="text/html")
+    response.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
+    return response
+
+
 @app.route("/platform/tools24")
 @app.route("/platform/tools24/")
 def tools24_product():
-    """Serve the public product page for the Tools24 Android application."""
-    response = send_from_directory(str(FRONTEND_DIR), "tools24.html")
+    """Serve the official site for the Tools24 Android application."""
+    return _render_tools24_product()
+
+
+def _tools24_admin_authorized() -> bool:
+    expected = os.getenv("WISH_ADMIN_TOKEN", "")
+    supplied = request.headers.get("X-Admin-Token", "")
+    authorization = request.headers.get("Authorization", "")
+    if not supplied and authorization.lower().startswith("bearer "):
+        supplied = authorization[7:].strip()
+    return bool(expected and supplied and hmac.compare_digest(supplied, expected))
+
+
+@app.route("/api/tools24/release", methods=["GET", "PUT"])
+def tools24_release():
+    """Read or update the official APK URL without exposing the admin token."""
+    if request.method == "GET":
+        response = jsonify(get_tools24_release())
+        response.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
+        return response
+    if not _tools24_admin_authorized():
+        return jsonify({"error": "管理员凭证无效"}), 403
+    body = request.get_json(silent=True) or {}
+    try:
+        release = set_tools24_release(body.get("download_url"))
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+    except RuntimeError as error:
+        logger.error("event=tools24_release_update status=storage_error")
+        return jsonify({"error": str(error)}), 503
+    logger.info("event=tools24_release_update status=success version=%s", release["version"])
+    response = jsonify({"ok": True, **release})
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.route("/api/tools24/download-qr.svg")
+def tools24_download_qr():
+    """Generate a QR code from the current official APK URL."""
+    release = get_tools24_release()
+    image = qrcode.make(
+        release["download_url"],
+        image_factory=SvgPathImage,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=4,
+    )
+    response = Response(image.to_string(), mimetype="image/svg+xml")
+    response.set_etag(hashlib.sha256(release["download_url"].encode("utf-8")).hexdigest())
     response.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
+    response.headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'"
     return response
 
 
@@ -1523,7 +1596,7 @@ def index():
     # previewed with e.g. www.tools24.uk:8730 as well as on production hosts.
     request_hostname = request.host.partition(":")[0].lower()
     if request_hostname in _LANDING_HOSTS:
-        return (FRONTEND_DIR / "landing.html").read_text(encoding="utf-8")
+        return _render_tools24_product()
     return serve_frontend_html("price-change.html")
 
 
