@@ -73,6 +73,23 @@ def test_app_tools24_domain_home_is_the_official_app_site(client):
     assert "/images/tools24/app-icon.png" in html
 
 
+def test_tools24_product_ships_three_language_i18n(client):
+    response = client.get("/platform/tools24")
+    html = response.get_data(as_text=True)
+
+    assert "TOOLS24_I18N" in html
+    assert '"zh-CN"' in html and '"zh-TW"' in html and '"en"' in html
+    assert 'data-lang="zh-CN"' in html
+    assert 'data-lang="zh-TW"' in html
+    assert 'data-lang="en"' in html
+    assert 'id="tools24LangTrigger"' in html
+    assert 'id="tools24LangMenu"' in html
+    assert 'data-i18n="heroTitle1"' in html
+    assert 'data-i18n="privacy"' in html
+    # Static Simplified Chinese text is preserved as the no-JS fallback.
+    assert "直接下载 APK" in html
+
+
 def test_app_tools24_domain_allows_local_preview_port(client):
     response = client.get("/", headers={"Host": "app.tools24.uk:8730"})
 

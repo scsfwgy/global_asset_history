@@ -87,6 +87,53 @@
         .topnav a { color: var(--secondary); text-decoration: none; font-size: 14px; }
         .topnav a:hover { color: var(--blue); }
         .back-link:hover { color: var(--blue); }
+        .topbar-right { display: flex; align-items: center; gap: 22px; }
+        .langswitch { position: relative; }
+        .langswitch-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid var(--line);
+            background: transparent;
+            color: var(--secondary);
+            font-size: 13px;
+            line-height: 1;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: color .15s, border-color .15s;
+        }
+        .langswitch-trigger:hover { color: var(--blue); }
+        .lang-chevron { width: 12px; height: 12px; transition: transform .15s; }
+        .langswitch-trigger[aria-expanded="true"] .lang-chevron { transform: rotate(180deg); }
+        .langswitch-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 132px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            padding: 6px;
+            z-index: 100;
+        }
+        .langswitch-option {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 8px 12px;
+            border: none;
+            background: none;
+            font-size: 13px;
+            color: var(--secondary);
+            text-align: left;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background .12s, color .12s;
+        }
+        .langswitch-option:hover { background: var(--surface-soft); color: var(--blue); }
+        .langswitch-option[aria-selected="true"] { color: var(--blue); font-weight: 600; }
         .hero {
             min-height: 660px;
             display: grid;
@@ -354,66 +401,79 @@
     </script>
     <!-- Cloudflare Web Analytics --><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "4e8e800522184f89be4da06c18ab5d0a"}'></script><!-- End Cloudflare Web Analytics -->
 </head>
-<body>
+<body data-version="__TOOLS24_VERSION_TEXT__">
     <header class="shell topbar">
         <a class="brand" href="/" aria-label="Tools24 首页">
             <img src="/images/tools24/app-icon.png" alt="" width="38" height="38">
             <span>Tools24</span>
         </a>
-        <nav class="topnav" aria-label="主要导航">
-            <a href="#features">功能</a>
-            <a href="#screenshots">界面</a>
-            <a href="#download">下载</a>
-        </nav>
+        <div class="topbar-right">
+            <nav class="topnav" aria-label="主要导航">
+                <a href="#features" data-i18n="navFeatures">功能</a>
+                <a href="#screenshots" data-i18n="navScreenshots">界面</a>
+                <a href="#download" data-i18n="navDownload">下载</a>
+            </nav>
+            <div class="langswitch">
+                <button type="button" class="langswitch-trigger" id="tools24LangTrigger" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="tools24LangLabel">简体中文</span>
+                    <svg class="lang-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="langswitch-menu" id="tools24LangMenu" role="listbox" style="display:none;">
+                    <button type="button" class="langswitch-option" role="option" data-lang="zh-CN" aria-selected="true">简体中文</button>
+                    <button type="button" class="langswitch-option" role="option" data-lang="zh-TW" aria-selected="false">繁體中文</button>
+                    <button type="button" class="langswitch-option" role="option" data-lang="en" aria-selected="false">English</button>
+                </div>
+            </div>
+        </div>
     </header>
 
     <main>
         <div class="shell hero">
             <div>
                 <div class="eyebrow">TOOLS24 FOR ANDROID</div>
-                <h1>一个应用，<span class="gradient-text">装下日常所需。</span></h1>
-                <p class="hero-copy">Tools24 把扫码、测量、设备信息和生活计算等 25+ 项工具收进一个清爽的 Android 应用。需要时快速打开，用完即走。</p>
+                <h1><span data-i18n="heroTitle1">一个应用，</span><span class="gradient-text" data-i18n="heroTitle2">装下日常所需。</span></h1>
+                <p class="hero-copy" data-i18n="heroCopy">Tools24 把扫码、测量、设备信息和生活计算等 25+ 项工具收进一个清爽的 Android 应用。需要时快速打开，用完即走。</p>
                 <div class="actions">
-                    <a class="button button-primary" href="__TOOLS24_DOWNLOAD_URL_ATTRIBUTE__">直接下载 APK ↓</a>
-                    <a class="button button-secondary" href="https://play.google.com/store/apps/details?id=com.maxhall.tools24" target="_blank" rel="sponsored nofollow noopener">Google Play 下载</a>
+                    <a class="button button-primary" href="__TOOLS24_DOWNLOAD_URL_ATTRIBUTE__" data-i18n="downloadApk">直接下载 APK ↓</a>
+                    <a class="button button-secondary" href="https://play.google.com/store/apps/details?id=com.maxhall.tools24" target="_blank" rel="sponsored nofollow noopener" data-i18n="googlePlay">Google Play 下载</a>
                 </div>
-                <p class="beta-note">当前版本 V__TOOLS24_VERSION_TEXT__ · Android 安装包</p>
+                <p class="beta-note" data-i18n="betaNote">当前版本 V__TOOLS24_VERSION_TEXT__ · Android 安装包</p>
             </div>
             <div class="device-stage" aria-label="Tools24 应用首页预览">
                 <div class="phone"><img src="/images/tools24/screenshot-home.png" alt="Tools24 正式版工具中心首页，展示扫码、二维码生成、手电筒、屏幕灯等收藏工具" width="1440" height="3200"></div>
                 <div class="download-card">
                     <img src="/api/tools24/download-qr.svg" alt="Tools24 最新 APK 下载二维码" width="138" height="138">
-                    <strong>手机扫码下载</strong>
-                    <span>二维码始终指向最新版</span>
+                    <strong data-i18n="qrTitle">手机扫码下载</strong>
+                    <span data-i18n="qrSubtitle">二维码始终指向最新版</span>
                 </div>
             </div>
         </div>
 
         <section id="features" class="shell">
             <div class="section-heading">
-                <h2>从随手一扫，到认真测量</h2>
-                <p>按快捷、测量、设备和生活四类整理；支持搜索、收藏以及浅色/深色主题，常用工具始终触手可及。</p>
+                <h2 data-i18n="featuresTitle">从随手一扫，到认真测量</h2>
+                <p data-i18n="featuresSubtitle">按快捷、测量、设备和生活四类整理；支持搜索、收藏以及浅色/深色主题，常用工具始终触手可及。</p>
             </div>
             <div class="feature-grid">
-                <article class="feature-card"><span class="feature-index">01 / 快捷</span><h3>扫一扫，马上用</h3><p>扫码、二维码生成、手电筒、屏幕灯、放大镜和水印相机。</p></article>
-                <article class="feature-card"><span class="feature-index">02 / 测量</span><h3>让手机成为仪表</h3><p>指南针、水平仪、速度与海拔、加速度、陀螺仪和分贝计。</p></article>
-                <article class="feature-card"><span class="feature-index">03 / 设备</span><h3>了解手中的设备</h3><p>设备能力、设备信息、应用列表与纯色显示等实用能力。</p></article>
-                <article class="feature-card"><span class="feature-index">04 / 生活</span><h3>把计算交给工具</h3><p>单位与汇率换算、个税、房贷、计时器、随机数和图片压缩。</p></article>
+                <article class="feature-card"><span class="feature-index">01 / <span data-i18n="f1cat">快捷</span></span><h3 data-i18n="f1title">扫一扫，马上用</h3><p data-i18n="f1desc">扫码、二维码生成、手电筒、屏幕灯、放大镜和水印相机。</p></article>
+                <article class="feature-card"><span class="feature-index">02 / <span data-i18n="f2cat">测量</span></span><h3 data-i18n="f2title">让手机成为仪表</h3><p data-i18n="f2desc">指南针、水平仪、速度与海拔、加速度、陀螺仪和分贝计。</p></article>
+                <article class="feature-card"><span class="feature-index">03 / <span data-i18n="f3cat">设备</span></span><h3 data-i18n="f3title">了解手中的设备</h3><p data-i18n="f3desc">设备能力、设备信息、应用列表与纯色显示等实用能力。</p></article>
+                <article class="feature-card"><span class="feature-index">04 / <span data-i18n="f4cat">生活</span></span><h3 data-i18n="f4title">把计算交给工具</h3><p data-i18n="f4desc">单位与汇率换算、个税、房贷、计时器、随机数和图片压缩。</p></article>
             </div>
         </section>
 
         <section id="screenshots" class="gallery-wrap">
             <div class="shell">
                 <div class="section-heading">
-                    <h2>清楚、直接、不绕路</h2>
-                    <p>收藏决定首页，分类与搜索负责发现；工具界面聚焦当前任务，同时适配浅色与深色环境。</p>
+                    <h2 data-i18n="shotsTitle">清楚、直接、不绕路</h2>
+                    <p data-i18n="shotsSubtitle">收藏决定首页，分类与搜索负责发现；工具界面聚焦当前任务，同时适配浅色与深色环境。</p>
                 </div>
                 <div class="gallery">
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-home.png" alt="Tools24 正式版首页收藏工具界面" loading="lazy" width="1440" height="3200"></div><figcaption>常用工具，自由收藏</figcaption></figure>
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-all-tools.png" alt="Tools24 正式版全部功能抽屉、分类和搜索界面" loading="lazy" width="1440" height="3200"></div><figcaption>分类与搜索，快速发现</figcaption></figure>
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-qr-generator.png" alt="Tools24 正式版二维码生成结果界面" loading="lazy" width="1440" height="3200"></div><figcaption>输入内容，即刻生成二维码</figcaption></figure>
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-level.png" alt="Tools24 正式版水平仪界面" loading="lazy" width="1440" height="3200"></div><figcaption>水平测量，实时反馈</figcaption></figure>
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-unit-converter.png" alt="Tools24 正式版单位换算界面" loading="lazy" width="1440" height="3200"></div><figcaption>常用单位，随手换算</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-home.png" alt="Tools24 正式版首页收藏工具界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap1">常用工具，自由收藏</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-all-tools.png" alt="Tools24 正式版全部功能抽屉、分类和搜索界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap2">分类与搜索，快速发现</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-qr-generator.png" alt="Tools24 正式版二维码生成结果界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap3">输入内容，即刻生成二维码</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-level.png" alt="Tools24 正式版水平仪界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap4">水平测量，实时反馈</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-unit-converter.png" alt="Tools24 正式版单位换算界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap5">常用单位，随手换算</figcaption></figure>
                 </div>
             </div>
         </section>
@@ -421,14 +481,14 @@
         <div class="shell">
             <section id="download" class="invite">
                 <div>
-                    <h2>现在就把 Tools24 装进手机</h2>
-                    <p>扫描二维码或直接下载官方 APK，也可以前往 Google Play 安装。二维码会随正式包地址自动更新。</p>
+                    <h2 data-i18n="downloadTitle">现在就把 Tools24 装进手机</h2>
+                    <p data-i18n="downloadSubtitle">扫描二维码或直接下载官方 APK，也可以前往 Google Play 安装。二维码会随正式包地址自动更新。</p>
                 </div>
                 <div class="download-panel">
                     <img src="/api/tools24/download-qr.svg" alt="扫描二维码下载 Tools24 最新 APK" loading="lazy" width="142" height="142">
                     <div class="download-actions">
-                        <a class="button button-primary" href="__TOOLS24_DOWNLOAD_URL_ATTRIBUTE__">下载 APK V__TOOLS24_VERSION_TEXT__</a>
-                        <a class="button button-secondary" href="https://play.google.com/store/apps/details?id=com.maxhall.tools24" target="_blank" rel="sponsored nofollow noopener">前往 Google Play</a>
+                        <a class="button button-primary" href="__TOOLS24_DOWNLOAD_URL_ATTRIBUTE__" data-i18n="downloadApkV">下载 APK V__TOOLS24_VERSION_TEXT__</a>
+                        <a class="button button-secondary" href="https://play.google.com/store/apps/details?id=com.maxhall.tools24" target="_blank" rel="sponsored nofollow noopener" data-i18n="goGooglePlay">前往 Google Play</a>
                     </div>
                 </div>
             </section>
@@ -438,9 +498,108 @@
     <footer class="shell">
         <span>© 2026 tools24.uk</span>
         <nav aria-label="页脚导航">
-            <a href="/platform/tools24/privacy">隐私政策</a>
+            <a href="/platform/tools24/privacy" data-i18n="privacy">隐私政策</a>
             <a href="https://play.google.com/store/apps/details?id=com.maxhall.tools24" target="_blank" rel="sponsored nofollow noopener">Google Play</a>
         </nav>
     </footer>
+<script>
+(function () {
+  'use strict';
+
+  window.TOOLS24_I18N = {
+    "zh-CN": { "title": "Tools24 Android 工具箱 — 官方网站", "metaDescription": "Tools24 Android 工具箱官方网站。一个应用装下扫码、二维码生成、指南针、水平仪、单位换算等 25+ 项实用工具，支持直接下载 APK 或通过 Google Play 安装。", "ogDescription": "一个应用，装下日常所需。25+ 项快捷、测量、设备与生活工具，提供 APK 与 Google Play 下载。", "navFeatures": "功能", "navScreenshots": "界面", "navDownload": "下载", "heroTitle1": "一个应用，", "heroTitle2": "装下日常所需。", "heroCopy": "Tools24 把扫码、测量、设备信息和生活计算等 25+ 项工具收进一个清爽的 Android 应用。需要时快速打开，用完即走。", "downloadApk": "直接下载 APK ↓", "googlePlay": "Google Play 下载", "betaNote": "当前版本 V{{version}} · Android 安装包", "qrTitle": "手机扫码下载", "qrSubtitle": "二维码始终指向最新版", "featuresTitle": "从随手一扫，到认真测量", "featuresSubtitle": "按快捷、测量、设备和生活四类整理；支持搜索、收藏以及浅色/深色主题，常用工具始终触手可及。", "f1cat": "快捷", "f2cat": "测量", "f3cat": "设备", "f4cat": "生活", "f1title": "扫一扫，马上用", "f1desc": "扫码、二维码生成、手电筒、屏幕灯、放大镜和水印相机。", "f2title": "让手机成为仪表", "f2desc": "指南针、水平仪、速度与海拔、加速度、陀螺仪和分贝计。", "f3title": "了解手中的设备", "f3desc": "设备能力、设备信息、应用列表与纯色显示等实用能力。", "f4title": "把计算交给工具", "f4desc": "单位与汇率换算、个税、房贷、计时器、随机数和图片压缩。", "shotsTitle": "清楚、直接、不绕路", "shotsSubtitle": "收藏决定首页，分类与搜索负责发现；工具界面聚焦当前任务，同时适配浅色与深色环境。", "cap1": "常用工具，自由收藏", "cap2": "分类与搜索，快速发现", "cap3": "输入内容，即刻生成二维码", "cap4": "水平测量，实时反馈", "cap5": "常用单位，随手换算", "downloadTitle": "现在就把 Tools24 装进手机", "downloadSubtitle": "扫描二维码或直接下载官方 APK，也可以前往 Google Play 安装。二维码会随正式包地址自动更新。", "downloadApkV": "下载 APK V{{version}}", "goGooglePlay": "前往 Google Play", "privacy": "隐私政策" },
+    "zh-TW": { "title": "Tools24 Android 工具箱 — 官方網站", "metaDescription": "Tools24 Android 工具箱官方網站。一個應用裝下掃碼、二維碼生成、指南針、水平儀、單位換算等 25+ 項實用工具，支援直接下載 APK 或透過 Google Play 安裝。", "ogDescription": "一個應用，裝下日常所需。25+ 項快捷、測量、裝置與生活工具，提供 APK 與 Google Play 下載。", "navFeatures": "功能", "navScreenshots": "介面", "navDownload": "下載", "heroTitle1": "一個應用，", "heroTitle2": "裝下日常所需。", "heroCopy": "Tools24 把掃碼、測量、裝置資訊和生活計算等 25+ 項工具收進一個清爽的 Android 應用。需要時快速開啟，用完即走。", "downloadApk": "直接下載 APK ↓", "googlePlay": "Google Play 下載", "betaNote": "當前版本 V{{version}} · Android 安裝包", "qrTitle": "手機掃碼下載", "qrSubtitle": "二維碼始終指向最新版", "featuresTitle": "從隨手一掃，到認真測量", "featuresSubtitle": "按快捷、測量、裝置和生活四類整理；支援搜尋、收藏以及淺色/深色主題，常用工具始終觸手可及。", "f1cat": "快捷", "f2cat": "測量", "f3cat": "裝置", "f4cat": "生活", "f1title": "掃一掃，馬上用", "f1desc": "掃碼、二維碼生成、手電筒、螢幕燈、放大鏡和水印相機。", "f2title": "讓手機成為儀表", "f2desc": "指南針、水平儀、速度與海拔、加速度、陀螺儀和分貝計。", "f3title": "瞭解手中的裝置", "f3desc": "裝置能力、裝置資訊、應用列表與純色顯示等實用能力。", "f4title": "把計算交給工具", "f4desc": "單位與匯率換算、個稅、房貸、計時器、隨機數和圖片壓縮。", "shotsTitle": "清楚、直接、不繞路", "shotsSubtitle": "收藏決定首頁，分類與搜尋負責發現；工具介面聚焦當前任務，同時適配淺色與深色環境。", "cap1": "常用工具，自由收藏", "cap2": "分類與搜尋，快速發現", "cap3": "輸入內容，即刻生成二維碼", "cap4": "水平測量，實時反饋", "cap5": "常用單位，隨手換算", "downloadTitle": "現在就把 Tools24 裝進手機", "downloadSubtitle": "掃描二維碼或直接下載官方 APK，也可以前往 Google Play 安裝。二維碼會隨正式包地址自動更新。", "downloadApkV": "下載 APK V{{version}}", "goGooglePlay": "前往 Google Play", "privacy": "隱私政策" },
+    "en": { "title": "Tools24 Android Toolbox — Official Website", "metaDescription": "The official website for the Tools24 Android toolbox. Scan, QR generation, compass, level, unit conversion and 25+ practical tools in one app — download the APK directly or install from Google Play.", "ogDescription": "One app for everything you need every day. 25+ quick, measure, device and life tools with APK and Google Play downloads.", "navFeatures": "Features", "navScreenshots": "Screenshots", "navDownload": "Download", "heroTitle1": "One app, ", "heroTitle2": "for everything you need.", "heroCopy": "Tools24 packs 25+ tools — scan, measure, device info and life calculators — into one clean Android app. Open it the moment you need it, done the moment you leave.", "downloadApk": "Download APK ↓", "googlePlay": "Get it on Google Play", "betaNote": "Version V{{version}} · Android APK", "qrTitle": "Scan to download", "qrSubtitle": "Always points to the latest build", "featuresTitle": "From a quick scan to precise measurements", "featuresSubtitle": "Organized into Quick, Measure, Device and Life — with search, favorites and light/dark themes, your go-to tools are always within reach.", "f1cat": "Quick", "f2cat": "Measure", "f3cat": "Device", "f4cat": "Life", "f1title": "Scan and go", "f1desc": "Scan, QR generator, flashlight, screen light, magnifier and watermark camera.", "f2title": "Turn your phone into an instrument", "f2desc": "Compass, level, speed & altitude, accelerometer, gyroscope and sound meter.", "f3title": "Know your device", "f3desc": "Device capability, device info, app list and solid-color display.", "f4title": "Leave the math to tools", "f4desc": "Unit & currency conversion, tax, mortgage, timer, random and image compression.", "shotsTitle": "Clear, direct, no detours", "shotsSubtitle": "Favorites define your home screen; categories and search handle discovery. Every tool focuses on the task at hand, in both light and dark.", "cap1": "Your go-to tools, pinned freely", "cap2": "Categories & search, discover fast", "cap3": "Enter content, generate a QR instantly", "cap4": "Level measurement, live feedback", "cap5": "Common units, convert in a tap", "downloadTitle": "Put Tools24 on your phone now", "downloadSubtitle": "Scan the QR code or download the official APK directly, or install from Google Play. The QR code always points to the latest release.", "downloadApkV": "Download APK V{{version}}", "goGooglePlay": "Go to Google Play", "privacy": "Privacy Policy" }
+  };
+
+  var STORAGE_KEY = 'tools24-lang';
+  var FALLBACK = 'zh-CN';
+  var LABELS = { 'zh-CN': '简体中文', 'zh-TW': '繁體中文', 'en': 'English' };
+  var dict = window.TOOLS24_I18N;
+
+  function detect() {
+    try {
+      var stored = localStorage.getItem(STORAGE_KEY);
+      if (stored && dict[stored]) return stored;
+    } catch (_) {}
+    var nav = (navigator.language || '').toLowerCase();
+    if (nav === 'zh-tw' || nav === 'zh-hk' || nav === 'zh-mo' || nav === 'zh-hant' || nav.indexOf('zh-hant') === 0) return 'zh-TW';
+    if (nav === 'zh' || nav === 'zh-cn' || nav === 'zh-sg' || nav === 'zh-hans' || nav.indexOf('zh-hans') === 0 || nav.indexOf('zh') === 0) return 'zh-CN';
+    if (nav.indexOf('en') === 0) return 'en';
+    return FALLBACK;
+  }
+
+  function interpolate(text) {
+    var version = document.body.getAttribute('data-version') || '';
+    return text.replace(/\{\{version\}\}/g, version);
+  }
+
+  function setMeta(selector, value) {
+    var el = document.querySelector('meta[name="' + selector + '"], meta[property="' + selector + '"]');
+    if (el) el.setAttribute('content', value);
+  }
+
+  function apply(lang) {
+    var t = dict[lang] || dict[FALLBACK];
+    document.documentElement.lang = lang;
+    document.title = t.title;
+    setMeta('description', t.metaDescription);
+    setMeta('og:title', t.title);
+    setMeta('og:description', t.ogDescription);
+    setMeta('twitter:title', t.title);
+    setMeta('twitter:description', t.ogDescription);
+
+    var els = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < els.length; i++) {
+      var key = els[i].getAttribute('data-i18n');
+      if (key && t[key] != null) els[i].textContent = interpolate(t[key]);
+    }
+
+    var label = document.getElementById('tools24LangLabel');
+    if (label) label.textContent = LABELS[lang] || lang;
+
+    var opts = document.querySelectorAll('[data-lang]');
+    for (var j = 0; j < opts.length; j++) {
+      opts[j].setAttribute('aria-selected', opts[j].getAttribute('data-lang') === lang ? 'true' : 'false');
+    }
+  }
+
+  window.tools24SetLang = function (lang) {
+    if (!dict[lang]) return;
+    try { localStorage.setItem(STORAGE_KEY, lang); } catch (_) {}
+    apply(lang);
+  };
+
+  var trigger = document.getElementById('tools24LangTrigger');
+  var menu = document.getElementById('tools24LangMenu');
+
+  function setOpen(open) {
+    if (menu) menu.style.display = open ? 'block' : 'none';
+    if (trigger) trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  if (trigger) {
+    trigger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      setOpen(menu && menu.style.display !== 'block');
+    });
+  }
+  if (menu) {
+    menu.addEventListener('click', function (e) {
+      var opt = e.target && e.target.closest ? e.target.closest('[data-lang]') : null;
+      if (!opt) return;
+      window.tools24SetLang(opt.getAttribute('data-lang'));
+      setOpen(false);
+    });
+  }
+  document.addEventListener('click', function () { setOpen(false); });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { apply(detect()); });
+  } else {
+    apply(detect());
+  }
+})();
+</script>
 </body>
 </html>

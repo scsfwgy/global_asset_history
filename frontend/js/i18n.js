@@ -5,10 +5,10 @@
  * __() is available everywhere.
  *
  * Language resolution (first match wins):
- *   1. URL path prefix  — /en/yearly  →  en
+ *   1. URL path prefix  — /en/yearly → en, /zh-TW/… → zh-TW, /zh/… → zh-CN
  *   2. server-rendered initial language
  *   3. localStorage      — "gah-lang"
- *   4. navigator.language (first two chars)
+ *   4. navigator.language (full tag to tell 繁/简 apart)
  *   5. fallback          — "zh-CN"
  *
  * Usage:
@@ -22,7 +22,7 @@
   'use strict';
 
   const STORAGE_KEY = 'gah-lang';
-  const SUPPORTED = ['zh-CN', 'en'];
+  const SUPPORTED = ['zh-CN', 'zh-TW', 'en'];
   const DEFAULT_LANG = 'zh-CN';
 
   // ── State ──────────────────────────────────────────────────────────
@@ -31,10 +31,28 @@
 
   // ── Helpers ────────────────────────────────────────────────────────
 
+  function _urlLang() {
+    var m = location.pathname.match(/^\/(en|zh-TW|zh)(?:\/|$)/);
+    if (!m) return null;
+    if (m[1] === 'en') return 'en';
+    if (m[1] === 'zh-TW') return 'zh-TW';
+    return 'zh-CN';
+  }
+
+  function _browserLang() {
+    var nav = (navigator.language || '').toLowerCase();
+    // Traditional variants first (zh-TW/zh-HK/zh-MO/zh-Hant*)
+    if (nav === 'zh-tw' || nav === 'zh-hk' || nav === 'zh-mo' || nav === 'zh-hant' || nav.indexOf('zh-hant') === 0) return 'zh-TW';
+    // Simplified variants (zh/zh-CN/zh-SG/zh-Hans*)
+    if (nav === 'zh' || nav === 'zh-cn' || nav === 'zh-sg' || nav === 'zh-hans' || nav.indexOf('zh-hans') === 0 || nav.indexOf('zh') === 0) return 'zh-CN';
+    if (nav.indexOf('en') === 0) return 'en';
+    return null;
+  }
+
   function _detectLang() {
-    // 1. URL prefix: /en/xxx or /zh/xxx
-    var m = location.pathname.match(/^\/(en|zh)(?:\/|$)/);
-    if (m) return m[1] === 'zh' ? 'zh-CN' : 'en';
+    // 1. URL prefix: /en/xxx, /zh-TW/xxx or /zh/xxx
+    var urlLang = _urlLang();
+    if (urlLang) return urlLang;
 
     // 2. server-rendered initial language keeps body text aligned with SEO head.
     if (SUPPORTED.indexOf(window.__GAH_INITIAL_LANG__) !== -1) return window.__GAH_INITIAL_LANG__;
@@ -45,10 +63,9 @@
       if (stored && SUPPORTED.indexOf(stored) !== -1) return stored;
     } catch (_) { /* localStorage unavailable */ }
 
-    // 4. browser preference (only first two chars — "zh" → "zh-CN")
-    var nav = navigator.language || '';
-    if (nav.slice(0, 2) === 'zh') return 'zh-CN';
-    if (nav.slice(0, 2) === 'en') return 'en';
+    // 4. browser preference (full language tag to tell 繁/简 apart)
+    var browserLang = _browserLang();
+    if (browserLang) return browserLang;
 
     // 5. fallback
     return DEFAULT_LANG;
@@ -92,7 +109,7 @@
     return _interpolate(val, params);
   };
 
-  /** Return the current language code ("zh-CN" | "en"). */
+  /** Return the current language code ("zh-CN" | "zh-TW" | "en"). */
   window.__lang = function () {
     return _currentLang;
   };
@@ -111,9 +128,9 @@
     if (SUPPORTED.indexOf(lang) === -1) return;
     try { localStorage.setItem(STORAGE_KEY, lang); } catch (_) {}
 
-    var short = lang === 'zh-CN' ? 'zh' : 'en';
+    var short = lang === 'zh-CN' ? 'zh' : lang;
     var path = location.pathname;
-    var m = path.match(/^\/(en|zh)(\/|$)/);
+    var m = path.match(/^\/(en|zh-TW|zh)(\/|$)/);
     if (m) {
       // URL prefix exists — swap it
       path = '/' + short + path.slice(m[0].length - (m[2] ? 1 : 0));
@@ -128,7 +145,7 @@
 
   /** Get the URL prefix for a given language (for building hreflang links). */
   window.__langPath = function (path, lang) {
-    var short = lang === 'zh-CN' ? 'zh' : 'en';
+    var short = lang === 'zh-CN' ? 'zh' : lang;
     path = path || '/';
     return '/' + short + (path === '/' ? '' : path);
   };

@@ -75,7 +75,7 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 - 前端：原生 HTML/CSS/classic JavaScript
 - 图表：原生 SVG，自实现折线图、热力图和 Treemap
 - 部署：Vercel 静态资源 + Python Serverless Function
-- 国际化：`frontend/locales/zh-CN.json` 和 `en.json`
+- 国际化：`frontend/locales/zh-CN.json`、`zh-TW.json` 和 `en.json`（简体、繁体、英文，无前缀路径默认跟随浏览器语言）
 
 主要功能包括多市场热力图、历史收益钻取、单标的详情和基本面历史、美股对比、多周期数据下载、投资回测、暴跌统计、VIX/VXN 对比与阈值研究、汇率损失与汇率计算器、A 股场内 ETF、QDII 基金及持仓地区配置、知识文章、心愿墙和站点统计。
 

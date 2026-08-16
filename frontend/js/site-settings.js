@@ -177,21 +177,42 @@
 
   // ─── Language switching ───
   (function () {
-    var toggle = document.getElementById("settingsLangRow");
+    var row = document.getElementById("settingsLangRow");
+    var menu = document.getElementById("settingsLangMenu");
     var label = document.getElementById("settingsLangLabel");
+    var LANGS = ["zh-CN", "zh-TW", "en"];
+    var LABELS = { "zh-CN": "简体中文", "zh-TW": "繁體中文", "en": "English" };
     var currentLang = typeof window.__lang === "function" ? __lang() : "zh-CN";
+    if (LANGS.indexOf(currentLang) === -1) currentLang = "zh-CN";
 
-    if (label) label.textContent = currentLang === "en" ? "English" : "中文";
-
-    if (toggle) {
-      toggle.addEventListener("click", function () {
-        var next = currentLang === "zh-CN" ? "en" : "zh-CN";
-        if (typeof _track === "function") _track("settings_action", { action: "language" });
-        if (typeof window.__switchLang === "function") {
-          window.__switchLang(next);
+    function refresh() {
+      if (label) label.textContent = LABELS[currentLang];
+      if (menu) {
+        var opts = menu.querySelectorAll("[data-lang]");
+        for (var i = 0; i < opts.length; i++) {
+          opts[i].setAttribute("aria-selected", opts[i].getAttribute("data-lang") === currentLang ? "true" : "false");
         }
+      }
+    }
+
+    if (row) {
+      row.addEventListener("click", function () {
+        var open = menu && menu.style.display !== "none";
+        if (menu) menu.style.display = open ? "none" : "flex";
+        row.setAttribute("aria-expanded", open ? "false" : "true");
       });
     }
+    if (menu) {
+      menu.addEventListener("click", function (e) {
+        var opt = e.target && e.target.closest ? e.target.closest("[data-lang]") : null;
+        if (!opt) return;
+        var lang = opt.getAttribute("data-lang");
+        if (LANGS.indexOf(lang) === -1) return;
+        if (typeof _track === "function") _track("settings_action", { action: "language" });
+        if (typeof window.__switchLang === "function") window.__switchLang(lang);
+      });
+    }
+    refresh();
   })();
 
   // ─── Update log (row exists on the main page only) ───

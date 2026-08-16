@@ -77,7 +77,7 @@ class TestVisitCounter:
         client.post("/api/visits/increment", json={**payload, "site_language": "en"})
 
         assert visitor_stats.get_language_stats() == {
-            "site_language": {"zh-CN": 1, "en": 1},
+            "site_language": {"zh-CN": 1, "zh-TW": 0, "en": 1},
             "device_language": {"en-US": 1},
         }
 
@@ -238,7 +238,9 @@ class TestAdminStatsDashboard:
         assert resp.status_code == 200
         assert "网站使用语言 · 累计唯一用户" in html
         assert 'data-language="zh-CN"' in html
-        assert '<div class="num">2</div><div class="label">中文 · 66.7%</div>' in html
+        assert '<div class="num">2</div><div class="label">简体中文 · 66.7%</div>' in html
+        assert 'data-language="zh-TW"' in html
+        assert '<div class="num">0</div><div class="label">繁體中文 · 0.0%</div>' in html
         assert 'data-language="en"' in html
         assert '<div class="num">1</div><div class="label">English · 33.3%</div>' in html
         assert "设备本身语言 · 累计唯一用户" in html

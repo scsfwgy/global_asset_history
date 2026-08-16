@@ -14,8 +14,15 @@ logger = logging.getLogger(__name__)
 _SITE_LANGUAGE_ALIASES = {
     "zh": "zh-CN",
     "zh-cn": "zh-CN",
+    "zh-hans": "zh-CN",
+    "zh-sg": "zh-CN",
     "en": "en",
+    "zh-tw": "zh-TW",
+    "zh-hk": "zh-TW",
+    "zh-mo": "zh-TW",
+    "zh-hant": "zh-TW",
 }
+_SITE_LANGUAGES = ("zh-CN", "zh-TW", "en")
 _DEVICE_LANGUAGE_RE = re.compile(r"^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$")
 _DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -54,7 +61,7 @@ def normalize_device_language(value: object) -> str:
 
 def _empty_data() -> dict:
     return {
-        "site_language": {"zh-CN": [], "en": []},
+        "site_language": {"zh-CN": [], "zh-TW": [], "en": []},
         "device_language": {},
     }
 
@@ -68,7 +75,7 @@ def _read_local_data() -> dict:
         return _empty_data()
 
     data = _empty_data()
-    for language in ("zh-CN", "en"):
+    for language in _SITE_LANGUAGES:
         values = payload.get("site_language", {}).get(language, [])
         if isinstance(values, list):
             data["site_language"][language] = sorted(
@@ -139,7 +146,7 @@ def get_language_stats() -> dict[str, dict[str, int]]:
     if cache_store.is_enabled():
         site_stats = {
             language: cache_store.cache_scard(_SITE_LANGUAGE_KEY_PREFIX + language) or 0
-            for language in ("zh-CN", "en")
+            for language in _SITE_LANGUAGES
         }
         device_stats = {}
         for language in sorted(set(cache_store.cache_smembers(_DEVICE_LANGUAGE_LOCALES_KEY))):
@@ -157,7 +164,7 @@ def get_language_stats() -> dict[str, dict[str, int]]:
     return {
         "site_language": {
             language: len(data["site_language"][language])
-            for language in ("zh-CN", "en")
+            for language in _SITE_LANGUAGES
         },
         "device_language": {
             language: len(digests)

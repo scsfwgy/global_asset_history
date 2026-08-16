@@ -86,15 +86,17 @@ class TestSitemap:
     """GET /sitemap.xml — structure and real lastmod."""
 
     def test_only_language_prefixed_locs(self, client):
-        """Every <loc> must carry a /zh or /en prefix — the no-prefix variant
-        canonicalizes to /zh, so listing it creates a duplicate Google flags."""
+        """Every <loc> must carry a /zh, /zh-TW or /en prefix — the no-prefix
+        variant canonicalizes to /zh, so listing it creates a duplicate Google flags."""
         urls = _sitemap_urls(client)
         locs = [u.findtext(f"{SITEMAP_NS}loc") for u in urls]
         assert locs, "sitemap should not be empty"
         for loc in locs:
-            assert f"{SITE_URL}/zh" in loc or f"{SITE_URL}/en" in loc, (
-                f"no-prefix URL leaked into sitemap: {loc}"
-            )
+            assert (
+                f"{SITE_URL}/zh-TW" in loc
+                or f"{SITE_URL}/zh" in loc
+                or f"{SITE_URL}/en" in loc
+            ), f"no-prefix URL leaked into sitemap: {loc}"
 
     def test_no_duplicate_locs(self, client):
         locs = [u.findtext(f"{SITEMAP_NS}loc") for u in _sitemap_urls(client)]
@@ -103,7 +105,7 @@ class TestSitemap:
     def test_url_count_matches_pages_times_languages(self, client):
         # Top-level pages, indexable tools, articles and intent landing pages.
         urls = _sitemap_urls(client)
-        expected = (2 + len(INDEXABLE_TOOL_PATHS) + len(KNOWLEDGE_ARTICLES)) * 2
+        expected = (2 + len(INDEXABLE_TOOL_PATHS) + len(KNOWLEDGE_ARTICLES)) * 3
         assert len(urls) == expected
 
     def test_lastmod_uses_fixed_constants(self, client):
@@ -121,13 +123,13 @@ class TestSitemap:
     def test_home_lastmod_matches_index_constant(self, client):
         for u in _sitemap_urls(client):
             loc = u.findtext(f"{SITEMAP_NS}loc")
-            if loc.endswith("/zh/") or loc.endswith("/en/"):
+            if loc.endswith("/zh/") or loc.endswith("/zh-TW/") or loc.endswith("/en/"):
                 assert u.findtext(f"{SITEMAP_NS}lastmod") == INDEX_LASTMOD
 
     def test_each_url_has_full_hreflang_set(self, client):
         for u in _sitemap_urls(client):
             hreflangs = {a.get("hreflang") for a in u.findall(f"{XHTML_NS}link")}
-            assert {"zh-CN", "en", "x-default"} <= hreflangs
+            assert {"zh-CN", "zh-TW", "en", "x-default"} <= hreflangs
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -144,6 +146,48 @@ class TestHtmlMeta:
     def test_en_home_canonical_points_to_self(self, client):
         html = client.get("/en/").get_data(as_text=True)
         assert '<link rel="canonical" href="https://test.local/en/"' in html
+
+    def test_zh_tw_home_renders_traditional_head(self, client):
+        html = client.get("/zh-TW/").get_data(as_text=True)
+        assert '<html lang="zh-TW"' in html
+        assert '<link rel="canonical" href="https://test.local/zh-TW/"' in html
+        assert "GlobalAssetHistory - 歷史漲跌幅與定投回測工具" in html
+        assert 'property="og:locale" content="zh_TW"' in html
+
+    @pytest.mark.parametrize("path", ["/zh-TW/yearly", "/zh-TW/backtest", "/zh-TW/etf-market"])
+    def test_zh_tw_subpath_routes_render(self, client, path):
+        resp = client.get(path)
+        assert resp.status_code == 200
+        html = resp.get_data(as_text=True)
+        assert '<html lang="zh-TW"' in html
+        assert f'<link rel="canonical" href="https://test.local{path}"' in html
+
+    def test_zh_tw_settings_route_is_not_404(self, client):
+        resp = client.get("/zh-TW/settings")
+        assert resp.status_code == 200
+        html = resp.get_data(as_text=True)
+        assert '<html lang="zh-TW"' in html
+        # Language pick list (not a cycling toggle): three selectable options.
+        assert 'id="settingsLangMenu"' in html
+        assert 'data-lang="zh-CN">简体中文</button>' in html
+        assert 'data-lang="zh-TW">繁體中文</button>' in html
+        assert 'data-lang="en">English</button>' in html
+
+    @pytest.mark.parametrize(
+        "header,expected",
+        [
+            ("zh-TW,zh;q=0.9,en;q=0.8", "zh-TW"),
+            ("zh-HK,zh;q=0.9", "zh-TW"),
+            ("zh-Hant-TW,zh;q=0.8", "zh-TW"),
+            ("en-US,en;q=0.9", "en"),
+            ("zh-CN,zh;q=0.9", "zh-CN"),
+            ("fr-FR,fr;q=0.9", "zh-CN"),
+            ("", "zh-CN"),
+        ],
+    )
+    def test_accept_lang_maps_to_supported_language(self, client, header, expected):
+        html = client.get("/", headers={"Accept-Language": header}).get_data(as_text=True)
+        assert f'<html lang="{expected}"' in html
 
     def test_frontend_assets_use_content_version_and_explicit_cache_policy(self, client):
         response = client.get("/zh/")
@@ -285,6 +329,16 @@ class TestHtmlMeta:
         script = client.get("/js/api.js").get_data(as_text=True)
         assert "function normalizeAssetSymbol" in script
         assert "function escapeHtml" in script
+
+    def test_vix_header_badge_ships_on_all_routes(self, client):
+        # The VIX header badge is a site-wide decoration; its loader must ship
+        # on every route, not only the VIX tab (which uses vix-chart.js).
+        for path in ("/heatmap", "/yearly", "/detail"):
+            html = client.get(path).get_data(as_text=True)
+            assert "/js/vix-badge.js" in html
+            assert "/js/vix-chart.js" not in html
+        badge = client.get("/js/vix-badge.js").get_data(as_text=True)
+        assert "window.VixBadge" in badge
 
     def test_route_documents_are_unique_and_have_specific_headings(self, client):
         yearly = client.get("/zh/yearly").get_data(as_text=True)

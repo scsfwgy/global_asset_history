@@ -388,7 +388,7 @@ KNOWLEDGE_SUBTAB_I18N_KEYS = {
 
 COMMON_PAGE_SCRIPTS = {
     "i18n.js", "feature-updates.js", "api.js", "history.js",
-    "visitor-stats.js", "site-settings.js",
+    "visitor-stats.js", "site-settings.js", "vix-badge.js",
 }
 
 TAB_PAGE_SCRIPTS = {
@@ -412,13 +412,35 @@ def site_url() -> str:
     return os.getenv("SITE_URL", get_site_base_url()).rstrip("/")
 
 
+def _accept_lang() -> str:
+    """Map the Accept-Language header to a supported language, defaulting to zh-CN."""
+    header = request.headers.get("Accept-Language", "")
+    for part in header.split(","):
+        tag = part.split(";")[0].strip().lower()
+        if not tag:
+            continue
+        if tag in ("zh-tw", "zh-hk", "zh-mo", "zh-hant") or tag.startswith("zh-hant"):
+            return "zh-TW"
+        if tag == "zh" or tag.startswith("zh"):
+            return "zh-CN"
+        if tag.startswith("en"):
+            return "en"
+    return "zh-CN"
+
+
 def request_lang() -> str:
-    m = re.match(r"^/(en|zh)(?:/|$)", request.path)
-    return "en" if m and m.group(1) == "en" else "zh-CN"
+    m = re.match(r"^/(en|zh-TW|zh)(?:/|$)", request.path)
+    if m:
+        if m.group(1) == "en":
+            return "en"
+        if m.group(1) == "zh-TW":
+            return "zh-TW"
+        return "zh-CN"
+    return _accept_lang()
 
 
 def _load_locale(lang: str) -> dict:
-    locale_file = "en.json" if lang == "en" else "zh-CN.json"
+    locale_file = {"en": "en.json", "zh-TW": "zh-TW.json"}.get(lang, "zh-CN.json")
     try:
         return json.loads((FRONTEND_DIR / "locales" / locale_file).read_text(encoding="utf-8"))
     except Exception:
@@ -445,7 +467,7 @@ def _replace_meta_content(html: str, selector: str, value: str) -> str:
 
 def _base_request_path() -> str:
     path = request.path.rstrip("/") or "/"
-    m = re.match(r"^/(en|zh)(/.*)?$", path)
+    m = re.match(r"^/(en|zh-TW|zh)(/.*)?$", path)
     return (m.group(2) or "/") if m else path
 
 
@@ -505,7 +527,7 @@ def _page_json_ld(
             "name": "GlobalAssetHistory",
             "url": base_url,
             "publisher": {"@id": organization_id},
-            "inLanguage": ["zh-CN", "en"],
+            "inLanguage": ["zh-CN", "zh-TW", "en"],
         },
     ]
     if page_path in KNOWLEDGE_ARTICLES:
@@ -602,9 +624,9 @@ def serve_frontend_html(filename: str):
     lang = request_lang()
     locale = _load_locale(lang)
     base_url = site_url()
-    html_lang = "en" if lang == "en" else "zh-CN"
-    og_locale = "en_US" if lang == "en" else "zh_CN"
-    prefix = "/en" if lang == "en" else "/zh"
+    html_lang = {"en": "en", "zh-TW": "zh-TW"}.get(lang, "zh-CN")
+    og_locale = {"en": "en_US", "zh-TW": "zh_TW"}.get(lang, "zh_CN")
+    prefix = {"en": "/en", "zh-TW": "/zh-TW"}.get(lang, "/zh")
     base_request_path = _base_request_path()
     page_path = _canonical_content_path(base_request_path, filename)
     page_url = f"{base_url}{prefix}{page_path}"
@@ -665,6 +687,7 @@ def serve_frontend_html(filename: str):
     html = _replace_meta_content(html, r'name="twitter:image:alt"', _page_heading(title))
     html = re.sub(r'(<link rel="canonical" href=")[^"]*(")', rf'\g<1>{page_url}\2', html, count=1)
     html = re.sub(r'(<link rel="alternate" hreflang="zh-CN" href=")[^"]*(")', rf'\g<1>{base_url}/zh{page_path}\2', html, count=1)
+    html = re.sub(r'(<link rel="alternate" hreflang="zh-TW" href=")[^"]*(")', rf'\g<1>{base_url}/zh-TW{page_path}\2', html, count=1)
     html = re.sub(r'(<link rel="alternate" hreflang="en" href=")[^"]*(")', rf'\g<1>{base_url}/en{page_path}\2', html, count=1)
     html = re.sub(r'(<link rel="alternate" hreflang="x-default" href=")[^"]*(")', rf'\g<1>{base_url}/zh{page_path}\2', html, count=1)
     html = html.replace("__LANG_PREFIX__", prefix)
@@ -969,7 +992,6 @@ def llms_txt():
 
 @app.route("/sitemap.xml")
 def sitemap_xml():
-    langs = [("zh", "zh-CN"), ("en", "en")]
     # (path, changefreq, priority, lastmod, include_en)
     urls = [
         ("/", "daily", "1.0", INDEX_LASTMOD, True),
@@ -981,7 +1003,7 @@ def sitemap_xml():
     items = []
     base_url = site_url()
     for path, changefreq, priority, lastmod, include_en in urls:
-        page_langs = langs if include_en else [("zh", "zh-CN")]
+        page_langs = [("zh", "zh-CN"), ("zh-TW", "zh-TW")] + ([("en", "en")] if include_en else [])
         # One <url> per language variant. The default (no-lang-prefix) URL is
         # intentionally omitted: its canonical points to /zh, so listing it
         # here would create duplicates that Google flags as redundant.
@@ -1206,7 +1228,7 @@ def index_lang(lang):
 
 @app.route("/<lang>/<path:subpath>")
 def lang_frontend(lang, subpath):
-    if lang not in ("en", "zh"):
+    if lang not in ("en", "zh", "zh-TW"):
         # Not a language prefix — serve as a static file from frontend/
         full_path = lang + "/" + subpath
         if full_path in {"price-change.html", "etf-market.html"}:
@@ -1437,7 +1459,7 @@ def stats_dashboard():
     site_languages = language_stats["site_language"]
     site_language_total = sum(site_languages.values())
     site_language_cards = ""
-    for language, label in (("zh-CN", "中文"), ("en", "English")):
+    for language, label in (("zh-CN", "简体中文"), ("zh-TW", "繁體中文"), ("en", "English")):
         count = int(site_languages.get(language, 0))
         site_language_cards += (
             f'<div class="summary-card language-card" data-language="{language}">'
@@ -1504,7 +1526,7 @@ code{{color:#0071e3;font-size:.78rem}}
 <h2>👤 每日唯一用户 <span class="sub">（匿名 UUID 去重，仅保留最近 30 天）</span></h2>
 <div class="uv-chart" aria-label="最近 30 天每日唯一用户柱状图">{user_bars}</div>
 
-<h2>🌐 网站使用语言 · 累计唯一用户 <span class="sub">（中文与 English 分别去重）</span></h2>
+<h2>🌐 网站使用语言 · 累计唯一用户 <span class="sub">（简体 / 繁体 / English 分别去重）</span></h2>
 <div class="summary">{site_language_cards}</div>
 <p class="sub">同一匿名用户使用过两种网站语言时会进入两个分组，分组可重叠。</p>
 

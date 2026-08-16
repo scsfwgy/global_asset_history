@@ -14,6 +14,7 @@
     <meta name="robots" content="index,follow">
     <link rel="canonical" href="__SITE_BASE_URL__/">
     <link rel="alternate" hreflang="zh-CN" href="__SITE_BASE_URL__/zh/">
+    <link rel="alternate" hreflang="zh-TW" href="__SITE_BASE_URL__/zh-TW/">
     <link rel="alternate" hreflang="en" href="__SITE_BASE_URL__/en/">
     <link rel="alternate" hreflang="x-default" href="__SITE_BASE_URL__/zh/">
     <meta property="og:type" content="website">
@@ -3160,11 +3161,17 @@
                             <span id="settingsColorSchemeLabel" data-i18n="settings.colorScheme">绿涨红跌</span>
                         </div>
                         <!-- System: language -->
-                        <div id="settingsLangRow" class="header-settings-info header-settings-theme-row">
+                        <div id="settingsLangRow" class="header-settings-info header-settings-theme-row" role="button" aria-expanded="false">
                             <span class="header-settings-theme-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                             </span>
                             <span id="settingsLangLabel">Language</span>
+                            <svg class="settings-lang-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div id="settingsLangMenu" class="settings-lang-menu" style="display:none;">
+                            <button type="button" class="settings-lang-option" data-lang="zh-CN">简体中文</button>
+                            <button type="button" class="settings-lang-option" data-lang="zh-TW">繁體中文</button>
+                            <button type="button" class="settings-lang-option" data-lang="en">English</button>
                         </div>
                         <!-- System: visit count -->
                         <div class="header-settings-info" id="settingsVisitCount" data-i18n="settings.visitCountPrefix">访问次数：⋯</div>
@@ -6894,6 +6901,7 @@
     <script src="/js/api.js"></script>
     <script src="/js/history.js"></script>
     <script src="/js/visitor-stats.js"></script>
+    <script src="/js/vix-badge.js"></script>
     <script>
       // Compact count formatting: 1234 -> 1.2K, 1500000 -> 1.5M, etc.
       // Truncate (floor) the decimal so we never overstate the real count.

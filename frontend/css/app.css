@@ -389,6 +389,29 @@ body {
 #settingsColorSchemeIcon { color: var(--data-positive); }
 #settingsColorSchemeIcon .cs-arrow { transition: transform 0.25s ease; }
 [data-color-scheme="red_up"] #settingsColorSchemeIcon .cs-arrow { transform: rotate(180deg); }
+/* Language selector: click row to expand a pick list, chevron flips open. */
+#settingsLangRow[aria-expanded="true"] .settings-lang-chevron { transform: rotate(180deg); }
+.settings-lang-chevron {
+            width: 13px; height: 13px; margin-left: auto;
+            color: var(--apple-text-secondary);
+            transition: transform 0.15s;
+        }
+.settings-lang-menu {
+            display: flex; flex-direction: column;
+            padding: 2px 6px 6px;
+        }
+.settings-lang-option {
+            display: flex; align-items: center;
+            padding: 7px 12px;
+            border: none; background: none;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            color: var(--apple-text-primary);
+            text-align: left; cursor: pointer;
+            transition: background 0.12s;
+        }
+.settings-lang-option:hover { background: var(--apple-overlay); }
+.settings-lang-option[aria-selected="true"] { color: var(--apple-blue); font-weight: 600; }
 
 /* Lift header content above the trend layer. */
 .header-left, .status { position: relative; z-index: 1; }

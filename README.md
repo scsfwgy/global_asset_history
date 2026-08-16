@@ -10,7 +10,7 @@ GlobalAssetHistory 是一个 Apache-2.0 开源、可自行部署的跨资产历�
 
 ## 功能总览
 
-主站提供 12 个用户功能入口；同一个功能可通过中文 `/zh/...`、英文 `/en/...` 或无语言前缀路径访问。
+主站提供 12 个用户功能入口；同一个功能可通过简体 `/zh/...`、繁体 `/zh-TW/...`、英文 `/en/...` 或无语言前缀路径访问（无前缀时默认跟随浏览器语言）。
 
 | 功能 | 路径 | 主要能力 |
 | --- | --- | --- |
@@ -38,7 +38,7 @@ GlobalAssetHistory 是一个 Apache-2.0 开源、可自行部署的跨资产历�
 
 ### 内容、体验与运营
 
-- 中文、英文界面和语言前缀 URL。
+- 简体中文、繁体中文、英文界面和语言前缀 URL。
 - 深色/浅色主题、绿涨红跌/红涨绿跌切换，以及桌面端和移动端适配。
 - 版本化功能更新弹窗集中展示近期更新；用户确认后同一版本不再提醒。
 - 金融知识文章、独立工具落地页、按路由裁剪的服务端 HTML、Article/Dataset JSON-LD、Open Graph 和多语言 SEO/GEO。
@@ -266,10 +266,10 @@ Redis 提供跨实例共享缓存和原子计数。未配置时，项目会降�
 
 动态 HTML 响应提供：
 
-- 中文 `/zh/...`、英文 `/en/...` canonical URL
+- 简体 `/zh/...`、繁体 `/zh-TW/...`、英文 `/en/...` canonical URL
 - `title`、description、keywords 和 robots
 - Open Graph 与 Twitter Card
-- `zh-CN`、`en`、`x-default` hreflang
+- `zh-CN`、`zh-TW`、`en`、`x-default` hreflang
 - Organization、WebSite、WebApplication、Article、BreadcrumbList 与 Dataset JSON-LD
 - `robots.txt`、`sitemap.xml`、`llms.txt` 和 `X-Robots-Tag`
 - 旧知识文章路径 canonical 到新路径并设为 `noindex,follow`
