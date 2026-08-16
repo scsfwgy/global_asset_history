@@ -1588,14 +1588,17 @@ def link_clicks():
 
 
 _LANDING_HOSTS = {"tools24.uk", "www.tools24.uk"}
+_TOOLS24_APP_HOSTS = {"app.tools24.uk"}
 
 
 @app.route("/")
 def index():
-    # Ignore a local development port so the dedicated homepage can be
-    # previewed with e.g. www.tools24.uk:8730 as well as on production hosts.
+    # Ignore a local development port so every domain-specific homepage can be
+    # previewed with a matching Host header.
     request_hostname = request.host.partition(":")[0].lower()
     if request_hostname in _LANDING_HOSTS:
+        return (FRONTEND_DIR / "landing.html").read_text(encoding="utf-8")
+    if request_hostname in _TOOLS24_APP_HOSTS:
         return _render_tools24_product()
     return serve_frontend_html("price-change.html")
 

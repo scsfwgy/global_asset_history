@@ -48,21 +48,52 @@ def test_tools24_product_route_is_the_official_download_site(client, path):
     assert "aspect-ratio: 9 / 20;" in html
 
 
-def test_tools24_domain_home_is_the_official_app_site(client):
-    response = client.get("/", headers={"Host": "www.tools24.uk"})
+@pytest.mark.parametrize("host", ["tools24.uk", "www.tools24.uk", "www.tools24.uk:8730"])
+def test_tools24_domain_home_remains_the_project_directory(client, host):
+    response = client.get("/", headers={"Host": host})
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "tools24.uk — 实用工具聚合平台" in html
+    assert "https://qqq.tools24.uk/" in html
+    assert "https://dev.tools24.uk/" in html
+    assert 'class="card app-card" href="https://app.tools24.uk/"' in html
+    assert "Tools24 Android 工具箱 — 官方网站" not in html
+
+
+def test_app_tools24_domain_home_is_the_official_app_site(client):
+    response = client.get("/", headers={"Host": "app.tools24.uk"})
 
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     assert "Tools24 Android 工具箱 — 官方网站" in html
     assert "直接下载 APK" in html
     assert DOWNLOAD_URL in html
+    assert '<link rel="canonical" href="https://app.tools24.uk/">' in html
     assert "/images/tools24/app-icon.png" in html
 
 
-def test_tools24_landing_host_allows_local_preview_port(client):
-    response = client.get("/", headers={"Host": "www.tools24.uk:8730"})
+def test_app_tools24_domain_allows_local_preview_port(client):
+    response = client.get("/", headers={"Host": "app.tools24.uk:8730"})
 
     assert response.status_code == 200
+    assert "Tools24 Android 工具箱 — 官方网站" in response.get_data(as_text=True)
+
+
+def test_qqq_domain_keeps_the_financial_site(client):
+    response = client.get("/", headers={"Host": "qqq.tools24.uk"})
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Tools24 Android 工具箱 — 官方网站" not in html
+    assert "GlobalAssetHistory - 历史涨跌幅与定投回测工具" in html
+
+
+def test_platform_tools24_still_serves_app_site_from_other_hosts(client):
+    response = client.get("/", headers={"Host": "www.tools24.uk"})
+    assert "tools24.uk — 实用工具聚合平台" in response.get_data(as_text=True)
+
+    response = client.get("/platform/tools24", headers={"Host": "www.tools24.uk"})
     assert "Tools24 Android 工具箱 — 官方网站" in response.get_data(as_text=True)
 
 
@@ -135,3 +166,4 @@ def test_vercel_rewrites_tools24_product_page_to_flask():
 
     assert ("/platform/tools24", "/api/index") in rewrites
     assert ("/platform/tools24/", "/api/index") in rewrites
+    assert ("/", "/api/index") in rewrites
