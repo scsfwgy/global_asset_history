@@ -136,6 +136,45 @@ class TestEventTracking:
         assert resp.status_code == 400
 
 
+class TestTools24Tracking:
+    """POST /api/tools24/track for page_view, download, google_play"""
+
+    def test_page_view(self, client):
+        resp = client.post("/api/tools24/track", json={"event": "page_view"})
+        assert resp.status_code == 200
+        assert resp.get_json()["ok"] is True
+
+    def test_download(self, client):
+        resp = client.post("/api/tools24/track", json={"event": "download"})
+        assert resp.status_code == 200
+        assert resp.get_json()["ok"] is True
+
+    def test_google_play(self, client):
+        resp = client.post("/api/tools24/track", json={"event": "google_play"})
+        assert resp.status_code == 200
+        assert resp.get_json()["ok"] is True
+
+    def test_unknown_event(self, client):
+        resp = client.post("/api/tools24/track", json={"event": "bogus"})
+        assert resp.status_code == 400
+
+    def test_missing_event(self, client):
+        resp = client.post("/api/tools24/track", json={})
+        assert resp.status_code == 400
+
+    def test_file_fallback_increments_independently(self, client):
+        import app as app_module
+
+        client.post("/api/tools24/track", json={"event": "download"})
+        client.post("/api/tools24/track", json={"event": "download"})
+        client.post("/api/tools24/track", json={"event": "page_view"})
+
+        with app_module._tools24_stats_lock:
+            data = app_module._read_tools24_stats()
+        assert data == {"download": 2, "page_view": 1}
+
+
+
 class TestVisitorStatsPages:
     def test_main_pages_load_visitor_stats(self, client):
         for path in ("/zh/yearly", "/en/yearly"):
@@ -214,6 +253,21 @@ class TestAdminStatsDashboard:
         assert resp.status_code == 200
         assert '<div class="num">2</div><div class="label">今日用户</div>' in html
         assert "近30日用户天次" in html
+
+    def test_stats_dashboard_shows_tools24_stats(self, client):
+        client.post("/api/tools24/track", json={"event": "page_view"})
+        client.post("/api/tools24/track", json={"event": "download"})
+        client.post("/api/tools24/track", json={"event": "google_play"})
+
+        resp = client.get(f"/api/stats?token={self.FAKE_TOKEN}")
+        assert resp.status_code == 200
+        html = resp.get_data(as_text=True)
+
+        assert "Tools24 官方下载站" in html
+        assert '<div class="num">1</div><div class="label">页面访问次数</div>' in html
+        assert '<div class="num">1</div><div class="label">下载按钮点击</div>' in html
+        assert '<div class="num">1</div><div class="label">Google Play 访问</div>' in html
+
 
     def test_stats_dashboard_shows_two_independent_language_distributions(self, client):
         visits = [

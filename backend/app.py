@@ -788,6 +788,15 @@ _TRACKED_LINK_NAMES = ["feishu_us_stock", "github", "xiaohongshu", "tools24"]
 # In-menu toggle actions (theme / color scheme / language) tracked via
 # settings_action events into the settings_actions hash.
 _VALID_SETTINGS_ACTIONS = {"theme", "colorscheme", "language"}
+# Tools24 official download site (app.tools24.uk) counters.
+_TOOLS24_STATS_KEYS = {
+    "page_view": "tools24_page_views",
+    "download": "tools24_download_clicks",
+    "google_play": "tools24_google_play_clicks",
+}
+_TOOLS24_STATS_PATH = Path("/tmp/tools24_stats.json") if os.path.exists("/tmp") else \
+    Path(__file__).resolve().parent / "config" / "tools24_stats.json"
+_tools24_stats_lock = threading.Lock()
 
 _COUNTER_PATH = Path("/tmp/visit_count.json") if os.path.exists("/tmp") else \
     Path(__file__).resolve().parent / "config" / "visit_count.json"
@@ -1349,6 +1358,43 @@ def track():
     return jsonify({"ok": False, "error": f"unknown event type: {event_type}"}), 400
 
 
+def _read_tools24_stats() -> dict:
+    try:
+        if _TOOLS24_STATS_PATH.exists():
+            data = json.loads(_TOOLS24_STATS_PATH.read_text())
+            if isinstance(data, dict):
+                return {k: int(v) for k, v in data.items() if isinstance(v, int)}
+    except Exception:
+        pass
+    return {}
+
+
+def _write_tools24_stats(data: dict) -> None:
+    _TOOLS24_STATS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _TOOLS24_STATS_PATH.write_text(json.dumps(data))
+
+
+@app.route("/api/tools24/track", methods=["POST"])
+def tools24_track():
+    """Record a Tools24 download-site event. Fire-and-forget.
+    Body: {"event": "page_view" | "download" | "google_play"}.
+    """
+    body = request.get_json(silent=True) or {}
+    event = str(body.get("event", "")).strip()
+    if event not in _TOOLS24_STATS_KEYS:
+        return jsonify({"ok": False, "error": f"unknown event: {event}"}), 400
+
+    if cache_store.is_enabled():
+        cache_store.cache_incr(_TOOLS24_STATS_KEYS[event])
+        return jsonify({"ok": True})
+
+    with _tools24_stats_lock:
+        data = _read_tools24_stats()
+        data[event] = data.get(event, 0) + 1
+        _write_tools24_stats(data)
+    return jsonify({"ok": True})
+
+
 # ─── Admin stats dashboard ──────────────────────────────────────────────────
 @app.route("/api/stats")
 def stats_dashboard():
@@ -1382,6 +1428,18 @@ def stats_dashboard():
         # Legacy external links still have a file fallback for local dev.
         with _link_clicks_lock:
             ad_stats = dict(_read_link_clicks())
+
+    if cache_store.is_enabled():
+        tools24_stats = {
+            event: cache_store.cache_get(key) or "0"
+            for event, key in _TOOLS24_STATS_KEYS.items()
+        }
+    else:
+        with _tools24_stats_lock:
+            tools24_file = _read_tools24_stats()
+        tools24_stats = {
+            event: str(tools24_file.get(event, 0)) for event in _TOOLS24_STATS_KEYS
+        }
 
     # Sort tab stats by count desc
     tab_rows = ""
@@ -1436,6 +1494,9 @@ def stats_dashboard():
     total_tab_views = sum(int(v) for v in tab_stats.values())
     total_ad_clicks = sum(int(v) for v in ad_stats.values())
     total_settings_actions = sum(int(v) for v in settings_actions.values())
+    tools24_page_views = tools24_stats["page_view"]
+    tools24_download_clicks = tools24_stats["download"]
+    tools24_google_play_clicks = tools24_stats["google_play"]
     user_series = _unique_visit_series()
     today_users = user_series[-1]["users"] if user_series else 0
     month_user_days = sum(item["users"] for item in user_series)
@@ -1543,7 +1604,14 @@ code{{color:#0071e3;font-size:.78rem}}
 <h2>⚙️ 设置项操作排行 <span class="sub">（所有用户累计）</span></h2>
 <table><thead><tr><th>#</th><th>操作</th><th>ID</th><th>次数</th></tr></thead><tbody>{action_rows}</tbody></table>
 
-<p class="sub" style="margin-top:24px">数据来源：Upstash Redis <code>gah:tab_visits</code> / <code>gah:site_language_users:*</code> / <code>gah:device_language_users:*</code> / <code>gah:ad_clicks</code> / <code>gah:settings_actions</code> / <code>gah:link_click:*</code></p>"""
+<h2>📱 Tools24 官方下载站 <span class="sub">（app.tools24.uk）</span></h2>
+<div class="summary">
+<div class="summary-card"><div class="num">{tools24_page_views}</div><div class="label">页面访问次数</div></div>
+<div class="summary-card"><div class="num">{tools24_download_clicks}</div><div class="label">下载按钮点击</div></div>
+<div class="summary-card"><div class="num">{tools24_google_play_clicks}</div><div class="label">Google Play 访问</div></div>
+</div>
+
+<p class="sub" style="margin-top:24px">数据来源：Upstash Redis <code>gah:tab_visits</code> / <code>gah:site_language_users:*</code> / <code>gah:device_language_users:*</code> / <code>gah:ad_clicks</code> / <code>gah:settings_actions</code> / <code>gah:link_click:*</code> / <code>gah:tools24_*</code></p>"""
     return html_page
 
 

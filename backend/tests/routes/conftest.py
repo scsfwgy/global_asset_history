@@ -21,4 +21,5 @@ def isolate_stats_files(monkeypatch, tmp_path):
 
     monkeypatch.setattr(app_module, "_COUNTER_PATH", tmp_path / "visit_count.json")
     monkeypatch.setattr(app_module, "_UNIQUE_VISITS_PATH", tmp_path / "unique_visits.json")
+    monkeypatch.setattr(app_module, "_TOOLS24_STATS_PATH", tmp_path / "tools24_stats.json")
     monkeypatch.setattr(visitor_stats, "_LANGUAGE_VISITS_PATH", tmp_path / "language_visits.json")

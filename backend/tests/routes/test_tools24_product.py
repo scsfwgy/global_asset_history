@@ -73,6 +73,17 @@ def test_app_tools24_domain_home_is_the_official_app_site(client):
     assert "/images/tools24/app-icon.png" in html
 
 
+def test_tools24_product_ships_download_tracking(client):
+    response = client.get("/platform/tools24")
+    html = response.get_data(as_text=True)
+
+    assert "/api/tools24/track" in html
+    assert "track('page_view')" in html
+    assert "track('download')" in html
+    assert "track('google_play')" in html
+    assert "keepalive" in html
+
+
 def test_tools24_product_ships_three_language_i18n(client):
     response = client.get("/platform/tools24")
     html = response.get_data(as_text=True)

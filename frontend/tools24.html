@@ -601,5 +601,33 @@
   }
 })();
 </script>
+<script>
+(function () {
+  'use strict';
+  function track(event) {
+    try {
+      fetch('/api/tools24/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event: event }),
+        keepalive: true
+      });
+    } catch (_) {}
+  }
+
+  track('page_view');
+
+  document.addEventListener('click', function (e) {
+    var el = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!el) return;
+    var href = el.getAttribute('href') || '';
+    if (href.indexOf('https://play.google.com') === 0) {
+      track('google_play');
+    } else if (el.classList && el.classList.contains('button-primary')) {
+      track('download');
+    }
+  });
+})();
+</script>
 </body>
 </html>
