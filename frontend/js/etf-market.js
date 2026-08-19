@@ -27,6 +27,10 @@
     var _aggregateHistory = {};
     var _aggregateLoading = false;
     var _aggregateHidden = {};
+    var _returnsMode = "year";
+    var _returnsYear = new Date().getFullYear();
+    var _returnsCache = {};
+    var _returnsLoadingKey = null;
     var _dataStarted = false;
 
     /* ── Chart type selection (single-select) ── */
@@ -89,6 +93,7 @@
                 if (_activeView === "aggregate") {
                     renderAggregateSymbols();
                     ensureAggregateHistory(false);
+                    ensureReturnsMatrix(false);
                 }
             });
         });
@@ -107,6 +112,7 @@
                     hideDetail();
                     renderAggregateSymbols();
                     ensureAggregateHistory(false);
+                    ensureReturnsMatrix(false);
                 }
             });
         });
@@ -124,6 +130,23 @@
         if (aggReloadBtn) aggReloadBtn.addEventListener("click", function () {
             ensureAggregateHistory(true);
         });
+
+        document.querySelectorAll("#etfReturnsModes .etf-chart-tab").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                document.querySelectorAll("#etfReturnsModes .etf-chart-tab").forEach(function (b) { b.classList.remove("active"); });
+                btn.classList.add("active");
+                _returnsMode = btn.dataset.etfReturnsMode || "year";
+                updateReturnsYearControl();
+                ensureReturnsMatrix(false);
+            });
+        });
+
+        var returnsYear = document.getElementById("etfReturnsYear");
+        if (returnsYear) returnsYear.addEventListener("change", function () {
+            _returnsYear = parseInt(returnsYear.value, 10) || new Date().getFullYear();
+            ensureReturnsMatrix(false);
+        });
+        updateReturnsYearControl();
 
         // Column sort clicks
         document.querySelectorAll(".etf-th-sort").forEach(function (th) {
@@ -178,6 +201,7 @@
         if (_activeView === "aggregate") {
             renderAggregateSymbols();
             ensureAggregateHistory(false);
+            ensureReturnsMatrix(false);
         }
     };
 
@@ -655,6 +679,135 @@
                 ? (c / firstClose - 1) * 100
                 : null;
         }
+    }
+
+    function returnsCacheKey() {
+        return _activeTab + ":" + _returnsMode + ":" + (_returnsMode === "month" ? _returnsYear : "all");
+    }
+
+    function updateReturnsYearControl(years) {
+        var label = document.getElementById("etfReturnsYearLabel");
+        var select = document.getElementById("etfReturnsYear");
+        if (label) label.style.display = _returnsMode === "month" ? "" : "none";
+        if (!select) return;
+        years = years || [];
+        if (!years.length) {
+            var current = new Date().getFullYear();
+            for (var year = current; year > current - 5; year--) years.push(year);
+        }
+        if (years.indexOf(_returnsYear) < 0) _returnsYear = years[0];
+        select.innerHTML = years.map(function (year) {
+            return '<option value="' + year + '"' + (year === _returnsYear ? " selected" : "") + ">" + year + C + "option>";
+        }).join("");
+    }
+
+    function setReturnsStatus(message) {
+        var status = document.getElementById("etfReturnsStatus");
+        if (status) status.textContent = message || "";
+    }
+
+    function ensureReturnsMatrix(force) {
+        var tables = document.getElementById("etfReturnsTables");
+        var section = document.getElementById("etfReturnsMatrix");
+        if (!tables || !section) return;
+        if (_activeTab === "global_others") {
+            section.style.display = "none";
+            return;
+        }
+        section.style.display = "";
+
+        var key = returnsCacheKey();
+        if (!force && _returnsCache[key]) {
+            updateReturnsYearControl(_returnsCache[key].available_years || []);
+            renderReturnsMatrix(_returnsCache[key]);
+            return;
+        }
+        if (_returnsLoadingKey === key) return;
+
+        _returnsLoadingKey = key;
+        setReturnsStatus(__("etf.returnsLoading"));
+        tables.innerHTML = "";
+        var url = "/api/etf-market/returns-matrix?group=" + encodeURIComponent(_activeTab) +
+            "&mode=" + encodeURIComponent(_returnsMode);
+        if (_returnsMode === "month") url += "&year=" + encodeURIComponent(_returnsYear);
+
+        fetch(url)
+            .then(function (response) {
+                return response.json().then(function (data) {
+                    if (!response.ok) throw new Error(data.error || __("etf.returnsLoadFailed"));
+                    return data;
+                });
+            })
+            .then(function (data) {
+                _returnsCache[key] = data;
+                if (returnsCacheKey() === key) {
+                    updateReturnsYearControl(data.available_years || []);
+                    renderReturnsMatrix(data);
+                }
+            })
+            .catch(function (error) {
+                if (returnsCacheKey() !== key) return;
+                setReturnsStatus(error.message || __("etf.returnsLoadFailed"));
+                tables.innerHTML = '<div class="etf-return-missing">' +
+                    escapeHtml(__("etf.returnsNoData")) + C + "div>";
+            })
+            .finally(function () {
+                if (_returnsLoadingKey === key) _returnsLoadingKey = null;
+            });
+    }
+
+    function renderReturnsMatrix(data) {
+        var tables = document.getElementById("etfReturnsTables");
+        if (!tables) return;
+        var rows = data && data.rows ? data.rows : [];
+        if (!rows.length) {
+            tables.innerHTML = '<div class="etf-return-missing">' + escapeHtml(__("etf.returnsNoData")) + C + "div>";
+            setReturnsStatus(__("etf.returnsNoData"));
+            return;
+        }
+        var errors = data.errors || [];
+        setReturnsStatus(errors.length
+            ? __("etf.returnsPartial", {count: errors.length})
+            : __("etf.returnsLoaded"));
+        tables.innerHTML = buildReturnsTable(data, "with_premium", __("etf.returnsWithPremium")) +
+            buildReturnsTable(data, "without_premium", __("etf.returnsWithoutPremium"));
+    }
+
+    function buildReturnsTable(data, metric, title) {
+        var columns = data.columns || [];
+        var header = '<th scope="col">' + escapeHtml(__("etf.returnsSymbol")) + C + "th>";
+        columns.forEach(function (column) {
+            var label = data.mode === "month" ? __("etf.returnsMonth", {month: column}) : column;
+            header += '<th scope="col">' + escapeHtml(label) + C + "th>";
+        });
+        var body = "";
+        (data.rows || []).forEach(function (row) {
+            body += '<tr' + (row.benchmark ? ' class="etf-returns-benchmark"' : "") + ">";
+            var symbol = escapeHtml(row.symbol);
+            var name = row.name && row.name !== row.symbol ? " " + escapeHtml(row.name) : "";
+            var benchmark = row.benchmark ? " · " + escapeHtml(__("etf.benchmark")) : "";
+            body += '<td>' + symbol + name + benchmark + C + "td>";
+            columns.forEach(function (column) {
+                var value = row[metric] ? row[metric][column] : null;
+                body += '<td class="' + returnValueClass(value) + '">' + formatReturnValue(value) + C + "td>";
+            });
+            body += C + "tr>";
+        });
+        return '<div class="etf-returns-table-block"><h4 class="etf-returns-table-title">' + escapeHtml(title) + C +
+            'h4><div class="etf-returns-table-wrap"><table class="etf-returns-table"><thead><tr>' + header + C +
+            "tr>" + C + "thead><tbody>" + body + C + "tbody>" + C + "table>" + C + "div>" + C + "div>";
+    }
+
+    function formatReturnValue(value) {
+        if (value == null || !isFinite(value)) return "--";
+        return (value > 0 ? "+" : "") + Number(value).toFixed(2) + "%";
+    }
+
+    function returnValueClass(value) {
+        if (value == null || !isFinite(value)) return "etf-return-missing";
+        if (value > 0) return "etf-return-positive";
+        if (value < 0) return "etf-return-negative";
+        return "";
     }
 
     function renderAggregateSymbols() {

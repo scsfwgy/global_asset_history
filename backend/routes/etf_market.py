@@ -132,6 +132,12 @@ _qdii_fund_cache: dict[str, tuple[float, dict]] = {}
 _qdii_holdings_cache: dict[str, tuple[float, dict]] = {}
 _benchmark_map: dict[str, tuple[str, str]] = {}
 
+_RETURNS_MATRIX_GROUPS = {
+    "nasdaq100": ("cn_etf_nasdaq100", "QQQ"),
+    "sp500": ("cn_etf_sp500", "SPY"),
+}
+_RETURNS_MATRIX_YEAR_COUNT = 5
+
 
 _QDII_FUND_GROUPS: dict[str, dict] = {
     "nasdaq100": {
@@ -203,6 +209,78 @@ def _load_benchmark_map() -> dict[str, tuple[str, str]]:
 def _benchmark_for_etf(symbol: str) -> tuple[Optional[str], Optional[str]]:
     """Return Yahoo benchmark symbol and display label for supported ETFs."""
     return _load_benchmark_map().get(symbol.strip(), (None, None))
+
+
+def _load_returns_matrix_group(group: str) -> tuple[str, list[dict]]:
+    """Return the benchmark and configured A-share ETFs for a matrix group."""
+    preset_key, benchmark = _RETURNS_MATRIX_GROUPS[group]
+    try:
+        with open(_CONFIG_PATH, "r", encoding="utf-8") as f:
+            preset = json.load(f).get("presets", {}).get(preset_key, {})
+    except Exception as exc:
+        raise RuntimeError(f"failed to load ETF configuration: {exc}") from exc
+
+    symbols = []
+    for entry in preset.get("symbols", []):
+        symbol = str(entry.get("symbol", "")).strip()
+        if symbol:
+            symbols.append({
+                "symbol": symbol,
+                "name": str(entry.get("name") or symbol),
+            })
+    if not symbols:
+        raise RuntimeError(f"ETF configuration is empty for group: {group}")
+    return benchmark, symbols
+
+
+def _valid_period_values(values) -> list[tuple[str, float]]:
+    """Normalize dated values and discard non-positive or non-finite points."""
+    normalized = []
+    for raw_date, raw_value in values:
+        try:
+            value = float(raw_value)
+            parsed = datetime.strptime(str(raw_date)[:10], "%Y-%m-%d")
+        except (TypeError, ValueError):
+            continue
+        if value > 0 and math.isfinite(value):
+            normalized.append((parsed.strftime("%Y-%m-%d"), value))
+    return sorted(normalized)
+
+
+def _strict_period_returns(values, mode: str, columns) -> dict[str, Optional[float]]:
+    """Compute returns only when the immediately preceding period has an endpoint."""
+    endpoints = {}
+    for date_str, value in _valid_period_values(values):
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+        key = dt.year if mode == "year" else (dt.year, dt.month)
+        endpoints[key] = value
+
+    result = {}
+    for column in columns:
+        if mode == "year":
+            current_key = column
+            previous_key = column - 1
+            output_key = str(column)
+        else:
+            year, month = column
+            current_key = (year, month)
+            previous_key = (year - 1, 12) if month == 1 else (year, month - 1)
+            output_key = str(month)
+        current = endpoints.get(current_key)
+        previous = endpoints.get(previous_key)
+        result[output_key] = (
+            round((current / previous - 1) * 100, 2)
+            if current is not None and previous is not None and previous > 0
+            else None
+        )
+    return result
+
+
+def _price_series_values(series) -> list[tuple[str, float]]:
+    return [
+        (datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d"), close)
+        for ts, close in zip(series.timestamps, series.closes)
+    ]
 
 
 # Pure index symbols for NAV-level tracking (not ETFs, no premium/fee noise)
@@ -1707,6 +1785,130 @@ def qdii_fund_holdings(code: str):
         return jsonify({"error": f"holdings report fetch failed: {exc}", "code": code}), 502
 
 
+@etf_market_bp.route("/returns-matrix", methods=["GET"])
+def returns_matrix():
+    """Return annual or monthly returns for a benchmark and its A-share ETFs."""
+    group = request.args.get("group", "").strip()
+    mode = request.args.get("mode", "year").strip()
+    if group not in _RETURNS_MATRIX_GROUPS:
+        return jsonify({"error": "group must be nasdaq100 or sp500"}), 400
+    if mode not in ("year", "month"):
+        return jsonify({"error": "mode must be year or month"}), 400
+
+    current_year = datetime.now(timezone.utc).year
+    available_years = list(range(current_year, current_year - _RETURNS_MATRIX_YEAR_COUNT, -1))
+    selected_year = None
+    if mode == "month":
+        try:
+            selected_year = int(request.args.get("year", ""))
+        except (TypeError, ValueError):
+            return jsonify({"error": "year is required for month mode"}), 400
+        if selected_year not in available_years:
+            return jsonify({
+                "error": f"year must be between {available_years[-1]} and {available_years[0]}"
+            }), 400
+
+    try:
+        benchmark, configured_symbols = _load_returns_matrix_group(group)
+    except RuntimeError as exc:
+        logger.error("Returns matrix configuration failed group=%s: %s", group, exc)
+        return jsonify({"error": str(exc)}), 500
+
+    if mode == "year":
+        period_columns = available_years
+        response_columns = [str(year) for year in period_columns]
+        start_year = available_years[-1] - 1
+        start_date = f"{start_year}-01-01"
+    else:
+        period_columns = [(selected_year, month) for month in range(1, 13)]
+        response_columns = [str(month) for month in range(1, 13)]
+        start_date = f"{selected_year - 1}-12-01"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    end_date = today if selected_year is None or selected_year == current_year else f"{selected_year}-12-31"
+
+    items = [{"symbol": benchmark, "name": benchmark, "benchmark": True}]
+    items.extend({**item, "benchmark": False} for item in configured_symbols)
+
+    def build_row(item):
+        symbol = item["symbol"]
+        row_errors = []
+        price_values = []
+        nav_values = []
+        try:
+            asset_type = "stock" if item["benchmark"] else "cn_stock"
+            series = _fetch_daily_series_cached(symbol, asset_type)
+            if series.error:
+                raise RuntimeError(series.error)
+            price_values = _price_series_values(series)
+            if not price_values:
+                row_errors.append({"symbol": symbol, "stage": "price", "error": "no data"})
+        except Exception as exc:
+            row_errors.append({"symbol": symbol, "stage": "price", "error": str(exc)})
+
+        if item["benchmark"]:
+            nav_values = price_values
+        else:
+            try:
+                nav_map = _fetch_etf_nav_cached(symbol, start_date, end_date)
+                nav_values = list(nav_map.items())
+                if not nav_values:
+                    row_errors.append({"symbol": symbol, "stage": "nav", "error": "no data"})
+            except Exception as exc:
+                row_errors.append({"symbol": symbol, "stage": "nav", "error": str(exc)})
+
+        return {
+            "symbol": symbol,
+            "name": item["name"],
+            "benchmark": item["benchmark"],
+            "with_premium": _strict_period_returns(price_values, mode, period_columns),
+            "without_premium": _strict_period_returns(nav_values, mode, period_columns),
+        }, row_errors
+
+    results = [None] * len(items)
+    errors = []
+    with ThreadPoolExecutor(max_workers=min(6, len(items))) as executor:
+        futures = {executor.submit(build_row, item): index for index, item in enumerate(items)}
+        for future in as_completed(futures):
+            index = futures[future]
+            try:
+                results[index], row_errors = future.result()
+                errors.extend(row_errors)
+            except Exception as exc:
+                item = items[index]
+                errors.append({"symbol": item["symbol"], "stage": "row", "error": str(exc)})
+                results[index] = {
+                    "symbol": item["symbol"],
+                    "name": item["name"],
+                    "benchmark": item["benchmark"],
+                    "with_premium": {column: None for column in response_columns},
+                    "without_premium": {column: None for column in response_columns},
+                }
+
+    has_data = any(
+        value is not None
+        for row in results
+        for metric in ("with_premium", "without_premium")
+        for value in row[metric].values()
+    )
+    if not has_data:
+        return jsonify({"error": "no return data available", "errors": errors}), 502
+
+    return jsonify({
+        "group": group,
+        "mode": mode,
+        "year": selected_year,
+        "available_years": available_years,
+        "columns": response_columns,
+        "rows": results,
+        "errors": errors,
+        "sources": {
+            "with_premium": "adjusted_close",
+            "without_premium": "nav",
+        },
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+
 @etf_market_bp.route("/history", methods=["GET"])
 def history():
     """Return recent daily OHLCV history for an ETF symbol.
@@ -2061,7 +2263,7 @@ def _fetch_etf_nav(symbol: str, start_date: str, end_date: str) -> dict:
 
     nav_map = {}
     page_size = 50
-    max_pages = 20  # safety: ~1000 data points max
+    max_pages = 120  # safety: enough for several years of daily NAV history
 
     s = start_date.replace("-", "-")  # keep YYYY-MM-DD
     e = end_date.replace("-", "-")

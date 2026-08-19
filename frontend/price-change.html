@@ -2582,9 +2582,115 @@
     }
     #etfAggregateChart { overflow-x: auto; scrollbar-width: none; }
     #etfAggregateChart::-webkit-scrollbar { display: none; }
+    .etf-returns-matrix {
+        margin-top: 18px;
+        padding-top: 16px;
+        border-top: 1px solid var(--apple-divider);
+    }
+    .etf-returns-toolbar,
+    .etf-returns-controls,
+    .etf-returns-modes,
+    .etf-returns-year-label {
+        display: flex;
+        align-items: center;
+    }
+    .etf-returns-toolbar {
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+    }
+    .etf-returns-toolbar h3,
+    .etf-returns-table-title {
+        margin: 0;
+        color: var(--apple-text-primary);
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0;
+    }
+    .etf-returns-controls { gap: 10px; flex-wrap: wrap; }
+    .etf-returns-modes { gap: 6px; }
+    .etf-returns-year-label {
+        gap: 6px;
+        color: var(--apple-text-secondary);
+        font-size: 12px;
+    }
+    .etf-returns-year {
+        min-width: 86px;
+        padding: 5px 8px;
+        color: var(--apple-text-primary);
+        background: var(--apple-surface-1);
+        border: 1px solid var(--apple-divider);
+        border-radius: 7px;
+        font-size: 12px;
+    }
+    .etf-returns-note {
+        margin: 8px 0 10px;
+        padding: 9px 11px;
+        border-left: 3px solid var(--apple-blue);
+        color: var(--apple-text-secondary);
+        background: var(--apple-surface-2);
+        font-size: 12px;
+        line-height: 1.6;
+    }
+    .etf-returns-note-title {
+        margin-bottom: 2px;
+        color: var(--apple-text-primary);
+        font-weight: 600;
+    }
+    .etf-returns-note p { margin: 2px 0; }
+    .etf-returns-status {
+        min-height: 18px;
+        color: var(--apple-text-secondary);
+        font-size: 12px;
+    }
+    .etf-returns-table-block + .etf-returns-table-block { margin-top: 16px; }
+    .etf-returns-table-title { margin-bottom: 7px; }
+    .etf-returns-table-wrap { overflow-x: auto; }
+    .etf-returns-table {
+        width: max-content;
+        min-width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+    }
+    .etf-returns-table th,
+    .etf-returns-table td {
+        min-width: 78px;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--apple-divider);
+        text-align: right;
+        white-space: nowrap;
+    }
+    .etf-returns-table th {
+        color: var(--apple-text-secondary);
+        background: var(--apple-surface-2);
+        font-weight: 600;
+    }
+    .etf-returns-table th:first-child,
+    .etf-returns-table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        min-width: 180px;
+        max-width: 220px;
+        text-align: left;
+        background: var(--apple-surface-1);
+    }
+    .etf-returns-table th:first-child {
+        z-index: 2;
+        background: var(--apple-surface-2);
+    }
+    .etf-return-positive { color: var(--data-positive); }
+    .etf-return-negative { color: var(--data-negative); }
+    .etf-return-missing { color: var(--apple-text-tertiary); }
+    .etf-returns-benchmark td:first-child { font-weight: 600; }
     @media (max-width: 720px) {
         .etf-aggregate-toolbar { align-items: flex-start; }
         .etf-aggregate-panel { padding: 12px 10px; }
+        .etf-returns-toolbar { align-items: flex-start; }
+        .etf-returns-table th:first-child,
+        .etf-returns-table td:first-child { min-width: 146px; max-width: 170px; }
     }
 
     /* QDII fund guide */
@@ -4072,6 +4178,29 @@
                 <div class="etf-aggregate-symbols" id="etfAggregateSymbols"></div>
                 <div class="etf-aggregate-status" id="etfAggregateStatus"></div>
                 <div id="etfAggregateChart"></div>
+                <section class="etf-returns-matrix" id="etfReturnsMatrix">
+                    <div class="etf-returns-toolbar">
+                        <h3 data-i18n="etf.returnsHistory">历史涨跌幅</h3>
+                        <div class="etf-returns-controls">
+                            <div class="etf-returns-modes" id="etfReturnsModes">
+                                <button class="etf-chart-tab active" type="button" data-etf-returns-mode="year" data-i18n="etf.returnsAnnual">按年</button>
+                                <button class="etf-chart-tab" type="button" data-etf-returns-mode="month" data-i18n="etf.returnsMonthly">按月</button>
+                            </div>
+                            <label class="etf-returns-year-label" id="etfReturnsYearLabel">
+                                <span data-i18n="etf.returnsYear">年份</span>
+                                <select id="etfReturnsYear" class="etf-returns-year"></select>
+                            </label>
+                        </div>
+                    </div>
+                    <aside class="etf-returns-note" aria-label="历史收益口径说明" data-i18n-attr="aria-label|etf.returnsNoteTitle">
+                        <div class="etf-returns-note-title" data-i18n="etf.returnsNoteTitle">口径说明</div>
+                        <p data-i18n="etf.returnsNoteWithPremium">带溢价（场内价格收益）反映按场内复权价格买入和卖出的区间收益，包含买卖两端折溢价变化，更接近投资者的场内持有收益，但未扣除佣金、买卖价差等交易成本。</p>
+                        <p data-i18n="etf.returnsNoteWithoutPremium">不带溢价（单位净值收益）反映基金净值本身的区间变化，不代表投资者一定能按该收益成交；需与同期基准收益对比后，才能评估跟踪差异。</p>
+                        <p data-i18n="etf.returnsNoteCaution">注意：表中显示对应年份或月份内的实际涨跌幅。当前尚未结束的年份显示今年以来（YTD）的涨跌幅，当前尚未结束的月份显示本月以来（MTD）的涨跌幅；这些数值不会换算成假设持有一整年的年化收益率。境内 ETF 与 QQQ/SPY 的差异还可能包含汇率、费率、现金仓位和估值时点影响；“--”表示缺少计算所需的相邻期末数据。</p>
+                    </aside>
+                    <div class="etf-returns-status" id="etfReturnsStatus"></div>
+                    <div id="etfReturnsTables"></div>
+                </section>
             </div>
         </div>
         </div><!-- /tab-etf -->

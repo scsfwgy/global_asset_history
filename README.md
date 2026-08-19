@@ -21,7 +21,7 @@ GlobalAssetHistory 是一个 Apache-2.0 开源、可自行部署的跨资产历�
 | 数据下载 | `/download` | 按代码或名称搜索标的，预览并下载多周期 OHLCV JSON；周/月/年数据由日线聚合 |
 | 投资回测 | `/backtest` | 详情：一次性或按日/周/月/年投入；资产、投入和盈亏曲线；资金加权年化收益（IRR）及逐笔成交明细；对比：多标的一次性投入动画对比，可切总资产/总收益曲线，动画可一键录制为标准 16:9 / 9:16 mp4 视频（仅含图表与图例） |
 | 暴跌统计 | `/crash` | 日 K、N 日 K、周 K、月 K 暴跌检测；触底、修复率、恢复天数和单次事件走势图 |
-| 场内 ETF 追踪 | `/etf` | A 股场内 ETF 实时报价、费率、溢价成本、跟踪误差、估值误差、单只历史图和多 ETF 聚合分析 |
+| 场内 ETF 追踪 | `/etf` | A 股场内 ETF 实时报价、费率、溢价成本、跟踪误差、估值误差、单只历史图、多 ETF 聚合分析，以及按自然年/月对比价格收益与 NAV 收益 |
 | 场外 QDII 追踪 | `/qdii-funds` | 纳指100、标普500和主动 QDII；申购状态、限额、费率、多周期收益、基金经理及最新报告持仓地区配置 |
 | VIX/VXN 分析 | `/vix` | SPY/QQQ/VIX/VXN 多周期走势、情绪分位和相关性，以及恐慌指数达到阈值后的远期收益统计 |
 | 汇率损失 | `/exchange-loss` | 多法币历史交叉汇率走势、跨币种持有盈亏计算，以及汇率计算器子工具（任意币对多目标折算、正反向汇率、搜索选择器与历史记录） |
@@ -63,7 +63,7 @@ GlobalAssetHistory 是一个 Apache-2.0 开源、可自行部署的跨资产历�
 - `backend/app.py`：Flask 入口、页面托管、SEO/GEO、健康检查和站点统计
 - `backend/seo_rendering.py`：按路由裁剪单页 HTML，只输出当前面板、文章语言和必要脚本
 - `backend/routes/price_change.py`：标的搜索、收益、详情、基本面历史、美股对比、数据下载、回测、暴跌、热力图和 VIX/VXN API
-- `backend/routes/etf_market.py`：场内 ETF 报价/估值、ETF 历史、QDII 基金和定期报告持仓 API
+- `backend/routes/etf_market.py`：场内 ETF 报价/估值、历史收益矩阵、ETF 历史、QDII 基金和定期报告持仓 API
 - `backend/routes/wishes.py`：心愿墙 API
 - `backend/service/price_change/`：数据抓取、统一日线模型、计算、缓存和诊断
 - `backend/service/wishes/`：验证码和心愿业务逻辑
@@ -232,6 +232,7 @@ Redis 两套变量会自动识别，优先使用 `UPSTASH_*`。
 | GET | `/qdii-funds` | QDII 基金数据 |
 | GET | `/qdii-funds/<code>/holdings` | QDII 最新定期报告持仓和地区配置 |
 | GET | `/history` | ETF 历史行情 |
+| GET | `/returns-matrix` | 纳指100/标普500基准与场内 ETF 的自然年/月价格收益和 NAV 收益矩阵 |
 
 ### 心愿墙 `/api/wishes`
 

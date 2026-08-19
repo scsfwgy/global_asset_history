@@ -154,6 +154,38 @@ class TestEtfHistoryCache:
         assert cached["cache_status"] == "local"
         assert cached["bars"][0]["premium_pct"] == 2.0
 
+    def test_fetch_nav_traverses_short_pages_until_start_date(self):
+        """East Money ignores pageSize, so short pages are not terminal."""
+        from unittest.mock import MagicMock
+
+        responses = []
+        for page in range(1, 23):
+            response = MagicMock()
+            response.raise_for_status.return_value = None
+            year = 2026 if page < 22 else 2024
+            response.json.return_value = {
+                "Data": {
+                    "LSJZList": [{
+                        "FSRQ": f"{year}-01-{min(page, 28):02d}",
+                        "DWJZ": str(1 + page / 100),
+                    }]
+                }
+            }
+            responses.append(response)
+
+        with patch(
+            "routes.etf_market.requests.get",
+            side_effect=responses,
+        ) as mock_get:
+            nav_map = etf_market._fetch_etf_nav(
+                "513300",
+                "2024-12-31",
+                "2026-08-19",
+            )
+
+        assert mock_get.call_count == 22
+        assert "2024-01-22" in nav_map
+
     def test_nav_cached_reads_local_snapshot_without_upstream(self, tmp_path, monkeypatch):
         monkeypatch.setattr(etf_market, "_ETF_NAV_DATA_DIR", tmp_path)
         etf_market._nav_cache.clear()

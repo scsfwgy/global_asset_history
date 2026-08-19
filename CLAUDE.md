@@ -121,7 +121,7 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 - `backend/app.py`：应用入口、前端响应、SEO/GEO、健康检查、诊断、访问和点击统计
 - `backend/seo_rendering.py`：根据请求路径裁剪 `price-change.html`，仅保留当前面板、语言文章和必要脚本，并增强语义标签
 - `price_change_bp` (`/api/price-change`)：标的搜索、收益、详情、基本面历史、美股对比、数据下载、回测、暴跌、热力图、VIX/VXN、汇率（`exchange-loss` / `exchange-rates`）
-- `etf_market_bp` (`/api/etf-market`)：ETF 报价和估值、ETF 历史、QDII 基金、QDII 定期报告持仓
+- `etf_market_bp` (`/api/etf-market`)：ETF 报价和估值、ETF 历史、自然年/月价格与 NAV 收益矩阵、QDII 基金、QDII 定期报告持仓
 - `wishes_bp` (`/api/wishes`)：验证码、心愿提交和管理
 - `api/index.py`：Vercel 导入并暴露 Flask `app`
 
@@ -154,7 +154,7 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 | 数据下载 | `/download` | `data-download.js` | `symbol-search`、`history-download` |
 | 投资回测（详情 + 多标的对比 + 动画录制） | `/backtest` | `backtest.js` | `backtest`（详情单标的多序列；对比面板并行调用同接口多标的动画对比，可录制含图表与图例的 mp4） |
 | 暴跌统计 | `/crash` | `crash-stats.js` | `crash-stats`、`crash-chart` |
-| 场内 ETF | `/etf` | `etf-market.js` | `/api/etf-market/quote`、`valuation`、`history` |
+| 场内 ETF | `/etf` | `etf-market.js` | `/api/etf-market/quote`、`valuation`、`history`、`returns-matrix` |
 | 场外 QDII | `/qdii-funds` | `qdii-funds.js` | `/api/etf-market/qdii-funds`、`qdii-funds/<code>/holdings` |
 | VIX/VXN | `/vix` | `vix-chart.js` | `vix-comparison`、`fear-threshold-stats` |
 | 汇率损失 | `/exchange-loss` | `exchange-loss.js`、`fx-calculator.js` | `exchange-loss`、`exchange-rates` |

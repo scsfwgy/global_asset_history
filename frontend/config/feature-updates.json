@@ -52,5 +52,15 @@
       "Yearly Returns: view returns and max drawdowns together in clearer tables and trend charts for a quicker read on performance and risk.",
       "Backtest: compare multiple assets side by side, then record and download the animation in landscape or portrait format."
     ]
+  },
+  {
+    "version": 9,
+    "date": "2026.08.19",
+    "zh": [
+      "标普纳指ETF追踪（场内）：新增历史涨跌幅，可按自然年或指定年份逐月比较场内价格收益（带溢价）与单位净值收益（不带溢价），并对照 QQQ/SPY 基准（位置：标普纳指ETF追踪（场内）-纳指100/标普500-聚合分析原图表下方）。"
+    ],
+    "en": [
+      "S&P & Nasdaq ETFs (listed): added historical returns by calendar year or by month for a selected year, comparing market-price returns (with premium) and NAV returns (without premium) against QQQ/SPY (under Aggregate Analysis, below the existing chart)."
+    ]
   }
 ]
