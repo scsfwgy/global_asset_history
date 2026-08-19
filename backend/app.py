@@ -312,7 +312,7 @@ INDEXABLE_PATHS = {
 # HTML/content actually changes — Google discounts <lastmod> if it always shows
 # "today". Knowledge articles use the per-article "updated" field instead.
 INDEX_LASTMOD = "2026-08-15"
-ETF_MARKET_LASTMOD = "2026-08-11"
+ETF_MARKET_LASTMOD = "2026-08-18"
 
 TOOL_SEO_KEYS = {
     "/": "index",
