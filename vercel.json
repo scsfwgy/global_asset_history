@@ -18,7 +18,7 @@
     { "source": "/tools/qqq-return-calculator", "destination": "/api/index" },
     { "source": "/(yearly|detail|stock-compare|download|backtest|crash|etf|qdii-funds|vix|exchange-loss|wishes|settings|knowledge|heatmap)", "destination": "/api/index" },
     { "source": "/etf/:sub(nasdaq100|sp500|global_others)", "destination": "/api/index" },
-    { "source": "/knowledge/:sub(how-to-buy|how-to-buy-us-stocks|value-investing|what-is-value-investing|etf-intro|core-etf-guide|nasdaq-etf|nasdaq-etf-guide|event-myth|market-data-myths|vix-vxn-investing-signal|terms|financial-terms|svol-volatility-premium-etf|china-sp-500-equivalent)", "destination": "/api/index" },
+    { "source": "/knowledge/:sub(how-to-buy|how-to-buy-us-stocks|value-investing|what-is-value-investing|etf-intro|core-etf-guide|nasdaq-etf|nasdaq-etf-guide|event-myth|market-data-myths|vix-vxn-investing-signal|terms|financial-terms|svol-volatility-premium-etf|china-sp-500-equivalent|spy-volatility-history)", "destination": "/api/index" },
     { "source": "/:lang(en|zh-TW|zh)", "destination": "/api/index" },
     { "source": "/:lang(en|zh-TW|zh)/", "destination": "/api/index" },
     { "source": "/:lang(en|zh-TW|zh)/etf-market", "destination": "/api/index" },
@@ -28,7 +28,7 @@
     { "source": "/:lang(en|zh-TW|zh)/tools/qqq-return-calculator", "destination": "/api/index" },
     { "source": "/:lang(en|zh-TW|zh)/(yearly|detail|stock-compare|download|backtest|crash|etf|qdii-funds|vix|exchange-loss|wishes|settings|knowledge|heatmap)", "destination": "/api/index" },
     { "source": "/:lang(en|zh-TW|zh)/etf/:sub(nasdaq100|sp500|global_others)", "destination": "/api/index" },
-    { "source": "/:lang(en|zh-TW|zh)/knowledge/:sub(how-to-buy|how-to-buy-us-stocks|value-investing|what-is-value-investing|etf-intro|core-etf-guide|nasdaq-etf|nasdaq-etf-guide|event-myth|market-data-myths|vix-vxn-investing-signal|terms|financial-terms|svol-volatility-premium-etf|china-sp-500-equivalent)", "destination": "/api/index" },
+    { "source": "/:lang(en|zh-TW|zh)/knowledge/:sub(how-to-buy|how-to-buy-us-stocks|value-investing|what-is-value-investing|etf-intro|core-etf-guide|nasdaq-etf|nasdaq-etf-guide|event-myth|market-data-myths|vix-vxn-investing-signal|terms|financial-terms|svol-volatility-premium-etf|china-sp-500-equivalent|spy-volatility-history)", "destination": "/api/index" },
     { "source": "/", "destination": "/api/index" }
   ],
   "functions": {

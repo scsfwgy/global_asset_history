@@ -971,6 +971,7 @@
   "knowledge": {
     "svolTab": "SVOL",
     "chinaSp500Tab": "中国版标普500",
+    "spyVolatilityTab": "SPY剧烈波动",
     "dramTab": "DRAM持仓",
     "qqqmTab": "QQQM持仓",
     "tqqqCsvTab": "TQQQ CSV",
@@ -1032,6 +1033,8 @@
     "knowledgeSvolDescription": "理解 SVOL 的波动率溢价策略、净值与市价、历史表现、风险，以及为什么传统指数跟踪误差未必适用。",
     "knowledgeChinaSp500Title": "中国版标普500是什么？沪深300、中证A500与上证50对比 - GlobalAssetHistory",
     "knowledgeChinaSp500Description": "对比沪深300、中证A500和上证50，理解不同语境下哪个指数更接近标普500。",
+    "knowledgeSpyVolatilityTitle": "SPY剧烈波动全史（1993–2026） - GlobalAssetHistory",
+    "knowledgeSpyVolatilityDescription": "复盘SPY自1993年发行以来15次至少10%的峰谷回撤与44个单日绝对涨跌至少5%的极端交易日，整理幅度、日期、恢复时间和主要原因。",
     "knowledgeDramTitle": "DRAM持仓与官方CSV下载指南 - GlobalAssetHistory",
     "knowledgeDramDescription": "查看 Roundhill Memory ETF 的主要持仓、暴露类型、数据口径和官方 DRAM 持仓下载入口。",
     "knowledgeQqqmTitle": "QQQM持仓与行业配置 - GlobalAssetHistory",

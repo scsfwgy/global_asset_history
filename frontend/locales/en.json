@@ -975,6 +975,7 @@
   "knowledge": {
     "svolTab": "SVOL",
     "chinaSp500Tab": "China S&P 500",
+    "spyVolatilityTab": "SPY Volatility",
     "dramTab": "DRAM Holdings",
     "qqqmTab": "QQQM Holdings",
     "tqqqCsvTab": "TQQQ CSV",
@@ -1036,6 +1037,8 @@
     "knowledgeSvolDescription": "Understand SVOL strategy, NAV versus market price, performance evaluation, volatility risks, and why index tracking error may not apply.",
     "knowledgeChinaSp500Title": "What Is China's Equivalent of the S&P 500? — GlobalAssetHistory",
     "knowledgeChinaSp500Description": "Compare the CSI 300, CSI A500 and SSE 50 to understand which Chinese index is closest to the S&P 500 for different use cases.",
+    "knowledgeSpyVolatilityTitle": "SPY Volatility History: Every Major Move, 1993–2026 — GlobalAssetHistory",
+    "knowledgeSpyVolatilityDescription": "A complete review of SPY's 15 peak-to-trough drawdowns of at least 10% and 44 daily moves of at least 5% from 1993 through 2026, with causes and recovery dates.",
     "knowledgeDramTitle": "DRAM Holdings & Official CSV Guide — GlobalAssetHistory",
     "knowledgeDramDescription": "Review Roundhill Memory ETF holdings, exposure types, data caveats, and the official DRAM holdings download source.",
     "knowledgeQqqmTitle": "QQQM Holdings & Sector Allocation — GlobalAssetHistory",

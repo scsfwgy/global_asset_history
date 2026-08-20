@@ -258,6 +258,25 @@ KNOWLEDGE_ARTICLES = {
             "en": "Chinese S&P 500 equivalent,China S&P 500,CSI 300,CSI A500,SSE 50,China index",
         },
     },
+    "/knowledge/spy-volatility-history": {
+        "legacy_paths": [],
+        "subtab": "spy-volatility",
+        "en_indexable": True,
+        "published": "2026-08-20",
+        "updated": "2026-08-20",
+        "title": {
+            "zh-CN": "SPY剧烈波动全史（1993–2026） - GlobalAssetHistory",
+            "en": "SPY Volatility History: Every Major Move, 1993–2026 — GlobalAssetHistory",
+        },
+        "description": {
+            "zh-CN": "复盘SPY自1993年发行以来15次至少10%的峰谷回撤与44个单日绝对涨跌至少5%的极端交易日，整理幅度、日期、恢复时间和主要原因。",
+            "en": "A complete review of SPY's 15 peak-to-trough drawdowns of at least 10% and 44 daily moves of at least 5% from 1993 through 2026, with causes and recovery dates.",
+        },
+        "keywords": {
+            "zh-CN": "SPY历史,标普500暴跌,标普500暴涨,SPY最大回撤,金融危机,新冠股灾,关税冲击,极端交易日",
+            "en": "SPY history,S&P 500 crashes,SPY drawdowns,stock market rallies,financial crisis,COVID crash,tariff shock,extreme trading days",
+        },
+    },
     "/us-etf/dram": {
         "legacy_paths": [],
         "subtab": "dram",
@@ -384,6 +403,7 @@ KNOWLEDGE_SUBTAB_I18N_KEYS = {
     "tqqq-csv": "knowledge.tqqqCsvTab",
     "svol": "knowledge.svolTab",
     "china-sp500": "knowledge.chinaSp500Tab",
+    "spy-volatility": "knowledge.spyVolatilityTab",
 }
 
 COMMON_PAGE_SCRIPTS = {
@@ -1219,6 +1239,7 @@ def tools24_download_qr():
 @app.route("/knowledge/financial-terms")
 @app.route("/knowledge/svol-volatility-premium-etf")
 @app.route("/knowledge/china-sp-500-equivalent")
+@app.route("/knowledge/spy-volatility-history")
 @app.route("/wishes")
 @app.route("/settings")
 @app.route("/heatmap")

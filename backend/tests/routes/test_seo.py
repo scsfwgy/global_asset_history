@@ -241,6 +241,7 @@ class TestHtmlMeta:
             "/knowledge/value-investing",
             "/knowledge/nasdaq-etf-guide",
             "/knowledge/vix-vxn-investing-signal",
+            "/knowledge/spy-volatility-history",
         ],
     )
     def test_knowledge_article_jsonld_dates(self, client, path):
@@ -281,6 +282,31 @@ class TestHtmlMeta:
         assert '<link rel="canonical" href="https://test.local/zh/knowledge/vix-vxn-investing-signal"' in zh_html
         assert '<link rel="canonical" href="https://test.local/en/knowledge/vix-vxn-investing-signal"' in en_html
         assert '"articleSection": "US Fear Index"' in zh_html
+
+    def test_spy_volatility_history_route_content_and_locales(self, client):
+        zh_html = client.get("/zh/knowledge/spy-volatility-history").get_data(as_text=True)
+        en_html = client.get("/en/knowledge/spy-volatility-history").get_data(as_text=True)
+
+        assert 'data-kb-tab="spy-volatility"' in zh_html
+        assert zh_html.count("<h1") == 1
+        assert ">SPY剧烈波动</h1>" in zh_html
+        assert 'id="kb-spy-volatility"' in zh_html
+        assert "15次重大波动期" in zh_html
+        assert "-56.47%" in zh_html
+        assert "44个极端交易日" in zh_html
+        assert "谷底后收复" in zh_html
+        assert "1,168" in zh_html
+        assert "有没有不是先暴跌" in zh_html
+        assert "2000-01-07" in zh_html
+        assert "+34.95%" in zh_html
+        assert 'id="kb-spy-volatility-en"' in en_html
+        assert ">SPY Volatility</h1>" in en_html
+        assert "44 extreme trading days" in en_html
+        assert "Recovery<br>sessions" in en_html
+        assert "Can Good News Drive a Rally Without a Prior Crash?" in en_html
+        assert "January 7, 2000" in en_html
+        assert '<link rel="canonical" href="https://test.local/zh/knowledge/spy-volatility-history"' in zh_html
+        assert '<link rel="canonical" href="https://test.local/en/knowledge/spy-volatility-history"' in en_html
 
     @pytest.mark.parametrize("path", ["/yearly", "/detail", "/stock-compare", "/backtest"])
     def test_indexable_tools_have_self_canonical_and_consistent_robots(self, client, path):
@@ -793,6 +819,7 @@ class TestHtmlMeta:
             ("/us-etf/tqqq/historical-prices", "TQQQ Historical Prices CSV"),
             ("/knowledge/svol-volatility-premium-etf", "tracking error may not apply"),
             ("/knowledge/china-sp-500-equivalent", "CSI A500"),
+            ("/knowledge/spy-volatility-history", "44 extreme trading days"),
         ],
     )
     def test_intent_landing_pages_are_server_rendered(self, client, path, needle):
