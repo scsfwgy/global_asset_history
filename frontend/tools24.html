@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Tools24 Android 工具箱官方网站。一个应用装下扫码、二维码生成、指南针、水平仪、单位换算等 25+ 项实用工具，支持直接下载 APK 或通过 Google Play 安装。">
+    <meta name="description" content="Tools24 Android 工具箱官方网站。一个应用装下扫码、二维码生成、图片处理、指南针、传感器测量、设备检测与生活计算等 34 项实用工具，支持直接下载 APK 或通过 Google Play 安装。">
     <meta name="keywords" content="Tools24,Android工具箱,APK下载,扫码,二维码生成,指南针,水平仪,单位换算,Google Play">
     <meta name="author" content="tools24.uk">
     <meta name="robots" content="index,follow">
@@ -11,12 +11,12 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="tools24.uk">
     <meta property="og:title" content="Tools24 Android 工具箱 — 官方网站">
-    <meta property="og:description" content="一个应用，装下日常所需。25+ 项快捷、测量、设备与生活工具，提供 APK 与 Google Play 下载。">
+    <meta property="og:description" content="一个应用，装下日常所需。34 项快捷、测量、设备与生活工具，提供 APK 与 Google Play 下载。">
     <meta property="og:url" content="https://app.tools24.uk/">
     <meta property="og:image" content="https://app.tools24.uk/images/tools24/feature-graphic.jpg">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Tools24 Android 工具箱 — 官方网站">
-    <meta name="twitter:description" content="一个应用，装下日常所需。25+ 项工具，提供 APK 与 Google Play 下载。">
+    <meta name="twitter:description" content="一个应用，装下日常所需。34 项工具，提供 APK 与 Google Play 下载。">
     <meta name="twitter:image" content="https://app.tools24.uk/images/tools24/feature-graphic.jpg">
     <title>Tools24 Android 工具箱 — 官方网站</title>
     <style>
@@ -195,6 +195,8 @@
             box-shadow: 0 12px 28px rgba(23, 108, 255, .25);
         }
         .button-secondary { color: var(--text); background: var(--surface); border: 1px solid var(--line); }
+        .button-google { gap: 9px; }
+        .google-play-icon { width: 20px; height: 20px; flex: 0 0 auto; }
         .beta-note { margin: 16px 0 0; color: var(--muted); font-size: 13px; }
         .device-stage {
             position: relative;
@@ -284,6 +286,16 @@
         .feature-index { color: var(--blue); font: 800 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
         .feature-card h3 { margin: 42px 0 10px; font-size: 20px; letter-spacing: -.025em; }
         .feature-card p { margin: 0; color: var(--secondary); font-size: 14px; }
+        .catalog-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; margin: 42px 0 16px; }
+        .catalog-heading h3 { margin: 0; font-size: 20px; letter-spacing: -.025em; }
+        .catalog-heading p { margin: 0; color: var(--muted); font-size: 13px; }
+        .tool-catalog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+        .tool-group { padding: 24px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface-soft); }
+        .tool-group h3 { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 16px; font-size: 18px; letter-spacing: -.02em; }
+        .tool-group h3 span { color: var(--blue-deep); font: 800 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+        .tool-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 14px; margin: 0; padding: 0; list-style: none; }
+        .tool-list li { position: relative; padding-left: 13px; color: var(--secondary); font-size: 14px; overflow-wrap: anywhere; }
+        .tool-list li::before { content: ''; position: absolute; top: .72em; left: 0; width: 5px; height: 5px; border-radius: 50%; background: var(--blue); }
         .gallery-wrap { overflow: hidden; }
         .gallery { display: grid; grid-template-columns: repeat(6, 1fr); gap: 24px; align-items: start; }
         .shot { grid-column: span 2; margin: 0; }
@@ -353,6 +365,7 @@
             .eyebrow, .actions { justify-content: center; }
             .device-stage { min-height: 500px; }
             .feature-grid { grid-template-columns: 1fr 1fr; }
+            .tool-catalog { grid-template-columns: 1fr; }
             .invite { grid-template-columns: 1fr; text-align: center; }
             .invite p { margin-inline: auto; }
             .download-panel { justify-content: center; }
@@ -375,6 +388,9 @@
             .feature-grid { grid-template-columns: 1fr; }
             .feature-card { min-height: 180px; }
             .feature-card h3 { margin-top: 28px; }
+            .catalog-heading { display: block; }
+            .catalog-heading p { margin-top: 4px; }
+            .tool-group { padding: 20px; }
             .gallery { grid-template-columns: repeat(5, 76vw); gap: 16px; overflow-x: auto; padding: 4px 14px 24px; margin-inline: -14px; scroll-snap-type: x mandatory; }
             .shot, .shot:nth-child(2), .shot:nth-child(4) { grid-column: auto; margin-top: 0; scroll-snap-align: center; }
             .invite { margin: 42px 0 64px; padding: 38px 24px; }
@@ -432,15 +448,18 @@
             <div>
                 <div class="eyebrow">TOOLS24 FOR ANDROID</div>
                 <h1><span data-i18n="heroTitle1">一个应用，</span><span class="gradient-text" data-i18n="heroTitle2">装下日常所需。</span></h1>
-                <p class="hero-copy" data-i18n="heroCopy">Tools24 把扫码、测量、设备信息和生活计算等 25+ 项工具收进一个清爽的 Android 应用。需要时快速打开，用完即走。</p>
+                <p class="hero-copy" data-i18n="heroCopy">Tools24 把扫码、图片处理、传感器测量、设备检测和生活计算等 34 项工具收进一个清爽的 Android 应用。需要时快速打开，用完即走。</p>
                 <div class="actions">
                     <a class="button button-primary" href="__TOOLS24_DOWNLOAD_URL_ATTRIBUTE__" data-i18n="downloadApk">直接下载 APK ↓</a>
-                    <a class="button button-secondary" href="https://play.google.com/store/apps/details?id=com.maxhall.tools24" target="_blank" rel="sponsored nofollow noopener" data-i18n="googlePlay">Google Play 下载</a>
+                    <a class="button button-secondary button-google" href="https://play.google.com/store/apps/details?id=com.maxhall.tools24" target="_blank" rel="sponsored nofollow noopener">
+                        <svg class="google-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#00D2FF" d="M3.4 2.5a2.1 2.1 0 0 0-.4 1.3v16.4c0 .5.1.9.4 1.3L13 12 3.4 2.5Z"/><path fill="#00E8A5" d="m14.1 10.9-3-1.7L4.3 3.1A2.1 2.1 0 0 1 6.8 3l9.5 5.4-2.2 2.5Z"/><path fill="#FFCF3C" d="m4.3 20.9 6.8-6.1 3 1.7 2.2 2.5L6.8 21a2.1 2.1 0 0 1-2.5-.1Z"/><path fill="#FF4F64" d="m20.2 10.1-3.9-2.2L13 12l3.3 4.1 3.9-2.2c1.1-.6 1.1-2.9 0-3.6Z"/></svg>
+                        <span data-i18n="googlePlay">Google Play 下载</span>
+                    </a>
                 </div>
-                <p class="beta-note" data-i18n="betaNote">当前版本 V__TOOLS24_VERSION_TEXT__ · Android 安装包</p>
+                <p class="beta-note" data-i18n="betaNote">正式版 V__TOOLS24_VERSION_TEXT__ · 34 项工具 · Android 安装包</p>
             </div>
             <div class="device-stage" aria-label="Tools24 应用首页预览">
-                <div class="phone"><img src="/images/tools24/screenshot-home.png" alt="Tools24 正式版工具中心首页，展示扫码、二维码生成、手电筒、屏幕灯等收藏工具" width="1440" height="3200"></div>
+                <div class="phone"><img src="/images/tools24/release-home.png" alt="Tools24 正式版工具中心首页，展示扫码、二维码生成、手电筒、屏幕灯等常用工具" width="1440" height="3200"></div>
                 <div class="download-card">
                     <img src="/api/tools24/download-qr.svg" alt="Tools24 最新 APK 下载二维码" width="138" height="138">
                     <strong data-i18n="qrTitle">手机扫码下载</strong>
@@ -458,22 +477,44 @@
                 <article class="feature-card"><span class="feature-index">01 / <span data-i18n="f1cat">快捷</span></span><h3 data-i18n="f1title">扫一扫，马上用</h3><p data-i18n="f1desc">扫码、二维码生成、手电筒、屏幕灯、放大镜和水印相机。</p></article>
                 <article class="feature-card"><span class="feature-index">02 / <span data-i18n="f2cat">测量</span></span><h3 data-i18n="f2title">让手机成为仪表</h3><p data-i18n="f2desc">指南针、水平仪、速度与海拔、加速度、陀螺仪和分贝计。</p></article>
                 <article class="feature-card"><span class="feature-index">03 / <span data-i18n="f3cat">设备</span></span><h3 data-i18n="f3title">了解手中的设备</h3><p data-i18n="f3desc">设备能力、设备信息、应用列表与纯色显示等实用能力。</p></article>
-                <article class="feature-card"><span class="feature-index">04 / <span data-i18n="f4cat">生活</span></span><h3 data-i18n="f4title">把计算交给工具</h3><p data-i18n="f4desc">单位与汇率换算、个税、房贷、计时器、随机数和图片压缩。</p></article>
+                <article class="feature-card"><span class="feature-index">04 / <span data-i18n="f4cat">生活</span></span><h3 data-i18n="f4title">把琐事交给工具</h3><p data-i18n="f4desc">图片压缩与拼接、文件信息、换算计算、计时、随机与专注工具。</p></article>
+            </div>
+            <div class="catalog-heading">
+                <h3 data-i18n="catalogTitle">34 项工具，全部收好</h3>
+                <p data-i18n="catalogSubtitle">部分工具需要相机、定位、传感器或麦克风等设备能力。</p>
+            </div>
+            <div class="tool-catalog" aria-label="Tools24 全部工具目录">
+                <article class="tool-group">
+                    <h3><span data-i18n="catalogQuick">快捷工具</span><span>06</span></h3>
+                    <ul class="tool-list" data-i18n-list="catalogQuickList"><li>扫码</li><li>二维码生成</li><li>手电筒</li><li>屏幕灯</li><li>放大镜</li><li>水印相机</li></ul>
+                </article>
+                <article class="tool-group">
+                    <h3><span data-i18n="catalogMeasure">测量工具</span><span>07</span></h3>
+                    <ul class="tool-list" data-i18n-list="catalogMeasureList"><li>指南针</li><li>水平仪</li><li>速度与海拔</li><li>加速度计</li><li>陀螺仪</li><li>金属探测器</li><li>分贝计</li></ul>
+                </article>
+                <article class="tool-group">
+                    <h3><span data-i18n="catalogDevice">设备检测</span><span>05</span></h3>
+                    <ul class="tool-list" data-i18n-list="catalogDeviceList"><li>设备能力</li><li>设备信息</li><li>应用列表</li><li>纯色屏幕检测</li><li>振动马达</li></ul>
+                </article>
+                <article class="tool-group">
+                    <h3><span data-i18n="catalogLife">生活与效率</span><span>16</span></h3>
+                    <ul class="tool-list" data-i18n-list="catalogLifeList"><li>单位换算</li><li>汇率换算</li><li>个税计算</li><li>房贷计算</li><li>全屏时钟</li><li>LED 灯牌</li><li>计时器与秒表</li><li>随机数</li><li>骰子</li><li>木鱼</li><li>反应力测试</li><li>图片压缩</li><li>图片拼接与切图</li><li>颜色转换</li><li>文件信息与哈希</li><li>Base64 编解码</li></ul>
+                </article>
             </div>
         </section>
 
         <section id="screenshots" class="gallery-wrap">
             <div class="shell">
                 <div class="section-heading">
-                    <h2 data-i18n="shotsTitle">清楚、直接、不绕路</h2>
-                    <p data-i18n="shotsSubtitle">收藏决定首页，分类与搜索负责发现；工具界面聚焦当前任务，同时适配浅色与深色环境。</p>
+                    <h2 data-i18n="shotsTitle">来自正式包的真实界面</h2>
+                    <p data-i18n="shotsSubtitle">以下均为 Tools24 正式版真机实拍：首页收藏、完整分类、生活效率、传感器测量与随机工具一目了然。</p>
                 </div>
                 <div class="gallery">
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-home.png" alt="Tools24 正式版首页收藏工具界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap1">常用工具，自由收藏</figcaption></figure>
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-all-tools.png" alt="Tools24 正式版全部功能抽屉、分类和搜索界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap2">分类与搜索，快速发现</figcaption></figure>
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-qr-generator.png" alt="Tools24 正式版二维码生成结果界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap3">输入内容，即刻生成二维码</figcaption></figure>
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-level.png" alt="Tools24 正式版水平仪界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap4">水平测量，实时反馈</figcaption></figure>
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/screenshot-unit-converter.png" alt="Tools24 正式版单位换算界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap5">常用单位，随手换算</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/release-home.png" alt="Tools24 正式版首页常用工具界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap1">常用工具，打开就用</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/release-all-tools.png" alt="Tools24 正式版全部功能抽屉、分类和搜索界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap2">搜索与分类，34 项工具一览</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/release-life-tools.png" alt="Tools24 正式版生活工具分类界面，展示 16 项工具" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap3">生活与效率，16 项工具收好</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/release-level.png" alt="Tools24 正式版水平仪界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap4">水平测量，实时反馈</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/release-dice.png" alt="Tools24 正式版掷骰子界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap5">轻触或摇一摇，快速掷骰</figcaption></figure>
                 </div>
             </div>
         </section>
@@ -482,13 +523,16 @@
             <section id="download" class="invite">
                 <div>
                     <h2 data-i18n="downloadTitle">现在就把 Tools24 装进手机</h2>
-                    <p data-i18n="downloadSubtitle">扫描二维码或直接下载官方 APK，也可以前往 Google Play 安装。二维码会随正式包地址自动更新。</p>
+                    <p data-i18n="downloadSubtitle">扫描二维码或直接下载官方正式 APK，也可以前往 Google Play 安装。二维码会随正式包地址自动更新。</p>
                 </div>
                 <div class="download-panel">
                     <img src="/api/tools24/download-qr.svg" alt="扫描二维码下载 Tools24 最新 APK" loading="lazy" width="142" height="142">
                     <div class="download-actions">
                         <a class="button button-primary" href="__TOOLS24_DOWNLOAD_URL_ATTRIBUTE__" data-i18n="downloadApkV">下载 APK V__TOOLS24_VERSION_TEXT__</a>
-                        <a class="button button-secondary" href="https://play.google.com/store/apps/details?id=com.maxhall.tools24" target="_blank" rel="sponsored nofollow noopener" data-i18n="goGooglePlay">前往 Google Play</a>
+                        <a class="button button-secondary button-google" href="https://play.google.com/store/apps/details?id=com.maxhall.tools24" target="_blank" rel="sponsored nofollow noopener">
+                            <svg class="google-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#00D2FF" d="M3.4 2.5a2.1 2.1 0 0 0-.4 1.3v16.4c0 .5.1.9.4 1.3L13 12 3.4 2.5Z"/><path fill="#00E8A5" d="m14.1 10.9-3-1.7L4.3 3.1A2.1 2.1 0 0 1 6.8 3l9.5 5.4-2.2 2.5Z"/><path fill="#FFCF3C" d="m4.3 20.9 6.8-6.1 3 1.7 2.2 2.5L6.8 21a2.1 2.1 0 0 1-2.5-.1Z"/><path fill="#FF4F64" d="m20.2 10.1-3.9-2.2L13 12l3.3 4.1 3.9-2.2c1.1-.6 1.1-2.9 0-3.6Z"/></svg>
+                            <span data-i18n="goGooglePlay">前往 Google Play</span>
+                        </a>
                     </div>
                 </div>
             </section>
@@ -511,6 +555,85 @@
     "zh-TW": { "title": "Tools24 Android 工具箱 — 官方網站", "metaDescription": "Tools24 Android 工具箱官方網站。一個應用裝下掃碼、二維碼生成、指南針、水平儀、單位換算等 25+ 項實用工具，支援直接下載 APK 或透過 Google Play 安裝。", "ogDescription": "一個應用，裝下日常所需。25+ 項快捷、測量、裝置與生活工具，提供 APK 與 Google Play 下載。", "navFeatures": "功能", "navScreenshots": "介面", "navDownload": "下載", "heroTitle1": "一個應用，", "heroTitle2": "裝下日常所需。", "heroCopy": "Tools24 把掃碼、測量、裝置資訊和生活計算等 25+ 項工具收進一個清爽的 Android 應用。需要時快速開啟，用完即走。", "downloadApk": "直接下載 APK ↓", "googlePlay": "Google Play 下載", "betaNote": "當前版本 V{{version}} · Android 安裝包", "qrTitle": "手機掃碼下載", "qrSubtitle": "二維碼始終指向最新版", "featuresTitle": "從隨手一掃，到認真測量", "featuresSubtitle": "按快捷、測量、裝置和生活四類整理；支援搜尋、收藏以及淺色/深色主題，常用工具始終觸手可及。", "f1cat": "快捷", "f2cat": "測量", "f3cat": "裝置", "f4cat": "生活", "f1title": "掃一掃，馬上用", "f1desc": "掃碼、二維碼生成、手電筒、螢幕燈、放大鏡和水印相機。", "f2title": "讓手機成為儀表", "f2desc": "指南針、水平儀、速度與海拔、加速度、陀螺儀和分貝計。", "f3title": "瞭解手中的裝置", "f3desc": "裝置能力、裝置資訊、應用列表與純色顯示等實用能力。", "f4title": "把計算交給工具", "f4desc": "單位與匯率換算、個稅、房貸、計時器、隨機數和圖片壓縮。", "shotsTitle": "清楚、直接、不繞路", "shotsSubtitle": "收藏決定首頁，分類與搜尋負責發現；工具介面聚焦當前任務，同時適配淺色與深色環境。", "cap1": "常用工具，自由收藏", "cap2": "分類與搜尋，快速發現", "cap3": "輸入內容，即刻生成二維碼", "cap4": "水平測量，實時反饋", "cap5": "常用單位，隨手換算", "downloadTitle": "現在就把 Tools24 裝進手機", "downloadSubtitle": "掃描二維碼或直接下載官方 APK，也可以前往 Google Play 安裝。二維碼會隨正式包地址自動更新。", "downloadApkV": "下載 APK V{{version}}", "goGooglePlay": "前往 Google Play", "privacy": "隱私政策" },
     "en": { "title": "Tools24 Android Toolbox — Official Website", "metaDescription": "The official website for the Tools24 Android toolbox. Scan, QR generation, compass, level, unit conversion and 25+ practical tools in one app — download the APK directly or install from Google Play.", "ogDescription": "One app for everything you need every day. 25+ quick, measure, device and life tools with APK and Google Play downloads.", "navFeatures": "Features", "navScreenshots": "Screenshots", "navDownload": "Download", "heroTitle1": "One app, ", "heroTitle2": "for everything you need.", "heroCopy": "Tools24 packs 25+ tools — scan, measure, device info and life calculators — into one clean Android app. Open it the moment you need it, done the moment you leave.", "downloadApk": "Download APK ↓", "googlePlay": "Get it on Google Play", "betaNote": "Version V{{version}} · Android APK", "qrTitle": "Scan to download", "qrSubtitle": "Always points to the latest build", "featuresTitle": "From a quick scan to precise measurements", "featuresSubtitle": "Organized into Quick, Measure, Device and Life — with search, favorites and light/dark themes, your go-to tools are always within reach.", "f1cat": "Quick", "f2cat": "Measure", "f3cat": "Device", "f4cat": "Life", "f1title": "Scan and go", "f1desc": "Scan, QR generator, flashlight, screen light, magnifier and watermark camera.", "f2title": "Turn your phone into an instrument", "f2desc": "Compass, level, speed & altitude, accelerometer, gyroscope and sound meter.", "f3title": "Know your device", "f3desc": "Device capability, device info, app list and solid-color display.", "f4title": "Leave the math to tools", "f4desc": "Unit & currency conversion, tax, mortgage, timer, random and image compression.", "shotsTitle": "Clear, direct, no detours", "shotsSubtitle": "Favorites define your home screen; categories and search handle discovery. Every tool focuses on the task at hand, in both light and dark.", "cap1": "Your go-to tools, pinned freely", "cap2": "Categories & search, discover fast", "cap3": "Enter content, generate a QR instantly", "cap4": "Level measurement, live feedback", "cap5": "Common units, convert in a tap", "downloadTitle": "Put Tools24 on your phone now", "downloadSubtitle": "Scan the QR code or download the official APK directly, or install from Google Play. The QR code always points to the latest release.", "downloadApkV": "Download APK V{{version}}", "goGooglePlay": "Go to Google Play", "privacy": "Privacy Policy" }
   };
+
+  Object.assign(window.TOOLS24_I18N["zh-CN"], {
+    metaDescription: "Tools24 Android 工具箱官方网站。一个应用装下扫码、二维码生成、图片处理、指南针、传感器测量、设备检测与生活计算等 34 项实用工具，支持直接下载 APK 或通过 Google Play 安装。",
+    ogDescription: "一个应用，装下日常所需。34 项快捷、测量、设备与生活工具，提供 APK 与 Google Play 下载。",
+    heroCopy: "Tools24 把扫码、图片处理、传感器测量、设备检测和生活计算等 34 项工具收进一个清爽的 Android 应用。需要时快速打开，用完即走。",
+    betaNote: "正式版 V{{version}} · 34 项工具 · Android 安装包",
+    f4title: "把琐事交给工具",
+    f4desc: "图片压缩与拼接、文件信息、换算计算、计时、随机与专注工具。",
+    shotsTitle: "来自正式包的真实界面",
+    shotsSubtitle: "以下均为 Tools24 正式版真机实拍：首页收藏、完整分类、生活效率、传感器测量与随机工具一目了然。",
+    cap1: "常用工具，打开就用",
+    cap2: "搜索与分类，34 项工具一览",
+    cap3: "生活与效率，16 项工具收好",
+    cap4: "水平测量，实时反馈",
+    cap5: "轻触或摇一摇，快速掷骰",
+    catalogTitle: "34 项工具，全部收好",
+    catalogSubtitle: "部分工具需要相机、定位、传感器或麦克风等设备能力。",
+    downloadSubtitle: "扫描二维码或直接下载官方正式 APK，也可以前往 Google Play 安装。二维码会随正式包地址自动更新。",
+    catalogQuick: "快捷工具",
+    catalogQuickList: "扫码|二维码生成|手电筒|屏幕灯|放大镜|水印相机",
+    catalogMeasure: "测量工具",
+    catalogMeasureList: "指南针|水平仪|速度与海拔|加速度计|陀螺仪|金属探测器|分贝计",
+    catalogDevice: "设备检测",
+    catalogDeviceList: "设备能力|设备信息|应用列表|纯色屏幕检测|振动马达",
+    catalogLife: "生活与效率",
+    catalogLifeList: "单位换算|汇率换算|个税计算|房贷计算|全屏时钟|LED 灯牌|计时器与秒表|随机数|骰子|木鱼|反应力测试|图片压缩|图片拼接与切图|颜色转换|文件信息与哈希|Base64 编解码"
+  });
+  Object.assign(window.TOOLS24_I18N["zh-TW"], {
+    metaDescription: "Tools24 Android 工具箱官方網站。一個應用裝下掃碼、二維碼生成、圖片處理、指南針、感測器測量、裝置檢測與生活計算等 34 項實用工具，支援直接下載 APK 或透過 Google Play 安裝。",
+    ogDescription: "一個應用，裝下日常所需。34 項快捷、測量、裝置與生活工具，提供 APK 與 Google Play 下載。",
+    heroCopy: "Tools24 把掃碼、圖片處理、感測器測量、裝置檢測和生活計算等 34 項工具收進一個清爽的 Android 應用。需要時快速開啟，用完即走。",
+    betaNote: "正式版 V{{version}} · 34 項工具 · Android 安裝包",
+    f4title: "把瑣事交給工具",
+    f4desc: "圖片壓縮與拼接、檔案資訊、換算計算、計時、隨機與專注工具。",
+    shotsTitle: "來自正式包的真實介面",
+    shotsSubtitle: "以下均為 Tools24 正式版真機實拍：首頁收藏、完整分類、生活效率、感測器測量與隨機工具一目了然。",
+    cap1: "常用工具，開啟就用",
+    cap2: "搜尋與分類，34 項工具一覽",
+    cap3: "生活與效率，16 項工具收好",
+    cap4: "水平測量，即時回饋",
+    cap5: "輕觸或搖一搖，快速擲骰",
+    catalogTitle: "34 項工具，全部收好",
+    catalogSubtitle: "部分工具需要相機、定位、感測器或麥克風等裝置能力。",
+    downloadSubtitle: "掃描二維碼或直接下載官方正式 APK，也可以前往 Google Play 安裝。二維碼會隨正式包地址自動更新。",
+    catalogQuick: "快捷工具",
+    catalogQuickList: "掃碼|二維碼生成|手電筒|螢幕燈|放大鏡|水印相機",
+    catalogMeasure: "測量工具",
+    catalogMeasureList: "指南針|水平儀|速度與海拔|加速度計|陀螺儀|金屬探測器|分貝計",
+    catalogDevice: "裝置檢測",
+    catalogDeviceList: "裝置能力|裝置資訊|應用列表|純色螢幕檢測|振動馬達",
+    catalogLife: "生活與效率",
+    catalogLifeList: "單位換算|匯率換算|個稅計算|房貸計算|全螢幕時鐘|LED 燈牌|計時器與秒錶|隨機數|骰子|木魚|反應力測試|圖片壓縮|圖片拼接與切圖|顏色轉換|檔案資訊與雜湊|Base64 編解碼"
+  });
+  Object.assign(window.TOOLS24_I18N.en, {
+    metaDescription: "The official website for the Tools24 Android toolbox. Scan, generate QR codes, edit images, measure with sensors, inspect your device and handle everyday calculations with 34 practical tools in one app — download the APK directly or install from Google Play.",
+    ogDescription: "One app for everything you need every day. 34 quick, measurement, device and life tools with APK and Google Play downloads.",
+    heroCopy: "Tools24 packs 34 tools — scanning, image work, sensor measurements, device checks and everyday calculators — into one clean Android app. Open it the moment you need it, done the moment you leave.",
+    betaNote: "Release V{{version}} · 34 tools · Android APK",
+    f4title: "Leave the small jobs to tools",
+    f4desc: "Image compression and composition, file info, converters, timers, random tools and focus tools.",
+    shotsTitle: "Real screens from the released app",
+    shotsSubtitle: "Captured on a real device running the Tools24 release: favorites, the full catalog, life tools, sensor measurement and quick random tools.",
+    cap1: "Your go-to tools, ready to open",
+    cap2: "Search and categories, all 34 tools",
+    cap3: "Life and productivity, 16 tools in one place",
+    cap4: "Level measurement, live feedback",
+    cap5: "Tap or shake for a quick roll",
+    catalogTitle: "All 34 tools, in one place",
+    catalogSubtitle: "Some tools require hardware such as a camera, location services, sensors or a microphone.",
+    downloadSubtitle: "Scan the QR code or download the official release APK directly, or install from Google Play. The QR code always points to the latest release.",
+    catalogQuick: "Quick tools",
+    catalogQuickList: "Scanner|QR generator|Flashlight|Screen light|Magnifier|Watermark camera",
+    catalogMeasure: "Measurement tools",
+    catalogMeasureList: "Compass|Level|Speed & altitude|Accelerometer|Gyroscope|Metal detector|Sound meter",
+    catalogDevice: "Device checks",
+    catalogDeviceList: "Device capabilities|Device info|App list|Solid-color screen test|Vibration motor",
+    catalogLife: "Life & productivity",
+    catalogLifeList: "Unit converter|Currency converter|Tax calculator|Mortgage calculator|Full-screen clock|LED sign|Timer & stopwatch|Random number|Dice|Wooden fish|Reaction test|Image compression|Image composition & grid split|Color converter|File info & hashes|Base64 encode/decode"
+  });
 
   var STORAGE_KEY = 'tools24-lang';
   var FALLBACK = 'zh-CN';
@@ -553,6 +676,19 @@
     for (var i = 0; i < els.length; i++) {
       var key = els[i].getAttribute('data-i18n');
       if (key && t[key] != null) els[i].textContent = interpolate(t[key]);
+    }
+
+    var lists = document.querySelectorAll('[data-i18n-list]');
+    for (var k = 0; k < lists.length; k++) {
+      var listKey = lists[k].getAttribute('data-i18n-list');
+      if (!listKey || t[listKey] == null) continue;
+      var items = String(t[listKey]).split('|');
+      lists[k].textContent = '';
+      for (var m = 0; m < items.length; m++) {
+        var item = document.createElement('li');
+        item.textContent = items[m];
+        lists[k].appendChild(item);
+      }
     }
 
     var label = document.getElementById('tools24LangLabel');

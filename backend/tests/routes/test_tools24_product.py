@@ -38,14 +38,18 @@ def test_tools24_product_route_is_the_official_download_site(client, path):
     assert "__TOOLS24_" not in html
     assert 'rel="sponsored nofollow noopener"' in html
     assert 'href="/platform/tools24/privacy"' in html
-    assert "/images/tools24/screenshot-home.png" in html
-    assert "/images/tools24/screenshot-all-tools.png" in html
-    assert "/images/tools24/screenshot-qr-generator.png" in html
-    assert "/images/tools24/screenshot-level.png" in html
-    assert "/images/tools24/screenshot-unit-converter.png" in html
+    assert "/images/tools24/release-home.png" in html
+    assert "/images/tools24/release-all-tools.png" in html
+    assert "/images/tools24/release-life-tools.png" in html
+    assert "/images/tools24/release-level.png" in html
+    assert "/images/tools24/release-dice.png" in html
     assert "/images/tools24/screenshot-compass.png" not in html
     assert html.count('width="1440" height="3200"') == 6
     assert "aspect-ratio: 9 / 20;" in html
+    assert "34 项工具，全部收好" in html
+    assert "来自正式包的真实界面" in html
+    assert 'data-i18n-list="catalogLifeList"' in html
+    assert html.count('class="google-play-icon"') == 2
 
 
 @pytest.mark.parametrize("host", ["tools24.uk", "www.tools24.uk", "www.tools24.uk:8730"])
@@ -97,6 +101,8 @@ def test_tools24_product_ships_three_language_i18n(client):
     assert 'id="tools24LangMenu"' in html
     assert 'data-i18n="heroTitle1"' in html
     assert 'data-i18n="privacy"' in html
+    assert 'data-i18n-list="catalogQuickList"' in html
+    assert "All 34 tools, in one place" in html
     # Static Simplified Chinese text is preserved as the no-JS fallback.
     assert "直接下载 APK" in html
 
