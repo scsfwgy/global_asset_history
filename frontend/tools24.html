@@ -315,7 +315,7 @@
             border-radius: 19px;
         }
         .shot:nth-child(2) { margin-top: 56px; }
-        .shot:nth-child(4) { grid-column: 2 / span 2; }
+        .shot:nth-child(7) { grid-column: 2 / span 2; }
         .shot figcaption { margin-top: 14px; color: var(--secondary); text-align: center; font-size: 14px; }
         .invite {
             margin: 72px 0 92px;
@@ -392,7 +392,7 @@
             .catalog-heading p { margin-top: 4px; }
             .tool-group { padding: 20px; }
             .gallery { grid-template-columns: repeat(5, 76vw); gap: 16px; overflow-x: auto; padding: 4px 14px 24px; margin-inline: -14px; scroll-snap-type: x mandatory; }
-            .shot, .shot:nth-child(2), .shot:nth-child(4) { grid-column: auto; margin-top: 0; scroll-snap-align: center; }
+            .shot, .shot:nth-child(2), .shot:nth-child(7) { grid-column: auto; margin-top: 0; scroll-snap-align: center; }
             .invite { margin: 42px 0 64px; padding: 38px 24px; }
             .download-panel { flex-direction: column; }
             footer { flex-direction: column; align-items: flex-start; }
@@ -459,7 +459,7 @@
                 <p class="beta-note" data-i18n="betaNote">正式版 V__TOOLS24_VERSION_TEXT__ · 34 项工具 · Android 安装包</p>
             </div>
             <div class="device-stage" aria-label="Tools24 应用首页预览">
-                <div class="phone"><img src="/images/tools24/release-home.png" alt="Tools24 正式版工具中心首页，展示扫码、二维码生成、手电筒、屏幕灯等常用工具" width="1440" height="3200"></div>
+                <div class="phone"><img src="https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/主页.webp" data-i18n-src="shotHomeSrc" alt="Tools24 正式版工具中心首页，展示扫码、二维码生成、手电筒、屏幕灯等常用工具" data-i18n-alt="shotHomeAlt" width="972" height="2160"></div>
                 <div class="download-card">
                     <img src="/api/tools24/download-qr.svg" alt="Tools24 最新 APK 下载二维码" width="138" height="138">
                     <strong data-i18n="qrTitle">手机扫码下载</strong>
@@ -506,15 +506,18 @@
         <section id="screenshots" class="gallery-wrap">
             <div class="shell">
                 <div class="section-heading">
-                    <h2 data-i18n="shotsTitle">来自正式包的真实界面</h2>
-                    <p data-i18n="shotsSubtitle">以下均为 Tools24 正式版真机实拍：首页收藏、完整分类、生活效率、传感器测量与随机工具一目了然。</p>
+                    <h2 data-i18n="shotsTitle">正式版界面，功能一目了然</h2>
+                    <p data-i18n="shotsSubtitle">官网会随所选语言显示对应的应用截图；中文与 English 截图均来自 Tools24 正式版。</p>
                 </div>
                 <div class="gallery">
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/release-home.png" alt="Tools24 正式版首页常用工具界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap1">常用工具，打开就用</figcaption></figure>
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/release-all-tools.png" alt="Tools24 正式版全部功能抽屉、分类和搜索界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap2">搜索与分类，34 项工具一览</figcaption></figure>
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/release-life-tools.png" alt="Tools24 正式版生活工具分类界面，展示 16 项工具" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap3">生活与效率，16 项工具收好</figcaption></figure>
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/release-level.png" alt="Tools24 正式版水平仪界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap4">水平测量，实时反馈</figcaption></figure>
-                    <figure class="shot"><div class="shot-frame"><img src="/images/tools24/release-dice.png" alt="Tools24 正式版掷骰子界面" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap5">轻触或摇一摇，快速掷骰</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/主页.webp" data-i18n-src="shotHomeSrc" alt="Tools24 正式版首页常用工具界面" data-i18n-alt="shotHomeAlt" loading="lazy" width="972" height="2160"></div><figcaption data-i18n="cap1">首页常用工具，一键进入</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/二维码生成.webp" data-i18n-src="shotQrSrc" alt="Tools24 正式版二维码生成界面" data-i18n-alt="shotQrAlt" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap2">二维码生成，输入即出结果</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/图片压缩.webp" data-i18n-src="shotImageCompressionSrc" alt="Tools24 正式版图片压缩界面" data-i18n-alt="shotImageCompressionAlt" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap3">图片压缩，清晰度与体积可选</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/水平仪.webp" data-i18n-src="shotLevelSrc" alt="Tools24 正式版水平仪界面" data-i18n-alt="shotLevelAlt" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap4">水平测量，实时反馈</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/设备信息.webp" data-i18n-src="shotDeviceInfoSrc" alt="Tools24 正式版设备信息界面" data-i18n-alt="shotDeviceInfoAlt" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap5">设备信息，关键参数一览</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/加速度仪.webp" data-i18n-src="shotAccelerometerSrc" alt="Tools24 正式版加速度仪界面" data-i18n-alt="shotAccelerometerAlt" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap6">加速度仪，动态变化清晰可见</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/系统能力.webp" data-i18n-src="shotDeviceCapabilitiesSrc" alt="Tools24 正式版系统能力界面" data-i18n-alt="shotDeviceCapabilitiesAlt" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap7">系统能力，支持情况一览</figcaption></figure>
+                    <figure class="shot"><div class="shot-frame"><img src="https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/指南针.webp" data-i18n-src="shotCompassSrc" alt="Tools24 正式版指南针界面" data-i18n-alt="shotCompassAlt" loading="lazy" width="1440" height="3200"></div><figcaption data-i18n="cap8">指南针，方向一目了然</figcaption></figure>
                 </div>
             </div>
         </section>
@@ -563,13 +566,32 @@
     betaNote: "正式版 V{{version}} · 34 项工具 · Android 安装包",
     f4title: "把琐事交给工具",
     f4desc: "图片压缩与拼接、文件信息、换算计算、计时、随机与专注工具。",
-    shotsTitle: "来自正式包的真实界面",
-    shotsSubtitle: "以下均为 Tools24 正式版真机实拍：首页收藏、完整分类、生活效率、传感器测量与随机工具一目了然。",
-    cap1: "常用工具，打开就用",
-    cap2: "搜索与分类，34 项工具一览",
-    cap3: "生活与效率，16 项工具收好",
+    shotsTitle: "正式版界面，功能一目了然",
+    shotsSubtitle: "官网会随所选语言显示对应的应用截图；中文与 English 截图均来自 Tools24 正式版。",
+    shotHomeSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/主页.webp",
+    shotHomeAlt: "Tools24 正式版工具中心首页，展示常用工具",
+    shotQrSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/二维码生成.webp",
+    shotQrAlt: "Tools24 正式版二维码生成界面",
+    shotImageCompressionSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/图片压缩.webp",
+    shotImageCompressionAlt: "Tools24 正式版图片压缩界面",
+    shotLevelSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/水平仪.webp",
+    shotLevelAlt: "Tools24 正式版水平仪界面",
+    shotDeviceInfoSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/设备信息.webp",
+    shotDeviceInfoAlt: "Tools24 正式版设备信息界面",
+    shotAccelerometerSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/加速度仪.webp",
+    shotAccelerometerAlt: "Tools24 正式版加速度仪界面",
+    shotDeviceCapabilitiesSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/系统能力.webp",
+    shotDeviceCapabilitiesAlt: "Tools24 正式版系统能力界面",
+    shotCompassSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/指南针.webp",
+    shotCompassAlt: "Tools24 正式版指南针界面",
+    cap1: "首页常用工具，一键进入",
+    cap2: "二维码生成，输入即出结果",
+    cap3: "图片压缩，清晰度与体积可选",
     cap4: "水平测量，实时反馈",
-    cap5: "轻触或摇一摇，快速掷骰",
+    cap5: "设备信息，关键参数一览",
+    cap6: "加速度仪，动态变化清晰可见",
+    cap7: "系统能力，支持情况一览",
+    cap8: "指南针，方向一目了然",
     catalogTitle: "34 项工具，全部收好",
     catalogSubtitle: "部分工具需要相机、定位、传感器或麦克风等设备能力。",
     downloadSubtitle: "扫描二维码或直接下载官方正式 APK，也可以前往 Google Play 安装。二维码会随正式包地址自动更新。",
@@ -589,13 +611,32 @@
     betaNote: "正式版 V{{version}} · 34 項工具 · Android 安裝包",
     f4title: "把瑣事交給工具",
     f4desc: "圖片壓縮與拼接、檔案資訊、換算計算、計時、隨機與專注工具。",
-    shotsTitle: "來自正式包的真實介面",
-    shotsSubtitle: "以下均為 Tools24 正式版真機實拍：首頁收藏、完整分類、生活效率、感測器測量與隨機工具一目了然。",
-    cap1: "常用工具，開啟就用",
-    cap2: "搜尋與分類，34 項工具一覽",
-    cap3: "生活與效率，16 項工具收好",
+    shotsTitle: "正式版介面，功能一目了然",
+    shotsSubtitle: "官網會隨所選語言顯示對應的應用截圖；中文與 English 截圖均來自 Tools24 正式版。",
+    shotHomeSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/主页.webp",
+    shotHomeAlt: "Tools24 正式版工具中心首頁，展示常用工具",
+    shotQrSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/二维码生成.webp",
+    shotQrAlt: "Tools24 正式版二維碼生成介面",
+    shotImageCompressionSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/图片压缩.webp",
+    shotImageCompressionAlt: "Tools24 正式版圖片壓縮介面",
+    shotLevelSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/水平仪.webp",
+    shotLevelAlt: "Tools24 正式版水平儀介面",
+    shotDeviceInfoSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/设备信息.webp",
+    shotDeviceInfoAlt: "Tools24 正式版裝置資訊介面",
+    shotAccelerometerSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/加速度仪.webp",
+    shotAccelerometerAlt: "Tools24 正式版加速度儀介面",
+    shotDeviceCapabilitiesSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/系统能力.webp",
+    shotDeviceCapabilitiesAlt: "Tools24 正式版系統能力介面",
+    shotCompassSrc: "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/指南针.webp",
+    shotCompassAlt: "Tools24 正式版指南針介面",
+    cap1: "首頁常用工具，一鍵進入",
+    cap2: "二維碼生成，輸入即出結果",
+    cap3: "圖片壓縮，清晰度與體積可選",
     cap4: "水平測量，即時回饋",
-    cap5: "輕觸或搖一搖，快速擲骰",
+    cap5: "裝置資訊，關鍵參數一覽",
+    cap6: "加速度儀，動態變化清晰可見",
+    cap7: "系統能力，支援情況一覽",
+    cap8: "指南針，方向一目了然",
     catalogTitle: "34 項工具，全部收好",
     catalogSubtitle: "部分工具需要相機、定位、感測器或麥克風等裝置能力。",
     downloadSubtitle: "掃描二維碼或直接下載官方正式 APK，也可以前往 Google Play 安裝。二維碼會隨正式包地址自動更新。",
@@ -615,13 +656,32 @@
     betaNote: "Release V{{version}} · 34 tools · Android APK",
     f4title: "Leave the small jobs to tools",
     f4desc: "Image compression and composition, file info, converters, timers, random tools and focus tools.",
-    shotsTitle: "Real screens from the released app",
-    shotsSubtitle: "Captured on a real device running the Tools24 release: favorites, the full catalog, life tools, sensor measurement and quick random tools.",
-    cap1: "Your go-to tools, ready to open",
-    cap2: "Search and categories, all 34 tools",
-    cap3: "Life and productivity, 16 tools in one place",
+    shotsTitle: "Release screens, clear at a glance",
+    shotsSubtitle: "The screenshots follow your selected language: Chinese and English screens are both captured from the official Tools24 release.",
+    shotHomeSrc: "https://oss.tools24.uk/tools24/screenshot/v3/en/Home.webp",
+    shotHomeAlt: "Tools24 release home screen with everyday tools",
+    shotQrSrc: "https://oss.tools24.uk/tools24/screenshot/v3/en/QR Generator.webp",
+    shotQrAlt: "Tools24 release QR Generator screen",
+    shotImageCompressionSrc: "https://oss.tools24.uk/tools24/screenshot/v3/en/Image Compression.webp",
+    shotImageCompressionAlt: "Tools24 release Image Compression screen",
+    shotLevelSrc: "https://oss.tools24.uk/tools24/screenshot/v3/en/Bubble Level.webp",
+    shotLevelAlt: "Tools24 release Bubble Level screen",
+    shotDeviceInfoSrc: "https://oss.tools24.uk/tools24/screenshot/v3/en/Device Information.webp",
+    shotDeviceInfoAlt: "Tools24 release Device Information screen",
+    shotAccelerometerSrc: "https://oss.tools24.uk/tools24/screenshot/v3/en/Accelerometer.webp",
+    shotAccelerometerAlt: "Tools24 release Accelerometer screen",
+    shotDeviceCapabilitiesSrc: "https://oss.tools24.uk/tools24/screenshot/v3/en/Device Capabilities.webp",
+    shotDeviceCapabilitiesAlt: "Tools24 release Device Capabilities screen",
+    shotCompassSrc: "https://oss.tools24.uk/tools24/screenshot/v3/en/Compass.webp",
+    shotCompassAlt: "Tools24 release Compass screen",
+    cap1: "Everyday tools, one tap away",
+    cap2: "Generate a QR code from your text",
+    cap3: "Compress images with quality and size options",
     cap4: "Level measurement, live feedback",
-    cap5: "Tap or shake for a quick roll",
+    cap5: "Device information, key details at a glance",
+    cap6: "Accelerometer, motion at a glance",
+    cap7: "Device capabilities, know what’s supported",
+    cap8: "Compass, stay on course",
     catalogTitle: "All 34 tools, in one place",
     catalogSubtitle: "Some tools require hardware such as a camera, location services, sensors or a microphone.",
     downloadSubtitle: "Scan the QR code or download the official release APK directly, or install from Google Play. The QR code always points to the latest release.",
@@ -689,6 +749,14 @@
         item.textContent = items[m];
         lists[k].appendChild(item);
       }
+    }
+
+    var localizedImages = document.querySelectorAll('[data-i18n-src], [data-i18n-alt]');
+    for (var n = 0; n < localizedImages.length; n++) {
+      var srcKey = localizedImages[n].getAttribute('data-i18n-src');
+      var altKey = localizedImages[n].getAttribute('data-i18n-alt');
+      if (srcKey && t[srcKey] != null) localizedImages[n].setAttribute('src', t[srcKey]);
+      if (altKey && t[altKey] != null) localizedImages[n].setAttribute('alt', t[altKey]);
     }
 
     var label = document.getElementById('tools24LangLabel');

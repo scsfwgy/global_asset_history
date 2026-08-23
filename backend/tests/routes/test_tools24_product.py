@@ -38,18 +38,34 @@ def test_tools24_product_route_is_the_official_download_site(client, path):
     assert "__TOOLS24_" not in html
     assert 'rel="sponsored nofollow noopener"' in html
     assert 'href="/platform/tools24/privacy"' in html
-    assert "/images/tools24/release-home.png" in html
-    assert "/images/tools24/release-all-tools.png" in html
-    assert "/images/tools24/release-life-tools.png" in html
-    assert "/images/tools24/release-level.png" in html
-    assert "/images/tools24/release-dice.png" in html
+    assert "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/主页.webp" in html
+    assert "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/二维码生成.webp" in html
+    assert "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/图片压缩.webp" in html
+    assert "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/水平仪.webp" in html
+    assert "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/设备信息.webp" in html
+    assert "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/加速度仪.webp" in html
+    assert "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/系统能力.webp" in html
+    assert "https://oss.tools24.uk/tools24/screenshot/v3/zh-CN/指南针.webp" in html
+    assert "https://oss.tools24.uk/tools24/screenshot/v3/en/Home.webp" in html
+    assert "https://oss.tools24.uk/tools24/screenshot/v3/en/Bubble Level.webp" in html
+    assert "https://oss.tools24.uk/tools24/screenshot/v3/en/Accelerometer.webp" in html
+    assert "https://oss.tools24.uk/tools24/screenshot/v3/en/Device Capabilities.webp" in html
+    assert "https://oss.tools24.uk/tools24/screenshot/v3/en/Compass.webp" in html
     assert "/images/tools24/screenshot-compass.png" not in html
-    assert html.count('width="1440" height="3200"') == 6
+    assert "/images/tools24/release-" not in html
+    assert html.count('<figure class="shot">') == 8
+    assert html.count('width="1440" height="3200"') == 7
+    assert html.count('width="972" height="2160"') == 2
     assert "aspect-ratio: 9 / 20;" in html
     assert "34 项工具，全部收好" in html
-    assert "来自正式包的真实界面" in html
+    assert "正式版界面，功能一目了然" in html
     assert 'data-i18n-list="catalogLifeList"' in html
     assert html.count('class="google-play-icon"') == 2
+    assert 'data-i18n-src="shotHomeSrc"' in html
+    assert 'data-i18n-alt="shotHomeAlt"' in html
+    assert 'data-i18n-src="shotAccelerometerSrc"' in html
+    assert 'data-i18n-src="shotDeviceCapabilitiesSrc"' in html
+    assert 'data-i18n-src="shotCompassSrc"' in html
 
 
 @pytest.mark.parametrize("host", ["tools24.uk", "www.tools24.uk", "www.tools24.uk:8730"])
@@ -103,6 +119,8 @@ def test_tools24_product_ships_three_language_i18n(client):
     assert 'data-i18n="privacy"' in html
     assert 'data-i18n-list="catalogQuickList"' in html
     assert "All 34 tools, in one place" in html
+    assert "Release screens, clear at a glance" in html
+    assert "shotDeviceInfoSrc" in html
     # Static Simplified Chinese text is preserved as the no-JS fallback.
     assert "直接下载 APK" in html
 
