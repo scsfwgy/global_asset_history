@@ -104,6 +104,8 @@ def test_feature_update_script_uses_last_release_and_confirms_once():
     assert "historyButton.onclick" in script
     assert "releases.slice().reverse()" in script
     assert "dialog.focus({ preventScroll: true })" in script
+    assert "initialFeatureNoticePending" in script
+    assert "noticeQueue.sort" in script
 
 
 def test_feature_update_config_is_served_with_the_frontend_cache_policy():
@@ -123,4 +125,76 @@ def test_feature_update_config_is_served_with_the_frontend_cache_policy():
     versioned = client.get(f"/config/feature-updates.json?v={version}")
     assert versioned.status_code == 200
     assert versioned.get_json() == configured_releases
+    assert versioned.headers["Cache-Control"] == "public, max-age=31536000, immutable"
+
+
+def test_versioned_knowledge_notice_supports_safe_clickable_links_and_once_only_display():
+    notices = json.loads(_source("frontend/config/knowledge-notices.json"))
+    page = _source("frontend/price-change.html")
+    script = _source("frontend/js/knowledge-notices.js")
+    zh = json.loads(_source("frontend/locales/zh-CN.json"))["knowledgeNotice"]
+    en = json.loads(_source("frontend/locales/en.json"))["knowledgeNotice"]
+
+    assert isinstance(notices, list) and notices
+    assert len({notice.get("version") for notice in notices}) == len(notices)
+    for notice in notices:
+        assert isinstance(notice.get("version"), int) and notice["version"] > 0
+        assert datetime.strptime(notice.get("date", ""), "%Y.%m.%d")
+        assert isinstance(notice.get("title"), dict)
+        assert all(isinstance(notice["title"].get(lang), str) and notice["title"][lang].strip()
+                   for lang in ("zh", "en"))
+        for lang in ("zh", "en"):
+            items = notice.get(lang)
+            assert isinstance(items, list) and items
+            for item in items:
+                assert isinstance(item, dict)
+                text = item.get("text")
+                link = item.get("link")
+                assert (isinstance(text, str) and text.strip()) or isinstance(link, dict)
+                if link is not None:
+                    assert isinstance(link.get("label"), str) and link["label"].strip()
+                    assert isinstance(link.get("href"), str)
+                    assert link["href"].startswith(("https://", "http://"))
+    assert 'id="knowledgeNoticeDialog"' in page
+    assert 'id="knowledgeNoticeList"' in page
+    assert 'id="knowledgeNoticeConfirm"' in page
+    assert 'src="/js/knowledge-notices.js"' in page
+    assert page.index('src="/js/i18n.js"') < page.index('src="/js/feature-updates.js"')
+    assert page.index('src="/js/feature-updates.js"') < page.index('src="/js/knowledge-notices.js"')
+    assert "'gah-knowledge-notice-seen-version'" in script
+    assert "new URL(value)" in script
+    assert "url.protocol === 'https:' || url.protocol === 'http:'" in script
+    assert "link.target = '_blank'" in script
+    assert "link.rel = 'noopener noreferrer'" in script
+    assert "text.trim() || (label && href)" in script
+    assert "if (item.label && item.href)" in script
+    assert "localizedText(release && release.title, lang)" in script
+    assert "return lang === 'zh' || lang === 'zh-CN' || lang === 'zh-TW' ? 'zh' : 'en';" in script
+    assert "window.gahEnqueueNotice(show, { priority: 1, delayMs: 5000 });" in script
+    assert "latest.title || translated('knowledgeNotice.title'" in script
+    assert "getSeenVersion() === latest.version" in script
+    assert "rememberVersion(latest.version)" in script
+    assert {"title", "meta", "confirm"} <= zh.keys()
+    assert {"title", "meta", "confirm"} <= en.keys()
+
+
+def test_knowledge_notice_config_is_served_with_the_frontend_cache_policy():
+    from app import app as flask_app
+
+    flask_app.config["TESTING"] = True
+    client = flask_app.test_client()
+    configured_notices = json.loads(_source("frontend/config/knowledge-notices.json"))
+    page = client.get("/zh/heatmap")
+    version = page.headers["X-Frontend-Version"]
+
+    assert f'src="/js/knowledge-notices.js?v={version}"' in page.get_data(as_text=True)
+
+    unversioned = client.get("/config/knowledge-notices.json")
+    assert unversioned.status_code == 200
+    assert unversioned.get_json() == configured_notices
+    assert unversioned.headers["Cache-Control"] == "no-cache, max-age=0, must-revalidate"
+
+    versioned = client.get(f"/config/knowledge-notices.json?v={version}")
+    assert versioned.status_code == 200
+    assert versioned.get_json() == configured_notices
     assert versioned.headers["Cache-Control"] == "public, max-age=31536000, immutable"

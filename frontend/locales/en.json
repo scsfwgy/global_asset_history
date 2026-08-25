@@ -43,6 +43,11 @@
     "backToLatest": "Back to latest",
     "confirm": "Got it"
   },
+  "knowledgeNotice": {
+    "title": "Investment Guide",
+    "meta": "Version {{version}} · {{date}}",
+    "confirm": "Got it"
+  },
   "historyRecords": {
     "title": "History",
     "clear": "Clear"

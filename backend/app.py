@@ -330,7 +330,7 @@ INDEXABLE_PATHS = {
 # Real last-modified dates per page group. Update these ONLY when the page's
 # HTML/content actually changes — Google discounts <lastmod> if it always shows
 # "today". Knowledge articles use the per-article "updated" field instead.
-INDEX_LASTMOD = "2026-08-15"
+INDEX_LASTMOD = "2026-08-25"
 ETF_MARKET_LASTMOD = "2026-08-19"
 
 TOOL_SEO_KEYS = {
@@ -407,7 +407,7 @@ KNOWLEDGE_SUBTAB_I18N_KEYS = {
 }
 
 COMMON_PAGE_SCRIPTS = {
-    "i18n.js", "feature-updates.js", "api.js", "history.js",
+    "i18n.js", "feature-updates.js", "knowledge-notices.js", "api.js", "history.js",
     "visitor-stats.js", "site-settings.js", "vix-badge.js",
 }
 

@@ -43,6 +43,11 @@
     "backToLatest": "返回本次更新",
     "confirm": "知道了"
   },
+  "knowledgeNotice": {
+    "title": "投資指南",
+    "meta": "版本 {{version}} · {{date}}",
+    "confirm": "知道了"
+  },
   "historyRecords": {
     "title": "歷史記錄",
     "clear": "清空"

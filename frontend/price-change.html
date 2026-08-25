@@ -2289,6 +2289,27 @@
             color: #fff;
         }
         .feature-update-confirm:hover { filter: brightness(1.06); }
+        .knowledge-notice-items {
+            display: grid;
+            gap: 9px;
+            margin: 0;
+            padding-left: 19px;
+            color: var(--apple-text-secondary);
+            font-size: 14px;
+            line-height: 1.55;
+        }
+        .knowledge-notice-items li::marker { color: var(--apple-blue); }
+        .knowledge-notice-items a {
+            color: var(--apple-blue);
+            font-weight: 650;
+            text-decoration: none;
+        }
+        .knowledge-notice-items a:hover { text-decoration: underline; }
+        .knowledge-notice-items a:focus-visible {
+            outline: 2px solid var(--apple-blue);
+            outline-offset: 2px;
+            border-radius: 2px;
+        }
         @media (max-width: 640px) {
             .feature-update-dialog {
                 width: calc(100vw - 20px);
@@ -3316,6 +3337,22 @@
                         data-i18n="featureUpdates.history">查看历史更新</button>
                 <button class="feature-update-action feature-update-confirm" id="featureUpdateConfirm" type="button"
                         data-i18n="featureUpdates.confirm">知道了</button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="knowledgeNoticeDialog" class="feature-update-dialog" tabindex="-1"
+            aria-labelledby="knowledgeNoticeTitle" aria-describedby="knowledgeNoticeMeta">
+        <div class="feature-update-shell">
+            <div class="feature-update-header">
+                <h2 class="feature-update-title" id="knowledgeNoticeTitle" data-i18n="knowledgeNotice.title">投资指南</h2>
+                <p class="feature-update-meta" id="knowledgeNoticeMeta"></p>
+            </div>
+            <div class="feature-update-list" id="knowledgeNoticeList"></div>
+            <div class="feature-update-footer">
+                <span></span>
+                <button class="feature-update-action feature-update-confirm" id="knowledgeNoticeConfirm" type="button"
+                        data-i18n="knowledgeNotice.confirm">知道了</button>
             </div>
         </div>
     </dialog>
@@ -7083,6 +7120,7 @@
 
     <script src="/js/i18n.js"></script>
     <script src="/js/feature-updates.js"></script>
+    <script src="/js/knowledge-notices.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/history.js"></script>
     <script src="/js/visitor-stats.js"></script>

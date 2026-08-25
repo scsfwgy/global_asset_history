@@ -11,6 +11,41 @@
   var CONFIG_PATH = '/config/feature-updates.json';
   var cachedConfig = null;
 
+  // Notices share a single modal slot, so a new-user guide and an update log
+  // never appear on top of each other.
+  var noticeQueue = [];
+  var noticeIsOpen = false;
+  var initialFeatureNoticePending = true;
+
+  window.gahEnqueueNotice = function (show, options) {
+    options = options || {};
+    noticeQueue.push({
+      show: show,
+      priority: Number.isFinite(options.priority) ? options.priority : 0,
+      delayMs: Number.isFinite(options.delayMs) ? Math.max(0, options.delayMs) : 0
+    });
+    noticeQueue.sort(function (left, right) { return left.priority - right.priority; });
+    showNextNotice();
+  };
+
+  function showNextNotice() {
+    if (noticeIsOpen || initialFeatureNoticePending || !noticeQueue.length) return;
+    noticeIsOpen = true;
+    var notice = noticeQueue.shift();
+    function finish() {
+      noticeIsOpen = false;
+      showNextNotice();
+    }
+    function open() { notice.show(finish); }
+    if (notice.delayMs) window.setTimeout(open, notice.delayMs);
+    else open();
+  }
+
+  function resolveInitialFeatureNotice() {
+    initialFeatureNoticePending = false;
+    showNextNotice();
+  }
+
   function getSeenVersion() {
     try {
       return localStorage.getItem(STORAGE_KEY) || '';
@@ -76,18 +111,18 @@
     container.appendChild(list);
   }
 
-  function openDialog(config) {
+  function openDialog(config, done) {
     var dialog = document.getElementById('featureUpdateDialog');
     var content = document.getElementById('featureUpdateList');
     var title = document.getElementById('featureUpdateTitle');
     var meta = document.getElementById('featureUpdateMeta');
     var historyButton = document.getElementById('featureUpdateHistory');
     var confirmButton = document.getElementById('featureUpdateConfirm');
-    if (!dialog || !content || !title || !meta || !historyButton || !confirmButton) return;
+    if (!dialog || !content || !title || !meta || !historyButton || !confirmButton) { done(); return; }
 
     var lang = typeof window.__lang === 'function' ? window.__lang() : 'zh-CN';
     var releases = validReleases(config, lang);
-    if (!releases.length) return;
+    if (!releases.length) { done(); return; }
 
     var latest = releases[releases.length - 1];
 
@@ -140,11 +175,19 @@
       else showHistory();
     };
 
+    var settled = false;
+    function finish() {
+      if (settled) return;
+      settled = true;
+      done();
+    }
+
     confirmButton.onclick = function () {
       rememberVersion(latest.version);
       if (typeof dialog.close === 'function') dialog.close();
-      else dialog.removeAttribute('open');
+      else { dialog.removeAttribute('open'); finish(); }
     };
+    dialog.addEventListener('close', finish, { once: true });
 
     dialog.dataset.version = latest.version;
     showLatest();
@@ -163,11 +206,11 @@
     if (!releases.length) return;
     var latest = releases[releases.length - 1];
     if (getSeenVersion() === latest.version) return;
-    openDialog(config);
+    window.gahEnqueueNotice(function (done) { openDialog(config, done); });
   }
 
   function showFeatureUpdates() {
-    if (cachedConfig) { openDialog(cachedConfig); return; }
+    if (cachedConfig) { window.gahEnqueueNotice(function (done) { openDialog(cachedConfig, done); }); return; }
     fetch(configUrl(), { headers: { Accept: 'application/json' } })
       .then(function (response) {
         if (!response.ok) throw new Error('feature update config unavailable');
@@ -175,7 +218,7 @@
       })
       .then(function (config) {
         cachedConfig = config;
-        openDialog(config);
+        window.gahEnqueueNotice(function (done) { openDialog(config, done); });
       })
       .catch(function () { /* Optional notice: page functionality must remain unaffected. */ });
   }
@@ -187,6 +230,12 @@
       if (!response.ok) throw new Error('feature update config unavailable');
       return response.json();
     })
-    .then(renderNotice)
-    .catch(function () { /* Optional notice: page functionality must remain unaffected. */ });
+    .then(function (config) {
+      renderNotice(config);
+      resolveInitialFeatureNotice();
+    })
+    .catch(function () {
+      resolveInitialFeatureNotice();
+      // Optional notice: page functionality must remain unaffected.
+    });
 })();
