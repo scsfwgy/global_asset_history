@@ -89,7 +89,7 @@ def _cache_ttl(series: PriceSeries) -> int:
 # lack new fields) are abandoned instead of served stale. v5 adds dividend
 # events used by the stock-only history tables in Stock Detail.
 _CACHE_SCHEMA_VERSION = "v5"
-_STOCK_COMPARE_CACHE_SCHEMA_VERSION = "v1"
+_STOCK_COMPARE_CACHE_SCHEMA_VERSION = "v2"
 
 
 def _redis_key(symbol: str, asset_type: str) -> str:
@@ -1678,9 +1678,21 @@ STOCK_COMPARE_METRICS = (
 )
 
 
-def _stock_compare_cache_key(symbols: List[str], tax_rate: float) -> str:
+def _stock_compare_cache_key(
+    symbols: List[str],
+    tax_rate: float,
+    include_dividend_reinvestment: bool = True,
+    backtest_enabled: bool = False,
+    start_date: Optional[str] = None,
+) -> str:
     signature = json.dumps(
-        {"symbols": symbols, "tax_rate": tax_rate},
+        {
+            "symbols": symbols,
+            "tax_rate": tax_rate,
+            "include_dividend_reinvestment": include_dividend_reinvestment,
+            "backtest_enabled": backtest_enabled,
+            "start_date": start_date if backtest_enabled else None,
+        },
         ensure_ascii=True,
         separators=(",", ":"),
         sort_keys=True,
@@ -1776,16 +1788,125 @@ def _normalize_stock_compare_symbols(symbols: List) -> List[str]:
     return normalized
 
 
+def _stock_total_return_curve(
+    series: PriceSeries,
+    tax_rate: float,
+    start_date: date,
+    include_dividend_reinvestment: bool,
+) -> List[Dict]:
+    """Build after-tax total return from raw closes and cash distributions."""
+    price_values = (
+        series.raw_closes
+        if series.raw_closes and len(series.raw_closes) == len(series.timestamps)
+        else series.closes
+    )
+    points = []
+    for timestamp, raw_close in zip(series.timestamps, price_values):
+        try:
+            close = float(raw_close)
+        except (TypeError, ValueError):
+            continue
+        point_date = datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
+        if math.isfinite(close) and close > 0 and point_date >= start_date:
+            points.append((int(timestamp), point_date, close))
+    if not points:
+        return []
+
+    baseline_timestamp, _, baseline_price = points[0]
+    dividends = []
+    for event in series.dividends or []:
+        try:
+            event_timestamp = int(event.get("timestamp"))
+            amount = float(event.get("amount"))
+        except (AttributeError, TypeError, ValueError):
+            continue
+        if event_timestamp > baseline_timestamp and math.isfinite(amount) and amount > 0:
+            dividends.append((event_timestamp, amount * (1 - tax_rate / 100)))
+    dividends.sort()
+
+    shares = 1.0
+    cash = 0.0
+    dividend_index = 0
+    curve = []
+    for timestamp, point_date, close in points:
+        while dividend_index < len(dividends) and dividends[dividend_index][0] <= timestamp:
+            net_amount = dividends[dividend_index][1]
+            if include_dividend_reinvestment:
+                shares += shares * net_amount / close
+            else:
+                cash += net_amount
+            dividend_index += 1
+        value = shares * close + cash
+        curve.append({
+            "date": point_date.isoformat(),
+            "total_return_pct": round((value / baseline_price - 1) * 100, 4),
+        })
+    return curve
+
+
+def _sample_stock_return_curve(curve: List[Dict], max_points: int = 1000) -> List[Dict]:
+    if len(curve) <= max_points:
+        return curve
+    step = (len(curve) - 1) / (max_points - 1)
+    indices = sorted({round(index * step) for index in range(max_points)})
+    return [curve[index] for index in indices]
+
+
+def _annual_reinvested_returns(
+    series: PriceSeries,
+    tax_rate: float,
+) -> Dict[int, float]:
+    """Return calendar-year after-tax total returns with dividend reinvestment."""
+    price_values = (
+        series.raw_closes
+        if series.raw_closes and len(series.raw_closes) == len(series.timestamps)
+        else series.closes
+    )
+    year_end_dates: Dict[int, date] = {}
+    for timestamp, raw_close in zip(series.timestamps, price_values):
+        try:
+            close = float(raw_close)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(close) or close <= 0:
+            continue
+        point_date = datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
+        year_end_dates[point_date.year] = point_date
+
+    sorted_years = sorted(year_end_dates)
+    results = {}
+    for index in range(1, len(sorted_years)):
+        year = sorted_years[index]
+        prior_year = sorted_years[index - 1]
+        curve = _stock_total_return_curve(
+            series,
+            tax_rate,
+            year_end_dates[prior_year],
+            True,
+        )
+        year_points = [row for row in curve if row["date"][:4] == str(year)]
+        if year_points:
+            results[year] = year_points[-1]["total_return_pct"]
+    return results
+
+
 def _build_stock_comparison_symbol(
     symbol: str,
     tax_rate: float,
-) -> Tuple[str, Dict[int, Dict[str, Optional[float]]], Dict]:
+    include_dividend_reinvestment: bool,
+    backtest_start_date: Optional[date],
+) -> Tuple[str, Dict[int, Dict[str, Optional[float]]], Dict, List[Dict]]:
     series = _fetch_daily_series_cached(symbol, "stock")
     meta = _series_meta(symbol, "stock", series)
     if series.error:
-        return symbol, {}, meta
+        return symbol, {}, meta, []
 
     tables = _build_stock_history_tables(series)
+    reinvested_returns = (
+        _annual_reinvested_returns(series, tax_rate)
+        if include_dividend_reinvestment
+        else {}
+    )
     rows: Dict[int, Dict[str, Optional[float]]] = {}
     tax_multiplier = 1 - tax_rate / 100
     for row in tables["rows"]:
@@ -1800,7 +1921,11 @@ def _build_stock_comparison_symbol(
             )
         combined = None
         if annual_return is not None and dividend_yield is not None:
-            combined = round(float(annual_return) + dividend_yield, 4)
+            combined = (
+                reinvested_returns.get(int(row["year"]))
+                if include_dividend_reinvestment
+                else round(float(annual_return) + dividend_yield, 4)
+            )
         rows[int(row["year"])] = {
             "combined_annualized": combined,
             "annual_return": annual_return,
@@ -1809,10 +1934,26 @@ def _build_stock_comparison_symbol(
         }
     if not rows and not meta["error"]:
         meta["error"] = "insufficient data"
-    return symbol, rows, meta
+    curve = []
+    if backtest_start_date is not None:
+        curve = _sample_stock_return_curve(_stock_total_return_curve(
+            series,
+            tax_rate,
+            backtest_start_date,
+            include_dividend_reinvestment,
+        ))
+        if not curve and not meta["error"]:
+            meta["error"] = "no data on or after start date"
+    return symbol, rows, meta, curve
 
 
-def fetch_stock_comparison(symbols: List, tax_rate: float = 30) -> Dict:
+def fetch_stock_comparison(
+    symbols: List,
+    tax_rate: float = 30,
+    include_dividend_reinvestment: bool = True,
+    backtest_enabled: bool = False,
+    start_date: Optional[str] = None,
+) -> Dict:
     """Build a compact year × US-stock × metric comparison cube."""
     normalized_symbols = _normalize_stock_compare_symbols(symbols)
     try:
@@ -1821,30 +1962,62 @@ def fetch_stock_comparison(symbols: List, tax_rate: float = 30) -> Dict:
         raise ValueError("tax_rate must be a number")
     if not math.isfinite(normalized_tax_rate) or not 0 <= normalized_tax_rate <= 100:
         raise ValueError("tax_rate must be between 0 and 100")
+    if not isinstance(include_dividend_reinvestment, bool):
+        raise ValueError("include_dividend_reinvestment must be a boolean")
+    if not isinstance(backtest_enabled, bool):
+        raise ValueError("backtest_enabled must be a boolean")
+    normalized_start_date = None
+    parsed_start_date = None
+    if backtest_enabled:
+        normalized_start_date = str(start_date or "").strip()
+        try:
+            parsed_start_date = date.fromisoformat(normalized_start_date)
+        except ValueError:
+            raise ValueError("valid start_date is required when backtest is enabled")
+        if parsed_start_date > datetime.now(timezone.utc).date():
+            raise ValueError("start_date cannot be in the future")
 
-    cache_key = _stock_compare_cache_key(normalized_symbols, normalized_tax_rate)
+    cache_key = _stock_compare_cache_key(
+        normalized_symbols,
+        normalized_tax_rate,
+        include_dividend_reinvestment,
+        backtest_enabled,
+        normalized_start_date,
+    )
     cached = _get_cached_stock_comparison(cache_key)
     if cached is not None:
         return cached
 
     started_at = time.perf_counter()
     logger.info(
-        "event=stock_comparison_start symbols=%s tax_rate=%s",
+        "event=stock_comparison_start symbols=%s tax_rate=%s dividend_reinvestment=%s backtest=%s start_date=%s",
         ",".join(normalized_symbols),
         normalized_tax_rate,
+        include_dividend_reinvestment,
+        backtest_enabled,
+        normalized_start_date,
     )
     fetched: Dict[str, Dict[int, Dict[str, Optional[float]]]] = {}
     meta: Dict[str, Dict] = {}
+    backtest_curves: Dict[str, List[Dict]] = {}
     worker_count = min(MAX_YEARLY_WORKERS, len(normalized_symbols))
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         futures = [
-            executor.submit(_build_stock_comparison_symbol, symbol, normalized_tax_rate)
+            executor.submit(
+                _build_stock_comparison_symbol,
+                symbol,
+                normalized_tax_rate,
+                include_dividend_reinvestment,
+                parsed_start_date,
+            )
             for symbol in normalized_symbols
         ]
         for future in as_completed(futures):
-            symbol, rows, symbol_meta = future.result()
+            symbol, rows, symbol_meta, curve = future.result()
             fetched[symbol] = rows
             meta[symbol] = symbol_meta
+            if backtest_enabled:
+                backtest_curves[symbol] = curve
 
     all_years = sorted(
         {year for rows in fetched.values() for year in rows},
@@ -1881,10 +2054,21 @@ def fetch_stock_comparison(symbols: List, tax_rate: float = 30) -> Dict:
         "years": all_years,
         "currency": "USD",
         "tax_rate": normalized_tax_rate,
+        "include_dividend_reinvestment": include_dividend_reinvestment,
+        "backtest_enabled": backtest_enabled,
+        "start_date": normalized_start_date,
         "metrics": list(STOCK_COMPARE_METRICS),
         "data": data,
         "meta": ordered_meta,
     }
+    if backtest_enabled:
+        result["backtest"] = {
+            "start_date": normalized_start_date,
+            "curves": {
+                symbol: backtest_curves.get(symbol, [])
+                for symbol in normalized_symbols
+            },
+        }
     _set_cached_stock_comparison(cache_key, result)
     return result
 

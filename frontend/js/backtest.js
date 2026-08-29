@@ -1,6 +1,7 @@
 /** Backtest controls, chart, and result table. */
 
 const BACKTEST_SYMBOL_STORAGE_KEY = "gah_backtest_symbol";
+const BACKTEST_PARAMS_STORAGE_KEY = "gah_backtest_params_v1";
 let _btCurrency = "USD";
 
 const GLOBAL_STOCK_CURRENCIES = [
@@ -1061,6 +1062,99 @@ function readCompareRows() {
   });
 }
 
+// Persist user-controlled backtest parameters. Symbol/type keep their legacy
+// key as well, so existing preferences continue to work across this upgrade.
+const BACKTEST_VALUE_FIELD_IDS = [
+  "btSymbolInput", "btTypeSelect", "pcBtInitialAmount", "pcBtAmount",
+  "pcBtStartDate", "pcBtEndDate", "pcBtFrequency", "pcBtInterval",
+  "pcBtDayOfMonth", "pcBtWeekday", "pcBtSampleSize", "pcBtAnimSeconds",
+  "pcBtPageSize", "pcBtCompareAmount", "pcBtCompareStart",
+  "pcBtCompareMetric", "pcBtCompareAnim", "pcBtCompareOrientation",
+];
+const BACKTEST_CHECKED_FIELD_IDS = [
+  "pcBtAdvanced", "btShowAsset", "btShowInvested", "btShowProfit",
+];
+
+function readBacktestParameterState() {
+  var values = {};
+  var checked = {};
+  BACKTEST_VALUE_FIELD_IDS.forEach(function (id) {
+    var field = document.getElementById(id);
+    if (field) values[id] = field.value;
+  });
+  BACKTEST_CHECKED_FIELD_IDS.forEach(function (id) {
+    var field = document.getElementById(id);
+    if (field) checked[id] = field.checked;
+  });
+  return { values: values, checked: checked };
+}
+
+function saveBacktestParameters() {
+  try {
+    localStorage.setItem(BACKTEST_PARAMS_STORAGE_KEY, JSON.stringify(readBacktestParameterState()));
+  } catch (_) { /* localStorage unavailable — keep the current form values */ }
+}
+
+function restoreBacktestParameters() {
+  try {
+    var raw = localStorage.getItem(BACKTEST_PARAMS_STORAGE_KEY);
+    if (!raw) return false;
+    var state = JSON.parse(raw) || {};
+    var values = state.values || {};
+    var checked = state.checked || {};
+    BACKTEST_VALUE_FIELD_IDS.forEach(function (id) {
+      var field = document.getElementById(id);
+      if (field && Object.prototype.hasOwnProperty.call(values, id)) field.value = values[id];
+    });
+    BACKTEST_CHECKED_FIELD_IDS.forEach(function (id) {
+      var field = document.getElementById(id);
+      if (field && Object.prototype.hasOwnProperty.call(checked, id)) field.checked = Boolean(checked[id]);
+    });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function syncRestoredBacktestParameters() {
+  updateBacktestFrequencyUI();
+  syncBacktestCurrency(btTypeSelect?.value || "stock");
+
+  var advanced = document.getElementById("pcBtAdvanced")?.checked;
+  document.querySelectorAll(".pc-bt-advanced").forEach(function (el) {
+    el.classList.toggle("show", Boolean(advanced));
+  });
+
+  var restoredVisibility = {
+    asset: document.getElementById("btShowAsset")?.checked !== false,
+    invested: document.getElementById("btShowInvested")?.checked !== false,
+    profit: document.getElementById("btShowProfit")?.checked !== false,
+  };
+  if (!restoredVisibility.asset && !restoredVisibility.invested && !restoredVisibility.profit) {
+    restoredVisibility.asset = true;
+  }
+  _btVisibleSeries = restoredVisibility;
+  BT_SERIES_NAMES.forEach(function (name) { btSetSeriesVisible(name, _btVisibleSeries[name]); });
+
+  _btPageSize = parseInt(document.getElementById("pcBtPageSize")?.value, 10) || 20;
+  _btCompareOrientation = document.getElementById("pcBtCompareOrientation")?.value || "landscape";
+}
+
+function initBacktestParameterPersistence() {
+  restoreBacktestParameters();
+  syncRestoredBacktestParameters();
+  var panel = document.getElementById("pcBacktest");
+  if (!panel) return;
+  panel.addEventListener("input", function (event) {
+    if (event.target && (BACKTEST_VALUE_FIELD_IDS.includes(event.target.id)
+      || BACKTEST_CHECKED_FIELD_IDS.includes(event.target.id))) saveBacktestParameters();
+  });
+  panel.addEventListener("change", function (event) {
+    if (event.target && (BACKTEST_VALUE_FIELD_IDS.includes(event.target.id)
+      || BACKTEST_CHECKED_FIELD_IDS.includes(event.target.id))) saveBacktestParameters();
+  });
+}
+
 async function runBacktestCompare() {
   var rows = readCompareRows().filter(function (r) { return normalizeAssetSymbol(r.symbol, r.type); });
   if (!rows.length) { btError(__("backtest.compareNoSymbols")); return; }
@@ -1945,6 +2039,8 @@ function initCompareRecorder() {
 }
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initCompareRecorder);
+  document.addEventListener("DOMContentLoaded", initBacktestParameterPersistence);
 } else {
   initCompareRecorder();
+  initBacktestParameterPersistence();
 }

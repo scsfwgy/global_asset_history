@@ -84,6 +84,47 @@ def test_backtest_remembers_symbol_and_asset_type():
     assert 'id="pcBtCurrency"' in page
 
 
+def test_backtest_remembers_all_user_parameters():
+    backtest = _source("frontend/js/backtest.js")
+
+    assert 'const BACKTEST_PARAMS_STORAGE_KEY = "gah_backtest_params_v1";' in backtest
+    assert "function saveBacktestParameters()" in backtest
+    assert "function restoreBacktestParameters()" in backtest
+    assert "function syncRestoredBacktestParameters()" in backtest
+    assert "function initBacktestParameterPersistence()" in backtest
+    assert '"pcBtAnimSeconds"' in backtest
+    assert '"pcBtStartDate"' in backtest
+    assert '"pcBtCompareAnim"' in backtest
+    assert '"pcBtCompareStart"' in backtest
+    assert '"pcBtAdvanced"' in backtest
+    assert '"btShowAsset"' in backtest
+    assert "localStorage.setItem(BACKTEST_PARAMS_STORAGE_KEY" in backtest
+    assert "localStorage.getItem(BACKTEST_PARAMS_STORAGE_KEY)" in backtest
+    assert 'panel.addEventListener("input"' in backtest
+    assert 'panel.addEventListener("change"' in backtest
+
+
+def test_stock_compare_backtest_start_date_defaults_and_persists():
+    script = _source("frontend/js/stock-compare.js")
+    page = _source("frontend/price-change.html")
+
+    assert 'id="scStartDate" value="2021-01-01"' in page
+    assert 'localStorage.setItem("gah_stock_compare_start_date"' in script
+    assert 'localStorage.getItem("gah_stock_compare_start_date")' in script
+    assert 'startDateInput.value = savedStartDate || "2021-01-01"' in script
+
+
+def test_stock_compare_backtest_chart_shows_point_data_on_hover():
+    script = _source("frontend/js/stock-compare.js")
+
+    assert "function nearestBacktestRow(rows, targetMs)" in script
+    assert 'id=\\"scBacktestHoverPlot\\"' in script
+    assert 'id=\\"scBacktestTooltip\\"' in script
+    assert 'hoverPlot.addEventListener("pointermove"' in script
+    assert 'hoverPlot.addEventListener("pointerleave"' in script
+    assert "formatChartNumber(row.total_return_pct)" in script
+
+
 def test_crash_stats_remembers_symbol_and_asset_type():
     source = _source("frontend/js/crash-stats.js")
     page = _source("frontend/price-change.html")

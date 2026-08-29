@@ -750,13 +750,58 @@ class TestFetchStockComparison:
         ]
         assert result["years"] == [2024, 2023]
         assert result["data"]["2024"]["AAPL"] == {
-            "combined_annualized": 10.1925,
+            "combined_annualized": 10.1926,
             "annual_return": 10.0,
             "dividend_yield_after_tax": 0.1925,
             "max_drawdown": -14.29,
         }
         assert result["data"]["2023"]["AAPL"]["combined_annualized"] is None
         assert result["meta"]["MSFT"]["source"] == "yahoo"
+
+    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
+    def test_dividend_reinvestment_compounds_and_drives_backtest_curve(self, mock_fetch):
+        dates = [
+            datetime(2023, 12, 29, 12, tzinfo=timezone.utc),
+            datetime(2024, 1, 2, 12, tzinfo=timezone.utc),
+            datetime(2024, 3, 1, 12, tzinfo=timezone.utc),
+            datetime(2024, 6, 3, 12, tzinfo=timezone.utc),
+            datetime(2024, 12, 31, 12, tzinfo=timezone.utc),
+        ]
+        mock_fetch.return_value = PriceSeries(
+            timestamps=[int(item.timestamp()) for item in dates],
+            closes=[100.0] * len(dates),
+            raw_closes=[100.0] * len(dates),
+            source="yahoo",
+            fetched_at=dates[-1].timestamp(),
+            dividends=[
+                {"timestamp": int(datetime(2024, 3, 1, tzinfo=timezone.utc).timestamp()), "amount": 10.0},
+                {"timestamp": int(datetime(2024, 6, 1, tzinfo=timezone.utc).timestamp()), "amount": 10.0},
+            ],
+        )
+
+        reinvested = svc.fetch_stock_comparison(
+            ["SPY"], 0, True, True, "2024-01-01",
+        )
+        svc.clear_price_change_cache()
+        cash_only = svc.fetch_stock_comparison(
+            ["SPY"], 0, False, True, "2024-01-01",
+        )
+
+        assert reinvested["data"]["2024"]["SPY"]["combined_annualized"] == 21.0
+        assert cash_only["data"]["2024"]["SPY"]["combined_annualized"] == 20.0
+        assert reinvested["backtest"]["curves"]["SPY"][-1]["total_return_pct"] == 21.0
+        assert cash_only["backtest"]["curves"]["SPY"][-1]["total_return_pct"] == 20.0
+
+    @pytest.mark.parametrize("start_date", [None, "", "not-a-date"])
+    def test_backtest_requires_valid_start_date(self, start_date):
+        with pytest.raises(ValueError, match="start_date"):
+            svc.fetch_stock_comparison(["SPY"], backtest_enabled=True, start_date=start_date)
+
+    def test_rejects_non_boolean_stock_compare_options(self):
+        with pytest.raises(ValueError, match="include_dividend_reinvestment"):
+            svc.fetch_stock_comparison(["SPY"], include_dividend_reinvestment="yes")
+        with pytest.raises(ValueError, match="backtest_enabled"):
+            svc.fetch_stock_comparison(["SPY"], backtest_enabled=1)
 
     @patch("service.price_change.price_change_service._fetch_daily_series_cached")
     def test_keeps_partial_failures_in_meta(self, mock_fetch):

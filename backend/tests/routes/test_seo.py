@@ -596,6 +596,10 @@ class TestHtmlMeta:
         assert 'id="scTags"' in html
         assert 'id="scParamsToggle"' in html
         assert 'id="scParamsPanel"' in html
+        assert 'id="scDividendReinvestment" checked' in html
+        assert 'id="scBacktestEnabled"' in html
+        assert 'id="scStartDate"' in html
+        assert 'id="scBacktestChart"' in html
         assert 'id="scMethodologyTitle"' in html
         assert 'id="scAggregateTable"' in html
         assert "先用一张聚合表纵览四项指标" not in html
@@ -640,6 +644,9 @@ class TestHtmlMeta:
         assert "sc-aggregate-bg-return" in aggregate_block
         assert "sc-aggregate-bg-drawdown" in aggregate_block
         assert "renderAggregateTable(result);" in script
+        assert "function renderBacktestChart(result)" in script
+        assert "include_dividend_reinvestment: reinvested" in script
+        assert "backtest_enabled: runBacktest" in script
 
         zh_locale = client.get("/locales/zh-CN.json").get_json()
         en_locale = client.get("/locales/en.json").get_json()
@@ -745,7 +752,7 @@ class TestHtmlMeta:
             'data-i18n-attr="aria-label|detail.fundamentalsHistoryAria"'
             in html
         )
-        assert INDEX_LASTMOD == "2026-08-25"
+        assert INDEX_LASTMOD == "2026-08-29"
 
         zh_locale = client.get("/locales/zh-CN.json").get_json()["detail"]
         en_locale = client.get("/locales/en.json").get_json()["detail"]

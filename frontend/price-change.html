@@ -1230,6 +1230,33 @@
             text-align: right;
             font: inherit;
         }
+        .sc-option {
+            display: inline-flex;
+            min-height: 34px;
+            align-items: center;
+            gap: 8px;
+            color: var(--apple-text-secondary);
+            cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .sc-option input {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            accent-color: var(--apple-blue);
+        }
+        .sc-start-date input {
+            box-sizing: border-box;
+            height: 34px;
+            padding: 7px 9px;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-sm);
+            background: var(--apple-surface-1);
+            color: var(--apple-text-primary);
+            color-scheme: light dark;
+            font: inherit;
+        }
         .sc-quick-picks {
             display: flex;
             flex: 0 0 100%;
@@ -1446,6 +1473,30 @@
             font-size: 11px;
             line-height: 1.5;
         }
+        .sc-backtest-card {
+            margin-bottom: 14px;
+        }
+        .sc-backtest-chart {
+            padding: 8px 10px 2px;
+        }
+        .sc-backtest-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 14px;
+            padding: 0 14px 12px;
+            color: var(--apple-text-secondary);
+            font-size: 11px;
+        }
+        .sc-backtest-legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .sc-backtest-swatch {
+            width: 16px;
+            height: 3px;
+            border-radius: var(--radius-full);
+        }
         .sc-warning {
             margin: 0 0 12px;
             padding: 9px 11px;
@@ -1541,6 +1592,13 @@
             }
             .sc-controls > .pc-btn {
                 flex: 1;
+            }
+            .sc-option,
+            .sc-start-date input {
+                width: 100%;
+            }
+            .sc-backtest-chart {
+                padding-inline: 2px;
             }
             .sc-metric-grid {
                 grid-template-columns: 1fr;
@@ -3720,7 +3778,7 @@
                 <ul class="sc-methodology-list">
                     <li data-i18n="stockCompare.methodologyReturn">涨跌幅：使用未含现金分红的收盘价，按上年末至当年末计算。</li>
                     <li data-i18n="stockCompare.methodologyDividend">分红年化（税后）：当年每股现金分红 ×（1 − 税率）÷ 上年末收盘价。</li>
-                    <li data-i18n="stockCompare.methodologyCombined">年度综合收益（税后）：涨跌幅与税后分红年化直接相加；不假设分红再投资，也不是跨年 CAGR。</li>
+                    <li id="scMethodologyCombined" data-i18n="stockCompare.methodologyCombinedReinvested">年度综合收益（税后）：按除息日将税后现金分红再投资，计算持有份额增长后的总收益；不是跨年 CAGR。</li>
                     <li data-i18n="stockCompare.methodologyDrawdown">最大回撤：自然年内，收盘价从阶段高点到后续低点的最大跌幅。</li>
                     <li data-i18n="stockCompare.methodologyCurrentYear">当年数据均为年初至今（YTD），不进行全年年化外推。</li>
                     <li data-i18n="stockCompare.methodologyCache">数据源为 Yahoo 日线及除息事件；成功结果缓存 6 小时，失败结果缓存 5 分钟。</li>
@@ -3746,6 +3804,18 @@
                             <span>%</span>
                         </span>
                     </label>
+                    <label class="sc-option">
+                        <input type="checkbox" id="scDividendReinvestment" checked>
+                        <span data-i18n="stockCompare.includeDividendReinvestment">是否包含：分红再投资</span>
+                    </label>
+                    <label class="sc-option">
+                        <input type="checkbox" id="scBacktestEnabled">
+                        <span data-i18n="stockCompare.enableBacktest">回测</span>
+                    </label>
+                    <label class="sc-field sc-start-date" id="scStartDateField" style="display:none;">
+                        <span data-i18n="stockCompare.investmentStartDate">投资起始时间</span>
+                        <input type="date" id="scStartDate" value="2021-01-01">
+                    </label>
                     <button id="scQueryBtn" class="pc-btn primary" data-i18n="stockCompare.query">开始对比</button>
                 </div>
                 <div class="sc-quick-picks" id="scQuickPicks"></div>
@@ -3764,6 +3834,14 @@
             </div>
             <div id="scResult" style="display:none;">
                 <div class="sc-warning" id="scWarnings" style="display:none;"></div>
+                <section class="sc-metric-card sc-backtest-card" id="scBacktestCard" style="display:none;">
+                    <div class="sc-metric-header">
+                        <h3 class="sc-metric-title" data-i18n="stockCompare.backtestChartTitle">累计总收益</h3>
+                        <p class="sc-metric-description" id="scBacktestDescription"></p>
+                    </div>
+                    <div class="sc-backtest-chart" id="scBacktestChart"></div>
+                    <div class="sc-backtest-legend" id="scBacktestLegend"></div>
+                </section>
                 <section class="sc-metric-card sc-aggregate-card">
                     <div class="sc-metric-header">
                         <h3 class="sc-metric-title" data-i18n="stockCompare.aggregateTitle">两维聚合</h3>
@@ -3777,7 +3855,7 @@
                     <section class="sc-metric-card">
                         <div class="sc-metric-header">
                             <h3 class="sc-metric-title" data-i18n="stockCompare.combinedAnnualized">年度综合收益（税后）</h3>
-                            <p class="sc-metric-description" data-i18n="stockCompare.combinedDescription">涨跌幅 + 税后分红年化</p>
+                            <p class="sc-metric-description" id="scCombinedDescription" data-i18n="stockCompare.combinedDescriptionReinvested">包含税后分红再投资的年度总收益</p>
                         </div>
                         <div class="sc-matrix-scroll">
                             <table class="sc-matrix-table" id="scCombinedTable"><thead></thead><tbody></tbody></table>

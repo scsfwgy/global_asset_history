@@ -673,8 +673,34 @@ class TestStockCompareEndpoint:
 
         assert resp.status_code == 200
         assert resp.get_json()["currency"] == "USD"
-        mock_fetch.assert_called_once_with(["AAPL", "MSFT"], 30)
+        mock_fetch.assert_called_once_with(
+            ["AAPL", "MSFT"],
+            30,
+            include_dividend_reinvestment=True,
+            backtest_enabled=False,
+            start_date=None,
+        )
         track_coverage(MOD, 3)
+
+    @patch("routes.price_change.fetch_stock_comparison")
+    def test_forwards_reinvestment_and_backtest_options(self, mock_fetch, client):
+        mock_fetch.return_value = {"currency": "USD"}
+        resp = client.post(f"{BASE}/stock-compare", json={
+            "symbols": ["SPY", "QQQ"],
+            "tax_rate": 15,
+            "include_dividend_reinvestment": False,
+            "backtest_enabled": True,
+            "start_date": "2020-01-02",
+        })
+
+        assert resp.status_code == 200
+        mock_fetch.assert_called_once_with(
+            ["SPY", "QQQ"],
+            15,
+            include_dividend_reinvestment=False,
+            backtest_enabled=True,
+            start_date="2020-01-02",
+        )
 
     @pytest.mark.parametrize("payload", [{}, {"symbols": "AAPL"}, {"symbols": []}])
     def test_requires_symbols_list(self, payload, client):

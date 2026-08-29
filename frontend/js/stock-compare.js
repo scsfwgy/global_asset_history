@@ -42,6 +42,10 @@
   var _loading = false;
   var _lastResult = null;
   var _paramsCollapsed = false;
+  var CHART_COLORS = [
+    "#2997ff", "#ff9f0a", "#30d158", "#bf5af2",
+    "#ff375f", "#64d2ff", "#ffd60a", "#ac8e68",
+  ];
 
   function $(id) {
     return document.getElementById(id);
@@ -95,6 +99,42 @@
     return Math.max(0, Math.min(100, value));
   }
 
+  function includeDividendReinvestment() {
+    var input = $("scDividendReinvestment");
+    return !input || input.checked;
+  }
+
+  function backtestEnabled() {
+    var input = $("scBacktestEnabled");
+    return Boolean(input && input.checked);
+  }
+
+  function updateOptionState() {
+    var enabled = backtestEnabled();
+    var dateField = $("scStartDateField");
+    var dateInput = $("scStartDate");
+    if (dateField) dateField.style.display = enabled ? "flex" : "none";
+    if (dateInput) dateInput.required = enabled;
+
+    var reinvested = includeDividendReinvestment();
+    var methodology = $("scMethodologyCombined");
+    var description = $("scCombinedDescription");
+    var methodologyKey = reinvested
+      ? "stockCompare.methodologyCombinedReinvested"
+      : "stockCompare.methodologyCombined";
+    var descriptionKey = reinvested
+      ? "stockCompare.combinedDescriptionReinvested"
+      : "stockCompare.combinedDescription";
+    if (methodology) {
+      methodology.setAttribute("data-i18n", methodologyKey);
+      methodology.textContent = __(methodologyKey);
+    }
+    if (description) {
+      description.setAttribute("data-i18n", descriptionKey);
+      description.textContent = __(descriptionKey);
+    }
+  }
+
   function setState(name) {
     var loading = $("scLoading");
     var empty = $("scEmpty");
@@ -115,6 +155,9 @@
     try {
       localStorage.setItem("gah_stock_compare_symbols_v3", _symbols.join(","));
       localStorage.setItem("gah_dividend_tax_rate", String(getTaxRate()));
+      localStorage.setItem("gah_stock_compare_dividend_reinvestment", includeDividendReinvestment() ? "1" : "0");
+      localStorage.setItem("gah_stock_compare_backtest", backtestEnabled() ? "1" : "0");
+      localStorage.setItem("gah_stock_compare_start_date", ($("scStartDate") || {}).value || "");
     } catch (_) {}
   }
 
@@ -331,6 +374,191 @@
     });
   }
 
+  function formatChartNumber(value) {
+    var number = Number(value);
+    if (!Number.isFinite(number)) return "—";
+    return (number > 0 ? "+" : "") + number.toFixed(Math.abs(number) >= 100 ? 0 : 1) + "%";
+  }
+
+  function nearestBacktestRow(rows, targetMs) {
+    if (!rows.length) return null;
+    var low = 0;
+    var high = rows.length - 1;
+    while (low < high) {
+      var mid = Math.floor((low + high) / 2);
+      if (rows[mid].dateMs < targetMs) low = mid + 1;
+      else high = mid;
+    }
+    if (low > 0 && Math.abs(rows[low - 1].dateMs - targetMs) <= Math.abs(rows[low].dateMs - targetMs)) {
+      return rows[low - 1];
+    }
+    return rows[low];
+  }
+
+  function renderBacktestChart(result) {
+    var card = $("scBacktestCard");
+    var chart = $("scBacktestChart");
+    var legend = $("scBacktestLegend");
+    var description = $("scBacktestDescription");
+    var backtest = result.backtest;
+    if (!card || !chart || !legend) return;
+    if (!result.backtest_enabled || !backtest) {
+      card.style.display = "none";
+      chart.innerHTML = "";
+      legend.innerHTML = "";
+      return;
+    }
+    card.style.display = "block";
+    if (description) {
+      description.textContent = __(
+        result.include_dividend_reinvestment
+          ? "stockCompare.backtestDescriptionReinvested"
+          : "stockCompare.backtestDescriptionCash",
+        { date: backtest.start_date }
+      );
+    }
+
+    var series = (result.symbols || []).map(function (symbol, index) {
+      var rows = ((backtest.curves || {})[symbol] || []).filter(function (row) {
+        return row && row.date && Number.isFinite(Number(row.total_return_pct));
+      }).map(function (row) {
+        return {
+          date: row.date,
+          dateMs: Date.parse(row.date + "T00:00:00Z"),
+          total_return_pct: Number(row.total_return_pct),
+        };
+      });
+      return { symbol: symbol, rows: rows, color: CHART_COLORS[index % CHART_COLORS.length] };
+    }).filter(function (item) { return item.rows.length; });
+    if (!series.length) {
+      chart.innerHTML = "<div class=\"pc-empty\">" + escapeHtml(__("stockCompare.backtestNoData")) + "</div>";
+      legend.innerHTML = "";
+      return;
+    }
+
+    var allRows = [];
+    series.forEach(function (item) { allRows = allRows.concat(item.rows); });
+    var dateValues = allRows.map(function (row) { return row.dateMs; });
+    var returnValues = allRows.map(function (row) { return Number(row.total_return_pct); }).concat([0]);
+    var minDate = Math.min.apply(null, dateValues);
+    var maxDate = Math.max.apply(null, dateValues);
+    var minReturn = Math.min.apply(null, returnValues);
+    var maxReturn = Math.max.apply(null, returnValues);
+    var returnRange = maxReturn - minReturn || Math.max(Math.abs(maxReturn), 1);
+    minReturn -= returnRange * 0.08;
+    maxReturn += returnRange * 0.08;
+    returnRange = maxReturn - minReturn || 1;
+
+    var W = 760, H = 300;
+    var PAD = { left: 60, right: 18, top: 18, bottom: 36 };
+    var plotW = W - PAD.left - PAD.right;
+    var plotH = H - PAD.top - PAD.bottom;
+    var dateRange = maxDate - minDate || 1;
+    var xPos = function (dateText) {
+      return PAD.left + (Date.parse(dateText + "T00:00:00Z") - minDate) / dateRange * plotW;
+    };
+    var yPos = function (value) {
+      return PAD.top + plotH - (Number(value) - minReturn) / returnRange * plotH;
+    };
+    var svg = "";
+    for (var tick = 0; tick <= 4; tick += 1) {
+      var tickValue = minReturn + returnRange * tick / 4;
+      var tickY = yPos(tickValue);
+      svg += "<line x1=\"" + PAD.left + "\" y1=\"" + tickY + "\" x2=\"" + (W - PAD.right)
+        + "\" y2=\"" + tickY + "\" stroke=\"var(--apple-divider)\" stroke-width=\"1\"/>"
+        + "<text x=\"" + (PAD.left - 8) + "\" y=\"" + (tickY + 4)
+        + "\" text-anchor=\"end\" fill=\"var(--apple-text-tertiary)\" font-size=\"10\">"
+        + escapeHtml(formatChartNumber(tickValue)) + "</text>";
+    }
+    for (var dateTick = 0; dateTick <= 4; dateTick += 1) {
+      var tickDateValue = minDate + dateRange * dateTick / 4;
+      var tickDate = new Date(tickDateValue);
+      var tickX = PAD.left + plotW * dateTick / 4;
+      var tickLabel = tickDate.getUTCFullYear() + "-" + String(tickDate.getUTCMonth() + 1).padStart(2, "0");
+      svg += "<text x=\"" + tickX + "\" y=\"" + (H - 12)
+        + "\" text-anchor=\"middle\" fill=\"var(--apple-text-tertiary)\" font-size=\"10\">"
+        + tickLabel + "</text>";
+    }
+    var zeroY = yPos(0);
+    if (zeroY >= PAD.top && zeroY <= H - PAD.bottom) {
+      svg += "<line x1=\"" + PAD.left + "\" y1=\"" + zeroY + "\" x2=\"" + (W - PAD.right)
+        + "\" y2=\"" + zeroY + "\" stroke=\"var(--apple-text-tertiary)\" stroke-dasharray=\"4,3\" opacity=\"0.65\"/>";
+    }
+    series.forEach(function (item) {
+      var path = item.rows.map(function (row, index) {
+        return (index ? "L" : "M") + xPos(row.date).toFixed(2) + " " + yPos(row.total_return_pct).toFixed(2);
+      }).join(" ");
+      svg += "<path d=\"" + path + "\" fill=\"none\" stroke=\"" + item.color
+        + "\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><title>"
+        + escapeHtml(item.symbol + ": " + formatChartNumber(item.rows[item.rows.length - 1].total_return_pct))
+        + "</title></path>";
+    });
+    var tooltipHeight = 28 + series.length * 18;
+    svg += "<rect id=\"scBacktestHoverPlot\" x=\"" + PAD.left + "\" y=\"" + PAD.top
+      + "\" width=\"" + plotW + "\" height=\"" + plotH + "\" fill=\"transparent\" style=\"cursor:crosshair;\"/>"
+      + "<g id=\"scBacktestTooltip\" style=\"display:none;pointer-events:none;\">"
+      + "<line id=\"scBacktestTooltipGuide\" x1=\"0\" y1=\"" + PAD.top + "\" x2=\"0\" y2=\""
+      + (PAD.top + plotH) + "\" stroke=\"var(--apple-text-tertiary)\" stroke-width=\"1\" stroke-dasharray=\"4,3\"/>"
+      + "<g id=\"scBacktestTooltipDots\"></g>"
+      + "<g id=\"scBacktestTooltipBox\"><rect width=\"190\" height=\"" + tooltipHeight
+      + "\" rx=\"8\" fill=\"var(--apple-tooltip-bg, rgba(24,24,26,0.96))\" stroke=\"var(--apple-divider)\"/>"
+      + "<g id=\"scBacktestTooltipRows\"></g></g></g>";
+    chart.innerHTML = "<svg viewBox=\"0 0 " + W + " " + H
+      + "\" role=\"img\" aria-label=\"" + escapeHtml(__("stockCompare.backtestChartTitle"))
+      + "\" style=\"width:100%;height:auto;display:block;font-family:-apple-system,SF Pro Text,Helvetica,Arial,sans-serif;\">"
+      + svg + "</svg>";
+    var chartSvg = chart.querySelector("svg");
+    var hoverPlot = chartSvg && chartSvg.querySelector("#scBacktestHoverPlot");
+    var tooltip = chartSvg && chartSvg.querySelector("#scBacktestTooltip");
+    var tooltipGuide = chartSvg && chartSvg.querySelector("#scBacktestTooltipGuide");
+    var tooltipBox = chartSvg && chartSvg.querySelector("#scBacktestTooltipBox");
+    var tooltipRows = chartSvg && chartSvg.querySelector("#scBacktestTooltipRows");
+    var tooltipDots = chartSvg && chartSvg.querySelector("#scBacktestTooltipDots");
+    if (hoverPlot && tooltip) {
+      hoverPlot.addEventListener("pointermove", function (event) {
+        var rect = chartSvg.getBoundingClientRect();
+        if (!rect.width) return;
+        var pointerX = Math.max(PAD.left, Math.min(W - PAD.right,
+          (event.clientX - rect.left) / rect.width * W));
+        var targetMs = minDate + (pointerX - PAD.left) / plotW * dateRange;
+        var anchor = nearestBacktestRow(series[0].rows, targetMs);
+        if (!anchor) return;
+        var guideX = PAD.left + (anchor.dateMs - minDate) / dateRange * plotW;
+        var rowMarkup = "<text x=\"10\" y=\"18\" fill=\"var(--apple-tooltip-text, #fff)\" font-size=\"11\" font-weight=\"600\">"
+          + escapeHtml(anchor.date) + "</text>";
+        var dotMarkup = "";
+        series.forEach(function (item, index) {
+          var row = nearestBacktestRow(item.rows, anchor.dateMs);
+          if (!row) return;
+          var rowY = 37 + index * 18;
+          rowMarkup += "<rect x=\"10\" y=\"" + (rowY - 8) + "\" width=\"8\" height=\"3\" rx=\"1\" fill=\""
+            + item.color + "\"/><text x=\"24\" y=\"" + (rowY - 5)
+            + "\" fill=\"var(--apple-tooltip-text, #fff)\" font-size=\"10\">" + escapeHtml(item.symbol)
+            + "</text><text x=\"180\" y=\"" + (rowY - 5)
+            + "\" text-anchor=\"end\" fill=\"var(--apple-tooltip-text, #fff)\" font-size=\"10\">"
+            + escapeHtml(formatChartNumber(row.total_return_pct)) + "</text>";
+          dotMarkup += "<circle cx=\"" + guideX + "\" cy=\"" + yPos(row.total_return_pct)
+            + "\" r=\"3.5\" fill=\"" + item.color + "\" stroke=\"var(--apple-bg)\" stroke-width=\"1.5\"/>";
+        });
+        var boxX = guideX + 12;
+        if (boxX + 190 > W - PAD.right) boxX = guideX - 202;
+        tooltipGuide.setAttribute("x1", String(guideX));
+        tooltipGuide.setAttribute("x2", String(guideX));
+        tooltipBox.setAttribute("transform", "translate(" + boxX + ", " + (PAD.top + 8) + ")");
+        tooltipRows.innerHTML = rowMarkup;
+        tooltipDots.innerHTML = dotMarkup;
+        tooltip.style.display = "";
+      });
+      hoverPlot.addEventListener("pointerleave", function () { tooltip.style.display = "none"; });
+    }
+    legend.innerHTML = series.map(function (item) {
+      var latest = item.rows[item.rows.length - 1];
+      return "<span class=\"sc-backtest-legend-item\"><span class=\"sc-backtest-swatch\" style=\"background:"
+        + item.color + "\"></span><strong>" + escapeHtml(item.symbol) + "</strong> "
+        + escapeHtml(formatChartNumber(latest.total_return_pct)) + "</span>";
+    }).join("");
+  }
+
   function renderResult(result) {
     _lastResult = result;
     _symbols = (result.symbols || []).slice();
@@ -349,6 +577,7 @@
       warning.style.display = errors.length ? "block" : "none";
     }
     renderMetricTables(result);
+    renderBacktestChart(result);
     setState("result");
   }
 
@@ -359,6 +588,14 @@
       return;
     }
     var taxRate = getTaxRate();
+    var reinvested = includeDividendReinvestment();
+    var runBacktest = backtestEnabled();
+    var startDate = ($("scStartDate") || {}).value || "";
+    if (runBacktest && !startDate) {
+      showError(__("stockCompare.errorStartDate"));
+      if ($("scStartDate")) $("scStartDate").focus();
+      return;
+    }
     var taxInput = $("scTaxRate");
     if (taxInput) taxInput.value = String(taxRate);
     showError("");
@@ -369,7 +606,13 @@
       var response = await fetch(STOCK_COMPARE_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbols: _symbols, tax_rate: taxRate }),
+        body: JSON.stringify({
+          symbols: _symbols,
+          tax_rate: taxRate,
+          include_dividend_reinvestment: reinvested,
+          backtest_enabled: runBacktest,
+          start_date: runBacktest ? startDate : null,
+        }),
       });
       var payload = await response.json().catch(function () { return {}; });
       if (!response.ok) throw new Error(payload.error || ("HTTP " + response.status));
@@ -401,16 +644,27 @@
   function init() {
     var input = $("scSymbolInput");
     var taxInput = $("scTaxRate");
+    var reinvestmentInput = $("scDividendReinvestment");
+    var backtestInput = $("scBacktestEnabled");
+    var startDateInput = $("scStartDate");
+    if (startDateInput) startDateInput.max = new Date().toISOString().slice(0, 10);
     try {
       var savedSymbols = localStorage.getItem("gah_stock_compare_symbols_v3");
       var savedTax = localStorage.getItem("gah_dividend_tax_rate");
+      var savedReinvestment = localStorage.getItem("gah_stock_compare_dividend_reinvestment");
+      var savedBacktest = localStorage.getItem("gah_stock_compare_backtest");
+      var savedStartDate = localStorage.getItem("gah_stock_compare_start_date");
       if (savedSymbols) {
         _symbols = savedSymbols.split(",").map(function (symbol) {
           return symbol.trim().toUpperCase();
         }).filter(Boolean).slice(0, 8);
       }
       if (savedTax && taxInput) taxInput.value = savedTax;
+      if (savedReinvestment !== null && reinvestmentInput) reinvestmentInput.checked = savedReinvestment !== "0";
+      if (savedBacktest !== null && backtestInput) backtestInput.checked = savedBacktest === "1";
+      if (startDateInput) startDateInput.value = savedStartDate || "2021-01-01";
     } catch (_) {}
+    updateOptionState();
     renderTags();
     renderQuickPicks();
     loadSearchIndex();
@@ -453,12 +707,22 @@
       taxInput.value = String(getTaxRate());
       if (_loaded) queryComparison();
     });
+    reinvestmentInput.addEventListener("change", function () {
+      updateOptionState();
+      saveState();
+    });
+    backtestInput.addEventListener("change", function () {
+      updateOptionState();
+      saveState();
+    });
+    startDateInput.addEventListener("change", saveState);
     var observer = new MutationObserver(function (mutations) {
       if (_lastResult && mutations.some(function (mutation) {
         return mutation.attributeName === "data-color-scheme"
           || mutation.attributeName === "data-theme";
       })) {
         renderMetricTables(_lastResult);
+        renderBacktestChart(_lastResult);
       }
     });
     observer.observe(document.documentElement, { attributes: true });

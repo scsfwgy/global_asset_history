@@ -313,10 +313,19 @@ def stock_compare():
     body = request.get_json(silent=True) or {}
     symbols = body.get("symbols", [])
     tax_rate = body.get("tax_rate", 30)
+    include_dividend_reinvestment = body.get("include_dividend_reinvestment", True)
+    backtest_enabled = body.get("backtest_enabled", False)
+    start_date = body.get("start_date")
     if not isinstance(symbols, list) or not symbols:
         return jsonify({"error": "symbols list is required"}), 400
     try:
-        return jsonify(fetch_stock_comparison(symbols, tax_rate))
+        return jsonify(fetch_stock_comparison(
+            symbols,
+            tax_rate,
+            include_dividend_reinvestment=include_dividend_reinvestment,
+            backtest_enabled=backtest_enabled,
+            start_date=start_date,
+        ))
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
