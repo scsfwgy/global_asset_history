@@ -327,6 +327,11 @@ class TestFetchReturnDetail:
         assert result["overview"]["latest_date"] == "2024-12-31"
         assert result["overview"]["price_basis"] == "raw_close"
         assert result["overview"]["ytd_return"] == 25.0
+        assert result["overview"]["all_time_return"] == 25.0
+        assert result["overview"]["all_time_adjusted_return"] == 25.0
+        assert result["overview"]["all_time_unadjusted_return"] == 10.0
+        assert result["overview"]["all_time_unadjusted_first_date"] == "2023-12-29"
+        assert result["overview"]["all_time_unadjusted_latest_date"] == "2024-12-31"
         assert result["fundamentals"]["available"] is True
         assert result["fundamentals"]["fifty_two_week_high"] == 220.0
         assert result["fundamentals"]["fifty_two_week_low"] == 180.0
@@ -365,6 +370,8 @@ class TestFetchReturnDetail:
         assert svc._detail_period_return(points, 3, annualized=True) == pytest.approx(
             10.0, abs=0.02
         )
+        assert svc._detail_all_time_return(points) == pytest.approx(33.1)
+        assert svc._detail_all_time_return(points[:1]) is None
 
         drawdown = svc._detail_drawdown_summary([
             (date(2024, 1, 2), 100.0),

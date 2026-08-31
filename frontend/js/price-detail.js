@@ -473,6 +473,11 @@
     var coverage = overview.first_date && overview.latest_date
       ? overview.first_date + " → " + overview.latest_date
       : "—";
+    var unadjustedCoverage = overview.all_time_unadjusted_first_date
+      && overview.all_time_unadjusted_latest_date
+      ? overview.all_time_unadjusted_first_date + " → "
+        + overview.all_time_unadjusted_latest_date
+      : coverage;
     var resourceLinks = buildAssetResourceLinks(
       result.symbol || overview.symbol,
       result.type,
@@ -522,6 +527,18 @@
         value: formatPct(overview.ytd_return),
         tone: valueTone(overview.ytd_return),
         meta: overview.current_year_is_ytd ? "YTD" : "",
+      },
+      {
+        label: __("detail.allTimeAdjustedReturn"),
+        value: formatPct(overview.all_time_adjusted_return),
+        tone: valueTone(overview.all_time_adjusted_return),
+        meta: coverage,
+      },
+      {
+        label: __("detail.allTimeUnadjustedReturn"),
+        value: formatPct(overview.all_time_unadjusted_return),
+        tone: valueTone(overview.all_time_unadjusted_return),
+        meta: unadjustedCoverage,
       },
       {
         label: __("detail.oneYearReturn"),

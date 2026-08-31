@@ -668,6 +668,10 @@ class TestHtmlMeta:
         assert 'id="pdTableTitle"' in html
 
         script = client.get("/js/price-detail.js").get_data(as_text=True)
+        assert '"detail.allTimeAdjustedReturn"' in script
+        assert '"detail.allTimeUnadjustedReturn"' in script
+        assert "overview.all_time_adjusted_return" in script
+        assert "overview.all_time_unadjusted_return" in script
         assert '"detail.cagr5y"' in script
         assert '"detail.volatility1y"' in script
         assert '"detail.historicalMaxDrawdown"' in script
@@ -708,6 +712,8 @@ class TestHtmlMeta:
         zh_locale = client.get("/locales/zh-CN.json").get_json()
         en_locale = client.get("/locales/en.json").get_json()
         assert zh_locale["detail"]["cagr5y"] == "近 5 年 CAGR"
+        assert zh_locale["detail"]["allTimeAdjustedReturn"] == "历史累计总收益（复权）"
+        assert zh_locale["detail"]["allTimeUnadjustedReturn"] == "历史累计价格涨跌幅（不复权）"
         assert zh_locale["detail"]["winRate"] == "上涨概率"
         assert zh_locale["detail"]["fundamentalsTitle"] == "估值与市场快照"
         assert zh_locale["tab"]["returnDetail"] == "股票详情"
@@ -716,8 +722,12 @@ class TestHtmlMeta:
         assert zh_locale["detail"]["cryptoMarketData"] == "市场资料"
         assert zh_locale["detail"]["officialAnnouncements"] == "官方公告"
         assert "CAGR（复合年化增长率）" in zh_locale["detail"]["returnBasisStock"]
+        assert "更接近分红再投入后的持有总收益" in zh_locale["detail"]["returnBasisStock"]
+        assert "不计现金分红" in zh_locale["detail"]["returnBasisStock"]
         assert zh_locale["detail"]["collapseOverview"] == "收起概览"
         assert en_locale["detail"]["cagr5y"] == "5-Year CAGR"
+        assert en_locale["detail"]["allTimeAdjustedReturn"] == "All-Time Total Return (Adjusted)"
+        assert en_locale["detail"]["allTimeUnadjustedReturn"] == "All-Time Price Return (Unadjusted)"
         assert en_locale["detail"]["winRate"] == "Win Rate"
         assert en_locale["detail"]["fundamentalsTitle"] == "Valuation & Market Snapshot"
         assert en_locale["tab"]["returnDetail"] == "Stock Detail"
@@ -726,6 +736,8 @@ class TestHtmlMeta:
         assert en_locale["detail"]["cryptoMarketData"] == "Market Data"
         assert en_locale["detail"]["officialAnnouncements"] == "Official Announcements"
         assert "compound annual growth rate" in en_locale["detail"]["returnBasisStock"]
+        assert "first valid trading day after listing" in en_locale["detail"]["returnBasisStock"]
+        assert "excludes cash dividends" in en_locale["detail"]["returnBasisStock"]
         assert en_locale["detail"]["collapseOverview"] == "Collapse overview"
 
     def test_stock_detail_has_fundamentals_history_shell_and_locales(self, client):
@@ -752,7 +764,7 @@ class TestHtmlMeta:
             'data-i18n-attr="aria-label|detail.fundamentalsHistoryAria"'
             in html
         )
-        assert INDEX_LASTMOD == "2026-08-29"
+        assert INDEX_LASTMOD == "2026-08-31"
 
         zh_locale = client.get("/locales/zh-CN.json").get_json()["detail"]
         en_locale = client.get("/locales/en.json").get_json()["detail"]

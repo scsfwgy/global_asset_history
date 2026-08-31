@@ -730,10 +730,13 @@ def _row_stats(month_values: List[Optional[float]]) -> Dict:
     }
 
 
-def _detail_price_points(series: PriceSeries) -> List[Tuple[date, float]]:
-    """Return sorted, finite adjusted-close points for detail analytics."""
+def _detail_price_points_from_values(
+    timestamps: List[int],
+    closes: List[Optional[float]],
+) -> List[Tuple[date, float]]:
+    """Return sorted, finite close-price points from aligned source values."""
     points = []
-    for timestamp, close in zip(series.timestamps, series.closes):
+    for timestamp, close in zip(timestamps, closes):
         try:
             numeric_close = float(close)
         except (TypeError, ValueError):
@@ -745,6 +748,21 @@ def _detail_price_points(series: PriceSeries) -> List[Tuple[date, float]]:
             numeric_close,
         ))
     return sorted(points, key=lambda point: point[0])
+
+
+def _detail_price_points(series: PriceSeries) -> List[Tuple[date, float]]:
+    """Return sorted, finite adjusted-close points for detail analytics."""
+    return _detail_price_points_from_values(series.timestamps, series.closes)
+
+
+def _detail_unadjusted_price_points(series: PriceSeries) -> List[Tuple[date, float]]:
+    """Return unadjusted closes, falling back when no separate series exists."""
+    closes = (
+        series.raw_closes
+        if series.raw_closes and len(series.raw_closes) == len(series.timestamps)
+        else series.closes
+    )
+    return _detail_price_points_from_values(series.timestamps, closes)
 
 
 def _date_years_before(value: date, years: int) -> date:
@@ -788,6 +806,15 @@ def _detail_period_return(
         else (total_factor - 1) * 100
     )
     return round(value, 2)
+
+
+def _detail_all_time_return(
+    points: List[Tuple[date, float]],
+) -> Optional[float]:
+    """Return cumulative adjusted-close performance across the full history."""
+    if len(points) < 2 or points[0][1] <= 0:
+        return None
+    return round((points[-1][1] / points[0][1] - 1) * 100, 2)
 
 
 def _detail_ytd_return(points: List[Tuple[date, float]]) -> Optional[float]:
@@ -1020,6 +1047,7 @@ def _build_detail_overview(
     points = _detail_price_points(series)
     if not points:
         return {}
+    unadjusted_points = _detail_unadjusted_price_points(series)
     latest_date, latest_adjusted_close = points[-1]
     latest_price = latest_adjusted_close
     price_basis = "adjusted_close"
@@ -1047,6 +1075,8 @@ def _build_detail_overview(
     ]
     best_year = max(complete_years, key=lambda item: item[1]) if complete_years else None
     worst_year = min(complete_years, key=lambda item: item[1]) if complete_years else None
+    all_time_adjusted_return = _detail_all_time_return(points)
+    all_time_unadjusted_return = _detail_all_time_return(unadjusted_points)
     return {
         "symbol": symbol,
         "type": asset_type,
@@ -1059,6 +1089,16 @@ def _build_detail_overview(
         "updated_at": datetime.fromtimestamp(series.fetched_at, tz=timezone.utc).isoformat(),
         "current_year_is_ytd": current_year_is_ytd,
         "ytd_return": _detail_ytd_return(points),
+        # Keep the original field as an adjusted-close compatibility alias.
+        "all_time_return": all_time_adjusted_return,
+        "all_time_adjusted_return": all_time_adjusted_return,
+        "all_time_unadjusted_return": all_time_unadjusted_return,
+        "all_time_unadjusted_first_date": (
+            unadjusted_points[0][0].isoformat() if unadjusted_points else None
+        ),
+        "all_time_unadjusted_latest_date": (
+            unadjusted_points[-1][0].isoformat() if unadjusted_points else None
+        ),
         "one_year_return": _detail_period_return(points, 1),
         "cagr_3y": _detail_period_return(points, 3, annualized=True),
         "cagr_5y": _detail_period_return(points, 5, annualized=True),
