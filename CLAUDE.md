@@ -141,7 +141,7 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 
 全部脚本都是 classic script，并通过加载顺序共享全局常量、函数和状态。新增脚本时必须检查 `price-change.html` 底部的加载顺序。
 
-功能更新通知由 `frontend/config/feature-updates.json` 手动控制。配置是按时间排列的版本数组，最后一项为最新版本；发布时只需在数组末尾追加包含数字 `version`、`date`、`zh` 和 `en` 的对象，`date` 固定使用 `YYYY.MM.DD` 格式，双语内容均为字符串列表。空数组会关闭提醒。用户只有点击确认按钮后才会在 localStorage 记录最新版本，弹窗可切换查看全部历史更新。
+功能更新通知由 HomeTools 管理后台管理，内容存储在 GlobalAssetHistory Redis。配置是按时间排列的版本数组，最后一项为最新版本；发布时只需在后台新增包含数字 `version`、`date`、`zh` 和 `en` 的版本，`date` 固定使用 `YYYY.MM.DD` 格式，双语内容均为字符串列表。后台关闭开关会停止提醒并保留历史。用户只有点击确认按钮后才会在 localStorage 记录最新版本，弹窗可切换查看全部历史更新。
 
 ### 用户功能与代码入口
 
@@ -191,8 +191,8 @@ PORT=8080 ./start.sh debug
 - `FLASK_DEBUG`：是否开启 Flask debug/reloader
 - `REQUEST_LOG`：是否记录脱敏后的结构化 API 请求日志，默认开启
 - `SITE_URL`：SEO 绝对站点地址
-- `WISH_ADMIN_TOKEN`：心愿管理和 `/api/stats` 鉴权
-- `STATS_READ_TOKEN`：HomeTools 只读汇总接口 `/api/admin/stats` 的独立 Bearer Token，不接受 URL 参数、不授予业务写权限
+- `WISH_ADMIN_TOKEN`：心愿管理鉴权
+- `STATS_READ_TOKEN`：HomeTools `/api/admin/stats` 统计读取及 `/api/admin/config/<kind>` 通知配置 GET/PUT 的 Bearer Token，不接受 URL 参数
 - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`：首选共享缓存变量
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN`：兼容变量
 
@@ -271,3 +271,6 @@ SEO 分享图片必须实际存在于 `frontend/doc/screenshot/`，因为 Vercel
 - 与用户使用中文交流。
 - 代码注释保持英文。
 - 说明结果、验证情况和真实风险，不要把推测写成事实。
+
+### 集中运营后台
+统计界面迁至 HomeTools `/admin/sites?source=globalassets`；源站 `/api/stats` 仅跳转，不再渲染统计 HTML。`routes/site_config.py` 和 `service/site_config.py` 提供通知管理与公开动态读取，网页脚本使用 `/api/site-config/feature-updates`、`/api/site-config/knowledge-notices`，更新无需改静态文件。Redis 存储不设 TTL，保存必须成功且校验 revision；停用保留历史。

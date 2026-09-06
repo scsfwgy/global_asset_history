@@ -1,14 +1,14 @@
 /**
  * Versioned feature-update notice.
  *
- * Releases live in /config/feature-updates.json. The last release is current,
+ * Releases live in the server-side Redis-backed site-config API. The last release is current,
  * and it is considered read only after the user confirms it.
  */
 (function () {
   'use strict';
 
   var STORAGE_KEY = 'gah-feature-update-seen-version';
-  var CONFIG_PATH = '/config/feature-updates.json';
+  var CONFIG_PATH = '/api/site-config/feature-updates';
   var cachedConfig = null;
 
   // Notices share a single modal slot, so a new-user guide and an update log
@@ -211,7 +211,7 @@
 
   function showFeatureUpdates() {
     if (cachedConfig) { window.gahEnqueueNotice(function (done) { openDialog(cachedConfig, done); }); return; }
-    fetch(configUrl(), { headers: { Accept: 'application/json' } })
+    fetch(configUrl(), { cache: 'no-store', headers: { Accept: 'application/json' } })
       .then(function (response) {
         if (!response.ok) throw new Error('feature update config unavailable');
         return response.json();
@@ -225,7 +225,7 @@
 
   window.showFeatureUpdates = showFeatureUpdates;
 
-  fetch(configUrl(), { headers: { Accept: 'application/json' } })
+  fetch(configUrl(), { cache: 'no-store', headers: { Accept: 'application/json' } })
     .then(function (response) {
       if (!response.ok) throw new Error('feature update config unavailable');
       return response.json();

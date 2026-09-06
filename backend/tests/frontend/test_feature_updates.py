@@ -1,7 +1,6 @@
 """Integration checks for the versioned feature-update notice."""
 
 import json
-from datetime import datetime
 from pathlib import Path
 
 
@@ -12,19 +11,9 @@ def _source(relative_path: str) -> str:
     return (ROOT / relative_path).read_text(encoding="utf-8")
 
 
-def test_feature_update_config_is_a_bilingual_release_list():
-    releases = json.loads(_source("frontend/config/feature-updates.json"))
-
-    assert isinstance(releases, list)
-    assert releases
-    assert len({release["version"] for release in releases}) == len(releases)
-    for release in releases:
-        assert isinstance(release["version"], int) and release["version"] > 0
-        assert datetime.strptime(release["date"], "%Y.%m.%d")
-        assert release["zh"]
-        assert release["en"]
-        assert all(isinstance(item, str) and item.strip() for item in release["zh"])
-        assert all(isinstance(item, str) and item.strip() for item in release["en"])
+def test_local_notice_config_files_are_removed():
+    assert not (ROOT / 'frontend/config/feature-updates.json').exists()
+    assert not (ROOT / 'frontend/config/knowledge-notices.json').exists()
 
 
 def test_feature_update_dialog_and_history_controls_are_wired_into_the_main_page():
@@ -89,7 +78,7 @@ def test_settings_feature_list_ui_and_copy_are_removed():
 def test_feature_update_script_uses_last_release_and_confirms_once():
     script = _source("frontend/js/feature-updates.js")
 
-    assert "'/config/feature-updates.json'" in script
+    assert "'/api/site-config/feature-updates'" in script
     assert "'gah-feature-update-seen-version'" in script
     assert "if (!Array.isArray(config)) return [];" in script
     assert "languageKey = lang === 'en' ? 'en' : 'zh'" in script
@@ -108,53 +97,25 @@ def test_feature_update_script_uses_last_release_and_confirms_once():
     assert "noticeQueue.sort" in script
 
 
-def test_feature_update_config_is_served_with_the_frontend_cache_policy():
+def test_feature_update_feed_is_dynamic_and_never_cached(monkeypatch):
     from app import app as flask_app
-
-    flask_app.config["TESTING"] = True
+    from service import site_config
+    releases = [{'version': 1, 'date': '2026.01.01', 'zh': ['测试'], 'en': ['Test']}]
+    monkeypatch.setattr(site_config, 'read', lambda kind: {'enabled': True, 'items': releases})
     client = flask_app.test_client()
-    configured_releases = json.loads(_source("frontend/config/feature-updates.json"))
-    page = client.get("/zh/heatmap")
-    version = page.headers["X-Frontend-Version"]
-
-    unversioned = client.get("/config/feature-updates.json")
-    assert unversioned.status_code == 200
-    assert unversioned.get_json() == configured_releases
-    assert unversioned.headers["Cache-Control"] == "no-cache, max-age=0, must-revalidate"
-
-    versioned = client.get(f"/config/feature-updates.json?v={version}")
-    assert versioned.status_code == 200
-    assert versioned.get_json() == configured_releases
-    assert versioned.headers["Cache-Control"] == "public, max-age=31536000, immutable"
+    for url in ('/api/site-config/feature-updates', '/api/site-config/feature-updates?v=old'):
+        response = client.get(url)
+        assert response.json == releases
+        assert response.headers['Cache-Control'] == 'no-store'
+    assert client.get('/config/feature-updates.json').status_code == 404
 
 
 def test_versioned_knowledge_notice_supports_safe_clickable_links_and_once_only_display():
-    notices = json.loads(_source("frontend/config/knowledge-notices.json"))
     page = _source("frontend/price-change.html")
     script = _source("frontend/js/knowledge-notices.js")
     zh = json.loads(_source("frontend/locales/zh-CN.json"))["knowledgeNotice"]
     en = json.loads(_source("frontend/locales/en.json"))["knowledgeNotice"]
 
-    assert isinstance(notices, list) and notices
-    assert len({notice.get("version") for notice in notices}) == len(notices)
-    for notice in notices:
-        assert isinstance(notice.get("version"), int) and notice["version"] > 0
-        assert datetime.strptime(notice.get("date", ""), "%Y.%m.%d")
-        assert isinstance(notice.get("title"), dict)
-        assert all(isinstance(notice["title"].get(lang), str) and notice["title"][lang].strip()
-                   for lang in ("zh", "en"))
-        for lang in ("zh", "en"):
-            items = notice.get(lang)
-            assert isinstance(items, list) and items
-            for item in items:
-                assert isinstance(item, dict)
-                text = item.get("text")
-                link = item.get("link")
-                assert (isinstance(text, str) and text.strip()) or isinstance(link, dict)
-                if link is not None:
-                    assert isinstance(link.get("label"), str) and link["label"].strip()
-                    assert isinstance(link.get("href"), str)
-                    assert link["href"].startswith(("https://", "http://"))
     assert 'id="knowledgeNoticeDialog"' in page
     assert 'id="knowledgeNoticeList"' in page
     assert 'id="knowledgeNoticeConfirm"' in page
@@ -178,23 +139,16 @@ def test_versioned_knowledge_notice_supports_safe_clickable_links_and_once_only_
     assert {"title", "meta", "confirm"} <= en.keys()
 
 
-def test_knowledge_notice_config_is_served_with_the_frontend_cache_policy():
+def test_knowledge_notice_feed_is_dynamic_and_never_cached(monkeypatch):
     from app import app as flask_app
-
-    flask_app.config["TESTING"] = True
+    from service import site_config
+    notices = [{'version': 1, 'date': '2026.01.01', 'title': {'zh': '公告', 'en': 'Notice'},
+                'zh': [{'text': '测试'}], 'en': [{'text': 'Test'}]}]
+    monkeypatch.setattr(site_config, 'read', lambda kind: {'enabled': True, 'items': notices})
     client = flask_app.test_client()
-    configured_notices = json.loads(_source("frontend/config/knowledge-notices.json"))
-    page = client.get("/zh/heatmap")
-    version = page.headers["X-Frontend-Version"]
-
-    assert f'src="/js/knowledge-notices.js?v={version}"' in page.get_data(as_text=True)
-
-    unversioned = client.get("/config/knowledge-notices.json")
-    assert unversioned.status_code == 200
-    assert unversioned.get_json() == configured_notices
-    assert unversioned.headers["Cache-Control"] == "no-cache, max-age=0, must-revalidate"
-
-    versioned = client.get(f"/config/knowledge-notices.json?v={version}")
-    assert versioned.status_code == 200
-    assert versioned.get_json() == configured_notices
-    assert versioned.headers["Cache-Control"] == "public, max-age=31536000, immutable"
+    for url in ('/api/site-config/knowledge-notices', '/api/site-config/knowledge-notices?v=old'):
+        response = client.get(url)
+        assert response.json == notices
+        assert response.headers['Cache-Control'] == 'no-store'
+    assert client.get('/config/knowledge-notices.json').status_code == 404
+    assert "'/api/site-config/knowledge-notices'" in _source('frontend/js/knowledge-notices.js')

@@ -172,12 +172,12 @@ Redis 两套变量会自动识别，优先使用 `UPSTASH_*`。
 - 外部数据源地址
 - 站点基础配置
 
-`frontend/config/feature-updates.json` 控制功能更新弹窗：
+功能更新弹窗在 HomeTools 管理后台编辑，内容存储在 GlobalAssetHistory Redis：
 
 - 配置是一个版本数组，数组最后一项就是本次更新；发布时只需在末尾追加一项。
 - 每个版本只包含数字 `version`、`date`、`zh` 和 `en`；日期格式固定为 `YYYY.MM.DD`，两种语言都使用字符串列表维护更新内容。
 - 用户确认后会记住最后一项的版本号，同一版本只显示一次；后续追加新版本会再次提醒。
-- 弹窗中的“查看历史更新”会按新到旧展示整个数组；将数组设为空即可关闭提醒。
+- 弹窗中的“查看历史更新”会按新到旧展示整个数组；可在后台关闭提醒并保留历史。
 
 ```json
 [
@@ -324,3 +324,6 @@ Sitemap 只列语言前缀的 canonical URL，避免无前缀页面造成重复�
 欢迎提交缺陷修复、新数据源、测试、文档与无障碍改进。开始前请阅读[贡献指南](CONTRIBUTING.md)；安全漏洞请通过[私密渠道](SECURITY.md)报告，不要创建公开 issue。
 
 项目正在规划开源的数据适配器维护助手和可审计的双语自然语言研究层。设计原则、交付物、评估方式与明确排除的用途见 [AI 路线图](ROADMAP.md)。
+
+### 统一运营后台
+统计及版本更新通知、广告弹窗由 HomeTools `/admin/sites?source=globalassets` 查看和管理。统计入口 `/api/admin/stats`，通知管理 `/api/admin/config/{feature-updates|knowledge-notices}` 支持 GET/PUT，均使用 STATS_READ_TOKEN Bearer 鉴权。网页公开读取 `/api/site-config/<kind>`；通知历史全部来自 Redis，关闭保留历史。源站需配置 Redis 才能保存；HomeTools 无需新增环境变量。

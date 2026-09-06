@@ -16,7 +16,7 @@ from uuid import uuid4
 
 import qrcode
 from qrcode.image.svg import SvgPathImage
-from flask import Flask, Response, jsonify, request, send_from_directory
+from flask import Flask, Response, jsonify, redirect, request, send_from_directory
 from flask_cors import CORS
 
 from routes.price_change import price_change_bp
@@ -31,7 +31,10 @@ from service.price_change.price_change_service import _fetch_daily_series_cached
 from seo_data import QQQM_TOP_HOLDINGS
 from seo_rendering import prune_route_document
 
+from routes.site_config import site_config_bp
+
 app = Flask(__name__, static_folder=None)
+app.register_blueprint(site_config_bp)
 CORS(app)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -1427,15 +1430,13 @@ def admin_stats():
     return stats_dashboard(for_admin_api=True)
 
 
-@app.route("/api/stats")
-def stats_dashboard(for_admin_api=False):
-    """Admin-only stats dashboard. Access with ?token=<WISH_ADMIN_TOKEN>."""
-    if not for_admin_api and not _check_admin_token():
-        return Response(
-            "<h1>401 Unauthorized</h1><p>需要 ?token= 鉴权参数</p>",
-            status=401,
-        )
+@app.get('/api/stats')
+def stats_legacy():
+    return redirect('https://www.tools24.uk/admin/sites?source=globalassets', code=302)
 
+
+def stats_dashboard(for_admin_api=True):
+    """Export statistics for the centralized HomeTools dashboard."""
     language_stats = visitor_stats.get_language_stats()
 
     # Gather all stats from Redis (with file fallback for visit count + links)
@@ -1474,9 +1475,16 @@ def stats_dashboard(for_admin_api=False):
 
     if for_admin_api:
         user_series = _unique_visit_series()
+        labels = {"heatmap": "热力图", "yearly": "历年涨跌幅", "detail": "股票详情", "stock-compare": "美股对比",
+                  "download": "数据下载", "backtest": "回测", "crash": "暴跌统计", "etf": "场内 ETF", "qdii-funds": "场外基金",
+                  "vix": "美股恐慌指数", "knowledge": "数据科普", "wishes": "心愿墙", "exchange-loss": "汇率损失",
+                  "theme": "深浅色模式", "colorscheme": "涨跌配色", "language": "语言切换", "features": "功能菜单",
+                  "value-investing": "何为价值投资", "how-to-buy": "如何投资美股", "feishu_us_stock": "美股投资新途径",
+                  "github": "GitHub", "xiaohongshu": "小红书", "tools24": "开发者工具"}
         def breakdown(label, values):
             return {"label": label, "rows": [
-                {"name": name, "value": int(value)}
+                {"id": name, "name": labels.get(name, name), "value": int(value),
+                 "share": round(int(value) / sum(int(v) for v in values.values()) * 100, 1) if sum(int(v) for v in values.values()) else 0}
                 for name, value in sorted(values.items(), key=lambda item: int(item[1]), reverse=True)
             ]}
         return jsonify({"ok": True, "data": {
@@ -1489,6 +1497,9 @@ def stats_dashboard(for_admin_api=False):
                 {"label": "今日访客", "value": user_series[-1]["users"] if user_series else 0},
                 {"label": "近30日用户天次", "value": sum(row["users"] for row in user_series)},
                 {"label": "累计设置面板打开", "value": int(settings_count)},
+                {"label": "栏目总访问", "value": sum(int(v) for v in tab_stats.values())},
+                {"label": "广告与外链总点击", "value": sum(int(v) for v in ad_stats.values())},
+                {"label": "设置操作总数", "value": sum(int(v) for v in settings_actions.values())},
             ],
             "dailyUsers": user_series,
             "breakdowns": [breakdown("栏目访问 · 累计", tab_stats),
@@ -1498,183 +1509,9 @@ def stats_dashboard(for_admin_api=False):
                            breakdown("设备语言 · 累计唯一访客", language_stats["device_language"]),
                            breakdown("旧 Tools24 下载站 · 历史累计", tools24_stats)],
             "notes": ["访客按匿名 UUID 每日去重；用户天次为每日访客之和，不是月活。",
-                      "语言分组可重叠，不能相加作为总人数。旧 Tools24 计数不代表新版官网统计。",
+                      "占比为各分组计数之和中的比例；语言分组可重叠，不能相加作为总人数。旧 Tools24 计数不代表新版官网统计。",
                       "本地降级数据不代表跨实例完整统计。"],
         }}), 200, {"Cache-Control": "no-store"}
-
-    # Sort tab stats by count desc
-    tab_rows = ""
-    sorted_tabs = sorted(tab_stats.items(), key=lambda x: int(x[1]), reverse=True)
-    tab_labels = {
-        "heatmap": "热力图", "yearly": "历年涨跌幅", "detail": "股票详情",
-        "stock-compare": "美股对比", "download": "数据下载",
-        "backtest": "回测", "crash": "暴跌统计", "etf": "标普纳指ETF追踪（场内）",
-        "qdii-funds": "标普纳指基金追踪（场外）", "vix": "美股恐慌指数",
-        "knowledge": "数据科普", "wishes": "心愿墙",
-    }
-    for rank, (tab, count) in enumerate(sorted_tabs, 1):
-        label = tab_labels.get(tab, tab)
-        tab_rows += f"<tr><td>{rank}</td><td>{html.escape(label)}</td><td><code>{html.escape(tab)}</code></td><td>{count}</td></tr>"
-
-    if not sorted_tabs:
-        tab_rows = '<tr><td colspan="4" style="color:#666">暂无数据</td></tr>'
-
-    # Sort ad click stats by count desc
-    ad_rows = ""
-    sorted_ads = sorted(ad_stats.items(), key=lambda x: int(x[1]), reverse=True)
-    ad_labels = {
-        "value-investing": "何为价值投资",
-        "how-to-buy": "如何投资美股",
-        "feishu_us_stock": "美股投资新途径",
-        "github": "Github",
-        "xiaohongshu": "小红书",
-        "tools24": "开发者工具",
-    }
-    for rank, (link, count) in enumerate(sorted_ads, 1):
-        label = ad_labels.get(link, link)
-        ad_rows += f"<tr><td>{rank}</td><td>{html.escape(label)}</td><td><code>{html.escape(link)}</code></td><td>{count}</td></tr>"
-
-    if not sorted_ads:
-        ad_rows = '<tr><td colspan="4" style="color:#666">暂无数据</td></tr>'
-
-    # Settings menu toggle actions (theme / color scheme / language)
-    action_rows = ""
-    sorted_actions = sorted(settings_actions.items(), key=lambda x: int(x[1]), reverse=True)
-    action_labels = {
-        "theme": "深色/浅色模式",
-        "colorscheme": "涨跌配色",
-        "language": "语言切换",
-    }
-    for rank, (action, count) in enumerate(sorted_actions, 1):
-        label = action_labels.get(action, action)
-        action_rows += f"<tr><td>{rank}</td><td>{html.escape(label)}</td><td><code>{html.escape(action)}</code></td><td>{count}</td></tr>"
-
-    if not sorted_actions:
-        action_rows = '<tr><td colspan="4" style="color:#666">暂无数据</td></tr>'
-
-    total_tab_views = sum(int(v) for v in tab_stats.values())
-    total_ad_clicks = sum(int(v) for v in ad_stats.values())
-    total_settings_actions = sum(int(v) for v in settings_actions.values())
-    tools24_page_views = tools24_stats["page_view"]
-    tools24_download_clicks = tools24_stats["download"]
-    tools24_google_play_clicks = tools24_stats["google_play"]
-    user_series = _unique_visit_series()
-    today_users = user_series[-1]["users"] if user_series else 0
-    month_user_days = sum(item["users"] for item in user_series)
-    max_users = max([item["users"] for item in user_series] + [1])
-    user_bars = ""
-    for item in user_series:
-        users = item["users"]
-        height = max(3, round(users / max_users * 100)) if users else 3
-        value = users if users else ""
-        user_bars += (
-            f'<div class="uv-bar-item" title="{html.escape(item["date"])}：{users} 个唯一用户">'
-            f'<div class="uv-bar-value">{value}</div>'
-            f'<div class="uv-bar" style="height:{height}%"></div>'
-            f'<div class="uv-bar-label">{html.escape(item["date"][5:])}</div>'
-            f'</div>'
-        )
-
-    def percentage(count: int, total: int) -> str:
-        return f"{count / total * 100:.1f}%" if total else "0.0%"
-
-    site_languages = language_stats["site_language"]
-    site_language_total = sum(site_languages.values())
-    site_language_cards = ""
-    for language, label in (("zh-CN", "简体中文"), ("zh-TW", "繁體中文"), ("en", "English")):
-        count = int(site_languages.get(language, 0))
-        site_language_cards += (
-            f'<div class="summary-card language-card" data-language="{language}">'
-            f'<div class="num">{count}</div>'
-            f'<div class="label">{label} · {percentage(count, site_language_total)}</div>'
-            f'</div>'
-        )
-
-    device_languages = language_stats["device_language"]
-    device_language_total = sum(device_languages.values())
-    sorted_device_languages = sorted(
-        device_languages.items(),
-        key=lambda item: (-int(item[1]), item[0]),
-    )
-    device_language_rows = ""
-    for rank, (language, count) in enumerate(sorted_device_languages, 1):
-        safe_language = html.escape(language)
-        device_language_rows += (
-            f"<tr><td>{rank}</td><td><code>{safe_language}</code></td>"
-            f"<td>{int(count)}</td><td>{percentage(int(count), device_language_total)}</td></tr>"
-        )
-    if not device_language_rows:
-        device_language_rows = '<tr><td colspan="4" style="color:#666">暂无数据</td></tr>'
-
-    html_page = f"""<!DOCTYPE html>
-<meta charset="utf-8"><title>站点统计 — GlobalAssetHistory</title>
-<meta name="robots" content="noindex,nofollow">
-<style>
-body{{font-family:system-ui,-apple-system,Helvetica,Arial,sans-serif;max-width:900px;margin:30px auto;padding:0 20px;background:#f5f5f7;color:#1d1d1f}}
-@media(prefers-color-scheme:dark){{body{{background:#111;color:#eee}}}}
-h1{{font-size:1.4rem;margin-bottom:4px}}h2{{font-size:1rem;margin:28px 0 10px;color:#86868b}}
-.summary{{display:flex;gap:16px;margin:16px 0;flex-wrap:wrap}}
-.summary-card{{background:#fff;border-radius:12px;padding:14px 20px;min-width:130px;box-shadow:0 1px 3px rgba(0,0,0,.08)}}
-@media(prefers-color-scheme:dark){{.summary-card{{background:#1a1a1a}}}}
-.summary-card .num{{font-size:2rem;font-weight:700;color:#0071e3}}
-.summary-card .label{{font-size:.75rem;color:#86868b;margin-top:2px}}
-.uv-chart{{overflow-x:auto;height:180px;display:grid;grid-template-columns:repeat(30,minmax(12px,1fr));gap:6px;align-items:end;padding:16px 12px 10px;margin:10px 0 22px;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}}
-@media(prefers-color-scheme:dark){{.uv-chart{{background:#1a1a1a}}}}
-.uv-bar-item{{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0}}
-.uv-bar-value{{height:18px;font-size:.68rem;color:#86868b;font-variant-numeric:tabular-nums}}
-.uv-bar{{width:100%;max-width:20px;min-height:3px;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,#0071e3,#5856d6)}}
-.uv-bar-label{{margin-top:6px;font-size:.62rem;color:#86868b;writing-mode:vertical-rl;line-height:1}}
-table{{width:100%;border-collapse:collapse;margin-bottom:8px;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}}
-@media(prefers-color-scheme:dark){{table{{background:#1a1a1a}}}}
-th,td{{padding:8px 12px;text-align:left;border-bottom:1px solid #e5e5e5}}
-@media(prefers-color-scheme:dark){{th,td{{border-color:#333}}}}
-th{{color:#86868b;font-size:.75rem;font-weight:600}}
-td{{font-size:.82rem}}tr:hover{{background:#f5f5f7}}
-@media(prefers-color-scheme:dark){{tr:hover{{background:#222}}}}
-code{{color:#0071e3;font-size:.78rem}}
-.sub{{font-size:.7rem;color:#86868b}}
-</style>
-<h1>📊 GlobalAssetHistory 站点统计</h1>
-<div class="summary">
-<div class="summary-card"><div class="num">{visit_count}</div><div class="label">总访问次数</div></div>
-<div class="summary-card"><div class="num">{today_users}</div><div class="label">今日用户</div></div>
-<div class="summary-card"><div class="num">{month_user_days}</div><div class="label">近30日用户天次</div></div>
-<div class="summary-card"><div class="num">{total_tab_views}</div><div class="label">Tab 浏览</div></div>
-<div class="summary-card"><div class="num">{total_ad_clicks}</div><div class="label">广告位点击</div></div>
-<div class="summary-card"><div class="num">{settings_count}</div><div class="label">设置面板打开</div></div>
-<div class="summary-card"><div class="num">{total_settings_actions}</div><div class="label">设置项操作</div></div>
-</div>
-
-<h2>👤 每日唯一用户 <span class="sub">（匿名 UUID 去重，仅保留最近 30 天）</span></h2>
-<div class="uv-chart" aria-label="最近 30 天每日唯一用户柱状图">{user_bars}</div>
-
-<h2>🌐 网站使用语言 · 累计唯一用户 <span class="sub">（简体 / 繁体 / English 分别去重）</span></h2>
-<div class="summary">{site_language_cards}</div>
-<p class="sub">同一匿名用户使用过两种网站语言时会进入两个分组，分组可重叠。</p>
-
-<h2>🖥️ 设备本身语言 · 累计唯一用户 <span class="sub">（完整 navigator.language）</span></h2>
-<table><thead><tr><th>#</th><th>完整设备语言</th><th>人数</th><th>占比</th></tr></thead><tbody>{device_language_rows}</tbody></table>
-<p class="sub">设备语言变更后同一匿名用户可能进入多个分组，分组可重叠。</p>
-
-<h2>📑 Tab 访问排行 <span class="sub">（所有用户累计）</span></h2>
-<table><thead><tr><th>#</th><th>Tab</th><th>ID</th><th>次数</th></tr></thead><tbody>{tab_rows}</tbody></table>
-
-<h2>🔗 广告位 / 外链点击排行 <span class="sub">（所有用户累计）</span></h2>
-<table><thead><tr><th>#</th><th>链接</th><th>ID</th><th>次数</th></tr></thead><tbody>{ad_rows}</tbody></table>
-
-<h2>⚙️ 设置项操作排行 <span class="sub">（所有用户累计）</span></h2>
-<table><thead><tr><th>#</th><th>操作</th><th>ID</th><th>次数</th></tr></thead><tbody>{action_rows}</tbody></table>
-
-<h2>📱 Tools24 官方下载站 <span class="sub">（app.tools24.uk）</span></h2>
-<div class="summary">
-<div class="summary-card"><div class="num">{tools24_page_views}</div><div class="label">页面访问次数</div></div>
-<div class="summary-card"><div class="num">{tools24_download_clicks}</div><div class="label">下载按钮点击</div></div>
-<div class="summary-card"><div class="num">{tools24_google_play_clicks}</div><div class="label">Google Play 访问</div></div>
-</div>
-
-<p class="sub" style="margin-top:24px">数据来源：Upstash Redis <code>gah:tab_visits</code> / <code>gah:site_language_users:*</code> / <code>gah:device_language_users:*</code> / <code>gah:ad_clicks</code> / <code>gah:settings_actions</code> / <code>gah:link_click:*</code> / <code>gah:tools24_*</code></p>"""
-    return html_page
-
 
 _LINK_CLICKS_PATH = Path("/tmp/link_clicks.json") if os.path.exists("/tmp") else \
     Path(__file__).resolve().parent / "config" / "link_clicks.json"

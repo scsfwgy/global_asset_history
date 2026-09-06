@@ -26,3 +26,21 @@ def test_admin_stats_exports_separate_legacy_and_language_data(client, monkeypat
 def test_unconfigured_export_is_closed(client, monkeypatch):
     monkeypatch.delenv('STATS_READ_TOKEN', raising=False)
     assert client.get('/api/admin/stats', headers={'Authorization': 'Bearer '}).status_code == 401
+
+
+def test_export_keeps_missing_summary_metrics_and_labels(client, monkeypatch):
+    import app as app_module
+    monkeypatch.setenv('STATS_READ_TOKEN', 'stats-reader')
+    monkeypatch.setattr(app_module.cache_store, 'is_enabled', lambda: True)
+    values = {app_module._TAB_VISITS_KEY: {'yearly': '4', 'detail': '6'},
+              app_module._AD_CLICKS_KEY: {'value-investing': '3'},
+              app_module._SETTINGS_ACTIONS_KEY: {'theme': '2'}}
+    monkeypatch.setattr(app_module.cache_store, 'cache_hgetall', lambda key: dict(values.get(key, {})))
+    monkeypatch.setattr(app_module.cache_store, 'cache_get', lambda key: None)
+    monkeypatch.setattr(app_module.visitor_stats, 'get_language_stats', lambda: {'site_language': {}, 'device_language': {}})
+    data = client.get('/api/admin/stats', headers={'Authorization': 'Bearer stats-reader'}).json['data']
+    metrics = {row['label']: row['value'] for row in data['metrics']}
+    assert metrics['栏目总访问'] == 10
+    assert metrics['广告与外链总点击'] == 3
+    assert metrics['设置操作总数'] == 2
+    assert data['breakdowns'][0]['rows'][0] == {'id': 'detail', 'name': '股票详情', 'value': 6, 'share': 60.0}

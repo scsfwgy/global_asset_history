@@ -197,109 +197,44 @@ class TestVisitorStatsPages:
 
 
 class TestAdminStatsDashboard:
-    """GET /api/stats — admin-only HTML dashboard"""
-
-    FAKE_TOKEN = "test-admin-token-123"
+    FAKE_TOKEN = 'test-admin-token-123'
 
     @pytest.fixture(autouse=True)
     def set_admin_token(self, monkeypatch):
-        monkeypatch.setenv("WISH_ADMIN_TOKEN", self.FAKE_TOKEN)
+        monkeypatch.setenv('STATS_READ_TOKEN', self.FAKE_TOKEN)
 
-    def test_stats_unauthorized_without_token(self, client):
-        resp = client.get("/api/stats")
-        assert resp.status_code == 401
-        assert b"401" in resp.data
+    def read(self, client):
+        response = client.get('/api/admin/stats', headers={'Authorization': 'Bearer ' + self.FAKE_TOKEN})
+        assert response.status_code == 200
+        return response.json['data']
 
-    def test_stats_unauthorized_with_wrong_token(self, client):
-        resp = client.get("/api/stats?token=wrong")
-        assert resp.status_code == 401
-
-    def test_stats_authorized_with_correct_token(self, client):
-        resp = client.get(f"/api/stats?token={self.FAKE_TOKEN}")
-        assert resp.status_code == 200
-        html = resp.get_data(as_text=True)
-        assert "GlobalAssetHistory" in html
-        assert "总访问次数" in html
-        assert "Tab 浏览" in html
-        assert "广告位点击" in html
-        assert "设置面板打开" in html
-        assert "设置项操作" in html
-        assert "每日唯一用户" in html
-        assert "匿名 UUID 去重，仅保留最近 30 天" in html
-        assert 'class="uv-chart"' in html
-        assert ".uv-chart{overflow-x:auto" in html
-
-    def test_stats_shows_tracked_data(self, client):
-        # Track some events first
-        client.post("/api/track", json={"type": "tab_view", "tab": "yearly"})
-        client.post("/api/track", json={"type": "tab_view", "tab": "yearly"})
-        client.post("/api/track", json={"type": "ad_click", "link": "value-investing"})
-        client.post("/api/track", json={"type": "settings_click"})
-
-        resp = client.get(f"/api/stats?token={self.FAKE_TOKEN}")
-        assert resp.status_code == 200
-        # File-based counter should show the data since Redis is not configured in tests
-        html = resp.get_data(as_text=True)
-        # The dashboard should at least render without errors
-        assert "<table>" in html
+    def test_old_dashboard_moves_to_hometools_without_forwarding_token(self, client):
+        response = client.get('/api/stats?token=old-secret')
+        assert response.status_code == 302
+        assert response.headers['Location'] == 'https://www.tools24.uk/admin/sites?source=globalassets'
 
     def test_stats_dashboard_shows_unique_user_count(self, client):
-        client.post("/api/visits/increment", json={"anonymous_id": "11111111-1111-4111-8111-111111111111"})
-        client.post("/api/visits/increment", json={"anonymous_id": "22222222-2222-4222-8222-222222222222"})
-
-        resp = client.get(f"/api/stats?token={self.FAKE_TOKEN}")
-        html = resp.get_data(as_text=True)
-
-        assert resp.status_code == 200
-        assert '<div class="num">2</div><div class="label">今日用户</div>' in html
-        assert "近30日用户天次" in html
+        for uid in ('11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222'):
+            client.post('/api/visits/increment', json={'anonymous_id': uid})
+        data = self.read(client)
+        assert {row['label']: row['value'] for row in data['metrics']}['今日访客'] == 2
+        assert data['dailyUsers'][-1]['users'] == 2
 
     def test_stats_dashboard_shows_tools24_stats(self, client):
-        client.post("/api/tools24/track", json={"event": "page_view"})
-        client.post("/api/tools24/track", json={"event": "download"})
-        client.post("/api/tools24/track", json={"event": "google_play"})
+        for event in ('page_view', 'download', 'google_play'):
+            client.post('/api/tools24/track', json={'event': event})
+        groups = self.read(client)['breakdowns']
+        rows = next(g['rows'] for g in groups if g['label'] == '旧 Tools24 下载站 · 历史累计')
+        assert {r['id']: r['value'] for r in rows} == {'page_view': 1, 'download': 1, 'google_play': 1}
 
-        resp = client.get(f"/api/stats?token={self.FAKE_TOKEN}")
-        assert resp.status_code == 200
-        html = resp.get_data(as_text=True)
-
-        assert "Tools24 官方下载站" in html
-        assert '<div class="num">1</div><div class="label">页面访问次数</div>' in html
-        assert '<div class="num">1</div><div class="label">下载按钮点击</div>' in html
-        assert '<div class="num">1</div><div class="label">Google Play 访问</div>' in html
-
-
-    def test_stats_dashboard_shows_two_independent_language_distributions(self, client):
-        visits = [
-            ("11111111-1111-4111-8111-111111111111", "zh-CN", "en-US"),
-            ("11111111-1111-4111-8111-111111111111", "en", "en-US"),
-            ("22222222-2222-4222-8222-222222222222", "zh-CN", "zh-TW"),
-            ("33333333-3333-4333-8333-333333333333", "fr", "bad language!"),
-        ]
-        for anonymous_id, site_language, device_language in visits:
-            client.post(
-                "/api/visits/increment",
-                json={
-                    "anonymous_id": anonymous_id,
-                    "site_language": site_language,
-                    "device_language": device_language,
-                },
-            )
-
-        resp = client.get(f"/api/stats?token={self.FAKE_TOKEN}")
-        html = resp.get_data(as_text=True)
-
-        assert resp.status_code == 200
-        assert "网站使用语言 · 累计唯一用户" in html
-        assert 'data-language="zh-CN"' in html
-        assert '<div class="num">2</div><div class="label">简体中文 · 66.7%</div>' in html
-        assert 'data-language="zh-TW"' in html
-        assert '<div class="num">0</div><div class="label">繁體中文 · 0.0%</div>' in html
-        assert 'data-language="en"' in html
-        assert '<div class="num">1</div><div class="label">English · 33.3%</div>' in html
-        assert "设备本身语言 · 累计唯一用户" in html
-        assert "<code>en-US</code>" in html
-        assert "<code>zh-TW</code>" in html
-        assert "<code>unknown</code>" in html
-        assert "<code>fr</code>" not in html
-        assert "分组可重叠" in html
+    def test_independent_language_distributions_and_shares(self, client):
+        for uid, lang, device in [('11111111-1111-4111-8111-111111111111','zh-CN','en-US'),
+                                  ('11111111-1111-4111-8111-111111111111','en','en-US'),
+                                  ('22222222-2222-4222-8222-222222222222','zh-CN','zh-TW')]:
+            client.post('/api/visits/increment', json={'anonymous_id': uid, 'site_language': lang, 'device_language': device})
+        groups = self.read(client)['breakdowns']
+        site = next(g['rows'] for g in groups if g['label'].startswith('网站使用语言'))
+        assert {r['id']: r['value'] for r in site} == {'zh-CN': 2, 'en': 1, 'zh-TW': 0}
+        assert {r['id']: r['share'] for r in site}['zh-CN'] == 66.7
+        device = next(g['rows'] for g in groups if g['label'].startswith('设备语言'))
+        assert {r['id']: r['value'] for r in device} == {'en-US': 1, 'zh-TW': 1}

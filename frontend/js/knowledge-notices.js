@@ -8,7 +8,7 @@
   'use strict';
 
   var STORAGE_KEY = 'gah-knowledge-notice-seen-version';
-  var CONFIG_PATH = '/config/knowledge-notices.json';
+  var CONFIG_PATH = '/api/site-config/knowledge-notices';
 
   function getSeenVersion() {
     try {
@@ -168,7 +168,7 @@
     enqueueNotice(function (done) { openDialog(config, done); });
   }
 
-  fetch(configUrl(), { headers: { Accept: 'application/json' } })
+  fetch(configUrl(), { cache: 'no-store', headers: { Accept: 'application/json' } })
     .then(function (response) {
       if (!response.ok) throw new Error('knowledge notice config unavailable');
       return response.json();
