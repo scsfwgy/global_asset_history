@@ -1417,10 +1417,20 @@ def tools24_track():
 
 
 # ─── Admin stats dashboard ──────────────────────────────────────────────────
+@app.get("/api/admin/stats")
+def admin_stats():
+    """Read-only aggregate export for HomeTools, authenticated by header only."""
+    expected = os.getenv("STATS_READ_TOKEN", "")
+    supplied = request.headers.get("Authorization", "")
+    if not expected or not hmac.compare_digest(supplied.encode(), f"Bearer {expected}".encode()):
+        return jsonify({"ok": False, "error": {"code": "unauthorized", "message": "Unauthorized"}}), 401, {"Cache-Control": "no-store"}
+    return stats_dashboard(for_admin_api=True)
+
+
 @app.route("/api/stats")
-def stats_dashboard():
+def stats_dashboard(for_admin_api=False):
     """Admin-only stats dashboard. Access with ?token=<WISH_ADMIN_TOKEN>."""
-    if not _check_admin_token():
+    if not for_admin_api and not _check_admin_token():
         return Response(
             "<h1>401 Unauthorized</h1><p>需要 ?token= 鉴权参数</p>",
             status=401,
@@ -1461,6 +1471,36 @@ def stats_dashboard():
         tools24_stats = {
             event: str(tools24_file.get(event, 0)) for event in _TOOLS24_STATS_KEYS
         }
+
+    if for_admin_api:
+        user_series = _unique_visit_series()
+        def breakdown(label, values):
+            return {"label": label, "rows": [
+                {"name": name, "value": int(value)}
+                for name, value in sorted(values.items(), key=lambda item: int(item[1]), reverse=True)
+            ]}
+        return jsonify({"ok": True, "data": {
+            "schemaVersion": 1, "source": "globalassets",
+            "generatedAt": datetime.now(timezone.utc).isoformat(),
+            "timezone": datetime.now().astimezone().tzname(),
+            "storage": "redis" if cache_store.is_enabled() else "local-fallback",
+            "metrics": [
+                {"label": "累计页面访问", "value": int(visit_count)},
+                {"label": "今日访客", "value": user_series[-1]["users"] if user_series else 0},
+                {"label": "近30日用户天次", "value": sum(row["users"] for row in user_series)},
+                {"label": "累计设置面板打开", "value": int(settings_count)},
+            ],
+            "dailyUsers": user_series,
+            "breakdowns": [breakdown("栏目访问 · 累计", tab_stats),
+                           breakdown("外链与广告点击 · 累计", ad_stats),
+                           breakdown("设置操作 · 累计", settings_actions),
+                           breakdown("网站使用语言 · 累计唯一访客", language_stats["site_language"]),
+                           breakdown("设备语言 · 累计唯一访客", language_stats["device_language"]),
+                           breakdown("旧 Tools24 下载站 · 历史累计", tools24_stats)],
+            "notes": ["访客按匿名 UUID 每日去重；用户天次为每日访客之和，不是月活。",
+                      "语言分组可重叠，不能相加作为总人数。旧 Tools24 计数不代表新版官网统计。",
+                      "本地降级数据不代表跨实例完整统计。"],
+        }}), 200, {"Cache-Control": "no-store"}
 
     # Sort tab stats by count desc
     tab_rows = ""

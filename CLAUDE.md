@@ -192,6 +192,7 @@ PORT=8080 ./start.sh debug
 - `REQUEST_LOG`：是否记录脱敏后的结构化 API 请求日志，默认开启
 - `SITE_URL`：SEO 绝对站点地址
 - `WISH_ADMIN_TOKEN`：心愿管理和 `/api/stats` 鉴权
+- `STATS_READ_TOKEN`：HomeTools 只读汇总接口 `/api/admin/stats` 的独立 Bearer Token，不接受 URL 参数、不授予业务写权限
 - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`：首选共享缓存变量
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN`：兼容变量
 

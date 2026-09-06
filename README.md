@@ -10,6 +10,8 @@ GlobalAssetHistory 是一个 Apache-2.0 开源、可自行部署的跨资产历�
 
 ## 功能总览
 
+运营统计可通过 HomeTools `/admin/sites` 统一查看。本站新增 `GET /api/admin/stats`，源站环境变量 `STATS_READ_TOKEN` 仅通过 `Authorization: Bearer ...` 请求头验证，只导出聚合统计。原 `/api/stats` 管理页面、计数与 Redis 键保留；旧 Tools24 下载站计数单独标记历史数据。HomeTools 配置 `GLOBALASSETS_STATS_URL`（例如 `https://qqq.tools24.uk/api/admin/stats`）及匹配的 `GLOBALASSETS_STATS_TOKEN` 后，需双方部署才能联通。
+
 主站提供 12 个用户功能入口；同一个功能可通过简体 `/zh/...`、繁体 `/zh-TW/...`、英文 `/en/...` 或无语言前缀路径访问（无前缀时默认跟随浏览器语言）。
 
 | 功能 | 路径 | 主要能力 |
