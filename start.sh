@@ -169,17 +169,27 @@ show_logs() {
 kill_port_if_needed() {
     local port="${PORT:-8730}"
     local pids
-    pids=$(lsof -ti :"$port" 2>/dev/null || true)
-    if [ -n "$pids" ]; then
-        echo "端口 $port 被 PID $pids 占用，正在释放..."
-        kill -9 $pids 2>/dev/null || true
+    # Only stop listeners, never clients connected to this port.
+    pids=$(lsof -t -iTCP:"$port" -sTCP:LISTEN 2>/dev/null | sort -u || true)
+    if [ -z "$pids" ]; then
+        return 0
+    fi
+    echo "端口 $port 被 PID $pids 占用，正在释放..."
+    # Allow Python to clean up resources before falling back to SIGKILL.
+    kill -TERM $pids 2>/dev/null || true
+    for _ in $(seq 1 10); do
         sleep 0.5
-        # Double-check: if still occupied, kill again
-        pids=$(lsof -ti :"$port" 2>/dev/null || true)
-        if [ -n "$pids" ]; then
-            kill -9 $pids 2>/dev/null || true
-            sleep 0.5
+        pids=$(lsof -t -iTCP:"$port" -sTCP:LISTEN 2>/dev/null | sort -u || true)
+        if [ -z "$pids" ]; then
+            return 0
         fi
+    done
+    echo "服务未及时退出，强制释放端口 $port..."
+    kill -KILL $pids 2>/dev/null || true
+    sleep 0.5
+    if lsof -t -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+        echo "无法释放端口 $port，已停止启动" >&2
+        return 1
     fi
 }
 
