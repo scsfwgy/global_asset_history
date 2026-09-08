@@ -327,3 +327,7 @@ Sitemap 只列语言前缀的 canonical URL，避免无前缀页面造成重复�
 
 ### 统一运营后台
 统计及版本更新通知、广告弹窗由 HomeTools `/admin/sites?source=globalassets` 查看和管理。统计入口 `/api/admin/stats`，通知管理 `/api/admin/config/{feature-updates|knowledge-notices}` 支持 GET/PUT，均使用 STATS_READ_TOKEN Bearer 鉴权。网页公开读取 `/api/site-config/<kind>`；通知历史全部来自 Redis，关闭保留历史。源站需配置 Redis 才能保存；HomeTools 无需新增环境变量。
+
+### 新增 ETF 入口
+
+热门美股 ETF 预设包含 SSO（标普500每日2倍做多）和 UPRO（标普500每日3倍做多），使用基金自身历史行情；其它场内 ETF 包含 513400（道琼斯ETF鹏华），展示行情、历史和费率，不套用标普或纳指估值基准。

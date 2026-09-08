@@ -274,3 +274,7 @@ SEO 分享图片必须实际存在于 `frontend/doc/screenshot/`，因为 Vercel
 
 ### 集中运营后台
 统计界面迁至 HomeTools `/admin/sites?source=globalassets`；源站 `/api/stats` 仅跳转，不再渲染统计 HTML。`routes/site_config.py` 和 `service/site_config.py` 提供通知管理与公开动态读取，网页脚本使用 `/api/site-config/feature-updates`、`/api/site-config/knowledge-notices`，更新无需改静态文件。Redis 存储不设 TTL，保存必须成功且校验 revision；停用保留历史。
+
+### 新增 ETF 入口
+
+热门美股 ETF 预设包含 SSO（标普500每日2倍做多）和 UPRO（标普500每日3倍做多），使用基金自身历史行情；其它场内 ETF 包含 513400（道琼斯ETF鹏华），展示行情、历史和费率，不套用标普或纳指估值基准。

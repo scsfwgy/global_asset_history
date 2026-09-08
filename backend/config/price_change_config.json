@@ -113,6 +113,8 @@
         { "symbol": "VOO", "type": "stock", "name": "先锋标普500" },
         { "symbol": "IWM", "type": "stock", "name": "罗素2000ETF" },
         { "symbol": "SOXL", "type": "stock", "name": "半导体3倍做多" },
+        { "symbol": "SSO", "type": "stock", "name": "标普500每日2倍做多" },
+        { "symbol": "UPRO", "type": "stock", "name": "标普500每日3倍做多" },
         { "symbol": "TQQQ", "type": "stock", "name": "纳指3倍做多" },
         { "symbol": "SMH", "type": "stock", "name": "半导体ETF" },
         { "symbol": "IVV", "type": "stock", "name": "iShares标普500" },
@@ -137,6 +139,7 @@
     "cn_etf_others": {
       "label": "其它ETF追踪（A股）",
       "symbols": [
+        { "symbol": "513400", "type": "cn_stock", "name": "道琼斯ETF鹏华" },
         { "symbol": "513310", "type": "cn_stock", "name": "中韩半导体ETF华泰柏瑞" },
         { "symbol": "161128", "type": "cn_stock", "name": "标普信息科技LOF" },
         { "symbol": "501225", "type": "cn_stock", "name": "全球芯片LOF" },

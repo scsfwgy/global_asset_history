@@ -110,3 +110,16 @@ class TestEtfGroupAssignments:
         """Sector themes and non-NDX/SPX broad indices belong in 'others'."""
         syms = set(_etf_symbols_by_group()["cn_etf_others"])
         assert code in syms, f"{code} should be in cn_etf_others"
+
+
+def test_dow_jones_etf_has_no_sp500_or_nasdaq_benchmark():
+    from routes.etf_market import _benchmark_for_etf
+
+    assert "513400" in _etf_symbols_by_group()["cn_etf_others"]
+    assert _benchmark_for_etf("513400") == (None, None)
+
+
+def test_sp500_leveraged_funds_use_real_stock_symbols():
+    entries = {e["symbol"]: e for e in get_presets()["hot_us_etf"]["symbols"]}
+    for symbol in ("SSO", "UPRO"):
+        assert entries[symbol]["type"] == "stock"
