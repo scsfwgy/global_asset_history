@@ -108,6 +108,7 @@
                 var agg = document.getElementById("etfAggregateView");
                 if (rank) rank.style.display = _activeView === "rank" ? "" : "none";
                 if (agg) agg.classList.toggle("active", _activeView === "aggregate");
+                if (_activeView === "rank") fitEtfFreezePane();
                 if (_activeView === "aggregate") {
                     hideDetail();
                     renderAggregateSymbols();
@@ -194,10 +195,20 @@
         });
     }
 
+    function fitEtfFreezePane() {
+        var el = document.querySelector(".etf-freeze-scroll");
+        if (!el || !el.getClientRects().length) return;
+        var top = el.getBoundingClientRect().top;
+        if (top < 0) return;
+        var available = window.innerHeight - top - 16;
+        el.style.maxHeight = Math.max(280, available) + "px";
+    }
+
     // Idempotent entry used when the embedded ETF tab is first activated.
     window._etfActivate = function () {
         startDataLoad();
         renderTable();
+        fitEtfFreezePane();
         if (_activeView === "aggregate") {
             renderAggregateSymbols();
             ensureAggregateHistory(false);
@@ -214,6 +225,7 @@
         init();
         if (!document.getElementById("tab-etf")) startDataLoad();
     }
+    window.addEventListener("resize", fitEtfFreezePane);
 
     // Hook into theme-switch refresh chain (follows same pattern as vix-chart.js)
     var _origEtfRefresh = window._refreshCharts;
@@ -336,6 +348,7 @@
         var html = "";
         rows.forEach(function (r) { html += r._html; });
         document.getElementById("etfBody").innerHTML = html;
+        fitEtfFreezePane();
 
         // Row click handlers
         document.querySelectorAll("#etfBody tr.etf-row").forEach(function (tr) {

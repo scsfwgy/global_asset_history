@@ -363,12 +363,37 @@
         ].join("");
     }
 
+    function fitQdiiFreezePane() {
+        var el = document.querySelector(".qdii-freeze-scroll");
+        if (!el || !el.getClientRects().length) return;
+        var top = el.getBoundingClientRect().top;
+        if (top < 0) return;
+        var available = window.innerHeight - top - 16;
+        el.style.maxHeight = Math.max(280, available) + "px";
+    }
+
+    function syncQdiiFrozenColumns() {
+        var table = $("qdiiFundsTable");
+        if (!table) return;
+        var sample = table.querySelector("tbody tr.qdii-fund-row td:first-child")
+            || table.querySelector("thead th:first-child");
+        if (!sample) return;
+        var width = sample.offsetWidth;
+        if (!width) return;
+        var next = width + "px";
+        if (table.style.getPropertyValue("--qdii-freeze-col1") !== next) {
+            table.style.setProperty("--qdii-freeze-col1", next);
+        }
+    }
+
     function renderTable() {
         var body = $("qdiiFundsBody");
         if (!body) return;
         var rows = rowsForActiveIndex();
         if (!rows.length) {
             body.innerHTML = '<tr><td colspan="23" style="text-align:center;padding:24px;color:var(--apple-text-secondary);">' + escapeHtml(__("qdii.noMatchingFunds")) + '</td></tr>';
+            syncQdiiFrozenColumns();
+            fitQdiiFreezePane();
             return;
         }
         body.innerHTML = rows.map(function (row) {
@@ -409,6 +434,8 @@
             if (!expanded) return mainRow;
             return mainRow + '<tr class="qdii-holdings-detail-row"><td colspan="23">' + renderHoldingsDetail(row.code) + '</td></tr>';
         }).join("");
+        syncQdiiFrozenColumns();
+        fitQdiiFreezePane();
     }
 
     function loadHoldings(code, force) {
@@ -562,6 +589,7 @@
                 if (paramsPanel) paramsPanel.style.display = STATE.paramsCollapsed ? "none" : "block";
                 paramsToggle.textContent = __(STATE.paramsCollapsed ? "detail.expandParams" : "detail.collapseParams");
                 paramsToggle.setAttribute("aria-expanded", String(!STATE.paramsCollapsed));
+                fitQdiiFreezePane();
             });
         }
 
@@ -638,11 +666,22 @@
 
         var refresh = $("qdiiFundsRefresh");
         if (refresh) refresh.addEventListener("click", function () { loadData(true); });
+
+        var freezeTable = $("qdiiFundsTable");
+        if (freezeTable && window.ResizeObserver) {
+            new ResizeObserver(syncQdiiFrozenColumns).observe(freezeTable);
+        }
+        syncQdiiFrozenColumns();
+        window.addEventListener("resize", function () {
+            syncQdiiFrozenColumns();
+            fitQdiiFreezePane();
+        });
     }
 
     window._qdiiFundsActivate = function () {
         if (!STATE.loaded && !STATE.loading) loadData(false);
         else renderAll();
+        fitQdiiFreezePane();
     };
 
     if (document.readyState === "loading") {

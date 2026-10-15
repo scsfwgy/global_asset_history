@@ -678,6 +678,77 @@ body {
 .transfer-table .amount {
             text-align: right;
         }
+/* Frozen header + leading columns for the on-exchange ETF list and the
+   off-exchange QDII list. The wrap is the scrollport so sticky top and
+   sticky left share one pane. Separate borders are required: collapsed
+   borders drop sticky table cells in Safari. */
+.etf-freeze-scroll,
+.qdii-freeze-scroll {
+            max-height: calc(100dvh - 180px);
+            overflow: auto;
+            overscroll-behavior-x: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+#etfTable,
+#qdiiFundsTable {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+#etfTable thead th,
+#qdiiFundsTable thead th {
+            position: sticky;
+            top: 0;
+            z-index: 3;
+            background: var(--apple-surface-1);
+        }
+#etfTable tbody td:nth-child(1):not([colspan]) {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            background: var(--apple-surface-1);
+            box-shadow: var(--apple-sticky-shadow);
+        }
+#etfTable thead th:nth-child(1) {
+            left: 0;
+            z-index: 4;
+            box-shadow: var(--apple-sticky-shadow);
+        }
+#etfBody tr.etf-row:hover td:nth-child(1) {
+            background-image: linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04));
+        }
+#etfBody tr.etf-row.expanded td:nth-child(1) {
+            background-image: linear-gradient(rgba(0, 113, 227, 0.06), rgba(0, 113, 227, 0.06));
+        }
+#etfBody tr.etf-row.expanded:hover td:nth-child(1) {
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)),
+                linear-gradient(rgba(0, 113, 227, 0.06), rgba(0, 113, 227, 0.06));
+        }
+#qdiiFundsTable {
+            --qdii-freeze-col1: 108px;
+        }
+#qdiiFundsTable thead th:nth-child(1),
+#qdiiFundsTable tbody tr.qdii-fund-row td:nth-child(1) {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            background: var(--apple-surface-1);
+        }
+#qdiiFundsTable thead th:nth-child(2),
+#qdiiFundsTable tbody tr.qdii-fund-row td:nth-child(2) {
+            position: sticky;
+            left: var(--qdii-freeze-col1);
+            z-index: 2;
+            background: var(--apple-surface-1);
+            box-shadow: var(--apple-sticky-shadow);
+        }
+#qdiiFundsTable thead th:nth-child(1),
+#qdiiFundsTable thead th:nth-child(2) {
+            z-index: 4;
+        }
+#qdiiFundsTable tbody tr.qdii-fund-row:hover td:nth-child(-n+2) {
+            background-image: linear-gradient(var(--apple-overlay-subtle), var(--apple-overlay-subtle));
+        }
 /* Exchange badges — unified, no brand colors */
 .transfer-table .exchange-badge {
             display: inline-block;
