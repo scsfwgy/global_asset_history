@@ -23,6 +23,24 @@ def test_admin_stats_exports_separate_legacy_and_language_data(client, monkeypat
     assert '11111111-1111-4111-8111-111111111111' not in response.text
 
 
+def test_admin_stats_counts_a_new_daily_visitor_by_country_once(client, monkeypatch):
+    import app as app_module
+    monkeypatch.setenv('STATS_READ_TOKEN', 'stats-reader')
+    monkeypatch.setattr(app_module.cache_store, 'is_enabled', lambda: False)
+    uid = '11111111-1111-4111-8111-111111111111'
+    other = '22222222-2222-4222-8222-222222222222'
+    headers = {'X-Vercel-IP-Country': 'cn'}
+    assert client.post('/api/visits/increment', json={'anonymous_id': uid, 'country': 'US'}, headers=headers).status_code == 200
+    assert client.post('/api/visits/increment', json={'anonymous_id': uid}, headers={'X-Vercel-IP-Country': 'US'}).status_code == 200
+    assert client.post('/api/visits/increment', json={'anonymous_id': other}, headers={'X-Vercel-IP-Country': 'XX'}).status_code == 200
+    response = client.get('/api/admin/stats', headers={'Authorization': 'Bearer stats-reader'})
+    data = response.json['data']
+    assert data['geo']['day'] == [{'code': 'CN', 'value': 1}]
+    assert data['geo']['labels']['day'] == '今日去重访客'
+    assert data['geo']['week'][0]['code'] == 'CN'
+    assert uid not in response.text
+
+
 def test_unconfigured_export_is_closed(client, monkeypatch):
     monkeypatch.delenv('STATS_READ_TOKEN', raising=False)
     assert client.get('/api/admin/stats', headers={'Authorization': 'Bearer '}).status_code == 401

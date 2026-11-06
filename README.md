@@ -326,7 +326,7 @@ Sitemap 只列语言前缀的 canonical URL，避免无前缀页面造成重复�
 项目正在规划开源的数据适配器维护助手和可审计的双语自然语言研究层。设计原则、交付物、评估方式与明确排除的用途见 [AI 路线图](ROADMAP.md)。
 
 ### 统一运营后台
-统计及版本更新通知、广告弹窗由 HomeTools `/admin/sites?source=globalassets` 查看和管理。统计入口 `/api/admin/stats`，通知管理 `/api/admin/config/{feature-updates|knowledge-notices}` 支持 GET/PUT，均使用 STATS_READ_TOKEN Bearer 鉴权。网页公开读取 `/api/site-config/<kind>`；通知历史全部来自 Redis，关闭保留历史。源站需配置 Redis 才能保存；HomeTools 无需新增环境变量。
+统计及版本更新通知、广告弹窗由 HomeTools `/admin/globalassets` 查看和管理。统计入口 `/api/admin/stats`，其中 `geo` 是日、近 7 日、近 30 日的国家人数：新日访客按 `X-Vercel-IP-Country` 计入，只保存国家码。通知管理 `/api/admin/config/{feature-updates|knowledge-notices}` 支持 GET/PUT，均使用 STATS_READ_TOKEN Bearer 鉴权。网页公开读取 `/api/site-config/<kind>`；通知历史全部来自 Redis，关闭保留历史。源站需配置 Redis 才能保存；HomeTools 无需新增环境变量。
 
 ### 新增 ETF 入口
 

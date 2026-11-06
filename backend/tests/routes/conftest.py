@@ -17,9 +17,10 @@ def client():
 def isolate_stats_files(monkeypatch, tmp_path):
     """Keep visit/unique-user fallback files out of shared /tmp during tests."""
     import app as app_module
-    from service import visitor_stats
+    from service import visitor_geo, visitor_stats
 
     monkeypatch.setattr(app_module, "_COUNTER_PATH", tmp_path / "visit_count.json")
     monkeypatch.setattr(app_module, "_UNIQUE_VISITS_PATH", tmp_path / "unique_visits.json")
     monkeypatch.setattr(app_module, "_TOOLS24_STATS_PATH", tmp_path / "tools24_stats.json")
     monkeypatch.setattr(visitor_stats, "_LANGUAGE_VISITS_PATH", tmp_path / "language_visits.json")
+    monkeypatch.setattr(visitor_geo, "_PATH", tmp_path / "geo_visits.json")

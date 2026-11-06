@@ -22,7 +22,7 @@ from flask_cors import CORS
 from routes.price_change import price_change_bp
 from routes.wishes import wishes_bp
 from routes.etf_market import etf_market_bp
-from service import visitor_stats
+from service import visitor_geo, visitor_stats
 from service.tools24_release import get_release as get_tools24_release
 from service.tools24_release import set_release as set_tools24_release
 from service.price_change.config import get_site_base_url
@@ -907,6 +907,11 @@ def _record_unique_visit(anonymous_id: str) -> dict | None:
     return {"day": day, "count": len(users), "new": len(users) > before}
 
 
+def _record_geo_if_new(unique_visit) -> None:
+    if unique_visit and unique_visit.get("new"):
+        visitor_geo.record(unique_visit["day"], visitor_geo.country_from_headers(request.headers))
+
+
 def _unique_visit_series() -> list[dict]:
     days = _last_days(30)
     if cache_store.is_enabled():
@@ -1319,6 +1324,7 @@ def visits_increment():
                 cache_store.cache_hincrby(_TAB_VISITS_KEY, initial_tab)
             payload = {"count": count}
             unique_visit = _record_unique_visit(body.get("anonymous_id"))
+            _record_geo_if_new(unique_visit)
             if unique_visit:
                 if unique_visit["count"] is not None:
                     payload["unique_users_today"] = unique_visit["count"]
@@ -1329,6 +1335,7 @@ def visits_increment():
         _write_counter(count)
     payload = {"count": count}
     unique_visit = _record_unique_visit(body.get("anonymous_id"))
+    _record_geo_if_new(unique_visit)
     if unique_visit:
         if unique_visit["count"] is not None:
             payload["unique_users_today"] = unique_visit["count"]
@@ -1502,6 +1509,7 @@ def stats_dashboard(for_admin_api=True):
                 {"label": "设置操作总数", "value": sum(int(v) for v in settings_actions.values())},
             ],
             "dailyUsers": user_series,
+            "geo": visitor_geo.periods(),
             "breakdowns": [breakdown("栏目访问 · 累计", tab_stats),
                            breakdown("外链与广告点击 · 累计", ad_stats),
                            breakdown("设置操作 · 累计", settings_actions),
@@ -1509,6 +1517,7 @@ def stats_dashboard(for_admin_api=True):
                            breakdown("设备语言 · 累计唯一访客", language_stats["device_language"]),
                            breakdown("旧 Tools24 下载站 · 历史累计", tools24_stats)],
             "notes": ["访客按匿名 UUID 每日去重；用户天次为每日访客之和，不是月活。",
+                      "地区分布只计入带网络国家码的新日访客。日是今天；周、月是近 7、30 个自然日的用户天次之和，不是周活或月活。上线前的访问没有国家。",
                       "占比为各分组计数之和中的比例；语言分组可重叠，不能相加作为总人数。旧 Tools24 计数不代表新版官网统计。",
                       "本地降级数据不代表跨实例完整统计。"],
         }}), 200, {"Cache-Control": "no-store"}
