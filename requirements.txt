@@ -8,3 +8,6 @@ pypdf==6.10.0
 # Code degrades to `requests` if absent, but the reliable overseas path needs this.
 curl_cffi==0.15.0
 qrcode==8.2
+
+# Offline country lookup for self-hosted visit statistics.
+maxminddb==3.2.0

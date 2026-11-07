@@ -909,7 +909,7 @@ def _record_unique_visit(anonymous_id: str) -> dict | None:
 
 def _record_geo_if_new(unique_visit) -> None:
     if unique_visit and unique_visit.get("new"):
-        visitor_geo.record(unique_visit["day"], visitor_geo.country_from_headers(request.headers))
+        visitor_geo.record(unique_visit["day"], visitor_geo.country_from_headers(request.headers, request.remote_addr))
 
 
 def _unique_visit_series() -> list[dict]:

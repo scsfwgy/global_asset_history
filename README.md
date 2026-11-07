@@ -331,3 +331,20 @@ Sitemap 只列语言前缀的 canonical URL，避免无前缀页面造成重复�
 ### 新增 ETF 入口
 
 热门美股 ETF 预设包含 SSO（标普500每日2倍做多）和 UPRO（标普500每日3倍做多），使用基金自身历史行情；其它场内 ETF 包含 513400（道琼斯ETF鹏华），展示行情、历史和费率，不套用标普或纳指估值基准。
+
+## 自托管地区统计
+
+国家解析优先使用服务器本地的 DB-IP Country Lite 数据库（随代码附带），支持 IPv4/IPv6，
+不调用外部 IP 查询接口，不保存完整 IP。`VERCEL=1` 仅用于真正的 Vercel 部署；自托管请勿设置。
+
+Nginx/OpenResty 需向应用传递 `X-Forwarded-For`，例如：
+
+```nginx
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+```
+
+默认仅信任回环代理地址。Docker/1Panel 中请用 `GEOIP_TRUSTED_PROXIES` 配置实际代理 IP 或专用网段
+（逗号分隔），并限制应用端口仅供该代理访问；不要填写 `0.0.0.0/0`。
+代码从右向左剥离可信代理，只解析首个不可信节点，避免直接采信客户端伪造的转发头。
+无法解析的私网/未知地址不计地区；历史访问不回填。数据库与存储故障会在 HomeTools 后台分别显示。
+数据库更新、许可与校验值见 `backend/resources/README.md`；更新后需重启工作进程。

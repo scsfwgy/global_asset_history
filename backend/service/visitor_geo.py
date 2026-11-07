@@ -12,6 +12,7 @@ import threading
 from datetime import date, timedelta
 from pathlib import Path
 
+from service import geoip
 from service.price_change import cache_store
 
 logger = logging.getLogger(__name__)
@@ -38,12 +39,7 @@ def _today() -> date:
     return date.today()
 
 
-def country_from_headers(headers) -> str:
-    """ISO country from the edge, or empty when the header is missing or unknown."""
-    raw = str(headers.get("X-Vercel-IP-Country") or "").strip().upper()
-    if raw == "XX" or not _CODE_RE.fullmatch(raw):
-        return ""
-    return raw
+country_from_headers = geoip.country_from_headers
 
 
 def _keep_days(today: date | None = None) -> list[str]:
@@ -54,10 +50,10 @@ def _keep_days(today: date | None = None) -> list[str]:
 def _read_local() -> dict:
     try:
         payload = json.loads(_PATH.read_text())
-    except (OSError, ValueError, TypeError):
+    except FileNotFoundError:
         return {}
     if not isinstance(payload, dict):
-        return {}
+        raise ValueError("Invalid geo counters")
     counts = {}
     for day, bucket in payload.items():
         if not _DAY_RE.fullmatch(str(day)) or not isinstance(bucket, dict):
@@ -79,7 +75,7 @@ def _write_local(counts: dict) -> None:
 def _load() -> dict:
     if cache_store.is_enabled():
         counts = {}
-        for field, value in cache_store.cache_hgetall(_KEY).items():
+        for field, value in cache_store.cache_hgetall(_KEY, strict=True).items():
             day, separator, code = str(field).partition(":")
             if not separator or not _DAY_RE.fullmatch(day) or not _CODE_RE.fullmatch(code):
                 continue
@@ -120,7 +116,9 @@ def periods() -> dict:
         counts = _load()
     except Exception:  # noqa: BLE001 - a geo read must not take down the rest of the export
         logger.warning("Geo analytics read failed")
-        counts = {}
+        return {**{name: [] for name in _WINDOW}, "status": "unavailable",
+                "message": "地区统计读取失败，请检查存储连接后重试。",
+                "labels": dict(LABELS), "note": NOTE, **geoip.report_metadata()}
     today = _today()
     report = {}
     for name, days in _WINDOW.items():
@@ -135,4 +133,6 @@ def periods() -> dict:
         ]
     report["labels"] = dict(LABELS)
     report["note"] = NOTE
+    report["status"] = "ok"
+    report.update(geoip.report_metadata())
     return report

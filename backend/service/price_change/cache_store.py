@@ -148,11 +148,15 @@ def cache_hincrby(key: str, field: str, amount: int = 1) -> Optional[int]:
         return None
 
 
-def cache_hgetall(key: str) -> dict:
-    """Get all fields and values of a hash. Returns empty dict on failure.
+def cache_hgetall(key: str, *, strict: bool = False) -> dict:
+    """Get hash fields. Strict reads raise on failure instead of returning empty data.
     Upstash REST returns hash data as a flat list: [k1, v1, k2, v2, ...]."""
     result = _command(["HGETALL", _KEY_PREFIX + key])
-    if not isinstance(result, list):
+    if isinstance(result, dict):
+        return result
+    if not isinstance(result, list) or len(result) % 2:
+        if strict:
+            raise RuntimeError("Redis hash read unavailable")
         return {}
     data = {}
     for i in range(0, len(result), 2):

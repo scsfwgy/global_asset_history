@@ -3,7 +3,8 @@ from datetime import date, timedelta
 from service import visitor_geo
 
 
-def test_country_header_keeps_only_a_real_code():
+def test_country_header_keeps_only_a_real_code(monkeypatch):
+    monkeypatch.setenv("VERCEL", "1")
     assert visitor_geo.country_from_headers({"X-Vercel-IP-Country": "cn"}) == "CN"
     for raw in ("", "XX", "C1", "CHN", "C N"):
         assert visitor_geo.country_from_headers({"X-Vercel-IP-Country": raw}) == ""
@@ -41,7 +42,7 @@ def test_redis_counts_stay_out_of_the_local_file(monkeypatch, tmp_path):
         return store[field]
 
     monkeypatch.setattr(visitor_geo.cache_store, "cache_hincrby", hincrby)
-    monkeypatch.setattr(visitor_geo.cache_store, "cache_hgetall", lambda key: {k: str(v) for k, v in store.items()})
+    monkeypatch.setattr(visitor_geo.cache_store, "cache_hgetall", lambda key, **kwargs: {k: str(v) for k, v in store.items()})
     visitor_geo.record("2026-11-06", "CN")
     visitor_geo.record("2026-11-06", "CN")
     visitor_geo.record("not-a-day", "US")
