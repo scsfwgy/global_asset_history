@@ -1072,6 +1072,12 @@
   "heatmap": {
     "pulseTitle": "Global Market Pulse",
     "pulseSubtitle": "Latest session · Daily move",
+    "quotedAt": "Quote at",
+    "fetchedAt": "Fetched at",
+    "lastSession": "Last session",
+    "cachedQuote": "Cached quote",
+    "quotePrice": "Quote",
+    "resultAsOf": "Tiles generated at",
     "pulseToggle": "Expand or collapse global market pulse",
     "pulseUnavailable": "Unavailable",
     "marketType": "Heatmap Type",

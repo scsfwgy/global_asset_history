@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
 from datetime import date, datetime, timedelta, timezone
 from typing import Callable, Dict, List, Optional, Tuple
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .calculations import (
     _build_equity_curve,
@@ -36,7 +37,14 @@ from .common import (
     normalize_asset_symbol,
 )
 from .config import get_color_range, get_color_scheme, get_presets, get_site_config
-from .fetchers import DAILY_SERIES_FETCHERS, FETCHERS, fetch_intraday_series
+from .fetchers import (
+    DAILY_SERIES_FETCHERS,
+    FETCHERS,
+    fetch_binance_home_quotes,
+    fetch_intraday_series,
+    fetch_tencent_home_quotes,
+)
+from .homepage_quotes import cached_quotes, iso_time, quote_number
 from . import cache_store
 
 logger = logging.getLogger(__name__)
@@ -157,14 +165,10 @@ def _set_cached_daily_series(symbol: str, asset_type: str, series: PriceSeries) 
 
 def clear_price_change_cache() -> None:
     """Clear in-memory market-data cache. Mainly useful for tests."""
-    global _market_pulse_quote_cache, _market_pulse_quote_ts
     with _CACHE_LOCK:
         _DAILY_SERIES_CACHE.clear()
         _STOCK_COMPARE_CACHE.clear()
         _DETAIL_FUNDAMENTALS_CACHE.clear()
-    with _market_pulse_quote_lock:
-        _market_pulse_quote_cache = []
-        _market_pulse_quote_ts = 0.0
 
 
 def _series_meta(symbol: str, asset_type: str, series: PriceSeries) -> Dict:
@@ -535,103 +539,19 @@ def fetch_price_history(
     }
 
 
-def fetch_market_pulse() -> Dict:
-    """Return latest daily closes and moves for five global benchmarks.
-
-    Each market is independent: an upstream failure is represented on that
-    item and never prevents the remaining benchmarks from rendering.
-    """
-
-    def fetch_one(target: Dict[str, str]) -> Dict:
-        item = dict(target)
-        try:
-            series = _fetch_daily_series_cached(target["symbol"], target["type"])
-        except Exception as exc:
-            logger.warning("Market pulse fetch failed for %s: %s", target["symbol"], exc)
-            return {**item, "price": None, "change_pct": None, "trade_date": None,
-                    "source": None, "error": str(exc)}
-
-        points = [
-            (ts, float(close))
-            for ts, close in zip(series.timestamps, series.closes)
-            if close is not None
-        ]
-        if series.error or len(points) < 2:
-            return {**item, "price": None, "change_pct": None, "trade_date": None,
-                    "source": series.source, "error": series.error or "insufficient data"}
-
-        (_, previous_close), (latest_ts, latest_close) = points[-2:]
-        change_pct = round((latest_close / previous_close - 1) * 100, 2) if previous_close else None
-        return {
-            **item,
-            "price": round(latest_close, 4),
-            "change_pct": change_pct,
-            "trade_date": datetime.fromtimestamp(latest_ts, tz=timezone.utc).date().isoformat(),
-            "source": series.source,
-            "error": None,
-        }
-
-    yahoo_targets = [target for target in MARKET_PULSE_TARGETS if target["symbol"] in {"^GSPC", "^NDX", "^KS11"}]
-    other_targets = [target for target in MARKET_PULSE_TARGETS if target not in yahoo_targets]
-    results: Dict[str, Dict] = {}
-
-    # Fetch the three Yahoo indices in one batch while CN/BTC load in parallel.
-    with ThreadPoolExecutor(max_workers=1 + len(other_targets)) as executor:
-        yahoo_future = executor.submit(
-            _market_pulse_yahoo_quotes,
-            [target["symbol"] for target in yahoo_targets],
-        )
-        futures = {executor.submit(fetch_one, target): target for target in other_targets}
-        for future in as_completed(futures):
-            target = futures[future]
-            try:
-                results[target["symbol"]] = future.result()
-            except Exception as exc:
-                results[target["symbol"]] = {
-                    **target, "price": None, "change_pct": None, "trade_date": None,
-                    "source": None, "error": str(exc),
-                }
-
-        try:
-            quote_map = {quote["symbol"]: quote for quote in yahoo_future.result()}
-        except Exception as exc:
-            logger.warning("Market pulse Yahoo batch failed: %s", exc)
-            quote_map = {}
-
-    missing_yahoo_targets = []
-    for target in yahoo_targets:
-        quote = quote_map.get(target["symbol"])
-        if not quote or quote.get("price") is None or quote.get("change_pct") is None:
-            missing_yahoo_targets.append(target)
-            continue
-        trade_time = quote.get("trade_time")
-        results[target["symbol"]] = {
+def fetch_market_pulse(force_refresh: bool = False) -> Dict:
+    """Return the homepage benchmark quotes and their daily changes."""
+    entries = [(target["symbol"], target["type"]) for target in MARKET_PULSE_TARGETS]
+    quotes = _homepage_quote_map(entries, force_refresh)
+    markets = [
+        {
             **target,
-            "price": round(float(quote["price"]), 4),
-            "change_pct": round(float(quote["change_pct"]), 2),
-            "trade_date": (
-                datetime.fromtimestamp(trade_time, tz=timezone.utc).date().isoformat()
-                if trade_time else None
-            ),
-            "source": "yahoo-quote",
-            "error": None,
+            **_home_quote_fields(quotes.get(entry, {})),
+            "change_pct": _home_change(quotes.get(entry, {})),
+            "error": None if entry in quotes else "quote unavailable",
         }
-
-    # A partial/failed batch falls back only for the missing symbols.
-    if missing_yahoo_targets:
-        with ThreadPoolExecutor(max_workers=len(missing_yahoo_targets)) as executor:
-            futures = {executor.submit(fetch_one, target): target for target in missing_yahoo_targets}
-            for future in as_completed(futures):
-                target = futures[future]
-                try:
-                    results[target["symbol"]] = future.result()
-                except Exception as exc:
-                    results[target["symbol"]] = {
-                        **target, "price": None, "change_pct": None, "trade_date": None,
-                        "source": None, "error": str(exc),
-                    }
-
-    markets = [results[target["symbol"]] for target in MARKET_PULSE_TARGETS]
+        for target, entry in zip(MARKET_PULSE_TARGETS, entries)
+    ]
     valid_changes = [item["change_pct"] for item in markets if item["change_pct"] is not None]
     up = sum(1 for value in valid_changes if value > 0)
     down = sum(1 for value in valid_changes if value < 0)
@@ -3265,6 +3185,8 @@ def _yahoo_quote_batch(symbols: List[str]) -> List[dict]:
                     "price": price,
                     "change_pct": q.get("regularMarketChangePercent"),
                     "trade_time": q.get("regularMarketTime"),
+                    "exchange_timezone": q.get("exchangeTimezoneName"),
+                    "market_state": q.get("marketState"),
                     "volume": q.get("regularMarketVolume"),
                     "market_cap": q.get("marketCap"),
                     "quote_type": q.get("quoteType"),
@@ -3459,26 +3381,103 @@ def _fetch_detail_fundamentals(symbol: str) -> Dict:
     return dict(payload)
 
 
-_MARKET_PULSE_QUOTE_TTL = 5 * 60
-_market_pulse_quote_cache: List[dict] = []
-_market_pulse_quote_ts = 0.0
-_market_pulse_quote_lock = threading.Lock()
+def _yahoo_home_quotes(symbols: list[str], _previous: dict) -> list[dict]:
+    result = []
+    for quote in _yahoo_quote_batch(symbols):
+        price = quote_number(quote.get("price"))
+        if not price or price < 0:
+            continue
+        trade_time = quote_number(quote.get("trade_time"))
+        try:
+            exchange_zone = ZoneInfo(quote.get("exchange_timezone") or "UTC")
+        except (ValueError, ZoneInfoNotFoundError):
+            exchange_zone = timezone.utc
+        volume = quote_number(quote.get("volume"))
+        result.append({
+            **quote,
+            "price": price,
+            "change_pct": quote_number(quote.get("change_pct")),
+            "trade_time": trade_time,
+            "trade_date": datetime.fromtimestamp(trade_time, tz=exchange_zone).date().isoformat() if trade_time else None,
+            "market_closed": quote.get("market_state") not in (None, "REGULAR"),
+            "turnover": volume * price if volume else None,
+        })
+    return result
 
 
-def _market_pulse_yahoo_quotes(symbols: List[str]) -> List[dict]:
-    """Return one cached Yahoo batch for the market-pulse stock indices.
+def _daily_home_quote(symbol: str, asset_type: str) -> Optional[dict]:
+    # A quote outage must not trigger a full historical download for every tile.
+    series = _get_cached_daily_series(symbol, asset_type)
+    if not series or series.error:
+        return None
+    points = [(ts, close, index) for index, (ts, close) in enumerate(zip(series.timestamps, series.closes))
+              if close is not None]
+    if len(points) < 2:
+        return None
+    (_, previous_close, _), (timestamp, price, index) = points[-2:]
+    volume = series.volumes[index] if series.volumes and index < len(series.volumes) else None
+    return {
+        "symbol": symbol, "price": price, "source": series.source,
+        "change_pct": (price / previous_close - 1) * 100 if previous_close else None,
+        "trade_date": datetime.fromtimestamp(timestamp, tz=timezone.utc).date().isoformat(),
+        "fetched_ts": series.fetched_at, "stale": True,
+        "turnover": price * volume if volume else None,
+    }
 
-    The lock is intentionally held during refresh so concurrent cold requests
-    share one upstream call instead of causing a cache stampede.
-    """
-    global _market_pulse_quote_cache, _market_pulse_quote_ts
-    with _market_pulse_quote_lock:
-        if time.time() - _market_pulse_quote_ts < _MARKET_PULSE_QUOTE_TTL:
-            return list(_market_pulse_quote_cache)
-        quotes = _yahoo_quote_batch(symbols)
-        _market_pulse_quote_cache = list(quotes)
-        _market_pulse_quote_ts = time.time()
-        return list(_market_pulse_quote_cache)
+
+def _homepage_quote_map(entries: list[tuple[str, str]], force: bool) -> dict:
+    equity = list(dict.fromkeys(symbol for symbol, kind in entries if kind in _STOCK_ASSET_TYPES))
+    china = sorted({symbol for symbol, kind in entries if kind == "cn_stock"})
+    crypto = sorted({symbol for symbol, kind in entries if kind == "crypto"})
+    batches = [("yahoo-quote", equity, _yahoo_home_quotes)]
+    # Request the same watchlist for a benchmark and its tiles so both use one snapshot.
+    for source, requested, pool, fetch in (
+        ("tencent-quote", china, {*_HEATMAP_CN_WATCHLIST, "000001"}, fetch_tencent_home_quotes),
+        ("binance-quote", crypto, set(_HEATMAP_CRYPTO_WATCHLIST), fetch_binance_home_quotes),
+    ):
+        if pool.intersection(requested):
+            batches.append((source, sorted(pool), fetch))
+        batches.append((source, [symbol for symbol in requested if symbol not in pool], fetch))
+
+    by_source: dict = {"yahoo-quote": {}, "tencent-quote": {}, "binance-quote": {}}
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        requests = [
+            (source, executor.submit(cached_quotes, source, symbols, fetch, force))
+            for source, symbols, fetch in batches if symbols
+        ]
+        for source, future in requests:
+            by_source[source].update(future.result())
+
+        quotes = {}
+        missing = {}
+        for symbol, kind in entries:
+            source = {"cn_stock": "tencent-quote", "crypto": "binance-quote"}.get(kind, "yahoo-quote")
+            quote = by_source[source].get(symbol)
+            if quote:
+                quotes[(symbol, kind)] = quote
+            else:
+                missing[(symbol, kind)] = executor.submit(_daily_home_quote, symbol, kind)
+        for entry, future in missing.items():
+            if quote := future.result():
+                quotes[entry] = quote
+    return quotes
+
+
+def _home_quote_fields(quote: dict) -> dict:
+    return {
+        "price": quote.get("price"),
+        "source": quote.get("source"),
+        "quote_at": iso_time(quote["trade_time"]) if quote.get("trade_time") else None,
+        "fetched_at": iso_time(quote["fetched_ts"]) if quote.get("fetched_ts") else None,
+        "trade_date": quote.get("trade_date"),
+        "stale": bool(quote.get("stale")),
+        "market_closed": bool(quote.get("market_closed")),
+    }
+
+
+def _home_change(quote: dict) -> float | None:
+    change = quote.get("change_pct")
+    return round(change, 2) if change is not None else None
 
 
 def _build_heatmap_today(
@@ -3487,105 +3486,31 @@ def _build_heatmap_today(
     auto_syms: set,
     auto_top_n: int,
     include_market_cap: bool,
-    compute_fn: Callable,
-) -> Optional[dict]:
-    """Build heatmap data for period='today' using batch v7/quote.
+    force_refresh: bool,
+) -> dict:
+    quotes = _homepage_quote_map(unique_entries, force_refresh)
+    results = []
+    for symbol, asset_type in unique_entries:
+        quote = quotes.get((symbol, asset_type), {})
+        currency = _heatmap_currency(symbol, asset_type, quote.get("currency"))
+        results.append({
+            **_home_quote_fields(quote),
+            "symbol": symbol,
+            "name": quote.get("name"),
+            "type": asset_type,
+            "return_pct": _home_change(quote),
+            "turnover": quote.get("turnover"),
+            "turnover_currency": currency,
+            "market": _heatmap_stock_meta(symbol, asset_type)[1],
+            "market_cap": quote.get("market_cap") if include_market_cap else None,
+            "market_cap_currency": currency,
+        })
 
-    Yahoo-backed stocks are fetched in a single batch request (1-2 HTTP calls
-    per chunk). Other asset types go through *compute_fn*
-    (per-symbol OHLCV). Returns None when the batch fails and the
-    caller should fall back to the per-symbol path for everything.
-    """
-    # Split entries
-    stock_entries: List[Tuple[str, str]] = []
-    non_stock_entries: List[Tuple[str, str]] = []
-    for sym, atype in unique_entries:
-        if atype in _STOCK_ASSET_TYPES:
-            stock_entries.append((sym, atype))
-        else:
-            non_stock_entries.append((sym, atype))
-
-    stock_syms = [sym for sym, _ in stock_entries]
-
-    # Batch v7/quote — 1 request for all stocks
-    quotes = _yahoo_quote_batch(stock_syms) if stock_syms else []
-
-    # Had stocks but batch returned nothing → fail, let caller fall back
-    if stock_syms and not quotes:
-        return None
-
-    quote_map = {q["symbol"]: q for q in quotes}
-    results: List[dict] = []
-
-    # --- stock results from batch quote data ---
-    for sym, atype in stock_entries:
-        q = quote_map.get(sym)
-        currency = q.get("currency") if q else None
-        display_currency = _heatmap_currency(sym, atype, currency)
-        market = _heatmap_stock_meta(sym, atype)[1]
-        if q:
-            turnover = None
-            if q["volume"] and q["price"]:
-                turnover = round(q["volume"] * q["price"], 2)
-            results.append({
-                "symbol": sym,
-                "name": q.get("name"),
-                "type": atype,
-                "return_pct": round(q["change_pct"], 2) if q["change_pct"] is not None else None,
-                "turnover": turnover,
-                "turnover_currency": display_currency,
-                "market": market,
-                "market_cap": q.get("market_cap") if include_market_cap else None,
-                "market_cap_currency": display_currency,
-            })
-        else:
-            results.append({
-                "symbol": sym, "name": None, "type": atype,
-                "return_pct": None, "turnover": None,
-                "turnover_currency": display_currency,
-                "market": market,
-                "market_cap": None,
-                "market_cap_currency": display_currency,
-            })
-
-    # --- non-stock: per-symbol OHLCV (usually 0 entries) ---
-    if non_stock_entries:
-        worker_count = min(MAX_YEARLY_WORKERS, max(1, len(non_stock_entries)))
-        with ThreadPoolExecutor(max_workers=worker_count) as executor:
-            futures = {
-                executor.submit(compute_fn, sym, atype): sym
-                for sym, atype in non_stock_entries
-            }
-            for future in as_completed(futures):
-                try:
-                    results.append(future.result())
-                except Exception:
-                    logger.exception(
-                        "Heatmap compute failed for %s", futures[future]
-                    )
-
-    # --- sort & filter (same logic as the generic path) ---
-    auto_results = [r for r in results if r["symbol"] in auto_syms]
-    user_results = [r for r in results if r["symbol"] in user_symbols_set]
-
-    auto_results.sort(
-        key=lambda r: r["turnover"] if r["turnover"] is not None else 0,
-        reverse=True,
-    )
-    top_auto = auto_results[:auto_top_n] if auto_top_n > 0 else []
-
-    ordered = list(top_auto)
-    for sym, _ in unique_entries:
-        if sym in user_symbols_set:
-            match = next((r for r in user_results if r["symbol"] == sym), None)
-            if match and match not in ordered:
-                ordered.append(match)
-
-    return {
-        "period": "today",
-        "period_label": _period_label("today"),
-        "data": ordered,
-    }
+    automatic = [row for row in results if row["symbol"] in auto_syms]
+    automatic.sort(key=lambda row: row["turnover"] or 0, reverse=True)
+    ordered = automatic[:auto_top_n]
+    ordered.extend(row for row in results if row["symbol"] in user_symbols_set and row not in ordered)
+    return {"period": "today", "period_label": _period_label("today"), "data": ordered}
 
 
 def _eastmoney_detail_quote(symbol: str) -> Optional[Dict]:
@@ -3733,6 +3658,7 @@ def _get_market_caps(symbols: List[str]) -> Dict[str, float]:
 def fetch_heatmap_data(
     symbols: List[Dict[str, str]], period: str, auto_top_n: int = 0,
     include_market_cap: bool = False, market_type: Optional[str] = None,
+    force_refresh: bool = False,
 ) -> dict:
     """Compute per-symbol return + turnover for a treemap heatmap.
 
@@ -3848,18 +3774,13 @@ def fetch_heatmap_data(
 
         return result
 
-    # ---- Today fast path: batch v7/quote for stocks (1 request vs 92) ----
     if period == "today":
         result = _build_heatmap_today(
             unique_entries, user_symbols_set, auto_syms,
-            result_limit, include_market_cap, _compute_one,
+            result_limit, include_market_cap, force_refresh,
         )
-        if result is not None:
-            result["market_type"] = market_type
-            logger.info("Heatmap today: batch v7/quote used (%d symbols, 1 request)",
-                        len(result["data"]))
-            return result
-        logger.warning("Heatmap today: batch v7/quote failed, falling back to per-symbol OHLCV")
+        result["market_type"] = market_type
+        return result
 
     # Fetch concurrently
     worker_count = min(MAX_YEARLY_WORKERS, max(1, len(unique_entries)))

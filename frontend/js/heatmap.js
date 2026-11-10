@@ -9,10 +9,10 @@
 
 // ─── Independent state ───
 var _hmLastData = null;
-var _hmLastFetchTime = null;
 var _hmInitialFetchDone = false;
 var _hmSizeBy = "turnover";
-var _hmForceRefresh = false;
+var _hmRequest = null;
+var _pulseRequest = null;
 var _marketPulseData = null;
 const HM_FILTER_STORAGE_KEY = "gah_heatmap_filters";
 
@@ -237,18 +237,35 @@ function hmShowError(msg) {
   hmError.textContent = msg || "";
 }
 
-function hmUpdateFreshness() {
+function hmFormatTime(value) {
+  var date = new Date(value);
+  return value && !isNaN(date.getTime()) ? date.toLocaleString(__lang(), {
+    month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }) : "";
+}
+
+function hmQuoteLabel(item) {
+  var stamp = hmFormatTime(item.quote_at || item.fetched_at);
+  var label = item.quote_at ? __("heatmap.quotedAt") : __("heatmap.fetchedAt");
+  if (item.stale || item.market_closed) {
+    var status = __(item.stale ? "heatmap.cachedQuote" : "heatmap.lastSession");
+    return [status, item.quote_at ? stamp : item.trade_date, item.quote_at ? "" : (stamp && label + " " + stamp)]
+      .filter(Boolean).join(" · ");
+  }
+  return stamp ? label + " " + stamp : (item.trade_date || "");
+}
+
+function hmUpdateFreshness(result, requestFailed) {
   if (!hmFreshness) return;
-  if (!_hmLastFetchTime) { hmFreshness.style.display = "none"; return; }
-  var diffMs = Date.now() - _hmLastFetchTime;
-  var diffMin = Math.floor(diffMs / 60000);
-  var text;
-  if (diffMin < 1) text = __("status.justNow");
-  else if (diffMin < 60) text = __("status.minutesAgo", {n: diffMin});
-  else { var hrs = Math.floor(diffMin / 60); text = __("status.hoursAgo", {n: hrs}); }
-  hmFreshness.textContent = "· " + text;
-  hmFreshness.className = "pc-freshness" + (diffMin > 30 ? " stale" : "");
-  hmFreshness.style.display = "";
+  var items = result.data || [];
+  var stamps = items.map(function (item) { return item.fetched_at; }).filter(Boolean).sort();
+  var stamp = hmFormatTime(stamps[0] || result.as_of);
+  var stale = requestFailed || items.some(function (item) { return item.stale; });
+  var text = [stamp && __(result.period === "today" ? "heatmap.fetchedAt" : "heatmap.resultAsOf") + " " + stamp,
+    stale && __("heatmap.cachedQuote")].filter(Boolean).join(" · ");
+  hmFreshness.textContent = text;
+  hmFreshness.classList.toggle("stale", stale);
+  hmFreshness.style.display = text ? "" : "none";
 }
 
 function hmLocalizedName(d) {
@@ -278,7 +295,7 @@ function pulseFormatPrice(value) {
   if (value == null || !isFinite(value)) return "—";
   return new Intl.NumberFormat(typeof __lang === "function" && __lang() === "en" ? "en-US" : "zh-CN", {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: value > 0 && value < 0.01 ? 8 : 2,
   }).format(value);
 }
 
@@ -319,15 +336,15 @@ function renderMarketPulse(result) {
     var direction = change > 0 ? "pulse-up" : change < 0 ? "pulse-down" : "";
     var color = pulseColor(change);
     var sign = change > 0 ? "+" : "";
-    var date = item.trade_date ? item.trade_date.slice(5) : "";
+    var quoteLabel = hmQuoteLabel(item);
     return '<button type="button" class="market-pulse-card market-pulse-card-colored ' + direction + '" data-pulse-index="' + index + '"' +
       ' style="--pulse-bg:' + color.bg + '"' +
-      ' title="' + escapeHtml((item.source || "") + (item.trade_date ? " · " + item.trade_date : "")) + '">' +
+      ' title="' + escapeHtml([item.source, quoteLabel].filter(Boolean).join(" · ")) + '">' +
       '<span class="market-pulse-card-top"><span class="market-pulse-name">' + escapeHtml(name || item.symbol) + '</span>' +
       '<span class="market-pulse-market">' + escapeHtml(item.market || "") + '</span></span>' +
       '<span class="market-pulse-price">' + pulseFormatPrice(item.price) + '</span>' +
-      '<span class="market-pulse-foot"><span class="market-pulse-change ' + direction + '">' + sign + change.toFixed(2) + '%</span>' +
-      '<span class="market-pulse-date">' + escapeHtml(date) + '</span></span></button>';
+      '<span class="market-pulse-foot"><span class="market-pulse-change ' + direction + '">' + (item.change_pct == null ? "—" : sign + change.toFixed(2) + "%") + '</span>' +
+      '<span class="market-pulse-date">' + escapeHtml(quoteLabel) + '</span></span></button>';
   }).join("");
 
   marketPulseGrid.querySelectorAll("[data-pulse-index]").forEach(function (card) {
@@ -338,14 +355,34 @@ function renderMarketPulse(result) {
   });
 }
 
-async function fetchMarketPulse() {
+async function fetchMarketPulse(force, background) {
   if (!marketPulseGrid || typeof MARKET_PULSE_ENDPOINT === "undefined") return;
+  if (_pulseRequest) {
+    if (background) return;
+    _pulseRequest.abort();
+  }
+  var controller = new AbortController();
+  _pulseRequest = controller;
   try {
-    var response = await fetch(MARKET_PULSE_ENDPOINT, { headers: { "Accept": "application/json" } });
+    var response = await fetch(MARKET_PULSE_ENDPOINT + (force ? "?force=true" : ""), {
+      headers: { "Accept": "application/json" }, signal: controller.signal,
+    });
     if (!response.ok) throw new Error("HTTP " + response.status);
-    renderMarketPulse(await response.json());
+    var result = await response.json();
+    if (_pulseRequest === controller) renderMarketPulse(result);
   } catch (error) {
-    marketPulseGrid.innerHTML = '<div class="market-pulse-card"><div class="market-pulse-error">' + __("heatmap.pulseUnavailable") + '</div></div>';
+    if (controller.signal.aborted) return;
+    if (_marketPulseData) {
+      renderMarketPulse(Object.assign({}, _marketPulseData, {
+        markets: _marketPulseData.markets.map(function (item) {
+          return Object.assign({}, item, { stale: true });
+        }),
+      }));
+    } else {
+      marketPulseGrid.innerHTML = '<div class="market-pulse-card"><div class="market-pulse-error">' + __("heatmap.pulseUnavailable") + '</div></div>';
+    }
+  } finally {
+    if (_pulseRequest === controller) _pulseRequest = null;
   }
 }
 
@@ -785,6 +822,13 @@ function hmShowTooltip(evt, d) {
   var rows = "";
   rows += '<div class="hm-tt-row"><span class="hm-tt-label">' + __("heatmap.tooltipReturn") + '</span><span class="hm-tt-val ' + retCls + '">' + hmFormatPct(d.return_pct) + '</span></div>';
   rows += '<div class="hm-tt-row"><span class="hm-tt-label">' + __("heatmap.tooltipTurnover") + '</span><span class="hm-tt-val">' + hmFormatBig(d.turnover) + " " + (d.turnover_currency || "") + '</span></div>';
+  if (d.price != null) {
+    rows += '<div class="hm-tt-row"><span class="hm-tt-label">' + __("heatmap.quotePrice") + '</span><span class="hm-tt-val">' + pulseFormatPrice(d.price) + " " + escapeHtml(d.turnover_currency || "") + '</span></div>';
+  }
+  var quoteLabel = hmQuoteLabel(d);
+  if (quoteLabel) {
+    rows += '<div class="hm-tt-row"><span class="hm-tt-label">' + escapeHtml(quoteLabel) + '</span></div>';
+  }
   if (d.market_cap != null) {
     rows += '<div class="hm-tt-row"><span class="hm-tt-label">' + __("heatmap.tooltipMarketCap") + '</span><span class="hm-tt-val">' + hmFormatBig(d.market_cap) + " " + (d.market_cap_currency || d.turnover_currency || "") + '</span></div>';
   }
@@ -887,45 +931,73 @@ function hasMarketCapData() {
   return _hmLastData && _hmLastData.data && _hmLastData.data.some(function (d) { return d.market_cap != null; });
 }
 
-async function fetchHeatmap() {
+async function fetchHeatmap(force, background) {
+  if (_hmRequest) {
+    if (background) return;
+    _hmRequest.abort();
+  }
+  var controller = new AbortController();
+  _hmRequest = controller;
   hmShowError(null);
-  hmSetLoading(true);
+  if (!background) {
+    hmSetLoading(true);
+    if (hmFreshness) hmFreshness.style.display = "none";
+  }
 
-  var period = hmPeriod ? hmPeriod.value : "today";
+  var body = {
+    symbols: [],
+    market_type: hmMarketType.value,
+    period: hmPeriod.value,
+    include_market_cap: _hmSizeBy === "market_cap",
+  };
+  if (force) body.force = true;
 
   try {
-    // Market cap can trigger expensive per-symbol fallbacks when the Yahoo
-    // batch endpoint is unavailable.  Fetch it only when it drives the layout.
-    var body = {
-      symbols: [],
-      market_type: hmMarketType.value,
-      period: period,
-      include_market_cap: _hmSizeBy === "market_cap"
-    };
-    if (_hmForceRefresh) { body.force = true; _hmForceRefresh = false; }
     var resp = await fetch(HEATMAP_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
-
     if (!resp.ok) {
       var err = await resp.json().catch(function () { return {}; });
       throw new Error(err.error || "HTTP " + resp.status);
     }
 
     var result = await resp.json();
+    if (_hmRequest !== controller) return;
     _hmLastData = result;
-    _hmLastFetchTime = Date.now();
-    hmUpdateFreshness();
-    renderTreemap(result, true);
+    hmUpdateFreshness(result);
+    renderTreemap(result, !background);
   } catch (e) {
+    if (controller.signal.aborted) return;
     hmShowError(__("heatmap.errorRequest") + " " + e.message);
-    hmEmpty.style.display = "block";
-    hmTreemapWrap.style.display = "none";
+    if (_hmLastData && _hmLastData.market_type === body.market_type && _hmLastData.period === body.period) {
+      hmUpdateFreshness(_hmLastData, true);
+      renderTreemap(_hmLastData, false);
+    } else {
+      hmEmpty.style.display = "block";
+      hmTreemapWrap.style.display = "none";
+    }
   } finally {
-    hmSetLoading(false);
+    if (_hmRequest === controller) {
+      _hmRequest = null;
+      hmSetLoading(false);
+    }
   }
+}
+
+async function refreshHomepage(force, background) {
+  if (background && (_hmRequest || _pulseRequest)) return;
+  var fetchTiles = !background || hmPeriod.value === "today";
+  var sharesBenchmark = hmPeriod.value === "today" && ["crypto", "cn_stock"].includes(hmMarketType.value);
+  if (sharesBenchmark && fetchTiles) {
+    // The pulse reads the same snapshot after the tiles have refreshed it.
+    await fetchHeatmap(force, background);
+    await fetchMarketPulse(force, background);
+    return;
+  }
+  await Promise.all([fetchTiles && fetchHeatmap(force, background), fetchMarketPulse(force, background)]);
 }
 
 // Re-render from cached data without refetching (used on size-by / resize).
@@ -939,12 +1011,17 @@ var _hmResizeTimer;
 function startHeatmapData() {
   if (_hmInitialFetchDone) return;
   _hmInitialFetchDone = true;
-  fetchHeatmap();
-  fetchMarketPulse();
+  refreshHomepage(false, false);
+  function refreshVisible() {
+    var panel = document.getElementById("tab-heatmap");
+    if (!document.hidden && panel && panel.classList.contains("active")) refreshHomepage(false, true);
+  }
+  setInterval(refreshVisible, 60000);
+  document.addEventListener("visibilitychange", refreshVisible);
 }
 
 function isHeatmapRoute() {
-  var path = window.location.pathname.replace(/^\/(?:en|zh)(?=\/|$)/, "") || "/";
+  var path = window.location.pathname.replace(/^\/(?:en|zh-TW|zh)(?=\/|$)/, "") || "/";
   return path === "/" || path === "/heatmap";
 }
 
@@ -972,20 +1049,19 @@ async function initHeatmap() {
   hmSyncMarketControls();
 
   hmRefreshBtn.addEventListener("click", function () {
-    _hmForceRefresh = false;
     saveHmFilters();
-    fetchHeatmap();
+    refreshHomepage(false, false);
   });
-  hmForceBtn.addEventListener("click", function () { _hmForceRefresh = true; fetchHeatmap(); });
+  hmForceBtn.addEventListener("click", function () { refreshHomepage(true, false); });
 
   hmMarketType.addEventListener("change", function () {
     hmSyncMarketControls();
     saveHmFilters();
-    fetchHeatmap();
+    refreshHomepage(false, false);
   });
   hmPeriod.addEventListener("change", function () {
     saveHmFilters();
-    fetchHeatmap();
+    refreshHomepage(false, false);
   });
 
   // Size-by: re-render locally when possible, fetch only for market_cap w/o data

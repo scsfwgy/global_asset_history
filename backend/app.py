@@ -333,7 +333,8 @@ INDEXABLE_PATHS = {
 # Real last-modified dates per page group. Update these ONLY when the page's
 # HTML/content actually changes — Google discounts <lastmod> if it always shows
 # "today". Knowledge articles use the per-article "updated" field instead.
-INDEX_LASTMOD = "2026-09-08"
+INDEX_LASTMOD = "2026-11-10"
+TOOLS_LASTMOD = "2026-09-08"
 ETF_MARKET_LASTMOD = "2026-09-08"
 
 TOOL_SEO_KEYS = {
@@ -567,8 +568,8 @@ def _page_json_ld(
             "isPartOf": {"@id": website_id},
             "mainEntityOfPage": page_url,
             "inLanguage": html_lang,
-            "datePublished": article.get("published", INDEX_LASTMOD),
-            "dateModified": article.get("updated", INDEX_LASTMOD),
+            "datePublished": article.get("published", TOOLS_LASTMOD),
+            "dateModified": article.get("updated", TOOLS_LASTMOD),
             "articleSection": article.get("section", "Knowledge Base"),
             "keywords": article["keywords"][lang],
         })
@@ -1033,8 +1034,9 @@ def sitemap_xml():
     urls = [
         ("/", "daily", "1.0", INDEX_LASTMOD, True),
         ("/etf-market", "daily", "0.8", ETF_MARKET_LASTMOD, True),
-        *[(path, "weekly", "0.8", INDEX_LASTMOD, True) for path in sorted(INDEXABLE_TOOL_PATHS)],
-        *[(path, "weekly", "0.7", meta.get("updated", INDEX_LASTMOD), bool(meta.get("en_indexable")))
+        *[(path, "weekly", "0.8", INDEX_LASTMOD if path == "/heatmap" else TOOLS_LASTMOD, True)
+          for path in sorted(INDEXABLE_TOOL_PATHS)],
+        *[(path, "weekly", "0.7", meta.get("updated", TOOLS_LASTMOD), bool(meta.get("en_indexable")))
           for path, meta in KNOWLEDGE_ARTICLES.items()],
     ]
     items = []

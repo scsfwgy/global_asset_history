@@ -147,7 +147,7 @@ GlobalAssetHistory 是 Flask + 原生前端实现的金融数据分析站点，�
 
 | 功能 | 页面路径 | 主要前端模块 | 主要 API |
 | --- | --- | --- | --- |
-| 市场热力图 | `/heatmap` | `heatmap.js` | `market-pulse`、`heatmap` |
+| 市场热力图（今日行情与报价时间） | `/heatmap` | `heatmap.js` | `market-pulse`、`heatmap` |
 | 历年涨跌幅（收益 + 最大回撤双指标、回撤风险分级着色及双面板趋势图） | `/yearly` | `price-change.js`、`drilldown.js`、`charts.js` | `yearly`、`monthly-batch`、`daily` |
 | 股票详情 | `/detail` | `price-detail.js` | `detail`、`fundamentals-history` |
 | 美股对比 | `/stock-compare` | `stock-compare.js` | `symbol-search`、`stock-compare` |

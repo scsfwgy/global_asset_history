@@ -1,8 +1,10 @@
 """Market data fetchers for stocks, crypto, and China A-share indices."""
 
+import json
 import logging
 import math
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from typing import Dict, List
 
@@ -18,10 +20,12 @@ from .common import (
 )
 from .config import binance_base_url, coingecko_base_url, coingecko_ids, okx_base_url
 from .calculations import _compute_yearly_returns
+from .homepage_quotes import quote_number
 
 logger = logging.getLogger(__name__)
 _session = ThreadLocalSession()
 _session.headers.update({"User-Agent": "Mozilla/5.0"})
+_HOME_QUOTE_TIMEOUT = 6
 
 try:
     import yfinance as _yf
@@ -267,6 +271,66 @@ def _fetch_daily_series_global_stock(symbol: str) -> PriceSeries:
 def _binance_pair(symbol: str) -> str:
     s = symbol.upper().strip()
     return s if s.endswith("USDT") else s + "USDT"
+
+
+def _binance_home_pair(symbol: str) -> str:
+    # Binance migrated Toncoin to GRAM at a 1:1 ratio in June 2026.
+    return _binance_pair("GRAM" if symbol in {"TON", "TONUSDT"} else symbol)
+
+
+def fetch_binance_home_quotes(symbols: list[str], previous: dict) -> list[dict]:
+    """Fetch a batch of UTC-day quotes and fill the previous completed close."""
+    base_url = binance_base_url()
+    pairs = {_binance_home_pair(symbol): symbol for symbol in symbols if symbol.isascii() and symbol.isalnum()}
+    if not pairs:
+        return []
+    response = _session.get(
+        f"{base_url}/api/v3/ticker/tradingDay",
+        params={"symbols": json.dumps(list(pairs), separators=(",", ":")), "timeZone": "0"},
+        timeout=_HOME_QUOTE_TIMEOUT,
+    )
+    response.raise_for_status()
+    fetched = datetime.now(timezone.utc)
+    today = fetched.date()
+    midnight_ms = int(datetime.combine(today, datetime.min.time(), tzinfo=timezone.utc).timestamp() * 1000)
+    quotes = []
+    for row in response.json():
+        symbol = pairs.get(row.get("symbol"))
+        price = quote_number(row.get("lastPrice"))
+        if not symbol or not price or price < 0 or not row.get("count") or row.get("openTime") != midnight_ms:
+            continue
+        quotes.append({
+            "symbol": symbol, "price": price, "trade_date": today.isoformat(),
+            "turnover": quote_number(row.get("quoteVolume")), "currency": "USDT",
+            "fetched_ts": fetched.timestamp(),
+        })
+
+    def add_change(quote: dict) -> dict:
+        symbol = quote["symbol"]
+        old = previous.get(symbol, {})
+        close = old.get("reference_close") if old.get("trade_date") == quote["trade_date"] else None
+        if close is None:
+            try:
+                result = _session.get(
+                    f"{base_url}/api/v3/klines",
+                    params={"symbol": _binance_home_pair(symbol), "interval": "1d",
+                            "endTime": midnight_ms - 1, "limit": 1},
+                    timeout=_HOME_QUOTE_TIMEOUT,
+                )
+                result.raise_for_status()
+                candles = result.json()
+                if candles and candles[0][6] == midnight_ms - 1:
+                    close = quote_number(candles[0][4])
+            except Exception as exc:
+                logger.warning("Binance previous close failed for %s: %s", symbol, exc)
+        return {
+            **quote,
+            "reference_close": close,
+            "change_pct": (quote["price"] / close - 1) * 100 if close and close > 0 else None,
+        }
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        return list(executor.map(add_change, quotes))
 
 
 def _fetch_crypto(symbol: str) -> Dict[str, float]:
@@ -729,6 +793,48 @@ def _cn_tencent_symbol(symbol: str) -> str:
         return f"sh{s}"
     # SZSE: 0xx, 1xx, 2xx, 3xx
     return f"sz{s}"
+
+
+def fetch_tencent_home_quotes(symbols: list[str], _previous: dict) -> list[dict]:
+    """Normalize Tencent's batch quote using the exchange-local quote date."""
+    codes = {_cn_tencent_symbol(symbol): symbol for symbol in symbols
+             if len(symbol) == 6 and symbol.isascii() and symbol.isdigit()}
+    if not codes:
+        return []
+    response = _session.get(
+        f"https://qt.gtimg.cn/q={','.join(codes)}",
+        headers={"Referer": "https://gu.qq.com/"},
+        timeout=_HOME_QUOTE_TIMEOUT,
+    )
+    response.raise_for_status()
+    shanghai = timezone(timedelta(hours=8))
+    now = datetime.now(shanghai)
+    local_hhmm = now.hour * 100 + now.minute
+    in_session = 930 <= local_hhmm < 1130 or 1300 <= local_hhmm < 1500
+    quotes = []
+    for line in response.content.decode("gb18030", errors="replace").splitlines():
+        prefix, separator, payload = line.partition('="')
+        symbol = codes.get(prefix.removeprefix("v_"))
+        fields = payload.split("~")
+        if not separator or not symbol or len(fields) <= 37:
+            continue
+        price, previous_close = map(quote_number, fields[3:5])
+        if not price or price < 0 or not previous_close or previous_close < 0:
+            continue
+        try:
+            trade = datetime.strptime(fields[30], "%Y%m%d%H%M%S").replace(tzinfo=shanghai)
+        except ValueError:
+            continue
+        # Tencent f37 is turnover in units of 10,000 CNY.
+        turnover = quote_number(fields[37])
+        quotes.append({
+            "symbol": symbol, "name": fields[1], "price": price,
+            "change_pct": (price / previous_close - 1) * 100,
+            "trade_time": trade.timestamp(), "trade_date": trade.date().isoformat(),
+            "market_closed": trade.date() != now.date() or not in_session,
+            "turnover": turnover * 10_000 if turnover is not None else None, "currency": "CNY",
+        })
+    return quotes
 
 
 def _parse_east_money_klines(data: List[str]) -> tuple:

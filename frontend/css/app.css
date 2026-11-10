@@ -1459,9 +1459,10 @@ button.market-pulse-card:hover {
 .market-pulse-card-colored .market-pulse-price { color: #fff; }
 .market-pulse-foot {
             display: flex;
+            flex-wrap: wrap;
             align-items: baseline;
             justify-content: space-between;
-            gap: 5px;
+            gap: 3px 7px;
             margin-top: 5px;
             position: relative;
             z-index: 1;
@@ -1478,10 +1479,9 @@ button.market-pulse-card:hover {
         }
 .market-pulse-date {
             color: var(--apple-text-tertiary);
-            font-size: 8px;
-            white-space: nowrap;
+            font-size: 10px;
         }
-.market-pulse-card-colored .market-pulse-date { color: rgba(255, 255, 255, 0.64); }
+.market-pulse-card-colored .market-pulse-date { color: rgba(255, 255, 255, 0.82); }
 .market-pulse-error {
             margin-top: 18px;
             color: var(--apple-text-tertiary);

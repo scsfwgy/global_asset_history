@@ -26,6 +26,7 @@ from app import (
     INDEX_LASTMOD,
     INDEXABLE_TOOL_PATHS,
     KNOWLEDGE_ARTICLES,
+    TOOLS_LASTMOD,
     app as flask_app,
 )
 
@@ -113,6 +114,7 @@ class TestSitemap:
         allowed = {
             INDEX_LASTMOD,
             ETF_MARKET_LASTMOD,
+            TOOLS_LASTMOD,
             *(m.get("updated") for m in KNOWLEDGE_ARTICLES.values()),
         }
         for u in _sitemap_urls(client):
@@ -123,7 +125,7 @@ class TestSitemap:
     def test_home_lastmod_matches_index_constant(self, client):
         for u in _sitemap_urls(client):
             loc = u.findtext(f"{SITEMAP_NS}loc")
-            if loc.endswith("/zh/") or loc.endswith("/zh-TW/") or loc.endswith("/en/"):
+            if loc.endswith(("/zh/", "/zh-TW/", "/en/", "/heatmap")):
                 assert u.findtext(f"{SITEMAP_NS}lastmod") == INDEX_LASTMOD
 
     def test_each_url_has_full_hreflang_set(self, client):
@@ -765,7 +767,7 @@ class TestHtmlMeta:
             'data-i18n-attr="aria-label|detail.fundamentalsHistoryAria"'
             in html
         )
-        assert INDEX_LASTMOD == "2026-09-08"
+        assert TOOLS_LASTMOD == "2026-09-08"
 
         zh_locale = client.get("/locales/zh-CN.json").get_json()["detail"]
         en_locale = client.get("/locales/en.json").get_json()["detail"]

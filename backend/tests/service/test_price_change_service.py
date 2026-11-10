@@ -1009,97 +1009,30 @@ class TestCache:
 
 
 class TestMarketPulse:
-    """Fixed global benchmark strip."""
-
-    @patch("service.price_change.price_change_service._market_pulse_yahoo_quotes", return_value=[])
-    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
-    def test_returns_markets_in_display_order_with_summary(self, mock_fetch, mock_quotes):
-        def series_for(symbol, asset_type):
-            closes = {
-                "000001": [100.0, 101.0],
-                "^KS11": [100.0, 99.0],
-                "^GSPC": [100.0, 102.0],
-                "^NDX": [100.0, 100.0],
-                "BTC": [100.0, 103.0],
-            }[symbol]
-            timestamps = [1704067200, 1704153600]
-            return PriceSeries(timestamps, closes, "test", time.time())
-
-        mock_fetch.side_effect = series_for
-        result = svc.fetch_market_pulse()
-
-        assert [item["symbol"] for item in result["markets"]] == [
-            "000001", "^KS11", "^GSPC", "^NDX", "BTC",
-        ]
-        assert result["markets"][0]["price"] == 101.0
-        assert result["markets"][0]["change_pct"] == 1.0
-        assert result["markets"][0]["trade_date"] == "2024-01-02"
-        assert "trend" not in result["markets"][0]
+    @patch.object(svc, "_homepage_quote_map")
+    def test_returns_markets_in_display_order_with_summary(self, mock_quotes):
+        mock_quotes.return_value = {
+            ("000001", "cn_stock"): {"price": 101, "change_pct": 1.0, "trade_date": "2026-11-10"},
+            ("^KS11", "stock"): {"price": 99, "change_pct": -1.0},
+            ("^GSPC", "stock"): {"price": 102, "change_pct": 2.0},
+            ("^NDX", "stock"): {"price": 100, "change_pct": 0.0},
+            ("BTC", "crypto"): {"price": 103, "change_pct": 3.0},
+        }
+        result = svc.fetch_market_pulse(force_refresh=True)
+        assert [item["symbol"] for item in result["markets"]] == ["000001", "^KS11", "^GSPC", "^NDX", "BTC"]
+        assert result["markets"][0]["price"] == 101
+        assert result["markets"][0]["trade_date"] == "2026-11-10"
         assert result["summary"] == {"up": 3, "down": 1, "flat": 1, "available": 5}
+        assert mock_quotes.call_args.args[1] is True
 
-    @patch("service.price_change.price_change_service._market_pulse_yahoo_quotes", return_value=[])
-    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
-    def test_one_failure_does_not_hide_other_markets(self, mock_fetch, mock_quotes):
-        def series_for(symbol, asset_type):
-            if symbol == "^KS11":
-                return empty_series("yahoo", "upstream failed")
-            return PriceSeries([1704067200, 1704153600], [100.0, 101.0], "test", time.time())
-
-        mock_fetch.side_effect = series_for
+    @patch.object(svc, "_homepage_quote_map", return_value={("BTC", "crypto"): {"price": 103, "change_pct": None}})
+    def test_missing_quotes_do_not_hide_other_markets(self, _mock_quotes):
         result = svc.fetch_market_pulse()
-        korea = next(item for item in result["markets"] if item["symbol"] == "^KS11")
-
-        assert korea["price"] is None
-        assert "trend" not in korea
-        assert korea["error"] == "upstream failed"
-        assert result["summary"]["available"] == 4
-
-    @patch("service.price_change.price_change_service._market_pulse_yahoo_quotes")
-    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
-    def test_batches_yahoo_indices_and_fetches_only_cn_and_btc_separately(self, mock_fetch, mock_quotes):
-        mock_quotes.return_value = [
-            {"symbol": "^KS11", "price": 2600.0, "change_pct": -1.2, "trade_time": 1704153600},
-            {"symbol": "^GSPC", "price": 4800.0, "change_pct": 0.5, "trade_time": 1704153600},
-            {"symbol": "^NDX", "price": 16800.0, "change_pct": 0.8, "trade_time": 1704153600},
-        ]
-
-        def series_for(symbol, asset_type):
-            closes = {"000001": [100.0, 101.0], "BTC": [100.0, 103.0]}[symbol]
-            return PriceSeries([1704067200, 1704153600], closes, "test", time.time())
-
-        mock_fetch.side_effect = series_for
-        result = svc.fetch_market_pulse()
-
-        mock_quotes.assert_called_once_with(["^KS11", "^GSPC", "^NDX"])
-        assert {call.args for call in mock_fetch.call_args_list} == {
-            ("000001", "cn_stock"), ("BTC", "crypto"),
-        }
-        korea = next(item for item in result["markets"] if item["symbol"] == "^KS11")
-        assert korea["price"] == 2600.0
-        assert korea["change_pct"] == -1.2
-        assert korea["trade_date"] == "2024-01-02"
-        assert korea["source"] == "yahoo-quote"
-
-    @patch("service.price_change.price_change_service._market_pulse_yahoo_quotes")
-    @patch("service.price_change.price_change_service._fetch_daily_series_cached")
-    def test_partial_yahoo_batch_falls_back_only_for_missing_index(self, mock_fetch, mock_quotes):
-        mock_quotes.return_value = [
-            {"symbol": "^GSPC", "price": 4800.0, "change_pct": 0.5, "trade_time": 1704153600},
-            {"symbol": "^NDX", "price": 16800.0, "change_pct": 0.8, "trade_time": 1704153600},
-        ]
-
-        def series_for(symbol, asset_type):
-            closes = {
-                "000001": [100.0, 101.0], "BTC": [100.0, 103.0], "^KS11": [100.0, 99.0],
-            }[symbol]
-            return PriceSeries([1704067200, 1704153600], closes, "test", time.time())
-
-        mock_fetch.side_effect = series_for
-        svc.fetch_market_pulse()
-
-        assert {call.args for call in mock_fetch.call_args_list} == {
-            ("000001", "cn_stock"), ("BTC", "crypto"), ("^KS11", "stock"),
-        }
+        assert result["markets"][1]["price"] is None
+        assert result["markets"][1]["error"] == "quote unavailable"
+        assert result["markets"][-1]["price"] == 103
+        assert result["markets"][-1]["change_pct"] is None
+        assert result["summary"]["available"] == 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -2201,16 +2134,11 @@ class TestDetailFundamentals:
 class TestBuildHeatmapToday:
     """Tests for _build_heatmap_today — today fast-path orchestrator."""
 
-    def _compute_stub(self, sym, atype):
-        """Stub matching _compute_one signature for non-stock entries."""
-        return {
-            "symbol": sym,
-            "name": None,
-            "type": atype,
-            "return_pct": 5.0,
-            "turnover": 999.0,
-            "turnover_currency": "USD" if atype == "stock" else "CNY",
-        }
+    def setup_method(self):
+        from service.price_change import homepage_quotes
+
+        for cache in homepage_quotes._cache.values():
+            cache.clear()
 
     @patch("service.price_change.price_change_service._yahoo_quote_batch")
     def test_all_stocks_success(self, mock_batch):
@@ -2227,7 +2155,7 @@ class TestBuildHeatmapToday:
 
         result = svc._build_heatmap_today(
             entries, user, auto, auto_top_n=20,
-            include_market_cap=True, compute_fn=self._compute_stub,
+            include_market_cap=True, force_refresh=False,
         )
         assert result is not None
         assert result["period"] == "today"
@@ -2260,7 +2188,7 @@ class TestBuildHeatmapToday:
             {"0700.HK"},
             auto_top_n=1,
             include_market_cap=True,
-            compute_fn=self._compute_stub,
+            force_refresh=False,
         )
 
         mock_batch.assert_called_once_with(["0700.HK"])
@@ -2288,7 +2216,7 @@ class TestBuildHeatmapToday:
             {"7203.T"},
             auto_top_n=1,
             include_market_cap=False,
-            compute_fn=self._compute_stub,
+            force_refresh=False,
         )
 
         item = result["data"][0]
@@ -2299,15 +2227,15 @@ class TestBuildHeatmapToday:
 
     @patch("service.price_change.price_change_service._yahoo_quote_batch")
     def test_batch_fails_fallback(self, mock_batch):
-        """Batch returns empty for non-empty stocks → return None."""
+        """Unavailable automatic symbols respect the requested limit."""
         mock_batch.return_value = []
         entries = [("AAPL", "stock"), ("MSFT", "stock")]
 
         result = svc._build_heatmap_today(
             entries, set(), set(), auto_top_n=0,
-            include_market_cap=False, compute_fn=self._compute_stub,
+            include_market_cap=False, force_refresh=False,
         )
-        assert result is None
+        assert result["data"] == []
         track_coverage(MOD, 1)
 
     @patch("service.price_change.price_change_service._yahoo_quote_batch")
@@ -2319,7 +2247,7 @@ class TestBuildHeatmapToday:
         ]
         result = svc._build_heatmap_today(
             [("AAPL", "stock")], {"AAPL"}, set(), auto_top_n=0,
-            include_market_cap=False, compute_fn=self._compute_stub,
+            include_market_cap=False, force_refresh=False,
         )
         assert result is not None
         assert "market_cap" in result["data"][0]
@@ -2327,34 +2255,11 @@ class TestBuildHeatmapToday:
         track_coverage(MOD, 1)
 
     @patch("service.price_change.price_change_service._yahoo_quote_batch")
-    def test_mixed_stock_and_crypto(self, mock_batch):
-        """Stocks via batch, crypto via compute_fn."""
-        mock_batch.return_value = [
-            {"symbol": "AAPL", "name": "Apple", "price": 150.0,
-             "change_pct": 2.5, "volume": 1000000, "market_cap": 3e12},
-        ]
-        entries = [("AAPL", "stock"), ("BTC", "crypto")]
-        user = set()
-        auto = {"AAPL", "BTC"}
-
-        result = svc._build_heatmap_today(
-            entries, user, auto, auto_top_n=20,
-            include_market_cap=True, compute_fn=self._compute_stub,
-        )
-        assert result is not None
-        assert len(result["data"]) == 2
-        # BTC came from compute_stub
-        btc = next(r for r in result["data"] if r["symbol"] == "BTC")
-        assert btc["return_pct"] == 5.0
-        assert btc["type"] == "crypto"
-        track_coverage(MOD, 2)
-
-    @patch("service.price_change.price_change_service._yahoo_quote_batch")
     def test_empty_entries(self, mock_batch):
         """No entries → empty data, batch never called."""
         result = svc._build_heatmap_today(
             [], set(), set(), auto_top_n=0,
-            include_market_cap=True, compute_fn=self._compute_stub,
+            include_market_cap=True, force_refresh=False,
         )
         assert result is not None
         assert result["data"] == []
@@ -2377,7 +2282,7 @@ class TestBuildHeatmapToday:
         result = svc._build_heatmap_today(
             [("AAPL", "stock"), ("MSFT", "stock")],
             {"AAPL", "MSFT"}, set(), auto_top_n=0,
-            include_market_cap=False, compute_fn=self._compute_stub,
+            include_market_cap=False, force_refresh=False,
         )
         assert result is not None
         assert len(result["data"]) == 2
@@ -2402,7 +2307,7 @@ class TestBuildHeatmapToday:
 
         result = svc._build_heatmap_today(
             entries, user, auto, auto_top_n=3,
-            include_market_cap=False, compute_fn=self._compute_stub,
+            include_market_cap=False, force_refresh=False,
         )
         assert result is not None
         # Top 3 auto + 1 user = 4
@@ -2465,32 +2370,6 @@ class TestFetchHeatmapToday:
         assert (candidate, asset_type) in entries
         assert mock_build.call_args.args[3] == len(entries)
         assert result["market_type"] == market_type
-
-    @patch("service.price_change.price_change_service._build_heatmap_today")
-    def test_today_fast_path_fallback_to_ohlcv(self, mock_build):
-        """When fast path returns None, fall through to per-symbol OHLCV."""
-        mock_build.return_value = None
-
-        with patch(
-            "service.price_change.price_change_service._fetch_daily_series_cached"
-        ) as mock_fetch, patch(
-            "service.price_change.price_change_service._yahoo_quote_batch",
-            return_value=[{
-                "symbol": "AAPL", "name": "Apple Inc.", "price": 150.0,
-                "change_pct": 1.0, "volume": 1000, "market_cap": 3e12,
-            }],
-        ):
-            from tests.conftest import make_series
-            mock_fetch.return_value = make_series(years=1, start_price=100.0)
-
-            result = svc.fetch_heatmap_data(
-                symbols=[{"symbol": "AAPL", "type": "stock"}],
-                period="today", auto_top_n=0, include_market_cap=False,
-            )
-        assert result["period"] == "today"
-        mock_build.assert_called_once()
-        mock_fetch.assert_called()
-        track_coverage(MOD, 2)
 
     @patch("service.price_change.price_change_service._build_heatmap_today")
     @patch("service.price_change.price_change_service._fetch_daily_series_cached")
