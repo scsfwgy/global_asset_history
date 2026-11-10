@@ -2380,163 +2380,286 @@
         }
 
         /* ─── Wish Wall ─── */
-        .wish-admin-toggle {
-            cursor: pointer;
-            font-size: 14px;
-            color: var(--apple-text-tertiary);
-            user-select: none;
-            transition: color var(--transition-fast);
+        .wish-wall {
+            --wish-accent: #a9bbff;
+            --wish-hero: #171d34;
+            --wish-card: #15171e;
+            --wish-input: #101218;
+            --wish-tint: #202638;
+            --wish-submit: #4259ca;
+            --wish-error: #ff9a96;
+            --wish-success: #a3dfb9;
+            margin-bottom: 48px;
         }
-        .wish-admin-toggle:hover { color: var(--apple-text-primary); }
 
-        .wish-admin-row {
-            display: flex;
+        [data-theme="light"] .wish-wall {
+            --wish-accent: #364caf;
+            --wish-hero: #e4eaff;
+            --wish-card: #fff;
+            --wish-input: #f7f8fc;
+            --wish-tint: #edf0fa;
+            --wish-error: #a52720;
+            --wish-success: #196437;
+        }
+
+        .wish-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
             align-items: center;
-            gap: 10px;
-            margin-bottom: 14px;
+            gap: clamp(24px, 4vw, 56px);
+            padding: clamp(24px, 4vw, 44px);
+            border: 1px solid var(--apple-divider);
+            border-radius: 24px;
+            background:
+                repeating-radial-gradient(circle at 0 100%, transparent 0 46px, color-mix(in srgb, var(--wish-accent) 11%, transparent) 47px 48px),
+                linear-gradient(125deg, var(--wish-hero), var(--wish-card));
         }
 
-        .wish-form {
-            background: var(--apple-surface-2);
-            border-radius: var(--radius-md);
-            padding: 14px;
-            margin-bottom: 20px;
+        .wish-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--wish-accent);
+            font-weight: 700;
+            font-size: var(--text-sm);
+            letter-spacing: 0.06em;
         }
 
-        .wish-textarea {
-            width: 100%;
+        .wish-intro h2 {
+            margin: 14px 0 10px;
+            font-size: clamp(30px, 3.5vw, 44px);
+            font-weight: 750;
+            line-height: 1.18;
+            letter-spacing: -0.03em;
+            text-wrap: balance;
+        }
+
+        .wish-intro p {
+            max-width: 34ch;
+            margin: 0;
+            color: var(--apple-text-secondary);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        .wish-form,
+        .wish-card {
+            min-width: 0;
+            padding: 20px;
+            background: var(--wish-card);
+            border: 1px solid var(--apple-divider);
+            border-radius: 16px;
+        }
+
+        .wish-form { box-shadow: var(--apple-card-shadow); }
+
+        .wish-form-label,
+        .wish-feed-header,
+        .wish-card-meta,
+        .wish-card-reply-head {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 4px 12px;
+        }
+
+        .wish-form-label {
+            margin-bottom: 8px;
+            font-size: var(--text-base);
+            font-weight: 700;
+        }
+
+        .wish-count,
+        .wish-card time {
+            color: var(--apple-text-secondary);
+            font-size: var(--text-xs);
+            font-weight: 400;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .wish-wall :is(input, textarea) {
             box-sizing: border-box;
-            min-height: 64px;
-            resize: vertical;
+            width: 100%;
+            min-width: 0;
             padding: 10px 12px;
-            background: var(--apple-surface-1);
+            background: var(--wish-input);
             border: 1px solid var(--apple-divider);
             border-radius: var(--radius-md);
             color: var(--apple-text-primary);
-            font-size: 14px;
-            font-family: inherit;
-            outline: none;
-            transition: border-color var(--transition-fast);
-            margin-bottom: 10px;
+            font: inherit;
+            font-size: 16px;
         }
-        .wish-textarea:focus { border-color: var(--apple-blue); }
+
+        .wish-wall :is(input, textarea, button, summary):focus-visible {
+            outline: 2px solid var(--wish-accent);
+            outline-offset: 2px;
+        }
+
+        .wish-wall textarea {
+            display: block;
+            min-height: 96px;
+            resize: vertical;
+            line-height: 1.5;
+        }
 
         .wish-form-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .wish-captcha-box {
-            display: inline-flex;
-            align-items: center;
-            cursor: pointer;
-            border-radius: var(--radius-md);
-            overflow: hidden;
-            line-height: 0;
-            min-width: 120px;
-            min-height: 44px;
-            background: var(--apple-surface-1);
-        }
-
-        .wish-msg {
-            margin-top: 10px;
-            font-size: 13px;
-            padding: 8px 12px;
-            border-radius: var(--radius-md);
-        }
-        .wish-msg.is-error { background: var(--data-negative-alpha-10); color: var(--data-negative); }
-        .wish-msg.is-ok { background: var(--data-positive-alpha-12); color: var(--data-positive); }
-
-        .wish-list {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 12px;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+            gap: 10px;
+            margin-top: 12px;
         }
 
-        .wish-card {
-            background: var(--apple-surface-2);
-            border-radius: var(--radius-md);
-            padding: 14px 16px;
-            position: relative;
-            display: flex;
-            flex-direction: column;
+        .wish-captcha {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
             gap: 8px;
         }
 
-        .wish-card-text {
-            font-size: 14px;
-            line-height: 1.5;
-            color: var(--apple-text-primary);
-            white-space: pre-wrap;
-            word-break: break-word;
+        .wish-captcha-box {
+            display: grid;
+            place-items: center;
+            width: 104px;
+            min-height: 44px;
+            padding: 0;
+            overflow: hidden;
+            border: 1px solid var(--apple-divider);
+            border-radius: var(--radius-md);
+            background: #1c1c1e;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .wish-captcha-box svg { display: block; width: 100%; height: auto; }
+        .wish-captcha-box:hover { border-color: var(--wish-accent); }
+        .wish-captcha-box:disabled { cursor: wait; }
+
+        .wish-submit.pc-btn {
+            display: block;
+            width: 100%;
+            min-height: 42px;
+            margin-top: 12px;
+            border-color: var(--wish-submit);
+            background: var(--wish-submit);
+            font-weight: 700;
+        }
+
+        .wish-msg:not(:empty) {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: var(--radius-md);
+            background: var(--wish-tint);
+            font-size: var(--text-sm);
+        }
+        .wish-msg.is-error { color: var(--wish-error); }
+        .wish-msg.is-ok { color: var(--wish-success); }
+
+        .wish-feed { margin-top: 32px; }
+        .wish-feed-header { margin-bottom: 14px; }
+        #wishFeedMsg:not(:empty) { margin: 0 0 14px; }
+        .wish-feed-header h2 { margin: 0; font-size: var(--text-xl); }
+
+        .wish-admin {
+            color: var(--apple-text-secondary);
+            font-size: var(--text-sm);
+        }
+
+        .wish-admin summary {
+            width: fit-content;
+            color: var(--apple-text-secondary);
+            cursor: pointer;
+        }
+        .wish-feed-header summary { margin-inline-start: auto; }
+        .wish-admin summary:hover { color: var(--wish-accent); }
+
+        .wish-admin-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .wish-admin-row input { width: min(100%, 230px); }
+
+        .wish-state {
+            padding: 28px 16px;
+            border: 1px dashed var(--apple-divider);
+            border-radius: 16px;
+            color: var(--apple-text-secondary);
+            text-align: center;
+            font-size: var(--text-base);
+        }
+
+        .wish-list {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            align-items: start;
         }
 
         .wish-card-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: var(--text-xs);
-            color: var(--apple-text-tertiary);
+            color: var(--apple-text-secondary);
+            font-size: var(--text-sm);
+            overflow-wrap: anywhere;
         }
 
-        .wish-card-nick { font-weight: 600; color: var(--apple-text-secondary); }
+        .wish-card-nick { font-weight: 700; color: var(--apple-text-primary); }
 
-        .wish-card-del {
-            cursor: pointer;
-            color: var(--data-negative);
-            font-size: var(--text-xs);
-            opacity: 0.7;
+        .wish-card-text,
+        .wish-card-reply-text {
+            margin: 10px 0 0;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            line-height: 1.65;
         }
-        .wish-card-del:hover { opacity: 1; }
+
+        .wish-card-text { font-size: 15px; }
 
         .wish-card-reply {
-            background: rgba(0, 113, 227, 0.08);
-            border-left: 3px solid var(--apple-blue);
-            border-radius: var(--radius-md);
-            padding: 8px 10px;
-            font-size: 12px;
-            line-height: 1.5;
-            color: var(--apple-text-secondary);
-            word-break: break-word;
+            margin-top: 14px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: var(--wish-tint);
+            font-size: var(--text-sm);
+        }
+        .wish-card-reply-label { color: var(--wish-accent); font-weight: 700; }
+        .wish-card-reply-text { margin-top: 4px; }
+
+        .wish-card .wish-admin {
+            margin: 14px 0 0;
+            padding-top: 10px;
+            border-top: 1px solid var(--apple-divider);
         }
 
-        .wish-card-reply-label {
-            color: var(--apple-blue);
-            font-weight: 600;
-        }
-
-        .wish-card-reply-text {
-            color: var(--apple-text-primary);
-            white-space: pre-wrap;
-        }
-
-        .wish-card-reply-time {
-            color: var(--apple-text-tertiary);
-            font-size: var(--text-xs);
-        }
-
-        .wish-reply-form {
+        .wish-reply-form { margin-top: 10px; }
+        .wish-reply-actions {
             display: flex;
-            gap: 6px;
-            align-items: center;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .wish-card-del.pc-btn { color: var(--wish-error); }
+
+        @media (max-width: 900px) {
+            .wish-hero { grid-template-columns: minmax(0, 1fr); }
+            .wish-intro p { max-width: none; }
+            .wish-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
-        .wish-reply-input {
-            flex: 1;
-            min-width: 0;
-            box-sizing: border-box;
-            padding: 6px 8px;
-            background: var(--apple-surface-1);
-            border: 1px solid var(--apple-divider);
-            border-radius: var(--radius-md);
-            color: var(--apple-text-primary);
-            font-size: 12px;
-            font-family: inherit;
-            outline: none;
+        @media (max-width: 560px) {
+            .wish-hero { padding: 18px; gap: 18px; border-radius: 18px; }
+            .wish-form, .wish-card { padding: 14px; }
+            .wish-form-row, .wish-list { grid-template-columns: minmax(0, 1fr); }
+            .wish-feed { margin-top: 24px; }
+            .wish-list { gap: 12px; }
         }
-        .wish-reply-input:focus { border-color: var(--apple-blue); }
+
+        @media (max-width: 360px) {
+            .wish-hero { padding-inline: 14px; }
+            .wish-form { padding-inline: 10px; }
+            .wish-captcha-box { width: 84px; }
+        }
 
     /* ETF market table */
     #etfTable { table-layout: auto; width: 100%; min-width: 1120px; }
@@ -7163,35 +7286,52 @@
 
         <!-- 心愿墙 -->
         <div class="tab-panel" id="tab-wishes">
-        <div class="pc-monthly">
-            <div class="pc-monthly-header">
-                <span class="pc-chart-title" data-i18n="wishes.title">心愿墙 — 想看什么标的、想要什么功能，留个言</span>
-                <span class="wish-admin-toggle" id="wishAdminToggle" data-i18n-attr="title|wishes.manage"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+            <div class="wish-wall">
+                <section class="wish-hero" aria-labelledby="wishHeadline">
+                    <div class="wish-intro">
+                        <span class="wish-kicker">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v12H9l-5 4V4Z"/><path d="M8 10h8M12 6v8"/></svg>
+                            <span data-i18n="tab.wishes">心愿墙</span>
+                        </span>
+                        <h2 id="wishHeadline" data-i18n="wishes.title">下一步，想看什么？</h2>
+                        <p data-i18n="wishes.description">想多看一个标的，或用上一个新功能？欢迎留言，告诉我们你需要什么。</p>
+                    </div>
+                    <form class="wish-form" id="wishForm" novalidate>
+                        <div class="wish-form-label">
+                            <label for="wishText" data-i18n="wishes.compose">写下你的心愿</label>
+                            <span class="wish-count" id="wishCount">0 / 200</span>
+                        </div>
+                        <textarea id="wishText" maxlength="200" aria-describedby="wishCount" data-i18n-attr="placeholder|wishes.placeholder" placeholder="比如，希望添加日经 225 的历史走势…"></textarea>
+                        <div class="wish-form-row">
+                            <input type="text" id="wishNick" maxlength="24" data-i18n-attr="placeholder|wishes.nickname" data-i18n-attr-alt="aria-label|wishes.nickname" placeholder="昵称（可选）" aria-label="昵称（可选）">
+                            <div class="wish-captcha">
+                                <input type="text" id="wishCaptchaInput" maxlength="8" autocapitalize="characters" autocomplete="off" spellcheck="false" data-i18n-attr="placeholder|wishes.captcha" data-i18n-attr-alt="aria-label|wishes.captcha" placeholder="验证码" aria-label="验证码">
+                                <button type="button" class="wish-captcha-box" id="wishCaptchaBox" data-i18n-attr="title|wishes.captchaHint" data-i18n-attr-alt="aria-label|wishes.captchaHint" title="点击刷新验证码" aria-label="点击刷新验证码"></button>
+                            </div>
+                        </div>
+                        <button type="submit" id="wishSubmitBtn" class="pc-btn primary wish-submit" data-i18n="wishes.submit">提交心愿</button>
+                        <div class="wish-msg" id="wishMsg" role="status"></div>
+                    </form>
+                </section>
+                <section class="wish-feed" aria-labelledby="wishFeedTitle">
+                    <div class="wish-feed-header">
+                        <h2 id="wishFeedTitle" data-i18n="wishes.feed">大家的心愿</h2>
+                        <details class="wish-admin">
+                            <summary data-i18n="wishes.manage">管理</summary>
+                            <div class="wish-admin-row">
+                                <label for="wishAdminToken" data-i18n="wishes.adminToken">管理员 Token</label>
+                                <input type="password" id="wishAdminToken" autocomplete="off">
+                                <button type="button" id="wishAdminSave" class="pc-btn" data-i18n="wishes.save">保存</button>
+                                <span id="wishAdminHint" role="status"></span>
+                            </div>
+                        </details>
+                    </div>
+                    <div class="wish-msg" id="wishFeedMsg" role="status"></div>
+                    <div id="wishLoading" class="wish-state" role="status" hidden data-i18n="vix.loading">加载中...</div>
+                    <div id="wishEmpty" class="wish-state" hidden data-i18n="wishes.empty">还没有心愿，来许下第一个吧 ✨</div>
+                    <div id="wishList" class="wish-list"></div>
+                </section>
             </div>
-            <div class="wish-admin-row" id="wishAdminRow" style="display:none;">
-                <span class="pc-bt-label" data-i18n="wishes.adminToken">管理员 Token</span>
-                <input type="password" id="wishAdminToken" class="pc-bt-input" style="width:200px;" data-i18n-attr="placeholder|wishes.adminPlaceholder" placeholder="填入后每条心愿可删除">
-                <button id="wishAdminSave" class="pc-btn" style="padding:7px 14px;" data-i18n="wishes.save">保存</button>
-                <span id="wishAdminHint" style="font-size:12px;color:var(--apple-text-tertiary);"></span>
-            </div>
-            <div class="wish-form">
-                <textarea id="wishText" class="wish-textarea" maxlength="200" data-i18n-attr="placeholder|wishes.placeholder" placeholder="写下你的心愿（最多 200 字）..."></textarea>
-                <div class="wish-form-row">
-                    <input type="text" id="wishNick" class="pc-bt-input" maxlength="24" style="width:150px;" data-i18n-attr="placeholder|wishes.nickname" placeholder="昵称（可选）">
-                    <span class="wish-captcha-box" id="wishCaptchaBox" data-i18n-attr="title|wishes.captchaHint" title="点击刷新验证码"></span>
-                    <input type="text" id="wishCaptchaInput" class="pc-bt-input" style="width:110px;text-transform:uppercase;" maxlength="8" data-i18n-attr="placeholder|wishes.captcha" placeholder="验证码">
-                    <button id="wishSubmitBtn" class="pc-btn primary" style="padding:7px 18px;" data-i18n="wishes.submit">提交心愿</button>
-                </div>
-                <div class="wish-msg" id="wishMsg" style="display:none;"></div>
-            </div>
-            <div id="wishLoading" class="pc-loading" style="display:none;">
-                <div class="spinner"></div><span data-i18n="vix.loading">加载中...</span>
-            </div>
-            <div id="wishEmpty" style="display:none;text-align:center;padding:32px;color:var(--apple-text-tertiary);font-size:13px;" data-i18n="wishes.empty">
-                还没有心愿，来许下第一个吧 ✨
-            </div>
-            <div id="wishList" class="wish-list"></div>
-        </div>
         </div><!-- /tab-wishes -->
 
     </main>
@@ -7220,7 +7360,7 @@
       // }
       // Visit counter: increment on page load, then read back.
       function _initialTabForVisit() {
-        var path = location.pathname.replace(/^\/(?:en|zh)(?=\/|$)/, '') || '/';
+        var path = location.pathname.replace(/^\/(?:en|zh-TW|zh)(?=\/|$)/, '') || '/';
         if (path === '/' || path === '/heatmap') return 'heatmap';
         if (path.indexOf('/etf') === 0) return 'etf';
         if (path.indexOf('/qdii-funds') === 0) return 'qdii-funds';
@@ -7278,16 +7418,12 @@
 
         // ─── Tab Routing (URL-based) ───
         (function() {
-            // Language prefix helpers: /en for English, /zh for Chinese, '' for default (zh)
-            function _langPrefix() {
-                var lang = (typeof __lang === 'function') ? __lang() : 'zh-CN';
-                return lang === 'en' ? '/en' : '/zh';
-            }
             function _pathWithLang(path) {
-                return _langPrefix() + path;
+                var lang = (typeof __lang === 'function') ? __lang() : 'zh-CN';
+                return '/' + (lang === 'zh-CN' ? 'zh' : lang) + path;
             }
             function _stripLang(path) {
-                var m = path.match(/^\/(en|zh)(\/.*)?$/);
+                var m = path.match(/^\/(en|zh-TW|zh)(\/.*)?$/);
                 return m ? (m[2] || '/') : path;
             }
 
@@ -7752,7 +7888,7 @@
             // On page load: read URL and restore the correct tab
             function restoreFromUrl() {
                 var cleanPath = _stripLang(location.pathname);
-                var hasLangPrefix = /^\/(en|zh)\//.test(location.pathname) || /^\/(en|zh)$/.test(location.pathname);
+                var hasLangPrefix = cleanPath !== location.pathname;
 
                 // If no language prefix, redirect to the language-prefixed URL
                 if (!hasLangPrefix) {

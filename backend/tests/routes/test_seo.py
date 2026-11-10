@@ -332,6 +332,7 @@ class TestHtmlMeta:
             ("/zh/yearly", "tab-yearly", "tab-detail", "price-change.js", "price-detail.js"),
             ("/en/detail", "tab-detail", "tab-backtest", "price-detail.js", "backtest.js"),
             ("/zh/backtest", "tab-backtest", "tab-vix", "backtest.js", "vix-chart.js"),
+            ("/zh-TW/wishes", "tab-wishes", "tab-backtest", "wishes.js", "backtest.js"),
         ],
     )
     def test_tool_routes_only_ship_the_active_panel_and_scripts(

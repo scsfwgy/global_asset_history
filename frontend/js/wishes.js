@@ -1,4 +1,4 @@
-/** Wish wall: anonymous submissions with SVG CAPTCHA + admin delete. */
+/** Wish wall: anonymous submissions with SVG CAPTCHA and admin moderation. */
 
 let _wishCaptchaId = null;
 let _wishLoaded = false;
@@ -10,148 +10,160 @@ function _getAdminToken() {
     return sessionStorage.getItem(WISH_ADMIN_KEY) || "";
 }
 
-function _showWishMsg(text, isError) {
-    const el = _wishEl("wishMsg");
+function _showWishMsg(text, isError, el = _wishEl("wishMsg")) {
     el.textContent = text;
     el.className = "wish-msg " + (isError ? "is-error" : "is-ok");
-    el.style.display = "block";
 }
 
-function _clearWishMsg() {
-    _wishEl("wishMsg").style.display = "none";
+function _updateWishCount() {
+    const input = _wishEl("wishText");
+    _wishEl("wishCount").textContent = `${input.value.length} / ${input.maxLength}`;
 }
 
 // SVG comes from our own backend; injecting it as markup is safe and required
 // to render the image. User-supplied content is never injected this way.
 function loadCaptcha() {
     const box = _wishEl("wishCaptchaBox");
-    box.textContent = "...";
+    _wishCaptchaId = null;
+    _wishEl("wishCaptchaInput").value = "";
+    box.disabled = true;
+    box.textContent = "…";
     fetch(WISH_CAPTCHA_ENDPOINT)
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error();
+            return r.json();
+        })
         .then(d => {
             _wishCaptchaId = d.captcha_id;
             box.innerHTML = d.svg;
         })
-        .catch(() => { box.textContent = __("wishes.loadFailed"); });
+        .catch(() => { box.textContent = "↻"; })
+        .finally(() => { box.disabled = false; });
 }
 
-function _formatWishTime(ts) {
-    if (!ts) return "";
-    const d = new Date(ts * 1000);
+function _appendWishTime(container, ts) {
+    if (!ts) return;
+    const date = new Date(ts * 1000);
+    if (!Number.isFinite(date.getTime())) return;
     const pad = n => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const time = document.createElement("time");
+    time.dateTime = date.toISOString();
+    time.textContent = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    container.appendChild(time);
 }
 
 function _renderWishCard(wish) {
-    const card = document.createElement("div");
+    const card = document.createElement("article");
     card.className = "wish-card";
 
-    const textEl = document.createElement("div");
-    textEl.className = "wish-card-text";
-    textEl.textContent = wish.text || "";  // textContent => XSS-safe
-    card.appendChild(textEl);
-
-    const meta = document.createElement("div");
+    const meta = document.createElement("header");
     meta.className = "wish-card-meta";
 
-    const nickEl = document.createElement("span");
-    nickEl.className = "wish-card-nick";
-    nickEl.textContent = wish.nick || __("wishes.anonymous");  // textContent => XSS-safe
-    meta.appendChild(nickEl);
-
-    const right = document.createElement("span");
-    const timeEl = document.createElement("span");
-    timeEl.textContent = _formatWishTime(wish.ts);
-    right.appendChild(timeEl);
-
-    if (_getAdminToken()) {
-        const del = document.createElement("span");
-        del.className = "wish-card-del";
-        del.textContent = "  " + __("wishes.delete");
-        del.addEventListener("click", () => deleteWish(wish.id));
-        right.appendChild(del);
-    }
-    meta.appendChild(right);
-
+    const nick = document.createElement("span");
+    nick.className = "wish-card-nick";
+    nick.textContent = wish.nick || __("wishes.anonymous");
+    meta.appendChild(nick);
+    _appendWishTime(meta, wish.ts);
     card.appendChild(meta);
 
-    if (wish.reply) {
-        const replyEl = document.createElement("div");
-        replyEl.className = "wish-card-reply";
+    const text = document.createElement("p");
+    text.className = "wish-card-text";
+    text.textContent = wish.text || "";
+    card.appendChild(text);
 
+    if (wish.reply) {
+        const reply = document.createElement("div");
+        reply.className = "wish-card-reply";
+
+        const head = document.createElement("div");
+        head.className = "wish-card-reply-head";
         const label = document.createElement("span");
         label.className = "wish-card-reply-label";
         label.textContent = __("wishes.adminReply");
-        replyEl.appendChild(label);
+        head.appendChild(label);
+        _appendWishTime(head, wish.reply_ts);
 
-        const text = document.createElement("span");
-        text.className = "wish-card-reply-text";
-        text.textContent = wish.reply;
-        replyEl.appendChild(text);
-
-        if (wish.reply_ts) {
-            const time = document.createElement("span");
-            time.className = "wish-card-reply-time";
-            time.textContent = " · " + _formatWishTime(wish.reply_ts);
-            replyEl.appendChild(time);
-        }
-        card.appendChild(replyEl);
+        const replyText = document.createElement("p");
+        replyText.className = "wish-card-reply-text";
+        replyText.textContent = wish.reply;
+        reply.append(head, replyText);
+        card.appendChild(reply);
     }
 
     if (_getAdminToken()) {
-        const form = document.createElement("div");
-        form.className = "wish-reply-form";
+        const details = document.createElement("details");
+        details.className = "wish-admin";
+        const summary = document.createElement("summary");
+        summary.textContent = __("wishes.manage");
+        details.appendChild(summary);
 
-        const input = document.createElement("input");
-        input.type = "text";
-        input.className = "wish-reply-input";
+        const form = document.createElement("form");
+        form.className = "wish-reply-form";
+        const input = document.createElement("textarea");
+        input.rows = 4;
         input.maxLength = 200;
         input.placeholder = __("wishes.replyPlaceholder");
+        input.setAttribute("aria-label", __("wishes.adminReply"));
         input.value = wish.reply || "";
-        form.appendChild(input);
 
-        const btn = document.createElement("button");
-        btn.className = "pc-btn";
-        btn.style.cssText = "padding:4px 12px;font-size:12px;";
-        btn.textContent = wish.reply ? __("wishes.updateReply") : __("wishes.reply");
-        btn.addEventListener("click", () => replyWish(wish.id, input.value, btn));
-        form.appendChild(btn);
+        const actions = document.createElement("div");
+        actions.className = "wish-reply-actions";
+        const save = document.createElement("button");
+        save.type = "submit";
+        save.className = "pc-btn";
+        save.textContent = wish.reply ? __("wishes.updateReply") : __("wishes.reply");
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "pc-btn wish-card-del";
+        del.textContent = __("wishes.delete");
+        actions.append(save, del);
 
-        card.appendChild(form);
+        const status = document.createElement("div");
+        status.className = "wish-msg";
+        status.setAttribute("role", "status");
+        form.append(input, actions, status);
+        input.addEventListener("input", () => { status.textContent = ""; });
+        form.addEventListener("submit", event => {
+            event.preventDefault();
+            replyWish(wish.id, input.value, save, status);
+        });
+        del.addEventListener("click", () => deleteWish(wish.id, del, status));
+        details.appendChild(form);
+        card.appendChild(details);
     }
 
     return card;
 }
 
 function loadWishes() {
-    _wishEl("wishLoading").style.display = "flex";
-    _wishEl("wishEmpty").style.display = "none";
+    const loading = _wishEl("wishLoading");
+    const empty = _wishEl("wishEmpty");
+    const list = _wishEl("wishList");
+    const feedMsg = _wishEl("wishFeedMsg");
+    loading.hidden = list.childElementCount > 0;
+    empty.hidden = true;
     fetch(WISHES_ENDPOINT)
-        .then(r => r.json())
-        .then(d => {
-            _wishEl("wishLoading").style.display = "none";
-            const list = _wishEl("wishList");
-            list.innerHTML = "";
-            const wishes = (d && d.wishes) || [];
-            if (!wishes.length) {
-                _wishEl("wishEmpty").style.display = "block";
-                return;
-            }
-            wishes.forEach(w => list.appendChild(_renderWishCard(w)));
+        .then(r => {
+            if (!r.ok) throw new Error();
+            return r.json();
         })
-        .catch(() => {
-            _wishEl("wishLoading").style.display = "none";
-            _showWishMsg(__("wishes.loadFailed"), true);
-        });
+        .then(d => {
+            const wishes = d.wishes || [];
+            list.replaceChildren(...wishes.map(_renderWishCard));
+            empty.hidden = wishes.length > 0;
+            if (feedMsg.classList.contains("is-error")) feedMsg.textContent = "";
+        })
+        .catch(() => _showWishMsg(__("wishes.loadFailed"), true, feedMsg))
+        .finally(() => { loading.hidden = true; });
 }
 
 function submitWish() {
-    _clearWishMsg();
+    _wishEl("wishMsg").textContent = "";
     const text = _wishEl("wishText").value.trim();
     const nick = _wishEl("wishNick").value.trim();
     const answer = _wishEl("wishCaptchaInput").value.trim();
     if (!text) { _showWishMsg(__("wishes.errorEmpty"), true); return; }
-    if (!answer) { _showWishMsg(__("wishes.errorCaptcha"), true); return; }
+    if (!answer || !_wishCaptchaId) { _showWishMsg(__("wishes.errorCaptcha"), true); return; }
 
     const btn = _wishEl("wishSubmitBtn");
     btn.disabled = true;
@@ -172,7 +184,7 @@ function submitWish() {
         })
         .then(() => {
             _wishEl("wishText").value = "";
-            _wishEl("wishCaptchaInput").value = "";
+            _updateWishCount();
             _showWishMsg(__("wishes.success"), false);
             loadCaptcha();
             loadWishes();
@@ -184,10 +196,10 @@ function submitWish() {
         .finally(() => { btn.disabled = false; });
 }
 
-function replyWish(wishId, text, btn) {
+function replyWish(wishId, text, btn, status) {
     const reply = (text || "").trim();
-    if (!reply) { _showWishMsg(__("wishes.errorReplyEmpty"), true); return; }
-    if (btn) btn.disabled = true;
+    if (!reply) { _showWishMsg(__("wishes.errorReplyEmpty"), true, status); return; }
+    btn.disabled = true;
     fetch(`${WISHES_ENDPOINT}/${encodeURIComponent(wishId)}/reply`, {
         method: "PATCH",
         headers: {
@@ -202,14 +214,15 @@ function replyWish(wishId, text, btn) {
             return data;
         })
         .then(() => {
-            _showWishMsg(__("wishes.replySuccess"), false);
+            _showWishMsg(__("wishes.replySuccess"), false, _wishEl("wishFeedMsg"));
             loadWishes();
         })
-        .catch(err => _showWishMsg(err.message || __("wishes.errorReply"), true))
-        .finally(() => { if (btn) btn.disabled = false; });
+        .catch(err => _showWishMsg(err.message || __("wishes.errorReply"), true, status))
+        .finally(() => { btn.disabled = false; });
 }
 
-function deleteWish(wishId) {
+function deleteWish(wishId, btn, status) {
+    btn.disabled = true;
     fetch(`${WISHES_ENDPOINT}/${encodeURIComponent(wishId)}`, {
         method: "DELETE",
         headers: { "X-Admin-Token": _getAdminToken() },
@@ -220,12 +233,11 @@ function deleteWish(wishId) {
             return data;
         })
         .then(() => loadWishes())
-        .catch(err => _showWishMsg(err.message || __("wishes.errorDelete"), true));
+        .catch(err => _showWishMsg(err.message || __("wishes.errorDelete"), true, status))
+        .finally(() => { btn.disabled = false; });
 }
 
 function _initWishAdmin() {
-    const toggle = _wishEl("wishAdminToggle");
-    const row = _wishEl("wishAdminRow");
     const input = _wishEl("wishAdminToken");
     const hint = _wishEl("wishAdminHint");
 
@@ -235,9 +247,6 @@ function _initWishAdmin() {
     input.value = _getAdminToken();
     refreshHint();
 
-    toggle.addEventListener("click", () => {
-        row.style.display = row.style.display === "none" ? "flex" : "none";
-    });
     _wishEl("wishAdminSave").addEventListener("click", () => {
         const val = input.value.trim();
         if (!val) {
@@ -272,7 +281,12 @@ function _initWishAdmin() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    _wishEl("wishSubmitBtn").addEventListener("click", submitWish);
+    _wishEl("wishForm").addEventListener("submit", event => {
+        event.preventDefault();
+        submitWish();
+    });
+    _wishEl("wishText").addEventListener("input", _updateWishCount);
+    _updateWishCount();
     _wishEl("wishCaptchaBox").addEventListener("click", loadCaptcha);
     _initWishAdmin();
 
