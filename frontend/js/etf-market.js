@@ -182,6 +182,10 @@
             });
         });
 
+        document.querySelectorAll(".etf-freeze-scroll").forEach(function (pane) {
+            pane.addEventListener("wheel", handleEtfFreezeWheel, { passive: false });
+        });
+
         // The embedded ETF panel starts on first activation.  The standalone
         // ETF page has no tab panel, so it still loads immediately below.
     }
@@ -198,10 +202,49 @@
     function fitEtfFreezePane() {
         var el = document.querySelector(".etf-freeze-scroll");
         if (!el || !el.getClientRects().length) return;
-        var top = el.getBoundingClientRect().top;
-        if (top < 0) return;
-        var available = window.innerHeight - top - 16;
-        el.style.maxHeight = Math.max(280, available) + "px";
+        var viewportH = (window.visualViewport && window.visualViewport.height) || window.innerHeight || 0;
+        if (!viewportH) return;
+        var reserve = window.innerWidth <= 768 ? 76 : 96;
+        el.style.maxHeight = Math.max(360, Math.round(viewportH - reserve)) + "px";
+    }
+
+    function handleEtfFreezeWheel(event) {
+        if (event.defaultPrevented || event.ctrlKey || event.metaKey) return;
+        var el = event.currentTarget;
+        if (!el || el.scrollHeight <= el.clientHeight + 1) return;
+        var dx = Math.abs(event.deltaX || 0);
+        var dy = event.deltaY || 0;
+        if (!dy || dx >= Math.abs(dy)) return;
+        var pxDelta = event.deltaMode === 1
+            ? dy * 16
+            : (event.deltaMode === 2 ? dy * (window.innerHeight || 600) : dy);
+        var rect = el.getBoundingClientRect();
+        var topMargin = 16;
+        var bottomMargin = 12;
+        var docEl = document.documentElement;
+        if (pxDelta > 0) {
+            var maxWinScroll = docEl.scrollHeight - window.innerHeight;
+            var canScrollWinDown = window.scrollY < maxWinScroll - 1;
+            var hiddenBelow = rect.bottom - (window.innerHeight - bottomMargin);
+            var roomAbove = rect.top - topMargin;
+            if (canScrollWinDown && hiddenBelow > 1 && roomAbove > 1) {
+                var downStep = Math.min(pxDelta, hiddenBelow, roomAbove, maxWinScroll - window.scrollY);
+                if (downStep > 0.5) {
+                    event.preventDefault();
+                    window.scrollBy(0, downStep);
+                }
+            }
+        } else {
+            var canScrollWinUp = window.scrollY > 1;
+            var hiddenAbove = topMargin - rect.top;
+            if (canScrollWinUp && hiddenAbove > 1) {
+                var upStep = Math.max(pxDelta, -hiddenAbove, -window.scrollY);
+                if (upStep < -0.5) {
+                    event.preventDefault();
+                    window.scrollBy(0, upStep);
+                }
+            }
+        }
     }
 
     // Idempotent entry used when the embedded ETF tab is first activated.
@@ -226,6 +269,9 @@
         if (!document.getElementById("tab-etf")) startDataLoad();
     }
     window.addEventListener("resize", fitEtfFreezePane);
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", fitEtfFreezePane);
+    }
 
     // Hook into theme-switch refresh chain (follows same pattern as vix-chart.js)
     var _origEtfRefresh = window._refreshCharts;

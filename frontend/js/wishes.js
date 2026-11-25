@@ -20,6 +20,33 @@ function _updateWishCount() {
     _wishEl("wishCount").textContent = `${input.value.length} / ${input.maxLength}`;
 }
 
+function openWishDialog() {
+    const dialog = _wishEl("wishComposeDialog");
+    if (!dialog) return;
+    const msg = _wishEl("wishMsg");
+    if (msg) msg.textContent = "";
+    if (!_wishCaptchaId) loadCaptcha();
+    if (!dialog.open) {
+        if (typeof dialog.showModal === "function") dialog.showModal();
+        else dialog.setAttribute("open", "");
+    }
+    const input = _wishEl("wishText");
+    if (input) input.focus();
+}
+
+function closeWishDialog() {
+    const dialog = _wishEl("wishComposeDialog");
+    if (!dialog || !dialog.open) return;
+    if (typeof dialog.close === "function") dialog.close();
+    else dialog.removeAttribute("open");
+}
+
+function ensureWishesLoaded() {
+    if (_wishLoaded) return;
+    _wishLoaded = true;
+    loadWishes();
+}
+
 // SVG comes from our own backend; injecting it as markup is safe and required
 // to render the image. User-supplied content is never injected this way.
 function loadCaptcha() {
@@ -184,9 +211,11 @@ function submitWish() {
         })
         .then(() => {
             _wishEl("wishText").value = "";
+            _wishEl("wishCaptchaInput").value = "";
+            _wishCaptchaId = null;
             _updateWishCount();
-            _showWishMsg(__("wishes.success"), false);
-            loadCaptcha();
+            closeWishDialog();
+            _showWishMsg(__("wishes.success"), false, _wishEl("wishFeedMsg"));
             loadWishes();
         })
         .catch(err => {
@@ -281,23 +310,39 @@ function _initWishAdmin() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    _wishEl("wishForm").addEventListener("submit", event => {
+    const form = _wishEl("wishForm");
+    if (!form) return;
+
+    form.addEventListener("submit", event => {
         event.preventDefault();
         submitWish();
     });
     _wishEl("wishText").addEventListener("input", _updateWishCount);
     _updateWishCount();
     _wishEl("wishCaptchaBox").addEventListener("click", loadCaptcha);
+
+    const openBtn = _wishEl("wishOpenModalBtn");
+    if (openBtn) openBtn.addEventListener("click", openWishDialog);
+
+    const closeBtn = _wishEl("wishDialogClose");
+    if (closeBtn) closeBtn.addEventListener("click", closeWishDialog);
+
+    const dialog = _wishEl("wishComposeDialog");
+    if (dialog) {
+        dialog.addEventListener("click", event => {
+            if (event.target === dialog) closeWishDialog();
+        });
+    }
+
     _initWishAdmin();
 
-    // Lazy-load on first switch to the 心愿墙 tab.
+    // Lazy-load on first switch to the 心愿墙 tab or when opened directly at /wishes.
     document.querySelectorAll('.tab-btn[data-tab="wishes"]').forEach(btn => {
-        btn.addEventListener("click", () => {
-            if (_wishLoaded) return;
-            _wishLoaded = true;
-            loadCaptcha();
-            loadWishes();
-        });
+        btn.addEventListener("click", ensureWishesLoaded);
     });
+    const panel = _wishEl("tab-wishes");
+    if (panel && panel.classList.contains("active")) {
+        ensureWishesLoaded();
+    }
 });
 

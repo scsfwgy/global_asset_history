@@ -366,10 +366,49 @@
     function fitQdiiFreezePane() {
         var el = document.querySelector(".qdii-freeze-scroll");
         if (!el || !el.getClientRects().length) return;
-        var top = el.getBoundingClientRect().top;
-        if (top < 0) return;
-        var available = window.innerHeight - top - 16;
-        el.style.maxHeight = Math.max(280, available) + "px";
+        var viewportH = (window.visualViewport && window.visualViewport.height) || window.innerHeight || 0;
+        if (!viewportH) return;
+        var reserve = window.innerWidth <= 768 ? 76 : 96;
+        el.style.maxHeight = Math.max(360, Math.round(viewportH - reserve)) + "px";
+    }
+
+    function handleQdiiFreezeWheel(event) {
+        if (event.defaultPrevented || event.ctrlKey || event.metaKey) return;
+        var el = event.currentTarget;
+        if (!el || el.scrollHeight <= el.clientHeight + 1) return;
+        var dx = Math.abs(event.deltaX || 0);
+        var dy = event.deltaY || 0;
+        if (!dy || dx >= Math.abs(dy)) return;
+        var pxDelta = event.deltaMode === 1
+            ? dy * 16
+            : (event.deltaMode === 2 ? dy * (window.innerHeight || 600) : dy);
+        var rect = el.getBoundingClientRect();
+        var topMargin = 16;
+        var bottomMargin = 12;
+        var docEl = document.documentElement;
+        if (pxDelta > 0) {
+            var maxWinScroll = docEl.scrollHeight - window.innerHeight;
+            var canScrollWinDown = window.scrollY < maxWinScroll - 1;
+            var hiddenBelow = rect.bottom - (window.innerHeight - bottomMargin);
+            var roomAbove = rect.top - topMargin;
+            if (canScrollWinDown && hiddenBelow > 1 && roomAbove > 1) {
+                var downStep = Math.min(pxDelta, hiddenBelow, roomAbove, maxWinScroll - window.scrollY);
+                if (downStep > 0.5) {
+                    event.preventDefault();
+                    window.scrollBy(0, downStep);
+                }
+            }
+        } else {
+            var canScrollWinUp = window.scrollY > 1;
+            var hiddenAbove = topMargin - rect.top;
+            if (canScrollWinUp && hiddenAbove > 1) {
+                var upStep = Math.max(pxDelta, -hiddenAbove, -window.scrollY);
+                if (upStep < -0.5) {
+                    event.preventDefault();
+                    window.scrollBy(0, upStep);
+                }
+            }
+        }
     }
 
     function syncQdiiFrozenColumns() {
@@ -378,7 +417,8 @@
         var sample = table.querySelector("tbody tr.qdii-fund-row td:first-child")
             || table.querySelector("thead th:first-child");
         if (!sample) return;
-        var width = sample.offsetWidth;
+        var rectW = sample.getBoundingClientRect ? sample.getBoundingClientRect().width : 0;
+        var width = Math.round(rectW || sample.offsetWidth || 0);
         if (!width) return;
         var next = width + "px";
         if (table.style.getPropertyValue("--qdii-freeze-col1") !== next) {
@@ -667,6 +707,10 @@
         var refresh = $("qdiiFundsRefresh");
         if (refresh) refresh.addEventListener("click", function () { loadData(true); });
 
+        var freezeScroll = document.querySelector(".qdii-freeze-scroll");
+        if (freezeScroll) {
+            freezeScroll.addEventListener("wheel", handleQdiiFreezeWheel, { passive: false });
+        }
         var freezeTable = $("qdiiFundsTable");
         if (freezeTable && window.ResizeObserver) {
             new ResizeObserver(syncQdiiFrozenColumns).observe(freezeTable);
@@ -676,6 +720,9 @@
             syncQdiiFrozenColumns();
             fitQdiiFreezePane();
         });
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener("resize", fitQdiiFreezePane);
+        }
     }
 
     window._qdiiFundsActivate = function () {

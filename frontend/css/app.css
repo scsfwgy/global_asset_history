@@ -684,11 +684,19 @@ body {
    borders drop sticky table cells in Safari. */
 .etf-freeze-scroll,
 .qdii-freeze-scroll {
-            max-height: calc(100dvh - 180px);
+            max-height: calc(100vh - 96px);
+            max-height: calc(100dvh - 96px);
             overflow: auto;
             overscroll-behavior-x: contain;
             -webkit-overflow-scrolling: touch;
         }
+@media (max-width: 768px) {
+    .etf-freeze-scroll,
+    .qdii-freeze-scroll {
+                max-height: calc(100vh - 76px);
+                max-height: calc(100dvh - 76px);
+            }
+}
 #etfTable,
 #qdiiFundsTable {
             border-collapse: separate;
@@ -725,7 +733,7 @@ body {
                 linear-gradient(rgba(0, 113, 227, 0.06), rgba(0, 113, 227, 0.06));
         }
 #qdiiFundsTable {
-            --qdii-freeze-col1: 108px;
+            --qdii-freeze-col1: 72px;
         }
 #qdiiFundsTable thead th:nth-child(1),
 #qdiiFundsTable tbody tr.qdii-fund-row td:nth-child(1) {
@@ -748,6 +756,9 @@ body {
         }
 #qdiiFundsTable tbody tr.qdii-fund-row:hover td:nth-child(-n+2) {
             background-image: linear-gradient(var(--apple-overlay-subtle), var(--apple-overlay-subtle));
+        }
+#qdiiFundsTable tbody tr.qdii-fund-row.expanded td:nth-child(-n+2) {
+            background-image: linear-gradient(var(--apple-blue-soft), var(--apple-blue-soft));
         }
 /* Exchange badges — unified, no brand colors */
 .transfer-table .exchange-badge {
