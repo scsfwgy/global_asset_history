@@ -767,6 +767,53 @@ class TestBacktestEndpoint:
         assert resp.status_code == 500
         track_coverage(MOD, 1)
 
+    @patch("routes.price_change.run_dca_backtest")
+    def test_portfolio_and_vca_request(self, mock_run, client):
+        """Portfolio + VCA payload forwards cleanly through POST /api/price-change/backtest."""
+        mock_run.return_value = {
+            "target_mode": "portfolio",
+            "strategy": "vca",
+            "symbol": "SPY 60% + TLT 40%",
+            "type": "portfolio",
+            "currency": "USD",
+            "portfolio": {
+                "base_currency": "USD",
+                "rebalance": "yearly",
+                "rebalance_count": 1,
+                "holdings": [],
+            },
+            "summary": {
+                "invested": 12000.0,
+                "final_value": 15200.0,
+                "profit": 3200.0,
+                "return_pct": 26.67,
+                "annualized_return_pct": 14.2,
+                "trade_count": 12,
+            },
+            "cashflows": [],
+            "equity_curve": [],
+        }
+        payload = {
+            "target_mode": "portfolio",
+            "strategy": "vca",
+            "base_currency": "USD",
+            "rebalance": "yearly",
+            "portfolio": [
+                {"symbol": "SPY", "type": "stock", "weight": 60},
+                {"symbol": "TLT", "type": "stock", "weight": 40},
+            ],
+            "start_date": "2023-01-01",
+            "end_date": "2024-01-01",
+            "frequency": "monthly",
+            "amount": 1000,
+        }
+        resp = client.post(f"{BASE}/backtest", json=payload)
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["target_mode"] == "portfolio"
+        assert data["strategy"] == "vca"
+        mock_run.assert_called_once_with(payload)
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # POST /api/price-change/crash-stats

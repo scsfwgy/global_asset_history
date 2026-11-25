@@ -767,7 +767,7 @@ class TestHtmlMeta:
             'data-i18n-attr="aria-label|detail.fundamentalsHistoryAria"'
             in html
         )
-        assert TOOLS_LASTMOD == "2026-09-08"
+        assert TOOLS_LASTMOD == "2026-11-25"
 
         zh_locale = client.get("/locales/zh-CN.json").get_json()["detail"]
         en_locale = client.get("/locales/en.json").get_json()["detail"]

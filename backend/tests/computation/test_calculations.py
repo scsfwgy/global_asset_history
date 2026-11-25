@@ -14,14 +14,19 @@ from service.price_change.calculations import (
     _compute_daily_returns_for_month,
     _compute_monthly_returns,
     _compute_money_weighted_annualized_return,
+    _compute_vca_step,
     _compute_yearly_returns,
     _generate_schedule_dates,
     _next_month_anchor,
     _normalize_frequency,
+    _normalize_rebalance,
+    _normalize_strategy,
     _parse_iso_date,
     _resolve_execution_points,
     _safe_int,
     _series_points_in_range,
+    _simulate_portfolio_backtest,
+    _simulate_single_backtest,
 )
 from tests.conftest import (
     _EPOCH_START,
@@ -899,3 +904,170 @@ class TestBuildEquityCurve:
         assert len(set(post_exec_values)) > 1, "Value should change with price"
         diagnose("post-exec values", post_exec_values[:5])
         track_coverage(MOD, 1)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# VCA & Portfolio Backtest Calculations
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TestVcaAndPortfolioCalculations:
+    """Unit tests for VCA step logic, single-asset VCA, and multi-asset portfolio simulation."""
+
+    def test_normalize_strategy_and_rebalance(self):
+        assert _normalize_strategy(None) == "dca"
+        assert _normalize_strategy("VCA") == "vca"
+        with pytest.raises(ValueError, match="strategy"):
+            _normalize_strategy("grid")
+
+        assert _normalize_rebalance(None) == "none"
+        assert _normalize_rebalance("YEARLY") == "yearly"
+        assert _normalize_rebalance("quarterly") == "quarterly"
+        with pytest.raises(ValueError, match="rebalance"):
+            _normalize_rebalance("weekly")
+
+    def test_vca_step_buy_sell_hold_and_cap(self):
+        # Period 1: target 0 -> 1000, current 0 => buy 1000
+        target, amt, kind = _compute_vca_step(0.0, 1000.0, 0.0, False, 0.0)
+        assert target == 1000.0
+        assert amt == 1000.0
+        assert kind == "vca_buy"
+
+        # Period 2 with 1% growth: target 1000 * 1.01 + 1000 = 2010; current 800 => gap 1210
+        # With max_contribution = 1000 => capped at 1000
+        target, amt, kind = _compute_vca_step(
+            1000.0, 1000.0, 1.0, True, 800.0, allow_sell=True, max_contribution=1000.0
+        )
+        assert target == pytest.approx(2010.0)
+        assert amt == pytest.approx(1000.0)
+        assert kind == "vca_buy"
+
+        # Excess value above target: allow_sell=True => vca_sell
+        target, amt, kind = _compute_vca_step(
+            2000.0, 1000.0, 0.0, True, 3600.0, allow_sell=True
+        )
+        assert target == pytest.approx(3000.0)
+        assert amt == pytest.approx(-600.0)
+        assert kind == "vca_sell"
+
+        # Excess value above target: allow_sell=False => vca_hold
+        target, amt, kind = _compute_vca_step(
+            2000.0, 1000.0, 0.0, True, 3600.0, allow_sell=False
+        )
+        assert target == pytest.approx(3000.0)
+        assert amt == 0.0
+        assert kind == "vca_hold"
+
+    def test_single_vca_four_month_textbook_example(self):
+        """Verify the 4-month VCA example:
+        M1 price=10 -> target 1000, buy 1000 (100 units)
+        M2 price=8  -> value 800, target 2000, buy 1200 (150 units, cum 250)
+        M3 price=10 -> value 2500, target 3000, buy 500 (50 units, cum 300)
+        M4 price=15 -> value 4500, target 4000:
+          - bidirectional VCA sells 500 (-33.333333 units, cum 266.666667, final value 4000)
+          - buy-only VCA holds 0 (cum 300, final value 4500)
+        """
+        points = [
+            (date(2024, 1, 2), 10.0),
+            (date(2024, 2, 1), 8.0),
+            (date(2024, 3, 1), 10.0),
+            (date(2024, 4, 1), 15.0),
+        ]
+        bi = _simulate_single_backtest(
+            price_points=points,
+            execution_dates=points,
+            start_date=date(2024, 1, 1),
+            initial_amount=0.0,
+            amount=1000.0,
+            strategy="vca",
+            vca_growth_rate=0.0,
+            vca_allow_sell=True,
+        )
+        cfs = bi["cashflows"]
+        assert [c["kind"] for c in cfs] == ["vca_buy", "vca_buy", "vca_buy", "vca_sell"]
+        assert [c["amount"] for c in cfs] == [1000.0, 1200.0, 500.0, -500.0]
+        assert bi["summary"]["gross_invested"] == 2700.0
+        assert bi["summary"]["total_withdrawn"] == 500.0
+        assert bi["summary"]["invested"] == 2200.0
+        assert bi["summary"]["peak_invested"] == 2700.0
+        assert bi["summary"]["final_value"] == pytest.approx(4000.0, abs=0.01)
+        assert bi["summary"]["profit"] == pytest.approx(1800.0, abs=0.01)
+        assert bi["summary"]["buy_count"] == 3
+        assert bi["summary"]["sell_count"] == 1
+        assert all("target" in pt for pt in bi["equity_curve"])
+
+        no_sell = _simulate_single_backtest(
+            price_points=points,
+            execution_dates=points,
+            start_date=date(2024, 1, 1),
+            initial_amount=0.0,
+            amount=1000.0,
+            strategy="vca",
+            vca_growth_rate=0.0,
+            vca_allow_sell=False,
+        )
+        assert [c["kind"] for c in no_sell["cashflows"]] == [
+            "vca_buy", "vca_buy", "vca_buy", "vca_hold"
+        ]
+        assert no_sell["summary"]["invested"] == 2700.0
+        assert no_sell["summary"]["final_value"] == pytest.approx(4500.0, abs=0.01)
+        assert no_sell["summary"]["hold_count"] == 1
+
+    def test_portfolio_simulation_rebalance_and_late_inception(self):
+        """Portfolio aligns to the latest asset's first date and rebalances back to target weights."""
+        # Asset A starts 2023-01-02 and doubles by 2024-01-02; Asset B starts 2023-02-01 and stays flat.
+        a_pts = [
+            (date(2023, 1, 2), 100.0),
+            (date(2023, 2, 1), 100.0),
+            (date(2023, 7, 3), 150.0),
+            (date(2024, 2, 1), 200.0),
+            (date(2024, 3, 1), 200.0),
+        ]
+        b_pts = [
+            (date(2023, 2, 1), 50.0),
+            (date(2023, 7, 3), 50.0),
+            (date(2024, 2, 1), 50.0),
+            (date(2024, 3, 1), 50.0),
+        ]
+        assets = [
+            {
+                "symbol": "AAA",
+                "type": "stock",
+                "native_currency": "USD",
+                "weight": 0.6,
+                "weight_pct": 60.0,
+                "source": "test",
+                "native_points": a_pts,
+                "base_points": a_pts,
+            },
+            {
+                "symbol": "BBB",
+                "type": "stock",
+                "native_currency": "USD",
+                "weight": 0.4,
+                "weight_pct": 40.0,
+                "source": "test",
+                "native_points": b_pts,
+                "base_points": b_pts,
+            },
+        ]
+        res_rebal = _simulate_portfolio_backtest(
+            asset_inputs=assets,
+            start_date=date(2023, 1, 1),
+            end_date=date(2024, 3, 1),
+            frequency="once",
+            interval=1,
+            day_of_month=1,
+            weekday=None,
+            initial_amount=10000.0,
+            amount=0.0,
+            strategy="dca",
+            rebalance="yearly",
+        )
+        # Effective start date shifted from 2023-01-01 to 2023-02-01 (BBB's first date)
+        assert res_rebal["effective_start_date"] == "2023-02-01"
+        assert res_rebal["summary"]["rebalance_count"] == 1
+        # After yearly rebalance on 2024-02-01 and flat prices to 2024-03-01, final weights are back to 60/40
+        holdings = {h["symbol"]: h for h in res_rebal["holdings"]}
+        assert holdings["AAA"]["final_weight"] == pytest.approx(60.0, abs=0.05)
+        assert holdings["BBB"]["final_weight"] == pytest.approx(40.0, abs=0.05)
+

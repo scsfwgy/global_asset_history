@@ -4134,18 +4134,40 @@
             <div id="btTabDetail">
             <div id="btParamsPanel">
             <div class="pc-bt-row">
-                <span class="pc-bt-label" data-i18n="backtest.symbol">定投标的</span>
-                <input type="text" id="btSymbolInput" class="pc-bt-input" placeholder="SPY" maxlength="30" value="QQQ" style="width:120px;text-transform:uppercase;">
-                <select id="btTypeSelect" class="pc-bt-input" style="width:110px;">
-                    <option value="stock" data-i18n="yearly.assetTypeStock">美股</option>
-                    <option value="hk_stock" data-i18n="yearly.assetTypeHkStock">港股</option>
-                    <option value="global_stock" data-i18n="yearly.assetTypeGlobalStock">全球股票</option>
-                    <option value="crypto" data-i18n="yearly.assetTypeCrypto">数字货币</option>
-                    <option value="cn_stock" data-i18n="yearly.assetTypeCnStock">A股</option>
+                <span class="pc-bt-label" data-i18n="backtest.targetMode">模式</span>
+                <select id="pcBtTargetMode" class="pc-bt-input" style="width:105px;">
+                    <option value="single" selected data-i18n="backtest.modeSingle">单标的</option>
+                    <option value="portfolio" data-i18n="backtest.modePortfolio">投资组合</option>
                 </select>
+                <span id="btSingleAssetWrap" class="pc-bt-inline-group">
+                    <span class="pc-bt-label" data-i18n="backtest.symbol">定投标的</span>
+                    <input type="text" id="btSymbolInput" class="pc-bt-input" placeholder="SPY" maxlength="30" value="QQQ" style="width:120px;text-transform:uppercase;">
+                    <select id="btTypeSelect" class="pc-bt-input" style="width:110px;">
+                        <option value="stock" data-i18n="yearly.assetTypeStock">美股</option>
+                        <option value="hk_stock" data-i18n="yearly.assetTypeHkStock">港股</option>
+                        <option value="global_stock" data-i18n="yearly.assetTypeGlobalStock">全球股票</option>
+                        <option value="crypto" data-i18n="yearly.assetTypeCrypto">数字货币</option>
+                        <option value="cn_stock" data-i18n="yearly.assetTypeCnStock">A股</option>
+                    </select>
+                </span>
+                <span id="btPortfolioMetaWrap" class="pc-bt-inline-group" style="display:none;">
+                    <span class="pc-bt-label" data-i18n="backtest.baseCurrency">基准币种</span>
+                    <select id="pcBtBaseCurrency" class="pc-bt-input" style="width:88px;">
+                        <option value="USD" selected>USD</option>
+                        <option value="CNY">CNY</option>
+                        <option value="HKD">HKD</option>
+                    </select>
+                    <span class="pc-bt-label" data-i18n="backtest.rebalance">再平衡</span>
+                    <select id="pcBtRebalance" class="pc-bt-input" style="width:115px;">
+                        <option value="none" data-i18n="backtest.rebalanceNone">不再平衡</option>
+                        <option value="monthly" data-i18n="backtest.rebalanceMonthly">按月再平衡</option>
+                        <option value="quarterly" data-i18n="backtest.rebalanceQuarterly">按季再平衡</option>
+                        <option value="yearly" selected data-i18n="backtest.rebalanceYearly">按年再平衡</option>
+                    </select>
+                </span>
                 <span class="pc-bt-label" data-i18n="backtest.initialAmount">初始投入</span>
                 <input type="number" id="pcBtInitialAmount" class="pc-bt-input" value="0" min="0" step="100">
-                <span class="pc-bt-label" data-i18n="backtest.amountPerTime">每次投入</span>
+                <span class="pc-bt-label" id="pcBtAmountLabel" data-i18n="backtest.amountPerTime">每次投入</span>
                 <input type="number" id="pcBtAmount" class="pc-bt-input" value="1000" min="0" step="100">
                 <span id="pcBtCurrency" style="font-size:12px;color:var(--apple-text-tertiary)">USD</span>
                 <span class="pc-bt-label" data-i18n="backtest.startDate">开始日期</span>
@@ -4153,15 +4175,48 @@
                 <span class="pc-bt-label" data-i18n="backtest.endDate">结束日期</span>
                 <input type="date" id="pcBtEndDate" class="pc-bt-input" style="width:150px;">
             </div>
+            <div id="pcBtPortfolioPanel" class="pc-bt-portfolio-panel" style="display:none;">
+                <div class="pc-bt-portfolio-toolbar">
+                    <div class="pc-bt-preset-chips" id="pcBtPortfolioPresets">
+                        <span class="pc-bt-label" data-i18n="backtest.portfolioPresets">组合预设</span>
+                        <button type="button" class="pc-btn pc-btn-sm" data-pf-preset="6040" data-i18n="backtest.preset6040">经典股债 60/40</button>
+                        <button type="button" class="pc-btn pc-btn-sm" data-pf-preset="allweather" data-i18n="backtest.presetAllWeather">全天候精简</button>
+                        <button type="button" class="pc-btn pc-btn-sm" data-pf-preset="techgoldbtc" data-i18n="backtest.presetTechGoldBtc">纳指+黄金+BTC</button>
+                        <button type="button" class="pc-btn pc-btn-sm" data-pf-preset="uscn" data-i18n="backtest.presetUsCn">中美核心宽基</button>
+                    </div>
+                    <div class="pc-bt-portfolio-actions">
+                        <button type="button" id="pcBtPortfolioAdd" class="pc-btn pc-btn-sm" data-i18n="backtest.portfolioAdd">+ 添加资产</button>
+                        <button type="button" id="pcBtPortfolioEqual" class="pc-btn pc-btn-sm" data-i18n="backtest.portfolioEqual">等权分配</button>
+                        <span id="pcBtWeightSum" class="pc-bt-weight-badge is-valid">100.0%</span>
+                    </div>
+                </div>
+                <div id="pcBtPortfolioRows" class="pc-bt-portfolio-rows"></div>
+            </div>
             <div class="pc-bt-row">
                 <span class="pc-bt-label" data-i18n="backtest.strategy">策略</span>
-                <select id="pcBtFrequency" class="pc-bt-input" style="width:110px;">
+                <select id="pcBtStrategy" class="pc-bt-input" style="width:132px;">
+                    <option value="dca" selected data-i18n="backtest.strategyDca">定期定额 (DCA)</option>
+                    <option value="vca" data-i18n="backtest.strategyVca">价值平均 (VCA)</option>
+                </select>
+                <span class="pc-bt-label" data-i18n="backtest.frequency">频率</span>
+                <select id="pcBtFrequency" class="pc-bt-input" style="width:105px;">
                     <option value="once" data-i18n="backtest.strategyOnce">一次性</option>
                     <option value="daily" data-i18n="backtest.strategyDaily">按日</option>
                     <option value="weekly" data-i18n="backtest.strategyWeekly">按周</option>
                     <option value="monthly" selected data-i18n="backtest.strategyMonthly">按月</option>
                     <option value="yearly" data-i18n="backtest.strategyYearly">按年</option>
                 </select>
+                <span id="pcBtVcaFields" class="pc-bt-inline-group" style="display:none;">
+                    <span class="pc-bt-label" data-i18n="backtest.vcaExceedRule">超目标</span>
+                    <select id="pcBtVcaSellMode" class="pc-bt-input" style="width:142px;">
+                        <option value="sell" selected data-i18n="backtest.vcaAllowSell">标准双向 (卖出)</option>
+                        <option value="hold" data-i18n="backtest.vcaNoSell">只买不卖 (停投)</option>
+                    </select>
+                    <span class="pc-bt-label has-tip" data-i18n="backtest.vcaGrowthRate" data-i18n-attr="title|backtest.vcaGrowthTooltip">每期增长%</span>
+                    <input type="number" id="pcBtVcaGrowthRate" class="pc-bt-input" value="0" min="-20" max="50" step="0.1" style="width:82px;">
+                    <span class="pc-bt-label has-tip" data-i18n="backtest.vcaMaxCap" data-i18n-attr="title|backtest.vcaMaxCapTooltip">单期上限</span>
+                    <input type="number" id="pcBtVcaMaxContrib" class="pc-bt-input" value="" min="0" step="500" placeholder="不限" data-i18n-attr="placeholder|backtest.vcaUnlimited" style="width:96px;">
+                </span>
                 <span class="pc-bt-advanced"><span class="pc-bt-label" data-i18n="backtest.interval">间隔</span>
                 <input type="number" id="pcBtInterval" class="pc-bt-input" value="1" min="1" step="1"></span>
                 <span class="pc-bt-advanced"><span class="pc-bt-label" id="pcBtDayOfMonthLabel" data-i18n="backtest.labelMonthDay">月内日期</span>
@@ -4192,6 +4247,22 @@
                     <span class="pc-bt-adv-label" data-i18n="backtest.advanced">高级</span>
                 </label>
             </div>
+            <div id="pcBtStrategyGuide" class="pc-bt-strategy-guide">
+                <div class="pc-bt-strategy-card is-active" data-strategy-card="dca">
+                    <div class="pc-bt-strategy-head">
+                        <span class="pc-bt-strategy-title" data-i18n="backtest.guideDcaTitle">定期定额 (DCA) · 固定每期投入额</span>
+                        <span class="pc-bt-strategy-tag" data-i18n="backtest.guideDcaTag">现金流稳定</span>
+                    </div>
+                    <div class="pc-bt-strategy-desc" data-i18n="backtest.guideDcaDesc">每期投入相同金额，不论涨跌坚持买入；低位自动多买份额、高位少买份额。意义：每期支出固定可预期，适合以稳定收入长期积累核心资产。</div>
+                </div>
+                <div class="pc-bt-strategy-card" data-strategy-card="vca">
+                    <div class="pc-bt-strategy-head">
+                        <span class="pc-bt-strategy-title" data-i18n="backtest.guideVcaTitle">价值平均 (VCA) · 固定每期目标市值</span>
+                        <span class="pc-bt-strategy-tag" data-i18n="backtest.guideVcaTag">强化低买高卖</span>
+                    </div>
+                    <div class="pc-bt-strategy-desc" data-i18n="backtest.guideVcaDesc">设定账户市值每期的目标增长额（差多少补多少）：大跌时加大买入力度补足市值缺口，上涨时少买，超出目标市值时可卖出止盈（双向）或暂停买入（只买不卖）。意义：纪律性逆向加减仓，但暴跌期补仓资金需求较大，可配合“单期上限”控制现金流压力。</div>
+                </div>
+            </div>
             </div>
             <div id="btHistory"></div>
             <div id="pcBtResult" style="display:none;">
@@ -4199,9 +4270,22 @@
                 <div class="spinner"></div>
                 <span data-i18n="backtest.fetching">加载中...</span>
             </div>
+            <div id="pcBtNotice" class="pc-bt-notice" style="display:none;"></div>
             <div id="btLiveData" class="bt-live-data"></div>
             <div id="btChart" style="margin-bottom:20px;"></div>
                 <div class="pc-bt-summary" id="pcBtSummary"></div>
+                <div id="pcBtHoldingsWrap" class="pc-bt-holdings-wrap" style="display:none;">
+                    <div class="pc-bt-detail-header">
+                        <span class="pc-bt-detail-title" data-i18n="backtest.holdingsTitle">期末持仓分布</span>
+                        <span class="pc-bt-detail-count" id="pcBtHoldingsNote"></span>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="pc-bt-table">
+                            <thead><tr id="pcBtHoldingsHead"></tr></thead>
+                            <tbody id="pcBtHoldingsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
                 <div class="pc-bt-detail-header">
                     <span class="pc-bt-detail-title" data-i18n="backtest.detailRecords">买入详情</span>
                     <span class="pc-bt-detail-count" id="pcBtDetailCount"></span>

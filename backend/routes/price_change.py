@@ -11,6 +11,7 @@ import time
 from flask import Blueprint, jsonify, request
 from service.price_change import cache_store
 from service.price_change.common import normalize_asset_symbol
+from service.price_change.fx import FX_CURRENCIES as _SHARED_FX_CURRENCIES
 from service.price_change.homepage_quotes import iso_time
 from service.price_change.fundamentals_history import (
     fetch_fundamentals_history,
@@ -913,24 +914,8 @@ def vix_comparison():
     return jsonify(result)
 
 
-# Supported fiat currencies for the exchange-loss tool. Each maps to a Yahoo
-# FX symbol plus an inverse flag: inverse=True means the symbol quotes "units
-# of the currency per 1 USD" (e.g. CNY=X is USD/CNY), inverse=False means the
-# symbol quotes "USD per 1 unit" (e.g. EURUSD=X is EUR/USD). USD is the hub.
-FX_CURRENCIES = {
-    "USD": (None, False),
-    "CNY": ("CNY=X", True),
-    "EUR": ("EURUSD=X", False),
-    "GBP": ("GBPUSD=X", False),
-    "JPY": ("JPY=X", True),
-    "HKD": ("HKD=X", True),
-    "KRW": ("KRW=X", True),
-    "AUD": ("AUDUSD=X", False),
-    "SGD": ("SGD=X", True),
-    "CAD": ("CAD=X", True),
-    "CHF": ("CHF=X", True),
-    "TWD": ("TWD=X", True),
-}
+# Supported fiat currencies for the exchange-loss tool. Shared with service.price_change.fx.
+FX_CURRENCIES = dict(_SHARED_FX_CURRENCIES)
 
 
 @price_change_bp.route("/exchange-loss", methods=["POST"])

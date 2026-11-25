@@ -21,10 +21,18 @@ from .calculations import (
     _compute_yearly_returns,
     _generate_schedule_dates,
     _normalize_frequency,
+    _normalize_rebalance,
+    _normalize_strategy,
     _parse_iso_date,
     _resolve_execution_points,
     _safe_int,
     _series_points_in_range,
+    _simulate_portfolio_backtest,
+    _simulate_single_backtest,
+)
+from .fx import (
+    SUPPORTED_PORTFOLIO_BASE_CURRENCIES,
+    build_fx_rate_lookup,
 )
 from .crash_stats import compute_crash_statistics
 from .common import (
@@ -2218,123 +2226,301 @@ def fetch_return_detail(
 
 
 def run_dca_backtest(payload: Dict) -> Dict:
-    """Run a single-symbol DCA backtest using daily price data."""
-    asset_type = str(payload.get("type", "stock")).strip().lower()
-    symbol = normalize_asset_symbol(payload.get("symbol", ""), asset_type)
+    """Run a single-symbol or multi-asset portfolio DCA/VCA backtest using daily price data."""
+    started_at = time.perf_counter()
+    target_mode = str(payload.get("target_mode", "single") or "single").strip().lower()
+    if target_mode not in {"single", "portfolio"}:
+        raise ValueError("target_mode must be single or portfolio")
+
+    strategy = _normalize_strategy(payload.get("strategy", "dca"))
     start_date = _parse_iso_date(payload.get("start_date"), "start_date")
     end_date = _parse_iso_date(payload.get("end_date"), "end_date")
     if end_date < start_date:
         raise ValueError("end_date must be on or after start_date")
 
     frequency = _normalize_frequency(payload.get("frequency", "monthly"))
+    if strategy == "vca" and frequency == "once":
+        raise ValueError("vca strategy requires a recurring frequency (daily, weekly, monthly, or yearly)")
+
     interval = max(1, _safe_int(payload.get("interval"), 1))
-    amount = float(payload.get("amount", 0) or 0)
-    initial_amount = float(payload.get("initial_amount", 0) or 0)
+    try:
+        amount = float(payload.get("amount", 0) or 0)
+        initial_amount = float(payload.get("initial_amount", 0) or 0)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("amount and initial_amount must be numeric") from exc
+
+    if target_mode == "single":
+        asset_type = str(payload.get("type", "stock")).strip().lower()
+        symbol = normalize_asset_symbol(payload.get("symbol", ""), asset_type)
+        if not symbol:
+            raise ValueError("symbol is required")
+
+    if not math.isfinite(amount) or not math.isfinite(initial_amount) or amount < 0 or initial_amount < 0:
+        raise ValueError("amount and initial_amount must be non-negative")
+    if strategy == "vca" and amount <= 0:
+        raise ValueError("vca strategy requires amount (target increment) greater than 0")
+    if amount <= 0 and initial_amount <= 0:
+        raise ValueError("amount or initial_amount must be greater than 0")
+
+    try:
+        vca_growth_rate = float(payload.get("vca_growth_rate", 0) or 0)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("vca_growth_rate must be numeric") from exc
+    if not math.isfinite(vca_growth_rate) or not (-50.0 <= vca_growth_rate <= 100.0):
+        raise ValueError("vca_growth_rate must be between -50 and 100")
+
+    raw_allow_sell = payload.get("vca_allow_sell", True)
+    if isinstance(raw_allow_sell, bool):
+        vca_allow_sell = raw_allow_sell
+    else:
+        vca_allow_sell = str(raw_allow_sell).strip().lower() not in {"false", "0", "no", "hold"}
+
+    raw_max_contrib = payload.get("vca_max_contribution")
+    vca_max_contribution: Optional[float] = None
+    if raw_max_contrib not in (None, ""):
+        try:
+            parsed_cap = float(raw_max_contrib)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("vca_max_contribution must be numeric") from exc
+        if not math.isfinite(parsed_cap) or parsed_cap < 0:
+            raise ValueError("vca_max_contribution must be greater than 0")
+        if parsed_cap > 0:
+            vca_max_contribution = parsed_cap
+
     day_of_month = _safe_int(payload.get("day_of_month"), start_date.day)
     weekday = payload.get("weekday")
     weekday = None if weekday in (None, "") else max(0, min(6, _safe_int(weekday, 0)))
 
-    if not symbol:
-        raise ValueError("symbol is required")
-    if amount <= 0 and initial_amount <= 0:
-        raise ValueError("amount or initial_amount must be greater than 0")
+    vca_config = (
+        {
+            "growth_rate_pct": round(vca_growth_rate, 4),
+            "allow_sell": vca_allow_sell,
+            "max_contribution": round(vca_max_contribution, 2) if vca_max_contribution else None,
+        }
+        if strategy == "vca"
+        else None
+    )
 
-    series = _fetch_daily_series_cached(symbol, asset_type)
-    if series.error:
-        raise ValueError(series.error)
+    if target_mode == "single":
+        asset_type = str(payload.get("type", "stock")).strip().lower()
+        symbol = normalize_asset_symbol(payload.get("symbol", ""), asset_type)
+        if not symbol:
+            raise ValueError("symbol is required")
 
-    price_points = _series_points_in_range(series.timestamps, series.closes, start_date, end_date)
-    if not price_points:
-        raise ValueError("no price data in selected date range")
+        series = _fetch_daily_series_cached(symbol, asset_type)
+        if series.error:
+            raise ValueError(series.error)
 
-    schedule_dates = _generate_schedule_dates(
+        price_points = _series_points_in_range(series.timestamps, series.closes, start_date, end_date)
+        if not price_points:
+            raise ValueError("no price data in selected date range")
+
+        schedule_dates = _generate_schedule_dates(
+            start_date=start_date,
+            end_date=end_date,
+            frequency=frequency,
+            interval=interval,
+            anchor_day=day_of_month,
+            weekday=weekday,
+        )
+        execution_dates = _resolve_execution_points(price_points, schedule_dates)
+        sim = _simulate_single_backtest(
+            price_points=price_points,
+            execution_dates=execution_dates,
+            start_date=start_date,
+            initial_amount=initial_amount,
+            amount=amount,
+            strategy=strategy,
+            vca_growth_rate=vca_growth_rate,
+            vca_allow_sell=vca_allow_sell,
+            vca_max_contribution=vca_max_contribution,
+        )
+        currency = _asset_currency(symbol, asset_type)
+        logger.info(
+            "event=backtest_complete target_mode=single strategy=%s symbol=%s asset_type=%s currency=%s trades=%s duration_ms=%.1f",
+            strategy,
+            symbol,
+            asset_type,
+            currency,
+            sim["summary"]["trade_count"],
+            (time.perf_counter() - started_at) * 1000,
+        )
+        response = {
+            "target_mode": "single",
+            "strategy": strategy,
+            "symbol": symbol,
+            "type": asset_type,
+            "currency": currency,
+            "source": series.source,
+            "frequency": frequency,
+            "interval": interval,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "summary": sim["summary"],
+            "cashflows": sim["cashflows"],
+            "equity_curve": sim["equity_curve"],
+        }
+        if vca_config is not None:
+            response["vca_config"] = vca_config
+        return response
+
+    # Portfolio mode
+    raw_portfolio = payload.get("portfolio")
+    if not isinstance(raw_portfolio, list) or not (2 <= len(raw_portfolio) <= 15):
+        raise ValueError("portfolio must contain between 2 and 15 assets")
+
+    base_currency = str(payload.get("base_currency", "USD") or "USD").strip().upper()
+    if base_currency not in SUPPORTED_PORTFOLIO_BASE_CURRENCIES:
+        raise ValueError(
+            f"base_currency must be one of {', '.join(sorted(SUPPORTED_PORTFOLIO_BASE_CURRENCIES))}"
+        )
+    rebalance = _normalize_rebalance(payload.get("rebalance", "none"))
+
+    parsed_items: List[Dict] = []
+    seen_assets = set()
+    total_weight = 0.0
+    for entry in raw_portfolio:
+        if not isinstance(entry, dict):
+            raise ValueError("each portfolio item must be an object")
+        item_type = str(entry.get("type", "stock") or "stock").strip().lower()
+        if item_type not in _DAILY_SERIES_FETCHERS:
+            raise ValueError(f"unsupported asset type: {item_type}")
+        item_symbol = normalize_asset_symbol(entry.get("symbol", ""), item_type)
+        if not item_symbol:
+            raise ValueError("each portfolio asset requires a symbol")
+        asset_key = (item_symbol, item_type)
+        if asset_key in seen_assets:
+            raise ValueError(f"duplicate asset in portfolio: {item_symbol}")
+        seen_assets.add(asset_key)
+
+        try:
+            raw_weight = float(entry.get("weight", 0) or 0)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"invalid weight for {item_symbol}") from exc
+        if not math.isfinite(raw_weight) or raw_weight <= 0:
+            raise ValueError(f"weight for {item_symbol} must be greater than 0")
+        total_weight += raw_weight
+        parsed_items.append({
+            "symbol": item_symbol,
+            "type": item_type,
+            "raw_weight": raw_weight,
+            "native_currency": _asset_currency(item_symbol, item_type),
+        })
+
+    if abs(total_weight - 100.0) > 0.5:
+        raise ValueError("portfolio weights must sum to 100%")
+
+    series_by_key: Dict[Tuple[str, str], PriceSeries] = {}
+    with ThreadPoolExecutor(max_workers=min(MAX_YEARLY_WORKERS, len(parsed_items))) as executor:
+        futures = {
+            executor.submit(_fetch_daily_series_cached, item["symbol"], item["type"]): (
+                item["symbol"],
+                item["type"],
+            )
+            for item in parsed_items
+        }
+        for fut in as_completed(futures):
+            key = futures[fut]
+            series = fut.result()
+            if series.error:
+                raise ValueError(f"{key[0]}: {series.error}")
+            series_by_key[key] = series
+
+    fx_lookup = build_fx_rate_lookup(
+        currencies=[item["native_currency"] for item in parsed_items],
+        base_currency=base_currency,
+        fetch_series_fn=_fetch_daily_series_cached,
+    )
+
+    asset_inputs: List[Dict] = []
+    sources: List[str] = []
+    for item in parsed_items:
+        key = (item["symbol"], item["type"])
+        series = series_by_key[key]
+        if series.source and series.source not in sources:
+            sources.append(series.source)
+        native_pts = _series_points_in_range(series.timestamps, series.closes, start_date, end_date)
+        if not native_pts:
+            raise ValueError(f"no price data in selected date range for {item['symbol']}")
+        native_ccy = item["native_currency"]
+        base_pts = [
+            (pt_date, float(native_close) * fx_lookup.rate_to_base(native_ccy, pt_date))
+            for pt_date, native_close in native_pts
+        ]
+        norm_weight = item["raw_weight"] / total_weight
+        asset_inputs.append({
+            "symbol": item["symbol"],
+            "type": item["type"],
+            "native_currency": native_ccy,
+            "weight": norm_weight,
+            "weight_pct": round(norm_weight * 100.0, 2),
+            "source": series.source,
+            "native_points": native_pts,
+            "base_points": base_pts,
+        })
+
+    sim = _simulate_portfolio_backtest(
+        asset_inputs=asset_inputs,
         start_date=start_date,
         end_date=end_date,
         frequency=frequency,
         interval=interval,
-        anchor_day=day_of_month,
+        day_of_month=day_of_month,
         weekday=weekday,
-    )
-    execution_dates = _resolve_execution_points(price_points, schedule_dates)
-
-    cashflows: List[dict] = []
-    irr_cashflows: List[Tuple] = []
-    executed_points: List[Tuple] = []
-    cumulative_units = 0.0
-
-    first_trade_date, first_trade_price = price_points[0]
-    if initial_amount > 0:
-        initial_units = initial_amount / first_trade_price
-        cumulative_units += initial_units
-        irr_cashflows.append((first_trade_date, -initial_amount))
-        cashflows.append({
-            "date": first_trade_date.isoformat(),
-            "planned_date": start_date.isoformat(),
-            "amount": round(initial_amount, 2),
-            "price": round(first_trade_price, 6),
-            "units": round(initial_units, 8),
-            "cum_units": round(cumulative_units, 8),
-            "kind": "initial",
-        })
-
-    for exec_date, price in execution_dates:
-        if amount <= 0:
-            break
-        units = amount / price
-        cumulative_units += units
-        irr_cashflows.append((exec_date, -amount))
-        executed_points.append((exec_date, price, amount, units, cumulative_units))
-        cashflows.append({
-            "date": exec_date.isoformat(),
-            "planned_date": exec_date.isoformat(),
-            "amount": round(amount, 2),
-            "price": round(price, 6),
-            "units": round(units, 8),
-            "cum_units": round(cumulative_units, 8),
-            "kind": "recurring",
-        })
-
-    equity_curve = _build_equity_curve(
-        price_points=price_points,
-        executed_points=executed_points,
         initial_amount=initial_amount,
-        initial_date=first_trade_date if initial_amount > 0 else None,
-        initial_price=first_trade_price if initial_amount > 0 else None,
+        amount=amount,
+        strategy=strategy,
+        rebalance=rebalance,
+        vca_growth_rate=vca_growth_rate,
+        vca_allow_sell=vca_allow_sell,
+        vca_max_contribution=vca_max_contribution,
     )
 
-    invested = initial_amount + amount * len(executed_points)
-    last_date, last_price = price_points[-1]
-    final_value = cumulative_units * last_price
-    profit = final_value - invested
-    return_pct = 0.0 if invested == 0 else (profit / invested) * 100
-    money_weighted_return = _compute_money_weighted_annualized_return(
-        cashflows=irr_cashflows,
-        final_date=last_date,
-        final_value=final_value,
+    portfolio_label = " + ".join(
+        f"{item['symbol']} {round(item['weight'] * 100):d}%"
+        if abs(item["weight"] * 100 - round(item["weight"] * 100)) < 0.05
+        else f"{item['symbol']} {item['weight'] * 100:.1f}%"
+        for item in asset_inputs
     )
-    annualized_return_pct = (money_weighted_return or 0.0) * 100
 
-    return {
-        "symbol": symbol,
-        "type": asset_type,
-        "currency": _asset_currency(symbol, asset_type),
-        "source": series.source,
+    logger.info(
+        "event=backtest_complete target_mode=portfolio strategy=%s assets=%s base_currency=%s rebalance=%s trades=%s rebalances=%s duration_ms=%.1f",
+        strategy,
+        len(asset_inputs),
+        base_currency,
+        rebalance,
+        sim["summary"]["trade_count"],
+        sim["summary"]["rebalance_count"],
+        (time.perf_counter() - started_at) * 1000,
+    )
+
+    response = {
+        "target_mode": "portfolio",
+        "strategy": strategy,
+        "symbol": portfolio_label,
+        "type": "portfolio",
+        "currency": base_currency,
+        "source": ", ".join(sources) if sources else "multi",
         "frequency": frequency,
         "interval": interval,
         "start_date": start_date.isoformat(),
-        "end_date": end_date.isoformat(),
-        "summary": {
-            "invested": round(invested, 2),
-            "final_value": round(final_value, 2),
-            "profit": round(profit, 2),
-            "return_pct": round(return_pct, 2),
-            "annualized_return_pct": round(annualized_return_pct, 2),
-            "trade_count": len(cashflows),
-            "last_price": round(last_price, 6),
+        "effective_start_date": sim["effective_start_date"],
+        "end_date": sim["end_date"],
+        "portfolio": {
+            "base_currency": base_currency,
+            "rebalance": rebalance,
+            "effective_start_date": sim["effective_start_date"],
+            "start_date_shifted": sim["effective_start_date"] != start_date.isoformat(),
+            "rebalance_count": sim["summary"]["rebalance_count"],
+            "holdings": sim["holdings"],
         },
-        "cashflows": cashflows,
-        "equity_curve": equity_curve,
+        "summary": sim["summary"],
+        "cashflows": sim["cashflows"],
+        "equity_curve": sim["equity_curve"],
     }
+    if vca_config is not None:
+        response["vca_config"] = vca_config
+    return response
 
 
 def run_crash_stats(payload: Dict) -> Dict:

@@ -1425,6 +1425,170 @@ class TestRunDcaBacktest:
         diagnose("weekly trades", result["summary"]["trade_count"])
         track_coverage(MOD, 1)
 
+    def test_single_vca_backtest_with_growth_and_cap(self, mock_fetch_daily_series, three_year_series):
+        """Single-symbol VCA backtest returns vca_config, target curve, and buy/sell/hold summary."""
+        mock_fetch_daily_series.return_value = three_year_series
+        result = svc.run_dca_backtest({
+            "target_mode": "single",
+            "strategy": "vca",
+            "symbol": "QQQ",
+            "type": "stock",
+            "start_date": "2023-01-03",
+            "end_date": "2024-06-28",
+            "frequency": "monthly",
+            "amount": 1000,
+            "initial_amount": 2000,
+            "vca_growth_rate": 0.5,
+            "vca_allow_sell": True,
+            "vca_max_contribution": 2500,
+        })
+        assert result["target_mode"] == "single"
+        assert result["strategy"] == "vca"
+        assert result["vca_config"] == {
+            "growth_rate_pct": 0.5,
+            "allow_sell": True,
+            "max_contribution": 2500.0,
+        }
+        assert all("target" in pt for pt in result["equity_curve"])
+        assert result["summary"]["trade_count"] > 0
+
+    def test_vca_once_frequency_raises(self):
+        with pytest.raises(ValueError, match="vca strategy requires a recurring frequency"):
+            svc.run_dca_backtest({
+                "symbol": "QQQ",
+                "type": "stock",
+                "strategy": "vca",
+                "frequency": "once",
+                "start_date": "2023-01-03",
+                "end_date": "2024-06-28",
+                "amount": 1000,
+            })
+
+    def test_portfolio_same_currency_skips_fx_fetch(self, mock_fetch_daily_series, three_year_series):
+        """Portfolio with all USD/USDT assets under USD base currency makes zero FX fetches."""
+        mock_fetch_daily_series.return_value = three_year_series
+        result = svc.run_dca_backtest({
+            "target_mode": "portfolio",
+            "strategy": "dca",
+            "base_currency": "USD",
+            "rebalance": "quarterly",
+            "portfolio": [
+                {"symbol": "SPY", "type": "stock", "weight": 60},
+                {"symbol": "BTC", "type": "crypto", "weight": 40},
+            ],
+            "start_date": "2023-01-03",
+            "end_date": "2024-06-28",
+            "frequency": "monthly",
+            "amount": 1000,
+            "initial_amount": 5000,
+        })
+        assert result["target_mode"] == "portfolio"
+        assert result["currency"] == "USD"
+        assert result["portfolio"]["rebalance"] == "quarterly"
+        assert len(result["portfolio"]["holdings"]) == 2
+        called_symbols = {call.args[0] for call in mock_fetch_daily_series.call_args_list}
+        assert called_symbols == {"SPY", "BTC"}
+
+    def test_portfolio_cross_currency_converts_via_fx(self, mock_fetch_daily_series):
+        """Cross-currency portfolio (USD + HKD + GBp) converts prices into CNY base currency."""
+        from datetime import date as dt
+        from tests.conftest import _to_timestamp, _trading_dates
+
+        dates = _trading_dates(dt(2023, 1, 2), 80)
+        ts = [_to_timestamp(d) for d in dates]
+
+        def side_effect(symbol, asset_type):
+            if symbol == "CNY=X":
+                return PriceSeries(ts, [7.0] * len(ts), "yahoo-fx", time.time())
+            if symbol == "HKD=X":
+                return PriceSeries(ts, [7.8] * len(ts), "yahoo-fx", time.time())
+            if symbol == "GBPUSD=X":
+                return PriceSeries(ts, [1.25] * len(ts), "yahoo-fx", time.time())
+            return PriceSeries(
+                ts,
+                [100.0 + i * 0.5 for i in range(len(ts))],
+                f"src-{symbol}",
+                time.time(),
+            )
+
+        mock_fetch_daily_series.side_effect = side_effect
+        result = svc.run_dca_backtest({
+            "target_mode": "portfolio",
+            "strategy": "vca",
+            "vca_allow_sell": False,
+            "base_currency": "CNY",
+            "rebalance": "monthly",
+            "portfolio": [
+                {"symbol": "QQQ", "type": "stock", "weight": 50},
+                {"symbol": "0700.HK", "type": "hk_stock", "weight": 30},
+                {"symbol": "AZN.L", "type": "global_stock", "weight": 20},
+            ],
+            "start_date": "2023-01-03",
+            "end_date": "2023-04-20",
+            "frequency": "monthly",
+            "amount": 10000,
+        })
+        assert result["target_mode"] == "portfolio"
+        assert result["strategy"] == "vca"
+        assert result["currency"] == "CNY"
+        holdings = {h["symbol"]: h for h in result["portfolio"]["holdings"]}
+        assert holdings["QQQ"]["native_currency"] == "USD"
+        assert holdings["0700.HK"]["native_currency"] == "HKD"
+        assert holdings["AZN.L"]["native_currency"] == "GBp"
+        # QQQ last native price is converted by USD->CNY (7.0)
+        assert holdings["QQQ"]["last_price_base"] == pytest.approx(
+            holdings["QQQ"]["last_price_native"] * 7.0, rel=1e-4
+        )
+        # AZN.L in GBp = 0.01 GBP * 1.25 USD/GBP * 7.0 CNY/USD = 0.0875 CNY per GBp
+        assert holdings["AZN.L"]["last_price_base"] == pytest.approx(
+            holdings["AZN.L"]["last_price_native"] * 0.0875, rel=1e-4
+        )
+
+    @pytest.mark.parametrize(
+        "bad_payload,expected_msg",
+        [
+            (
+                {
+                    "target_mode": "portfolio",
+                    "portfolio": [{"symbol": "QQQ", "type": "stock", "weight": 100}],
+                    "start_date": "2023-01-03",
+                    "end_date": "2023-06-01",
+                    "amount": 1000,
+                },
+                "between 2 and 15 assets",
+            ),
+            (
+                {
+                    "target_mode": "portfolio",
+                    "portfolio": [
+                        {"symbol": "QQQ", "type": "stock", "weight": 50},
+                        {"symbol": "QQQ", "type": "stock", "weight": 50},
+                    ],
+                    "start_date": "2023-01-03",
+                    "end_date": "2023-06-01",
+                    "amount": 1000,
+                },
+                "duplicate asset",
+            ),
+            (
+                {
+                    "target_mode": "portfolio",
+                    "portfolio": [
+                        {"symbol": "QQQ", "type": "stock", "weight": 50},
+                        {"symbol": "TLT", "type": "stock", "weight": 30},
+                    ],
+                    "start_date": "2023-01-03",
+                    "end_date": "2023-06-01",
+                    "amount": 1000,
+                },
+                "sum to 100%",
+            ),
+        ],
+    )
+    def test_portfolio_validation_errors(self, bad_payload, expected_msg):
+        with pytest.raises(ValueError, match=expected_msg):
+            svc.run_dca_backtest(bad_payload)
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # run_crash_stats

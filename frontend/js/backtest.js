@@ -27,10 +27,15 @@ function backtestCurrencyForType(type, symbol) {
 }
 
 function syncBacktestCurrency(type, currency) {
-  _btCurrency = currency || backtestCurrencyForType(
-    type || btTypeSelect?.value || "stock",
-    btSymbolInput?.value || ""
-  );
+  var targetMode = document.getElementById("pcBtTargetMode")?.value || "single";
+  if (targetMode === "portfolio") {
+    _btCurrency = currency || document.getElementById("pcBtBaseCurrency")?.value || "USD";
+  } else {
+    _btCurrency = currency || backtestCurrencyForType(
+      type || btTypeSelect?.value || "stock",
+      btSymbolInput?.value || ""
+    );
+  }
   var label = document.getElementById("pcBtCurrency");
   if (label) label.textContent = _btCurrency;
 }
@@ -238,12 +243,35 @@ function getBtDotPulse(elapsedMs) {
 
 let _btCashflows = [];
 let _btEquityByDate = {};
+let _btLastResult = null;
 let _btPage = 1;
 let _btPageSize = 20;
 
 // Series visibility, shared by the advanced-panel checkboxes and the chart legend.
-let _btVisibleSeries = { asset: true, invested: true, profit: true };
-const BT_SERIES_NAMES = ["asset", "invested", "profit"];
+let _btVisibleSeries = { asset: true, invested: true, profit: true, target: true };
+const BT_SERIES_NAMES = ["asset", "invested", "profit", "target"];
+
+const PORTFOLIO_PRESETS = {
+  "6040": [
+    { symbol: "SPY", type: "stock", weight: 60 },
+    { symbol: "TLT", type: "stock", weight: 40 },
+  ],
+  "allweather": [
+    { symbol: "SPY", type: "stock", weight: 30 },
+    { symbol: "TLT", type: "stock", weight: 40 },
+    { symbol: "IEF", type: "stock", weight: 15 },
+    { symbol: "GLD", type: "stock", weight: 15 },
+  ],
+  "techgoldbtc": [
+    { symbol: "QQQ", type: "stock", weight: 60 },
+    { symbol: "GLD", type: "stock", weight: 25 },
+    { symbol: "BTC", type: "crypto", weight: 15 },
+  ],
+  "uscn": [
+    { symbol: "QQQ", type: "stock", weight: 50 },
+    { symbol: "000300", type: "cn_stock", weight: 50 },
+  ],
+};
 
 function btSetSeriesVisible(name, visible) {
   const svgEl = $("btChart")?.querySelector("svg");
@@ -342,24 +370,63 @@ function formatBtPlainAxis(value) {
   );
 }
 
+function formatBtKindBadge(kind) {
+  const keyMap = {
+    initial: ["backtest.kindInitial", "pc-bt-kind-buy"],
+    recurring: ["backtest.kindRecurring", "pc-bt-kind-buy"],
+    vca_buy: ["backtest.kindVcaBuy", "pc-bt-kind-buy"],
+    vca_sell: ["backtest.kindVcaSell", "pc-bt-kind-sell"],
+    vca_hold: ["backtest.kindVcaHold", "pc-bt-kind-hold"],
+    rebalance: ["backtest.kindRebalance", "pc-bt-kind-rebalance"],
+  };
+  const entry = keyMap[kind] || ["backtest.kindRecurring", "pc-bt-kind-buy"];
+  return `<span class="pc-bt-kind-badge ${entry[1]}">${__(entry[0])}</span>`;
+}
+
 function renderBacktestCashflowPage() {
   const total = _btCashflows.length;
   const totalPages = Math.max(1, Math.ceil(total / _btPageSize));
   _btPage = Math.max(1, Math.min(_btPage, totalPages));
   const start = (_btPage - 1) * _btPageSize;
   const rows = _btCashflows.slice(start, start + _btPageSize);
+  const isPortfolio = _btLastResult && _btLastResult.target_mode === "portfolio";
+  const isVca = _btLastResult && _btLastResult.strategy === "vca";
 
   btBody.innerHTML = rows.map((row) => {
     const point = _btEquityByDate[row.date];
-    const profit = point ? point.value - point.invested : null;
+    const netInv = row.net_invested != null ? row.net_invested : (point ? point.invested : 0);
+    const curVal = row.portfolio_value != null ? row.portfolio_value : (point ? point.value : null);
+    const profit = curVal != null ? curVal - netInv : (point ? point.value - point.invested : null);
     const profitClass = profit == null ? "" : profit >= 0 ? "bt-val-positive" : "bt-val-negative";
+    const amtNum = Number(row.amount) || 0;
+    const amtClass = amtNum < 0 ? "bt-val-negative" : "";
+    const targetCell = isVca
+      ? `<td>${row.target_value != null ? formatBtMoney(row.target_value) : "—"}</td>`
+      : "";
+
+    if (isPortfolio) {
+      return `
+        <tr>
+          <td>${escapeHtml(row.date)}</td>
+          <td>${formatBtKindBadge(row.kind)}</td>
+          <td class="${amtClass}">${formatBtMoney(row.amount, amtNum < 0)}</td>
+          <td>${formatBtMoney(netInv)}</td>
+          ${targetCell}
+          <td>${curVal != null ? formatBtMoney(curVal) : "—"}</td>
+          <td style="text-align:left;font-size:12px;color:var(--apple-text-secondary);">${escapeHtml(row.allocation_summary || "—")}</td>
+          <td class="${profitClass}">${profit == null ? "—" : formatBtMoney(profit, true)}</td>
+        </tr>
+      `;
+    }
+
     return `
       <tr>
         <td>${escapeHtml(row.date)}</td>
-        <td>${__(row.kind === "initial" ? "backtest.kindInitial" : "backtest.kindRecurring")}</td>
-        <td>${formatBtMoney(row.amount)}</td>
+        <td>${formatBtKindBadge(row.kind)}</td>
+        <td class="${amtClass}">${formatBtMoney(row.amount, amtNum < 0)}</td>
+        ${targetCell}
         <td>${formatBtMoney(row.price)}</td>
-        <td>${formatBtNumber(row.units, 6)}</td>
+        <td class="${amtClass}">${formatBtNumber(row.units, 6)}</td>
         <td>${formatBtNumber(row.cum_units, 6)}</td>
         <td class="${profitClass}">${profit == null ? "—" : formatBtMoney(profit, true)}</td>
       </tr>
@@ -384,11 +451,48 @@ function renderBacktestCashflowPage() {
   if (last) last.disabled = _btPage >= totalPages;
 }
 
+function updateBacktestModeUI() {
+  const targetMode = $("pcBtTargetMode")?.value || "single";
+  const singleWrap = $("btSingleAssetWrap");
+  const pfMetaWrap = $("btPortfolioMetaWrap");
+  const pfPanel = $("pcBtPortfolioPanel");
+  const historyEl = $("btHistory");
+  const isPortfolio = targetMode === "portfolio";
+
+  if (singleWrap) singleWrap.style.display = isPortfolio ? "none" : "inline-flex";
+  if (pfMetaWrap) pfMetaWrap.style.display = isPortfolio ? "inline-flex" : "none";
+  if (pfPanel) pfPanel.style.display = isPortfolio ? "" : "none";
+  if (historyEl) historyEl.style.display = isPortfolio ? "none" : "";
+  syncBacktestCurrency();
+}
+
+function updateBacktestStrategyUI() {
+  const strategy = $("pcBtStrategy")?.value || "dca";
+  const vcaFields = $("pcBtVcaFields");
+  const isVca = strategy === "vca";
+  if (vcaFields) vcaFields.style.display = isVca ? "inline-flex" : "none";
+
+  document.querySelectorAll("#pcBtStrategyGuide [data-strategy-card]").forEach(function (card) {
+    card.classList.toggle("is-active", card.dataset.strategyCard === strategy);
+  });
+
+  if (btFrequency) {
+    const onceOpt = btFrequency.querySelector('option[value="once"]');
+    if (onceOpt) onceOpt.disabled = isVca;
+    if (isVca && btFrequency.value === "once") {
+      btFrequency.value = "monthly";
+    }
+  }
+  updateBacktestFrequencyUI();
+}
+
 function updateBacktestFrequencyUI() {
   const mode = btFrequency?.value || "monthly";
+  const strategy = $("pcBtStrategy")?.value || "dca";
+  const amountLabel = $("pcBtAmountLabel") || (btAmount && btAmount.previousElementSibling);
   if (!btDayOfMonth || !btWeekday || !btDayOfMonthLabel || !btWeekdayLabel || !btInterval || !btAmount) return;
 
-  if (mode === "once") {
+  if (mode === "once" && strategy !== "vca") {
     btInterval.style.display = "none";
     btDayOfMonth.style.display = "none";
     btDayOfMonthLabel.style.display = "none";
@@ -396,9 +500,11 @@ function updateBacktestFrequencyUI() {
     btWeekdayLabel.style.display = "none";
     const intervalLabel = btInterval.previousElementSibling;
     if (intervalLabel) intervalLabel.style.display = "none";
-    btAmount.previousElementSibling && (btAmount.previousElementSibling.textContent = __("backtest.labelOnceInvest"));
+    if (amountLabel) amountLabel.textContent = __("backtest.labelOnceInvest");
     return;
   }
+
+  const perTimeText = strategy === "vca" ? __("backtest.labelVcaIncrement") : __("backtest.labelPerTime");
 
   if (mode === "yearly") {
     // yearly: interval is useful (every-N-years), but day-of-month/weekday are not
@@ -409,14 +515,14 @@ function updateBacktestFrequencyUI() {
     btDayOfMonthLabel.style.display = "none";
     btWeekday.style.display = "none";
     btWeekdayLabel.style.display = "none";
-    btAmount.previousElementSibling && (btAmount.previousElementSibling.textContent = __("backtest.labelPerTime"));
+    if (amountLabel) amountLabel.textContent = perTimeText;
     return;
   }
 
   const intervalLabel = btInterval.previousElementSibling;
   if (intervalLabel) intervalLabel.style.display = "";
   btInterval.style.display = "";
-  btAmount.previousElementSibling && (btAmount.previousElementSibling.textContent = __("backtest.labelPerTime"));
+  if (amountLabel) amountLabel.textContent = perTimeText;
 
   if (mode === "daily") {
     btDayOfMonth.style.display = "none";
@@ -484,28 +590,245 @@ function btError(msg) {
   if (msg) el.innerHTML = escapeHtml(msg);
 }
 
-async function runBacktest() {
-  const assetType = btTypeSelect?.value || "stock";
-  const symbol = normalizeAssetSymbol(btSymbolInput?.value || "", assetType);
-  if (btSymbolInput) btSymbolInput.value = symbol;
-  if (!symbol) {
-    btError(__("backtest.errorNoSymbol"));
-    return;
+function btAssetTypeOptionsHtml(selectedType) {
+  return [
+    ["stock", "yearly.assetTypeStock"],
+    ["hk_stock", "yearly.assetTypeHkStock"],
+    ["global_stock", "yearly.assetTypeGlobalStock"],
+    ["crypto", "yearly.assetTypeCrypto"],
+    ["cn_stock", "yearly.assetTypeCnStock"],
+  ].map(function (item) {
+    var sel = item[0] === selectedType ? " selected" : "";
+    return `<option value="${item[0]}"${sel}>${__(item[1])}</option>`;
+  }).join("");
+}
+
+function readPortfolioRows() {
+  var container = $("pcBtPortfolioRows");
+  if (!container) return [];
+  return Array.from(container.querySelectorAll(".pc-bt-portfolio-row")).map(function (row) {
+    var type = row.querySelector(".pf-type")?.value || "stock";
+    var rawSym = (row.querySelector(".pf-sym")?.value || "").trim();
+    var weight = parseFloat(row.querySelector(".pf-weight")?.value);
+    return {
+      symbol: normalizeAssetSymbol(rawSym, type),
+      type: type,
+      weight: Number.isFinite(weight) ? weight : 0,
+    };
+  });
+}
+
+function updatePortfolioWeightSum() {
+  var badge = $("pcBtWeightSum");
+  if (!badge) return;
+  var rows = readPortfolioRows();
+  var sum = rows.reduce(function (acc, item) { return acc + (item.weight > 0 ? item.weight : 0); }, 0);
+  var valid = rows.length >= 2 && Math.abs(sum - 100) <= 0.5;
+  badge.textContent = __("backtest.weightSumLabel", { sum: sum.toFixed(1) });
+  badge.classList.toggle("is-valid", valid);
+  badge.classList.toggle("is-invalid", !valid);
+}
+
+function addPortfolioRow(item) {
+  var container = $("pcBtPortfolioRows");
+  if (!container) return null;
+  var symbol = (item && item.symbol) || "";
+  var type = (item && item.type) || "stock";
+  var weight = item && item.weight != null ? item.weight : 50;
+  var div = document.createElement("div");
+  div.className = "pc-bt-portfolio-row";
+  div.innerHTML = `
+    <input type="text" class="pc-bt-input pf-sym" placeholder="SPY" maxlength="30" value="${escapeHtml(symbol)}" style="width:96px;text-transform:uppercase;">
+    <select class="pc-bt-input pf-type" style="width:96px;">${btAssetTypeOptionsHtml(type)}</select>
+    <input type="number" class="pc-bt-input pf-weight" min="0.1" max="100" step="0.1" value="${escapeHtml(String(weight))}" style="width:74px;">
+    <span class="pc-bt-label">%</span>
+    <button type="button" class="pc-btn pc-btn-sm pf-del">${__("backtest.compareRemove")}</button>
+  `;
+  container.appendChild(div);
+
+  var symInput = div.querySelector(".pf-sym");
+  var typeSel = div.querySelector(".pf-type");
+  var weightInput = div.querySelector(".pf-weight");
+  var delBtn = div.querySelector(".pf-del");
+
+  function bindAc() {
+    if (typeof window.attachAutocomplete === "function") window.attachAutocomplete(symInput, typeSel);
   }
-  saveBacktestSymbol(symbol, assetType);
+  if (typeof window.attachAutocomplete === "function") bindAc();
+  else window.addEventListener("gah-autocomplete-ready", bindAc, { once: true });
+
+  function onRowChange() {
+    updatePortfolioWeightSum();
+    saveBacktestParameters();
+  }
+  if (symInput) symInput.addEventListener("input", onRowChange);
+  if (typeSel) typeSel.addEventListener("change", onRowChange);
+  if (weightInput) weightInput.addEventListener("input", onRowChange);
+  if (delBtn) {
+    delBtn.addEventListener("click", function () {
+      if (container.querySelectorAll(".pc-bt-portfolio-row").length <= 2) {
+        btError(__("backtest.errorPortfolioMinAssets"));
+        return;
+      }
+      div.remove();
+      onRowChange();
+    });
+  }
+  updatePortfolioWeightSum();
+  return div;
+}
+
+function setPortfolioRows(items) {
+  var container = $("pcBtPortfolioRows");
+  if (!container) return;
+  container.innerHTML = "";
+  (items && items.length ? items : PORTFOLIO_PRESETS["6040"]).forEach(function (item) {
+    addPortfolioRow(item);
+  });
+  updatePortfolioWeightSum();
+}
+
+function equalizePortfolioWeights() {
+  var container = $("pcBtPortfolioRows");
+  if (!container) return;
+  var weightInputs = Array.from(container.querySelectorAll(".pf-weight"));
+  var n = weightInputs.length;
+  if (!n) return;
+  var base = Math.floor((1000 / n)) / 10;
+  var remainder = Math.round((100 - base * (n - 1)) * 10) / 10;
+  weightInputs.forEach(function (inp, idx) {
+    inp.value = String(idx === n - 1 ? remainder : base);
+  });
+  updatePortfolioWeightSum();
+  saveBacktestParameters();
+}
+
+function initPortfolioPanel() {
+  var container = $("pcBtPortfolioRows");
+  if (!container) return;
+  if (!container.children.length) {
+    setPortfolioRows(PORTFOLIO_PRESETS["6040"]);
+  }
+  var addBtn = $("pcBtPortfolioAdd");
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      if (container.querySelectorAll(".pc-bt-portfolio-row").length >= 15) return;
+      addPortfolioRow({ symbol: "", type: "stock", weight: 10 });
+      saveBacktestParameters();
+    });
+  }
+  var eqBtn = $("pcBtPortfolioEqual");
+  if (eqBtn) eqBtn.addEventListener("click", equalizePortfolioWeights);
+
+  var presetsWrap = $("pcBtPortfolioPresets");
+  if (presetsWrap) {
+    presetsWrap.querySelectorAll("[data-pf-preset]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var preset = PORTFOLIO_PRESETS[btn.dataset.pfPreset];
+        if (preset) {
+          setPortfolioRows(preset);
+          saveBacktestParameters();
+        }
+      });
+    });
+  }
+
+  var modeSel = $("pcBtTargetMode");
+  if (modeSel) modeSel.addEventListener("change", updateBacktestModeUI);
+  var baseCcySel = $("pcBtBaseCurrency");
+  if (baseCcySel) baseCcySel.addEventListener("change", function () { syncBacktestCurrency(); });
+  var stratSel = $("pcBtStrategy");
+  if (stratSel) stratSel.addEventListener("change", updateBacktestStrategyUI);
+
+  document.querySelectorAll("#pcBtStrategyGuide [data-strategy-card]").forEach(function (card) {
+    card.addEventListener("click", function () {
+      var targetStrat = card.dataset.strategyCard;
+      if (stratSel && targetStrat && stratSel.value !== targetStrat) {
+        stratSel.value = targetStrat;
+        updateBacktestStrategyUI();
+        saveBacktestParameters();
+      }
+    });
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initPortfolioPanel);
+} else {
+  initPortfolioPanel();
+}
+
+async function runBacktest() {
+  const targetMode = $("pcBtTargetMode")?.value || "single";
+  const strategy = $("pcBtStrategy")?.value || "dca";
+  const frequency = (strategy === "vca" && btFrequency?.value === "once")
+    ? "monthly"
+    : (btFrequency?.value || "monthly");
+
+  const rawMaxContrib = $("pcBtVcaMaxContrib")?.value;
+  const maxContrib = rawMaxContrib !== "" && rawMaxContrib != null ? parseFloat(rawMaxContrib) : null;
 
   const payload = {
-    symbol,
-    type: assetType,
+    target_mode: targetMode,
+    strategy: strategy,
     initial_amount: parseFloat(btInitialAmount?.value) || 0,
     amount: parseFloat(btAmount?.value) || 0,
     start_date: btStartDate?.value,
     end_date: btEndDate?.value,
-    frequency: btFrequency?.value || "monthly",
+    frequency: frequency,
     interval: parseInt(btInterval?.value, 10) || 1,
     day_of_month: parseInt(btDayOfMonth?.value, 10) || 1,
     weekday: parseInt(btWeekday?.value, 10) || 0,
   };
+
+  if (strategy === "vca") {
+    payload.vca_growth_rate = parseFloat($("pcBtVcaGrowthRate")?.value) || 0;
+    payload.vca_allow_sell = ($("pcBtVcaSellMode")?.value || "sell") !== "hold";
+    if (Number.isFinite(maxContrib) && maxContrib > 0) {
+      payload.vca_max_contribution = maxContrib;
+    }
+    if (payload.amount <= 0) {
+      btError(__("backtest.errorVcaIncrement"));
+      return;
+    }
+  }
+
+  let displaySymbol = "";
+  let historyRec = null;
+
+  if (targetMode === "portfolio") {
+    const rows = readPortfolioRows().filter(function (r) { return r.symbol; });
+    if (rows.length < 2) {
+      btError(__("backtest.errorPortfolioMinAssets"));
+      return;
+    }
+    if (rows.some(function (r) { return !(r.weight > 0); })) {
+      btError(__("backtest.errorPortfolioWeightInvalid"));
+      return;
+    }
+    const weightSum = rows.reduce(function (acc, r) { return acc + r.weight; }, 0);
+    if (Math.abs(weightSum - 100) > 0.5) {
+      btError(__("backtest.errorPortfolioWeightSum", { sum: weightSum.toFixed(1) }));
+      return;
+    }
+    payload.portfolio = rows;
+    payload.base_currency = $("pcBtBaseCurrency")?.value || "USD";
+    payload.rebalance = $("pcBtRebalance")?.value || "yearly";
+    displaySymbol = rows.map(function (r) { return r.symbol; }).join(" + ");
+  } else {
+    const assetType = btTypeSelect?.value || "stock";
+    const symbol = normalizeAssetSymbol(btSymbolInput?.value || "", assetType);
+    if (btSymbolInput) btSymbolInput.value = symbol;
+    if (!symbol) {
+      btError(__("backtest.errorNoSymbol"));
+      return;
+    }
+    saveBacktestSymbol(symbol, assetType);
+    payload.symbol = symbol;
+    payload.type = assetType;
+    displaySymbol = symbol;
+    historyRec = { symbol: symbol, name: "", type: assetType };
+  }
 
   btError(null);
   try {
@@ -518,9 +841,9 @@ async function runBacktest() {
     const result = await resp.json();
     if (!resp.ok) throw new Error(result.error || `HTTP ${resp.status}`);
     hideBacktestLoading();
-    renderBacktestResult(symbol, result);
-    if (typeof gahHistoryRecord === "function") {
-      gahHistoryRecord("gah_backtest_history", { symbol: symbol, name: "", type: assetType });
+    renderBacktestResult(result.symbol || displaySymbol, result);
+    if (historyRec && typeof gahHistoryRecord === "function") {
+      gahHistoryRecord("gah_backtest_history", historyRec);
     }
   } catch (e) {
     hideBacktestLoading();
@@ -546,10 +869,11 @@ function smoothPath(points) {
   return d;
 }
 
-function renderBtChart(equityCurve) {
+function renderBtChart(equityCurve, displayLabel) {
   if (!equityCurve || equityCurve.length === 0) return;
   const c = getChartColors();
   const sampledCurve = sampleEvenly(equityCurve, getBacktestSampleSize());
+  const hasTarget = sampledCurve.some((row) => row.target != null && Number.isFinite(Number(row.target)));
 
   // Live header row: currency, date range, and the three amounts that roll up with the reveal.
   const liveEl = document.getElementById("btLiveData");
@@ -564,14 +888,19 @@ function renderBtChart(equityCurve) {
       liveEl.innerHTML = "";
     } else {
       const profitClass = liveTarget.profit >= 0 ? "bt-val-positive" : "bt-val-negative";
+      const targetChip = hasTarget
+        ? `<button class="bt-legend-chip" type="button" data-series="target"><span class="bt-legend-swatch" style="background:#ff9f0a"></span>${__("backtest.targetValue")}</button>`
+        : "";
+      const staticLabel = displayLabel || btSymbolInput?.value || _btCurrency;
       // Legend chips sit in the same row as the live data, vertically centered.
       liveEl.innerHTML = `
         <span class="bt-live-legend">
           <button class="bt-legend-chip" type="button" data-series="asset"><span class="bt-legend-swatch" style="background:#2997ff"></span>${__("backtest.totalAssets")}</button>
           <button class="bt-legend-chip" type="button" data-series="invested"><span class="bt-legend-swatch" style="background:${c.invested}"></span>${__("backtest.totalInvested")}</button>
           <button class="bt-legend-chip" type="button" data-series="profit"><span class="bt-legend-swatch" style="background:${c.positiveAlpha88}"></span>${__("backtest.totalReturn")}</button>
+          ${targetChip}
         </span>
-        <span class="bt-live-static">${escapeHtml(btSymbolInput?.value || _btCurrency)}</span>
+        <span class="bt-live-static">${escapeHtml(staticLabel)}</span>
         <span class="bt-live-range">${escapeHtml(sampledCurve[0].date)} ~ ${escapeHtml(lastRow.date)}</span>
         <span class="bt-live-item"><span class="bt-live-label">${__("backtest.totalAssets")}</span><b id="btLiveAsset" class="bt-live-val">${formatBtMoney(0)}</b></span>
         <span class="bt-live-item"><span class="bt-live-label">${__("backtest.totalInvested")}</span><b id="btLiveInvested" class="bt-live-val">${formatBtMoney(0)}</b></span>
@@ -588,9 +917,13 @@ function renderBtChart(equityCurve) {
   // All three series share one left Y-axis (amounts); the right axis is removed.
   // Geometry and axis styling intentionally match the compare chart.
   const W = 700, H = 240;
-  // One shared axis must cover all three series. Using only total assets clips
+  // One shared axis must cover all active series. Using only total assets clips
   // negative profit and produces a misleading synthetic bottom tick.
-  const axisVals = sampledCurve.flatMap((row) => [row.value, row.invested, row.value - row.invested]);
+  const axisVals = sampledCurve.flatMap((row) => {
+    const vals = [row.value, row.invested, row.value - row.invested];
+    if (hasTarget && Number.isFinite(Number(row.target))) vals.push(Number(row.target));
+    return vals;
+  });
   const minAssetVal = Math.min(...axisVals);
   const maxAssetVal = Math.max(...axisVals);
   const assetRange = maxAssetVal - minAssetVal || 1;
@@ -628,16 +961,21 @@ function renderBtChart(equityCurve) {
   const assetPoints = [];
   const investedPoints = [];
   const profitPoints = [];
+  const targetPoints = [];
   sampledCurve.forEach((row) => {
     const x = xPosMs(btDateMs(row.date));
     assetPoints.push({ x: x, y: assetYPos(row.value) });
     investedPoints.push({ x: x, y: assetYPos(row.invested) });
     profitPoints.push({ x: x, y: assetYPos(row.value - row.invested) });
+    if (hasTarget && Number.isFinite(Number(row.target))) {
+      targetPoints.push({ x: x, y: assetYPos(Number(row.target)) });
+    }
   });
 
   const assetCurveD = smoothPath(assetPoints);
   const investedCurveD = smoothPath(investedPoints);
   const profitCurveD = smoothPath(profitPoints);
+  const targetCurveD = hasTarget ? smoothPath(targetPoints) : "";
   // Gradient fill under the total-assets curve, down to the x-axis (plot bottom).
   const assetBottomY = PAD.top + ch;
   const firstX = assetPoints.length ? assetPoints[0].x : 0;
@@ -654,15 +992,19 @@ function renderBtChart(equityCurve) {
   const profitPath = profitPoints.length
     ? `<path d="${profitCurveD}" fill="none" stroke="${c.positiveAlpha88}" stroke-width="${BT_SECONDARY_LINE_STROKE}" stroke-linecap="round"/>`
     : "";
+  const targetPath = hasTarget && targetPoints.length
+    ? `<path d="${targetCurveD}" fill="none" stroke="#ff9f0a" stroke-width="${BT_SECONDARY_LINE_STROKE}" stroke-dasharray="5,3" stroke-linecap="round" opacity="0.9"/>`
+    : "";
 
-  const hoverZones = sampledCurve.map((row, idx) => {
+  const hoverZones = sampledCurve.map((row) => {
     const profit = row.value - row.invested;
+    const targetAttr = hasTarget && row.target != null ? ` data-target="${row.target}"` : "";
     return `<rect
       class="bt-hover-zone"
       data-date="${row.date}"
       data-value="${row.value}"
       data-invested="${row.invested}"
-      data-profit="${profit}"
+      data-profit="${profit}"${targetAttr}
       x="${Math.max(PAD.left, xPosMs(btDateMs(row.date)) - 8)}"
       y="${PAD.top}"
       width="16"
@@ -675,12 +1017,13 @@ function renderBtChart(equityCurve) {
   const tooltip = `
     <g id="btTooltip" style="display:none;pointer-events:none;">
       <line id="btTooltipGuide" x1="0" y1="${PAD.top}" x2="0" y2="${PAD.top + ch}" stroke="${c.guide}" stroke-width="1" stroke-dasharray="4,3"/>
-      <rect id="btTooltipBg" x="0" y="0" width="168" height="88" rx="8" fill="${c.tooltipBg}" stroke="${c.tooltipBorder}"/>
+      <rect id="btTooltipBg" x="0" y="0" width="176" height="104" rx="8" fill="${c.tooltipBg}" stroke="${c.tooltipBorder}"/>
       <text id="btTooltipDate" x="10" y="16" fill="${c.tooltipText}" font-size="11"></text>
       <text id="btTooltipAsset" x="10" y="32" fill="#2997ff" font-size="11"></text>
       <text id="btTooltipInvested" x="10" y="48" fill="var(--apple-text-secondary)" font-size="11"></text>
       <text id="btTooltipProfit" x="10" y="64" fill="${c.positive}" font-size="11"></text>
       <text id="btTooltipReturn" x="10" y="80" fill="${c.tooltipText}" font-size="11"></text>
+      <text id="btTooltipTarget" x="10" y="96" fill="#ff9f0a" font-size="11" style="display:none;"></text>
     </g>
   `;
 
@@ -698,6 +1041,7 @@ function renderBtChart(equityCurve) {
       <g id="btPulse-asset"${seriesStyle("asset")}>${pulseDot(assetPoints, "#2997ff", "btPulseDot-asset")}</g>
       <g id="btPulse-invested"${seriesStyle("invested")}>${pulseDot(investedPoints, c.invested, "btPulseDot-invested")}</g>
       <g id="btPulse-profit"${seriesStyle("profit")}>${pulseDot(profitPoints, c.positiveAlpha88, "btPulseDot-profit")}</g>
+      ${hasTarget ? `<g id="btPulse-target"${seriesStyle("target")}>${pulseDot(targetPoints, "#ff9f0a", "btPulseDot-target")}</g>` : ""}
     </g>
   `;
   const svgH = H;
@@ -713,6 +1057,7 @@ function renderBtChart(equityCurve) {
       <g id="btSeries-profit"${seriesStyle("profit")}>
         ${profitPath}
       </g>
+      ${hasTarget ? `<g id="btSeries-target"${seriesStyle("target")}>${targetPath}</g>` : ""}
     </g>
   `;
   $("btChart").innerHTML = `<svg viewBox="0 0 ${W} ${svgH}" style="width:100%;height:auto;display:block;">
@@ -740,6 +1085,7 @@ function renderBtChart(equityCurve) {
   const tooltipInvested = svgEl?.querySelector("#btTooltipInvested");
   const tooltipProfit = svgEl?.querySelector("#btTooltipProfit");
   const tooltipReturn = svgEl?.querySelector("#btTooltipReturn");
+  const tooltipTarget = svgEl?.querySelector("#btTooltipTarget");
 
   svgEl?.querySelectorAll(".bt-hover-zone").forEach((zone) => {
     zone.addEventListener("mouseenter", () => {
@@ -747,8 +1093,8 @@ function renderBtChart(equityCurve) {
       const value = parseFloat(zone.dataset.value || "0");
       const invested = parseFloat(zone.dataset.invested || "0");
       const profit = parseFloat(zone.dataset.profit || "0");
-      const returnPct = invested === 0 ? 0 : (profit / invested) * 100;
-      const tooltipX = Math.min(Math.max(x + 10, PAD.left), W - PAD.right - 160);
+      const returnPct = invested <= 0 ? 0 : (profit / invested) * 100;
+      const tooltipX = Math.min(Math.max(x + 10, PAD.left), W - PAD.right - 168);
       const tooltipY = PAD.top + 8;
       if (tooltipEl) tooltipEl.setAttribute("transform", `translate(${tooltipX}, ${tooltipY})`);
       if (tooltipGuide) {
@@ -764,7 +1110,18 @@ function renderBtChart(equityCurve) {
         tooltipProfit.setAttribute("fill", profit >= 0 ? c.positive : c.negative);
       }
       if (tooltipReturn) tooltipReturn.textContent = __("backtest.returnRate") + " " + (returnPct >= 0 ? "+" : "") + returnPct.toFixed(2) + "%";
-      if (tooltipBg) tooltipBg.setAttribute("height", "88");
+      if (tooltipTarget) {
+        if (hasTarget && zone.dataset.target != null) {
+          tooltipTarget.textContent = __("backtest.targetValue") + ": " + formatBtMoney(parseFloat(zone.dataset.target));
+          tooltipTarget.style.display = "";
+          if (tooltipBg) tooltipBg.setAttribute("height", "104");
+        } else {
+          tooltipTarget.style.display = "none";
+          if (tooltipBg) tooltipBg.setAttribute("height", "88");
+        }
+      } else if (tooltipBg) {
+        tooltipBg.setAttribute("height", "88");
+      }
       if (tooltipEl) tooltipEl.style.display = "";
     });
     zone.addEventListener("mouseleave", () => {
@@ -800,6 +1157,7 @@ function renderBtChart(equityCurve) {
     place("btPulseDot-asset", assetPoints);
     place("btPulseDot-invested", investedPoints);
     place("btPulseDot-profit", profitPoints);
+    if (hasTarget) place("btPulseDot-target", targetPoints);
   };
   if (revealRect) {
     if (durationMs <= 0) {
@@ -849,13 +1207,104 @@ function animateBtSummary(durationMs) {
   requestAnimationFrame(tick);
 }
 
+function renderPortfolioHoldings(result) {
+  const wrap = $("pcBtHoldingsWrap");
+  const head = $("pcBtHoldingsHead");
+  const body = $("pcBtHoldingsBody");
+  const note = $("pcBtHoldingsNote");
+  if (!wrap || !head || !body) return;
+  const holdings = (result && result.portfolio && result.portfolio.holdings) || [];
+  if (result.target_mode !== "portfolio" || !holdings.length) {
+    wrap.style.display = "none";
+    return;
+  }
+
+  const rebMap = {
+    none: __("backtest.rebalanceNone"),
+    monthly: __("backtest.rebalanceMonthly"),
+    quarterly: __("backtest.rebalanceQuarterly"),
+    yearly: __("backtest.rebalanceYearly"),
+  };
+  const rebLabel = rebMap[result.portfolio.rebalance] || result.portfolio.rebalance;
+  if (note) {
+    note.textContent = `${rebLabel} · ${__("backtest.rebalanceCountNote", { count: result.portfolio.rebalance_count || 0 })}`;
+  }
+
+  head.innerHTML =
+    `<th>${__("backtest.colAsset")}</th>` +
+    `<th>${__("backtest.colNativeCcy")}</th>` +
+    `<th>${__("backtest.colTargetWeight")}</th>` +
+    `<th>${__("backtest.colFinalWeight")}</th>` +
+    `<th>${__("backtest.colCumShares")}</th>` +
+    `<th>${__("backtest.colLastPriceBase")}</th>` +
+    `<th>${__("backtest.colFinalValue")}</th>`;
+
+  body.innerHTML = holdings.map((h) => {
+    const fw = Number(h.final_weight) || 0;
+    const tw = Number(h.target_weight) || 0;
+    const barW = Math.max(0, Math.min(100, fw));
+    return `
+      <tr>
+        <td style="font-weight:600;color:var(--apple-text-primary);">${escapeHtml(h.symbol)}</td>
+        <td style="text-align:left;color:var(--apple-text-secondary);">${escapeHtml(h.native_currency || _btCurrency)}</td>
+        <td>${tw.toFixed(2)}%</td>
+        <td>
+          <span class="pc-bt-weight-bar-wrap">
+            <span>${fw.toFixed(2)}%</span>
+            <span class="pc-bt-weight-bar"><span class="pc-bt-weight-bar-fill" style="width:${barW}%"></span></span>
+          </span>
+        </td>
+        <td>${formatBtNumber(h.units, 6)}</td>
+        <td>${formatBtMoney(h.last_price_base)}</td>
+        <td style="font-weight:600;">${formatBtMoney(h.final_value)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  wrap.style.display = "";
+}
+
+function renderBacktestNotice(result) {
+  const noticeEl = $("pcBtNotice");
+  if (!noticeEl) return;
+  const messages = [];
+  if (result.target_mode === "portfolio" && result.portfolio && result.portfolio.start_date_shifted) {
+    messages.push(__("backtest.noticeStartDateShifted", {
+      requested: result.start_date,
+      effective: result.effective_start_date,
+    }));
+  }
+  if (result.strategy === "vca" && result.vca_config) {
+    const modeLabel = result.vca_config.allow_sell ? __("backtest.vcaAllowSell") : __("backtest.vcaNoSell");
+    const capLabel = result.vca_config.max_contribution
+      ? formatBtMoney(result.vca_config.max_contribution)
+      : __("backtest.vcaUnlimited");
+    messages.push(__("backtest.noticeVcaSummary", {
+      mode: modeLabel,
+      growth: Number(result.vca_config.growth_rate_pct || 0).toFixed(2) + "%",
+      cap: capLabel,
+    }));
+  }
+  if (messages.length) {
+    noticeEl.innerHTML = messages.map(escapeHtml).join("<br>");
+    noticeEl.style.display = "";
+  } else {
+    noticeEl.innerHTML = "";
+    noticeEl.style.display = "none";
+  }
+}
+
 function renderBacktestResult(symbol, result) {
+  _btLastResult = result;
   syncBacktestCurrency(result.type, result.currency);
   const summary = result.summary || {};
-  renderBtChart(result.equity_curve || []);
+  renderBacktestNotice(result);
+  renderBtChart(result.equity_curve || [], symbol);
   const profit = Number(summary.profit) || 0;
   const returnPct = Number(summary.return_pct) || 0;
   const annualizedReturnPct = Number(summary.annualized_return_pct) || 0;
+  const withdrawn = Number(summary.total_withdrawn) || 0;
+  const grossInvested = Number(summary.gross_invested != null ? summary.gross_invested : summary.invested) || 0;
   _btCashflows = result.cashflows || [];
   _btEquityByDate = Object.fromEntries((result.equity_curve || []).map((row) => [row.date, row]));
   _btPage = 1;
@@ -863,6 +1312,30 @@ function renderBacktestResult(symbol, result) {
   const animFinal = Number(summary.final_value) || 0;
   const animInvested = Number(summary.invested) || 0;
   const animTradeCount = Number(summary.trade_count) || 0;
+  const investedLabel = withdrawn > 0 ? __("backtest.netInvested") : __("backtest.totalInvested");
+  const investedNote = withdrawn > 0
+    ? __("backtest.netInvestedNote", {
+      gross: formatBtMoney(grossInvested),
+      withdrawn: formatBtMoney(withdrawn),
+    })
+    : __("backtest.totalInvestedNote");
+  const returnRateNote = withdrawn > 0
+    ? __("backtest.totalReturnRatePeakNote", { peak: formatBtMoney(summary.peak_invested || grossInvested) })
+    : __("backtest.totalReturnRateNote");
+
+  let tradeNote = __("backtest.tradeCountNote");
+  if (result.strategy === "vca") {
+    tradeNote = __("backtest.tradeCountVcaNote", {
+      buy: summary.buy_count || 0,
+      sell: summary.sell_count || 0,
+      hold: summary.hold_count || 0,
+    });
+  } else if (result.target_mode === "portfolio" && summary.rebalance_count > 0) {
+    tradeNote = __("backtest.tradeCountPortfolioNote", {
+      rebalances: summary.rebalance_count || 0,
+    });
+  }
+
   btSummary.innerHTML = `
     <div class="pc-bt-summary-item">
       <div class="pc-bt-summary-label">${__("backtest.finalAssets")}</div>
@@ -870,9 +1343,9 @@ function renderBacktestResult(symbol, result) {
       <div class="pc-bt-summary-note">${__("backtest.finalAssetsNote", { symbol: escapeHtml(symbol) })}</div>
     </div>
     <div class="pc-bt-summary-item">
-      <div class="pc-bt-summary-label">${__("backtest.totalInvested")}</div>
+      <div class="pc-bt-summary-label">${investedLabel}</div>
       <div class="pc-bt-summary-val" data-anim="money" data-value="${animInvested}">${formatBtMoney(animInvested)}</div>
-      <div class="pc-bt-summary-note">${__("backtest.totalInvestedNote")}</div>
+      <div class="pc-bt-summary-note">${escapeHtml(investedNote)}</div>
     </div>
     <div class="pc-bt-summary-item">
       <div class="pc-bt-summary-label">${__("backtest.profitAmount")}</div>
@@ -882,7 +1355,7 @@ function renderBacktestResult(symbol, result) {
     <div class="pc-bt-summary-item">
       <div class="pc-bt-summary-label">${__("backtest.totalReturnRate")}</div>
       <div class="pc-bt-summary-val ${returnPct >= 0 ? "bt-val-positive" : "bt-val-negative"}" data-anim="pct" data-value="${returnPct}">${returnPct >= 0 ? "+" : ""}${returnPct.toFixed(2)}%</div>
-      <div class="pc-bt-summary-note">${__("backtest.totalReturnRateNote")}</div>
+      <div class="pc-bt-summary-note">${escapeHtml(returnRateNote)}</div>
     </div>
     <div class="pc-bt-summary-item">
       <div class="pc-bt-summary-label has-tip" title="${__("backtest.irrTooltip")}">${__("backtest.irrAnnualized")}</div>
@@ -892,12 +1365,37 @@ function renderBacktestResult(symbol, result) {
     <div class="pc-bt-summary-item">
       <div class="pc-bt-summary-label">${__("backtest.tradeCount")}</div>
       <div class="pc-bt-summary-val" data-anim="int" data-value="${animTradeCount}">${formatBtNumber(animTradeCount, 0)}</div>
-      <div class="pc-bt-summary-note">${__("backtest.tradeCountNote")}</div>
+      <div class="pc-bt-summary-note">${escapeHtml(tradeNote)}</div>
     </div>
   `;
   animateBtSummary(getBacktestAnimMs());
 
-  btHead.innerHTML = "<th>" + __("backtest.colDate") + "</th><th>" + __("backtest.colKind") + "</th><th>" + __("backtest.colAmount") + "</th><th>" + __("backtest.colPrice") + "</th><th>" + __("backtest.colShares") + "</th><th>" + __("backtest.colCumShares") + "</th><th>" + __("backtest.colTotalReturn") + "</th>";
+  renderPortfolioHoldings(result);
+
+  const isPortfolio = result.target_mode === "portfolio";
+  const isVca = result.strategy === "vca";
+  const targetTh = isVca ? `<th>${__("backtest.colTargetValue")}</th>` : "";
+  if (isPortfolio) {
+    btHead.innerHTML =
+      `<th>${__("backtest.colDate")}</th>` +
+      `<th>${__("backtest.colKind")}</th>` +
+      `<th>${__("backtest.colAmount")}</th>` +
+      `<th>${__("backtest.colNetInvested")}</th>` +
+      targetTh +
+      `<th>${__("backtest.colPortfolioValue")}</th>` +
+      `<th style="text-align:left;">${__("backtest.colAllocation")}</th>` +
+      `<th>${__("backtest.colTotalReturn")}</th>`;
+  } else {
+    btHead.innerHTML =
+      "<th>" + __("backtest.colDate") + "</th>" +
+      "<th>" + __("backtest.colKind") + "</th>" +
+      "<th>" + __("backtest.colAmount") + "</th>" +
+      targetTh +
+      "<th>" + __("backtest.colPrice") + "</th>" +
+      "<th>" + __("backtest.colShares") + "</th>" +
+      "<th>" + __("backtest.colCumShares") + "</th>" +
+      "<th>" + __("backtest.colTotalReturn") + "</th>";
+  }
   renderBacktestCashflowPage();
 
   if (btResult) btResult.style.display = "";
@@ -1065,6 +1563,8 @@ function readCompareRows() {
 // Persist user-controlled backtest parameters. Symbol/type keep their legacy
 // key as well, so existing preferences continue to work across this upgrade.
 const BACKTEST_VALUE_FIELD_IDS = [
+  "pcBtTargetMode", "pcBtBaseCurrency", "pcBtRebalance",
+  "pcBtStrategy", "pcBtVcaSellMode", "pcBtVcaGrowthRate", "pcBtVcaMaxContrib",
   "btSymbolInput", "btTypeSelect", "pcBtInitialAmount", "pcBtAmount",
   "pcBtStartDate", "pcBtEndDate", "pcBtFrequency", "pcBtInterval",
   "pcBtDayOfMonth", "pcBtWeekday", "pcBtSampleSize", "pcBtAnimSeconds",
@@ -1086,7 +1586,8 @@ function readBacktestParameterState() {
     var field = document.getElementById(id);
     if (field) checked[id] = field.checked;
   });
-  return { values: values, checked: checked };
+  var portfolioRows = readPortfolioRows();
+  return { values: values, checked: checked, portfolioRows: portfolioRows };
 }
 
 function saveBacktestParameters() {
@@ -1110,6 +1611,9 @@ function restoreBacktestParameters() {
       var field = document.getElementById(id);
       if (field && Object.prototype.hasOwnProperty.call(checked, id)) field.checked = Boolean(checked[id]);
     });
+    if (Array.isArray(state.portfolioRows) && state.portfolioRows.length >= 2) {
+      setPortfolioRows(state.portfolioRows);
+    }
     return true;
   } catch (_) {
     return false;
@@ -1117,6 +1621,8 @@ function restoreBacktestParameters() {
 }
 
 function syncRestoredBacktestParameters() {
+  updateBacktestModeUI();
+  updateBacktestStrategyUI();
   updateBacktestFrequencyUI();
   syncBacktestCurrency(btTypeSelect?.value || "stock");
 
@@ -1129,6 +1635,7 @@ function syncRestoredBacktestParameters() {
     asset: document.getElementById("btShowAsset")?.checked !== false,
     invested: document.getElementById("btShowInvested")?.checked !== false,
     profit: document.getElementById("btShowProfit")?.checked !== false,
+    target: true,
   };
   if (!restoredVisibility.asset && !restoredVisibility.invested && !restoredVisibility.profit) {
     restoredVisibility.asset = true;
