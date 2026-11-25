@@ -65,6 +65,23 @@ def test_heatmap_uses_market_types_without_symbol_or_top_n_controls():
     )
 
 
+def test_heatmap_background_refresh_skips_entrance_animations_to_prevent_flicker():
+    script = _source("frontend/js/heatmap.js")
+    styles = _source("frontend/css/app.css")
+
+    assert 'hmTreemapWrap.classList.remove("hm-entering");' in script
+    assert 'if (animate) {' in script
+    assert 'hmTreemapWrap.classList.add("hm-entering");' in script
+    assert "renderTreemap(result, !background);" in script
+    assert "renderHmStats(prepared, animate);" in script
+    assert 'hmStats.classList.remove("hm-stats-entering");' in script
+    assert 'hmStats.classList.add("hm-stats-entering");' in script
+    assert ".hm-treemap-wrap.hm-entering .hm-treemap-svg g.hm-cell" in styles
+    assert ".hm-treemap-wrap.hm-entering .hm-treemap-svg text.hm-label" in styles
+    assert ".hm-stats.hm-stats-entering .hm-stat-card" in styles
+    assert 'hmStats.style.display = "none";\n  void hmStats.offsetWidth;' not in script
+
+
 def test_backtest_remembers_symbol_and_asset_type():
     backtest = _source("frontend/js/backtest.js")
     page = _source("frontend/price-change.html")

@@ -468,12 +468,12 @@ function layoutStripTreemap(items, x, y, w, h) {
     }
 
     // Lay the strip along the shorter side, stacked on the longer side.
-    var stripThick = rowSum / shortSide;
+    var stripThick = shortSide > 0 ? (rowSum / shortSide) : 0;
     if (rw <= rh) {
       // strip is a row across the top, height = stripThick
       var cx = rx;
       for (var i = 0; i < row.length; i++) {
-        var cw = row[i].weight / stripThick;
+        var cw = stripThick > 0 ? (row[i].weight / stripThick) : (rw / row.length);
         result.push({ x: cx, y: ry, w: cw, h: stripThick, item: row[i].item });
         cx += cw;
       }
@@ -482,7 +482,7 @@ function layoutStripTreemap(items, x, y, w, h) {
       // strip is a column down the left, width = stripThick
       var cy = ry;
       for (var j = 0; j < row.length; j++) {
-        var ch = row[j].weight / stripThick;
+        var ch = stripThick > 0 ? (row[j].weight / stripThick) : (rh / row.length);
         result.push({ x: rx, y: cy, w: stripThick, h: ch, item: row[j].item });
         cy += ch;
       }
@@ -620,8 +620,8 @@ function renderTreemap(result, animate) {
   hmTreemapWrap.style.display = "";
 
   // Container-level entrance animation on fresh data (complements cell cascade)
+  hmTreemapWrap.classList.remove("hm-entering");
   if (animate) {
-    hmTreemapWrap.classList.remove("hm-entering");
     void hmTreemapWrap.offsetWidth; // force reflow to restart animation
     hmTreemapWrap.classList.add("hm-entering");
   }
@@ -742,7 +742,7 @@ function renderTreemap(result, animate) {
   }
 
   renderHmLegend(maxAbs, prepared);
-  renderHmStats(prepared);
+  renderHmStats(prepared, animate);
 
   // Trigger return-ranked breathing effect after initial animation completes
   if (animate) {
@@ -889,7 +889,7 @@ function renderHmLegend(maxAbs, prepared) {
 
 // ─── Overview Stats ───
 
-function renderHmStats(prepared) {
+function renderHmStats(prepared, animate) {
   if (!hmStats || !prepared || !prepared.length) {
     if (hmStats) hmStats.style.display = "none";
     return;
@@ -918,9 +918,11 @@ function renderHmStats(prepared) {
   html += '<div class="hm-stat-card"><span class="hm-stat-label">' + __("heatmap.statsAvg") + '</span><span class="hm-stat-val ' + avgCls + '">' + hmFormatPct(avgPct) + '</span></div>';
   html += '<div class="hm-stat-card"><span class="hm-stat-label">' + __("heatmap.statsWeighted") + '</span><span class="hm-stat-val ' + wtCls + '">' + hmFormatPct(weightedPct) + '</span></div>';
 
-  // Force reflow to restart animation on re-render
-  hmStats.style.display = "none";
-  void hmStats.offsetWidth;
+  hmStats.classList.remove("hm-stats-entering");
+  if (animate) {
+    void hmStats.offsetWidth;
+    hmStats.classList.add("hm-stats-entering");
+  }
   hmStats.innerHTML = html;
   hmStats.style.display = "flex";
 }

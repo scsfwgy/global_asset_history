@@ -1565,8 +1565,10 @@ button.market-pulse-card:hover {
             cursor: pointer;
             transform-box: fill-box;
             transform-origin: center;
-            animation: hmCellPop 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
             transition: filter 0.18s ease;
+        }
+.hm-treemap-wrap.hm-entering .hm-treemap-svg g.hm-cell {
+            animation: hmCellPop 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
         }
 .hm-treemap-svg g.hm-cell:hover {
             filter: brightness(1.16) saturate(1.06);
@@ -1588,6 +1590,8 @@ button.market-pulse-card:hover {
             user-select: none;
             font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
             letter-spacing: 0.2px;
+        }
+.hm-treemap-wrap.hm-entering .hm-treemap-svg text.hm-label {
             animation: hmLabelFade 0.35s ease-out backwards;
         }
 /* ── HTML tooltip overlay ── */
@@ -1676,6 +1680,8 @@ button.market-pulse-card:hover {
             font-size: 11px;
             color: var(--apple-text-secondary);
             box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+.hm-stats.hm-stats-entering .hm-stat-card {
             /* Entrance animation: fade + slide up */
             animation: hmStatEnter 0.4s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
         }
