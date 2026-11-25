@@ -269,6 +269,17 @@ function deleteWish(wishId, btn, status) {
 function _initWishAdmin() {
     const input = _wishEl("wishAdminToken");
     const hint = _wishEl("wishAdminHint");
+    const panel = input.closest(".wish-admin");
+
+    document.addEventListener("click", event => {
+        if (!panel.contains(event.target)) panel.open = false;
+    });
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && panel.open) {
+            panel.open = false;
+            panel.querySelector("summary").focus();
+        }
+    });
 
     const refreshHint = () => {
         hint.textContent = _getAdminToken() ? __("wishes.adminEnabled") : "";
