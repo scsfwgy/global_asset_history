@@ -74,3 +74,10 @@ def test_fear_threshold_stats_accepts_decimal_vix_threshold(client):
     assert resp.status_code == 200
     assert resp.get_json()["threshold"] == 18.42
     mock_run.assert_called_once()
+
+
+def test_vix_chart_js_redirects_when_overview_panel_was_route_pruned(client):
+    script = client.get("/js/vix-chart.js").get_data(as_text=True)
+    assert "if (target === \"overview\" && !activeOverview)" in script
+    assert "window.location.assign(overviewPath);" in script
+    assert "activeOverview = zhOverview || enOverview;" in script

@@ -687,17 +687,29 @@
 
     function selectVixView(view, updateUrl) {
         var target = view === "threshold" || view === "overview" ? view : "chart";
+        var zhOverview = $("kb-vix-vxn-study");
+        var enOverview = $("kb-vix-vxn-study-en");
+        var useEnglish = typeof __lang === "function" && __lang() === "en";
+        var activeOverview = useEnglish ? enOverview : zhOverview;
+        var lang = typeof __lang === "function" ? __lang() : "zh-CN";
+        var overviewPath = typeof __langPath === "function"
+            ? __langPath("/knowledge/vix-vxn-investing-signal", lang)
+            : "/knowledge/vix-vxn-investing-signal";
+        if (target === "overview" && !activeOverview) {
+            if (updateUrl || (!zhOverview && !enOverview && window.location.pathname !== overviewPath)) {
+                window.location.assign(overviewPath);
+                return;
+            }
+            activeOverview = zhOverview || enOverview;
+        }
         var chartView = $("vixChartView");
         var thresholdView = $("vixThresholdView");
         var overviewView = $("vixOverviewView");
         if (chartView) chartView.style.display = target === "chart" ? "block" : "none";
         if (thresholdView) thresholdView.style.display = target === "threshold" ? "block" : "none";
         if (overviewView) overviewView.style.display = target === "overview" ? "block" : "none";
-        var zhOverview = $("kb-vix-vxn-study");
-        var enOverview = $("kb-vix-vxn-study-en");
-        var useEnglish = typeof __lang === "function" && __lang() === "en";
-        if (zhOverview) zhOverview.style.display = target === "overview" && !useEnglish ? "block" : "none";
-        if (enOverview) enOverview.style.display = target === "overview" && useEnglish ? "block" : "none";
+        if (zhOverview) zhOverview.style.display = target === "overview" && zhOverview === activeOverview ? "block" : "none";
+        if (enOverview) enOverview.style.display = target === "overview" && enOverview === activeOverview ? "block" : "none";
         document.querySelectorAll("#vixViewTabs .transfer-tab").forEach(function (button) {
             var active = button.dataset.vixView === target;
             button.classList.toggle("active", active);
@@ -705,7 +717,6 @@
         });
         if (updateUrl && window.history && window.URL) {
             var url = new URL(window.location.href);
-            var lang = typeof __lang === "function" ? __lang() : "zh-CN";
             if (target === "overview") {
                 url.pathname = typeof __langPath === "function"
                     ? __langPath("/knowledge/vix-vxn-investing-signal", lang)
