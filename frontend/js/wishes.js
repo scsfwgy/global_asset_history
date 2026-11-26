@@ -283,6 +283,7 @@ function _initWishAdmin() {
 
     const refreshHint = () => {
         hint.textContent = _getAdminToken() ? __("wishes.adminEnabled") : "";
+        _syncVpnPanel();
     };
     input.value = _getAdminToken();
     refreshHint();
@@ -308,16 +309,206 @@ function _initWishAdmin() {
                 if (!r.ok) throw new Error(__("wishes.invalidToken"));
                 sessionStorage.setItem(WISH_ADMIN_KEY, val);
                 hint.textContent = __("wishes.adminEnabled");
+                _syncVpnPanel();
                 loadWishes();  // re-render to show admin actions
             })
             .catch(() => {
                 sessionStorage.removeItem(WISH_ADMIN_KEY);
                 input.value = "";
                 hint.textContent = __("wishes.invalidToken");
+                _syncVpnPanel();
                 loadWishes();
             })
             .finally(() => { saveBtn.disabled = false; });
     });
+}
+
+function _formatVpnBytes(bytes) {
+    const n = Number(bytes || 0);
+    if (!Number.isFinite(n) || n <= 0) return "0 B";
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    let idx = 0;
+    let val = n;
+    while (val >= 1024 && idx < units.length - 1) {
+        val /= 1024;
+        idx += 1;
+    }
+    return `${val >= 100 || idx === 0 ? val.toFixed(0) : val.toFixed(2)} ${units[idx]}`;
+}
+
+function _createVpnCard(label, value, sub) {
+    const card = document.createElement("div");
+    card.className = "wish-vpn-card";
+    const l = document.createElement("div");
+    l.className = "wish-vpn-card-label";
+    l.textContent = label;
+    const v = document.createElement("div");
+    v.className = "wish-vpn-card-value";
+    v.textContent = value;
+    card.append(l, v);
+    if (sub) {
+        const s = document.createElement("div");
+        s.className = "wish-vpn-card-sub";
+        s.textContent = sub;
+        card.appendChild(s);
+    }
+    return card;
+}
+
+function _renderVpnData(data) {
+    const cardsEl = _wishEl("wishVpnCards");
+    const tbody = _wishEl("wishVpnNodesBody");
+    const badge = _wishEl("wishVpnSummaryBadge");
+    const msg = _wishEl("wishVpnStatusMsg");
+    if (!cardsEl || !tbody) return;
+
+    if (!data || !data.configured) {
+        cardsEl.replaceChildren();
+        tbody.replaceChildren();
+        if (badge) badge.textContent = "";
+        _showWishMsg((data && data.error) || __("wishes.vpnNotConfigured"), true, msg);
+        return;
+    }
+
+    const group = data.group || {};
+    const traffic = data.traffic || {};
+    const hit = data.last_hit || null;
+    const hitNodeName = hit && hit.node ? hit.node : null;
+
+    if (badge) {
+        badge.textContent = `${group.alive_nodes || 0} / ${group.total_nodes || 0} · ${_formatVpnBytes(traffic.total_bytes)}`;
+    }
+
+    const hitValue = hitNodeName
+        ? `${hitNodeName}`
+        : __("wishes.vpnNoHit");
+    const hitSubParts = [];
+    if (hit) {
+        if (hit.status_code != null) hitSubParts.push(`HTTP ${hit.status_code}`);
+        if (hit.node_delay_ms != null) hitSubParts.push(`${hit.node_delay_ms} ms`);
+        if (hit.latency_ms != null) hitSubParts.push(`RTT ${hit.latency_ms} ms`);
+        if (hit.error) hitSubParts.push(hit.error);
+    }
+
+    const trafficValue = _formatVpnBytes(traffic.total_bytes);
+    const trafficSub = `↑ ${_formatVpnBytes(traffic.upload_bytes)} · ↓ ${_formatVpnBytes(traffic.download_bytes)}`;
+    const nodesValue = `${group.alive_nodes || 0} / ${group.total_nodes || 0}`;
+    const nodesSub = [group.name, group.type].filter(Boolean).join(" · ");
+
+    cardsEl.replaceChildren(
+        _createVpnCard(__("wishes.vpnHitCard"), hitValue, hitSubParts.join(" · ")),
+        _createVpnCard(__("wishes.vpnTrafficCard"), trafficValue, trafficSub),
+        _createVpnCard(__("wishes.vpnNodesCard"), nodesValue, nodesSub)
+    );
+
+    const rows = (data.nodes || []).map(node => {
+        const tr = document.createElement("tr");
+        if (hitNodeName && node.name === hitNodeName) {
+            tr.className = "is-hit";
+        }
+        const tdName = document.createElement("td");
+        tdName.textContent = node.name || "";
+        if (hitNodeName && node.name === hitNodeName) {
+            const tag = document.createElement("span");
+            tag.className = "wish-vpn-badge is-ok";
+            tag.style.marginLeft = "6px";
+            tag.textContent = __("wishes.vpnHitTag");
+            tdName.appendChild(tag);
+        }
+
+        const tdType = document.createElement("td");
+        tdType.textContent = node.type || "-";
+
+        const tdStatus = document.createElement("td");
+        const stBadge = document.createElement("span");
+        stBadge.className = `wish-vpn-badge ${node.delay_ms != null ? "is-ok" : "is-down"}`;
+        stBadge.textContent = node.delay_ms != null ? __("wishes.vpnOnline") : __("wishes.vpnOffline");
+        tdStatus.appendChild(stBadge);
+
+        const tdDelay = document.createElement("td");
+        tdDelay.textContent = node.delay_ms != null ? `${node.delay_ms} ms` : "-";
+
+        tr.append(tdName, tdType, tdStatus, tdDelay);
+        return tr;
+    });
+    tbody.replaceChildren(...rows);
+}
+
+function _setVpnBusy(busy) {
+    ["wishVpnRefreshBtn", "wishVpnProbeBtn", "wishVpnSpeedtestBtn"].forEach(id => {
+        const el = _wishEl(id);
+        if (el) el.disabled = busy;
+    });
+}
+
+function loadVpnStatus() {
+    const token = _getAdminToken();
+    const msg = _wishEl("wishVpnStatusMsg");
+    if (!token) return;
+    _setVpnBusy(true);
+    if (msg) msg.textContent = "";
+    fetch(WISH_VPN_STATUS_ENDPOINT, {
+        headers: { "X-Admin-Token": token },
+    })
+        .then(async r => {
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(data.error || __("wishes.vpnLoadFailed"));
+            return data;
+        })
+        .then(_renderVpnData)
+        .catch(err => _showWishMsg(err.message || __("wishes.vpnLoadFailed"), true, msg))
+        .finally(() => _setVpnBusy(false));
+}
+
+function probeVpn(refreshDelays) {
+    const token = _getAdminToken();
+    const msg = _wishEl("wishVpnStatusMsg");
+    if (!token) return;
+    _setVpnBusy(true);
+    if (msg) msg.textContent = "";
+    fetch(WISH_VPN_PROBE_ENDPOINT, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Admin-Token": token,
+        },
+        body: JSON.stringify({ refresh_delays: Boolean(refreshDelays) }),
+    })
+        .then(async r => {
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(data.error || __("wishes.vpnLoadFailed"));
+            return data;
+        })
+        .then(_renderVpnData)
+        .catch(err => _showWishMsg(err.message || __("wishes.vpnLoadFailed"), true, msg))
+        .finally(() => _setVpnBusy(false));
+}
+
+function _syncVpnPanel() {
+    const panel = _wishEl("wishVpnPanel");
+    if (!panel) return;
+    const isAdmin = Boolean(_getAdminToken());
+    panel.hidden = !isAdmin;
+    if (isAdmin && panel.open) {
+        loadVpnStatus();
+    }
+}
+
+function _initWishVpn() {
+    const panel = _wishEl("wishVpnPanel");
+    if (!panel) return;
+    panel.addEventListener("toggle", () => {
+        if (panel.open && _getAdminToken()) {
+            loadVpnStatus();
+        }
+    });
+    const refreshBtn = _wishEl("wishVpnRefreshBtn");
+    const probeBtn = _wishEl("wishVpnProbeBtn");
+    const speedBtn = _wishEl("wishVpnSpeedtestBtn");
+    if (refreshBtn) refreshBtn.addEventListener("click", loadVpnStatus);
+    if (probeBtn) probeBtn.addEventListener("click", () => probeVpn(false));
+    if (speedBtn) speedBtn.addEventListener("click", () => probeVpn(true));
+    _syncVpnPanel();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -346,6 +537,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     _initWishAdmin();
+    _initWishVpn();
 
     // Lazy-load on first switch to the 心愿墙 tab or when opened directly at /wishes.
     document.querySelectorAll('.tab-btn[data-tab="wishes"]').forEach(btn => {

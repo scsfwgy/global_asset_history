@@ -6,6 +6,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from service.wishes import captcha
+from service.wishes.vpn_service import get_vpn_status, probe_yahoo_vpn
 from service.wishes.wishes_service import (
     add_wish,
     check_rate_limit,
@@ -117,3 +118,31 @@ def remove_wish(wish_id):
     if not removed:
         return jsonify({"error": "未找到该心愿"}), 404
     return jsonify({"ok": True})
+
+
+@wishes_bp.route("/vpn-status", methods=["GET"])
+def vpn_status():
+    """Admin-only mihomo VPN status, node delays, and traffic usage."""
+    token = request.headers.get("X-Admin-Token", "")
+    if not verify_admin_token(token):
+        return jsonify({"error": "Token 无效"}), 403
+    try:
+        return jsonify(get_vpn_status())
+    except Exception as e:
+        logger.exception("Failed to fetch VPN status: %s", e)
+        return jsonify({"configured": True, "error": str(e)}), 502
+
+
+@wishes_bp.route("/vpn-probe", methods=["POST"])
+def vpn_probe():
+    """Admin-only live Yahoo probe through mihomo to capture hit node and latency."""
+    token = request.headers.get("X-Admin-Token", "")
+    if not verify_admin_token(token):
+        return jsonify({"error": "Token 无效"}), 403
+    body = request.get_json(silent=True) or {}
+    refresh_delays = bool(body.get("refresh_delays", False))
+    try:
+        return jsonify(probe_yahoo_vpn(refresh_delays=refresh_delays))
+    except Exception as e:
+        logger.exception("Failed to probe VPN: %s", e)
+        return jsonify({"configured": True, "error": str(e)}), 502

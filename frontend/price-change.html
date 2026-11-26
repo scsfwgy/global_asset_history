@@ -2870,6 +2870,71 @@
         #wishAdminHint { grid-column: 1 / -1; line-height: 1.5; overflow-wrap: anywhere; }
         #wishAdminHint:empty { display: none; }
 
+        .wish-vpn-panel {
+            margin-bottom: 16px;
+            border: 1px solid var(--apple-divider);
+            border-radius: 14px;
+            background: var(--wish-card);
+            padding: 12px 16px;
+        }
+        .wish-vpn-panel[hidden] { display: none; }
+        .wish-vpn-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: var(--text-base);
+            list-style: none;
+        }
+        .wish-vpn-summary::-webkit-details-marker { display: none; }
+        .wish-vpn-body { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+        .wish-vpn-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .wish-vpn-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+        .wish-vpn-card {
+            padding: 10px 12px;
+            border: 1px solid var(--apple-divider);
+            border-radius: 10px;
+            background: var(--apple-bg-secondary, transparent);
+        }
+        .wish-vpn-card-label { font-size: var(--text-xs, 12px); color: var(--apple-text-secondary); margin-bottom: 4px; }
+        .wish-vpn-card-value { font-size: var(--text-base, 14px); font-weight: 600; overflow-wrap: anywhere; }
+        .wish-vpn-card-sub { font-size: var(--text-xs, 12px); color: var(--apple-text-secondary); margin-top: 2px; }
+        .wish-vpn-table-wrap {
+            max-height: 280px;
+            overflow: auto;
+            border: 1px solid var(--apple-divider);
+            border-radius: 10px;
+        }
+        .wish-vpn-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm, 13px); }
+        .wish-vpn-table th, .wish-vpn-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--apple-divider);
+        }
+        .wish-vpn-table th {
+            position: sticky;
+            top: 0;
+            background: var(--wish-card);
+            font-weight: 600;
+            color: var(--apple-text-secondary);
+        }
+        .wish-vpn-table tr.is-hit { background: rgba(52, 199, 89, 0.12); }
+        .wish-vpn-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .wish-vpn-badge.is-ok { background: rgba(52, 199, 89, 0.16); color: var(--apple-green, #28a745); }
+        .wish-vpn-badge.is-down { background: rgba(255, 59, 48, 0.14); color: var(--apple-red, #dc3545); }
+
         .wish-state {
             padding: 28px 16px;
             border: 1px dashed var(--apple-divider);
@@ -7722,6 +7787,34 @@
                         </div>
                     </div>
                     <div class="wish-msg" id="wishFeedMsg" role="status"></div>
+                    <details class="wish-vpn-panel" id="wishVpnPanel" hidden>
+                        <summary class="wish-vpn-summary">
+                            <span data-i18n="wishes.vpnTitle">VPN 代理监控</span>
+                            <span id="wishVpnSummaryBadge" class="wish-vpn-card-sub"></span>
+                        </summary>
+                        <div class="wish-vpn-body">
+                            <div class="wish-vpn-actions">
+                                <button type="button" id="wishVpnRefreshBtn" class="pc-btn" data-i18n="wishes.vpnRefresh">刷新状态</button>
+                                <button type="button" id="wishVpnProbeBtn" class="pc-btn primary" data-i18n="wishes.vpnProbe">探测命中节点</button>
+                                <button type="button" id="wishVpnSpeedtestBtn" class="pc-btn" data-i18n="wishes.vpnSpeedtest">全节点测速</button>
+                                <span id="wishVpnStatusMsg" class="wish-msg" role="status"></span>
+                            </div>
+                            <div class="wish-vpn-cards" id="wishVpnCards"></div>
+                            <div class="wish-vpn-table-wrap">
+                                <table class="wish-vpn-table">
+                                    <thead>
+                                        <tr>
+                                            <th data-i18n="wishes.vpnColNode">节点</th>
+                                            <th data-i18n="wishes.vpnColType">协议</th>
+                                            <th data-i18n="wishes.vpnColStatus">状态</th>
+                                            <th data-i18n="wishes.vpnColDelay">耗时</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="wishVpnNodesBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </details>
                     <div id="wishLoading" class="wish-state" role="status" hidden data-i18n="vix.loading">加载中...</div>
                     <div id="wishEmpty" class="wish-state" hidden data-i18n="wishes.empty">还没有心愿，来许下第一个吧 ✨</div>
                     <div id="wishList" class="wish-list"></div>
