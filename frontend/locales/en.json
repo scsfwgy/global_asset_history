@@ -859,6 +859,7 @@
     "corrWeakening": "SPY/VIX negative correlation weakening — watch for anomaly risk",
     "corrNormal": "SPY/VIX still maintaining typical negative correlation",
     "ruleTip": "VIX Zones & Guidelines:\n<12  Extreme Calm  ❌ Avoid chasing (let profits run / take partial profits)\n12-15 Low Vol       ❌ Avoid chasing (light positions / wait on left)\n15-20 Normal Range  ✅ Stay the course (mean reversion / stick to plan)\n20-25 Fear Rising   ✅ Buy in tranches (market pullback / deploy reserves)\n25-35 High Fear     ✅ Increase DCA (stage bottom / accumulate aggressively)\n>=35 Extreme Panic  ✅ Aggressive buy (historic opportunity / keep powder dry)",
+    "badgeClickHint": "Click to jump to Fear Index Threshold Stats and auto-run with this VIX level",
     "countLabel": "Bars",
     "loadBtn": "Load",
     "adviceVixLatest": "Latest VIX",

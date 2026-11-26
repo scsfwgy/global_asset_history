@@ -713,13 +713,64 @@
                 url.search = "";
             } else {
                 url.pathname = typeof __langPath === "function" ? __langPath("/vix", lang) : "/vix";
-                if (target === "threshold") url.searchParams.set("view", "threshold");
-                else url.searchParams.delete("view");
+                if (target === "threshold") {
+                    url.searchParams.set("view", "threshold");
+                } else {
+                    url.searchParams.delete("view");
+                    url.searchParams.delete("index");
+                    url.searchParams.delete("threshold");
+                    url.searchParams.delete("autorun");
+                }
             }
             window.history.replaceState({}, "", url.pathname + url.search + url.hash);
             if (typeof window.__GAH_UPDATE_SEO__ === "function") window.__GAH_UPDATE_SEO__("vix");
         }
         if (target === "chart" && !_vixData) onTabActivated();
+    }
+
+    var _lastThresholdAutorunKey = null;
+
+    function openFearThresholdWithParams(opts) {
+        var options = opts || {};
+        var targetIndex = String(options.index || "VIX").toUpperCase() === "VXN" ? "VXN" : "VIX";
+        var indexInput = $("fearStatsIndex");
+        var thresholdInput = $("fearStatsThreshold");
+        var startInput = $("fearStatsStartDate");
+        var endInput = $("fearStatsEndDate");
+        var today = new Date().toISOString().slice(0, 10);
+
+        if (indexInput) {
+            var prevIndex = indexInput.value;
+            indexInput.value = targetIndex;
+            if (startInput && (!startInput.value || prevIndex !== targetIndex)) {
+                startInput.value = targetIndex === "VXN" ? "2001-01-01" : "2000-01-01";
+            }
+        }
+        if (endInput && !endInput.value) {
+            endInput.value = today;
+        }
+        var rawThreshold = options.threshold;
+        var parsedThreshold = rawThreshold != null && rawThreshold !== "" ? Number(rawThreshold) : NaN;
+        if (thresholdInput && Number.isFinite(parsedThreshold) && parsedThreshold > 0 && parsedThreshold <= 500) {
+            thresholdInput.value = parsedThreshold.toFixed(2);
+        }
+
+        selectVixView("threshold", Boolean(options.updateUrl));
+
+        if (options.updateUrl && window.history && window.URL) {
+            var url = new URL(window.location.href);
+            url.searchParams.set("view", "threshold");
+            url.searchParams.set("index", targetIndex);
+            if (Number.isFinite(parsedThreshold) && parsedThreshold > 0 && parsedThreshold <= 500) {
+                url.searchParams.set("threshold", parsedThreshold.toFixed(2));
+            }
+            url.searchParams.delete("autorun");
+            window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+        }
+
+        if (options.autorun) {
+            fetchFearThresholdStats();
+        }
     }
 
     function initFearThresholdControls() {
@@ -767,16 +818,33 @@
             renderFearStatsPage();
         });
 
+        window.VixThresholdJump = openFearThresholdWithParams;
         syncVixViewFromLocation();
     }
 
     function syncVixViewFromLocation() {
         var cleanPath = window.location.pathname.replace(/^\/(en|zh)(?=\/|$)/, "") || "/";
-        var initialView = new URLSearchParams(window.location.search).get("view");
+        var params = new URLSearchParams(window.location.search);
+        var initialView = params.get("view");
+        if (cleanPath !== "/knowledge/vix-vxn-investing-signal" && initialView === "threshold") {
+            var paramIndex = params.get("index");
+            var paramThreshold = params.get("threshold");
+            var wantAutorun = params.get("autorun") === "1";
+            var runKey = window.location.search;
+            var shouldAutorun = wantAutorun && _lastThresholdAutorunKey !== runKey;
+            if (shouldAutorun) _lastThresholdAutorunKey = runKey;
+            openFearThresholdWithParams({
+                index: paramIndex || "VIX",
+                threshold: paramThreshold,
+                autorun: shouldAutorun,
+                updateUrl: false,
+            });
+            return;
+        }
         selectVixView(
             cleanPath === "/knowledge/vix-vxn-investing-signal"
                 ? "overview"
-                : initialView === "threshold" ? "threshold" : "chart",
+                : "chart",
             false
         );
     }

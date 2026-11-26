@@ -12,6 +12,8 @@
 (function () {
     "use strict";
 
+    var _latestVix = null;
+
     function $(id) { return document.getElementById(id); }
 
     function vixZone(vixVal) {
@@ -25,17 +27,71 @@
     }
 
     function vixRuleTip() {
-        return __("vix.ruleTip");
+        var hint = typeof __ === "function" ? __("vix.badgeClickHint") : "";
+        var base = __("vix.ruleTip");
+        return hint && hint !== "vix.badgeClickHint" ? hint + "\n\n" + base : base;
+    }
+
+    function buildThresholdUrl(vixVal) {
+        var vixTab = document.querySelector('.tab-btn[data-tab="vix"]');
+        var basePath = vixTab && vixTab.getAttribute("href")
+            ? vixTab.getAttribute("href")
+            : (typeof __langPath === "function" && typeof __lang === "function"
+                ? __langPath("/vix", __lang())
+                : "/vix");
+        var url = new URL(basePath, window.location.origin);
+        url.searchParams.set("view", "threshold");
+        url.searchParams.set("index", "VIX");
+        if (vixVal != null && Number.isFinite(Number(vixVal)) && Number(vixVal) > 0) {
+            url.searchParams.set("threshold", Number(vixVal).toFixed(2));
+            url.searchParams.set("autorun", "1");
+        }
+        return url.pathname + url.search;
+    }
+
+    function navigateToThresholdStats() {
+        var thresholdStr = (_latestVix != null && Number.isFinite(_latestVix) && _latestVix > 0)
+            ? _latestVix.toFixed(2)
+            : null;
+        var vixPanel = $("tab-vix");
+        if (vixPanel && vixPanel.classList.contains("active") && typeof window.VixThresholdJump === "function") {
+            window.VixThresholdJump({
+                index: "VIX",
+                threshold: thresholdStr,
+                autorun: true,
+                updateUrl: true,
+            });
+            return;
+        }
+        window.location.assign(buildThresholdUrl(_latestVix));
+    }
+
+    function bindBadgeInteraction(badge) {
+        if (!badge || badge.dataset.vixBound === "1") return;
+        badge.dataset.vixBound = "1";
+        badge.setAttribute("role", "button");
+        badge.setAttribute("tabindex", "0");
+        badge.addEventListener("click", function (event) {
+            event.preventDefault();
+            navigateToThresholdStats();
+        });
+        badge.addEventListener("keydown", function (event) {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                navigateToThresholdStats();
+            }
+        });
     }
 
     function setHeaderBadgeStatus(text, cls) {
         var line = $("vixHeaderLine");
         var badge = $("vixHeaderBadge");
         if (!badge || !line) return;
+        bindBadgeInteraction(badge);
         updateHeaderBackground(null);
         line.style.display = "";
         badge.textContent = text;
-        badge.className = "vix-header-badge has-tip " + (cls || "zone-loading");
+        badge.className = "vix-header-badge has-tip is-clickable " + (cls || "zone-loading");
         badge.title = vixRuleTip();
     }
 
@@ -53,21 +109,27 @@
         var line = $("vixHeaderLine");
         var badge = $("vixHeaderBadge");
         if (!badge || !line) return;
+        bindBadgeInteraction(badge);
         if (vixVal == null || isNaN(vixVal)) { setHeaderBadgeStatus("VIX " + __("vix.loadFailed").replace(": ",""), "zone-error"); return; }
 
-        var zone = vixZone(vixVal);
+        var numericVix = Number(vixVal);
+        if (Number.isFinite(numericVix) && numericVix > 0) {
+            _latestVix = numericVix;
+        }
+
+        var zone = vixZone(numericVix);
         if (!zone) { setHeaderBadgeStatus("VIX " + __("vix.loadFailed").replace(": ",""), "zone-error"); updateHeaderBackground(null); return; }
 
         updateHeaderBackground(zone);
         line.style.display = "";
-        badge.textContent = "VIX " + vixVal.toFixed(2) + " · " +
-            (vixVal >= 35 ? __("vix.badgeExtremePanic") :
-             vixVal >= 25 ? __("vix.badgeHighFear") :
-             vixVal >= 20 ? __("vix.badgeFear") :
-             vixVal >= 15 ? __("vix.badgeNormal") :
-             vixVal >= 12 ? __("vix.badgeLowVol") :
+        badge.textContent = "VIX " + numericVix.toFixed(2) + " · " +
+            (numericVix >= 35 ? __("vix.badgeExtremePanic") :
+             numericVix >= 25 ? __("vix.badgeHighFear") :
+             numericVix >= 20 ? __("vix.badgeFear") :
+             numericVix >= 15 ? __("vix.badgeNormal") :
+             numericVix >= 12 ? __("vix.badgeLowVol") :
              __("vix.badgeExtremeCalm"));
-        badge.className = "vix-header-badge has-tip " + zone.cls;
+        badge.className = "vix-header-badge has-tip is-clickable " + zone.cls;
         badge.title = vixRuleTip();
     }
 
@@ -93,6 +155,9 @@
         update: updateHeaderBadge,
         status: setHeaderBadgeStatus,
         zone: vixZone,
+        latest: function () { return _latestVix; },
+        buildThresholdUrl: buildThresholdUrl,
+        navigateToThresholdStats: navigateToThresholdStats,
     };
 
     function init() {

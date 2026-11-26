@@ -855,6 +855,21 @@ body {
             text-decoration-thickness: 1px;
             text-underline-offset: 3px;
         }
+.vix-header-badge.is-clickable {
+            cursor: pointer;
+            transition: filter 0.15s ease, transform 0.15s ease;
+        }
+.vix-header-badge.is-clickable:hover {
+            filter: brightness(1.06);
+            transform: translateY(-0.5px);
+        }
+.vix-header-badge.is-clickable:active {
+            transform: translateY(0);
+        }
+.vix-header-badge.is-clickable:focus-visible {
+            outline: 2px solid var(--apple-blue);
+            outline-offset: 2px;
+        }
 .vix-header-badge.zone-loading {
             background: var(--apple-overlay);
             color: var(--apple-text-secondary);
