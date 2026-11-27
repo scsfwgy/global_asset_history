@@ -1032,7 +1032,14 @@
     "vpnNoHit": "Not probed yet (click Probe Hit Node)",
     "vpnNotConfigured": "mihomo controller not configured",
     "vpnLoadFailed": "Failed to load VPN status",
-    "vpnHitTag": "HIT"
+    "vpnHitTag": "HIT",
+    "vpnSubPlaceholder": "Paste new Clash subscription URL (HTTPS)...",
+    "vpnUpdateSub": "Update Sub",
+    "vpnUpdatingSub": "Updating subscription & reloading (anti-abuse mode)...",
+    "vpnSubSuccess": "Subscription updated (anti-abuse mode: selected {{selected}} / {{total}} nodes)",
+    "vpnSubFailed": "Failed to update subscription",
+    "vpnSubInvalidUrl": "Please enter a valid http/https subscription URL",
+    "vpnAntiAbuseHint": "Anti-abuse mode: selects 5 multi-region nodes with lazy on-demand fallback (30m check interval) to avoid provider bans."
   },
   "chart": {
     "monthlyTrend": "Monthly Return Trend",

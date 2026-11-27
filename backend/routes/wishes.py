@@ -6,7 +6,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from service.wishes import captcha
-from service.wishes.vpn_service import get_vpn_status, probe_yahoo_vpn
+from service.wishes.vpn_service import get_vpn_status, probe_yahoo_vpn, update_vpn_subscription
 from service.wishes.wishes_service import (
     add_wish,
     check_rate_limit,
@@ -146,3 +146,24 @@ def vpn_probe():
     except Exception as e:
         logger.exception("Failed to probe VPN: %s", e)
         return jsonify({"configured": True, "error": str(e)}), 502
+
+
+@wishes_bp.route("/vpn-subscription", methods=["POST"])
+def vpn_subscription():
+    """Admin-only Clash subscription updater with anti-abuse node selection."""
+    token = request.headers.get("X-Admin-Token", "")
+    if not verify_admin_token(token):
+        return jsonify({"error": "Token 无效"}), 403
+    body = request.get_json(silent=True) or {}
+    sub_url = str(body.get("url") or "").strip()
+    try:
+        max_nodes = int(body.get("max_nodes", 5) or 5)
+    except (TypeError, ValueError):
+        return jsonify({"configured": True, "error": "max_nodes 必须为整数"}), 400
+    try:
+        return jsonify(update_vpn_subscription(sub_url, max_nodes=max_nodes))
+    except ValueError as e:
+        return jsonify({"configured": True, "error": str(e)}), 400
+    except Exception as e:
+        logger.warning("Failed to update VPN subscription: %s", type(e).__name__)
+        return jsonify({"configured": True, "error": f"更新订阅失败: {type(e).__name__}"}), 502

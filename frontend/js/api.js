@@ -27,6 +27,7 @@ const WISH_CAPTCHA_ENDPOINT = `${API_BASE}/api/wishes/captcha`;
 const WISH_VERIFY_ADMIN_ENDPOINT = `${API_BASE}/api/wishes/verify-admin`;
 const WISH_VPN_STATUS_ENDPOINT = `${API_BASE}/api/wishes/vpn-status`;
 const WISH_VPN_PROBE_ENDPOINT = `${API_BASE}/api/wishes/vpn-probe`;
+const WISH_VPN_SUBSCRIPTION_ENDPOINT = `${API_BASE}/api/wishes/vpn-subscription`;
 
 // Shared symbol normalization for route-specific bundles. Individual pages no
 // longer need to load the full yearly-return module just to normalize a code.

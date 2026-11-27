@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+import yaml
 
 import app as app_module
 from service.wishes import vpn_service
@@ -131,3 +132,149 @@ def test_vpn_probe_captures_hit_node_and_latency(client, monkeypatch):
     assert data["last_hit"]["node_delay_ms"] == 195
     assert data["last_hit"]["status_code"] == 200
     assert data["last_hit"]["latency_ms"] >= 0
+
+
+def test_vpn_subscription_requires_admin_token(client):
+    resp = client.post("/api/wishes/vpn-subscription", json={"url": "https://example.com/sub.yaml"})
+    assert resp.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "bad_url",
+    [
+        "",
+        "ftp://example.com/sub.yaml",
+        "http://127.0.0.1/sub.yaml",
+        "http://localhost:8080/sub.yaml",
+        "http://169.254.169.254/latest/meta-data",
+        "https://10.0.0.1/sub.yaml",
+    ],
+)
+def test_vpn_subscription_rejects_invalid_or_internal_urls(client, monkeypatch, bad_url):
+    monkeypatch.setenv("MIHOMO_CONTROLLER_URL", "http://127.0.0.1:9090")
+    resp = client.post(
+        "/api/wishes/vpn-subscription",
+        json={"url": bad_url},
+        headers={"X-Admin-Token": "test-secret-token"},
+    )
+    assert resp.status_code == 400
+    assert resp.get_json()["error"]
+
+
+def test_select_anti_abuse_proxies_prefers_diverse_regions_and_daily_nodes():
+    raw = [
+        {"name": "到期: 2027-10-16", "server": "1.2.3.4", "port": 443, "type": "ss"},
+        {"name": "流量: 64 GB / 200 GB", "server": "1.2.3.4", "port": 443, "type": "ss"},
+        {"name": "🇭🇰 高级 香港 01", "server": "a.example.com", "port": 1001, "type": "anytls"},
+        {"name": "🇭🇰 日用 专线 香港[0.2]", "server": "a.example.com", "port": 1002, "type": "anytls"},
+        {"name": "🇺🇸 高级 美国 01", "server": "a.example.com", "port": 1003, "type": "anytls"},
+        {"name": "🇺🇸 日用 专线 美国[0.2]", "server": "a.example.com", "port": 1004, "type": "anytls"},
+        {"name": "🇸🇬 日用 专线 狮城[0.2]", "server": "a.example.com", "port": 1005, "type": "anytls"},
+        {"name": "🇯🇵 日用 专线 日本[0.2]", "server": "a.example.com", "port": 1006, "type": "anytls"},
+        {"name": "🇹🇼 台湾 01", "server": "a.example.com", "port": 1007, "type": "anytls"},
+        {"name": "🇬🇧 英国 01", "server": "a.example.com", "port": 1008, "type": "anytls"},
+    ]
+    picked = vpn_service._select_anti_abuse_proxies(raw, max_nodes=5)
+    assert [p["name"] for p in picked] == [
+        "🇺🇸 日用 专线 美国[0.2]",
+        "🇸🇬 日用 专线 狮城[0.2]",
+        "🇯🇵 日用 专线 日本[0.2]",
+        "🇹🇼 台湾 01",
+        "🇭🇰 日用 专线 香港[0.2]",
+    ]
+
+
+def test_build_anti_abuse_mihomo_config_emits_lazy_fallback(monkeypatch):
+    monkeypatch.setenv("MIHOMO_CONTROLLER_URL", "http://172.17.0.1:9090")
+    monkeypatch.setenv("MIHOMO_CONTROLLER_SECRET", "ctrl-sec")
+    monkeypatch.setenv("MIHOMO_PROXY_GROUP", "YahooAuto")
+
+    raw_sub = yaml.safe_dump(
+        {
+            "proxies": [
+                {"name": "到期: 2027-01-01", "server": "1.1.1.1", "port": 443, "type": "ss"},
+                {"name": "🇺🇸 US 01", "server": "us.example.com", "port": 443, "type": "trojan"},
+                {"name": "🇯🇵 JP 01", "server": "jp.example.com", "port": 443, "type": "trojan"},
+            ]
+        },
+        allow_unicode=True,
+    )
+    yaml_text, selected_names, total_count = vpn_service.build_anti_abuse_mihomo_config(raw_sub)
+    assert total_count == 2
+    assert selected_names == ["🇺🇸 US 01", "🇯🇵 JP 01"]
+    cfg = yaml.safe_load(yaml_text)
+    assert cfg["secret"] == "ctrl-sec"
+    assert cfg["lan-allowed-ips"] == ["127.0.0.1/8", "172.17.0.0/16"]
+    group = cfg["proxy-groups"][0]
+    assert group["type"] == "fallback"
+    assert group["lazy"] is True
+    assert group["interval"] == 1800
+    assert group["expected-status"] == 200
+
+
+def test_vpn_subscription_updates_file_and_reloads_mihomo(client, monkeypatch, tmp_path):
+    cfg_file = tmp_path / ".mihomo-config.yaml"
+    monkeypatch.setenv("MIHOMO_CONTROLLER_URL", "http://127.0.0.1:9090")
+    monkeypatch.setenv("MIHOMO_CONTROLLER_SECRET", "ctrl-sec")
+    monkeypatch.setenv("MIHOMO_CONFIG_PATH", str(cfg_file))
+    monkeypatch.setenv("MIHOMO_HOST_CONFIG_PATH", "/srv/host/.mihomo-config.yaml")
+
+    with vpn_service._last_hit_lock:
+        vpn_service._last_hit = {"node": "OldNode"}
+
+    raw_sub = yaml.safe_dump(
+        {
+            "proxies": [
+                {"name": "🇺🇸 US 01", "server": "us.example.com", "port": 443, "type": "trojan"},
+                {"name": "🇯🇵 JP 01", "server": "jp.example.com", "port": 443, "type": "trojan"},
+            ]
+        },
+        allow_unicode=True,
+    ).encode("utf-8")
+
+    sub_resp = MagicMock()
+    sub_resp.raise_for_status = MagicMock()
+    sub_resp.iter_content.return_value = [raw_sub]
+
+    proxies_resp = MagicMock()
+    proxies_resp.raise_for_status = MagicMock()
+    proxies_resp.json.return_value = {
+        "proxies": {
+            "YahooAuto": {"type": "Fallback", "now": "🇺🇸 US 01", "all": ["🇺🇸 US 01", "🇯🇵 JP 01"]},
+            "🇺🇸 US 01": {"type": "Trojan", "alive": True, "history": [{"delay": 150}]},
+            "🇯🇵 JP 01": {"type": "Trojan", "alive": True, "history": [{"delay": 180}]},
+        }
+    }
+
+    conns_resp = MagicMock()
+    conns_resp.raise_for_status = MagicMock()
+    conns_resp.json.return_value = {"uploadTotal": 0, "downloadTotal": 0, "connections": []}
+
+    put_resp = MagicMock()
+    put_resp.raise_for_status = MagicMock()
+
+    def fake_get(url, **kwargs):
+        if url.startswith("https://sub.example.com"):
+            return sub_resp
+        if url.endswith("/proxies"):
+            return proxies_resp
+        return conns_resp
+
+    with patch.object(vpn_service._ctrl_session, "get", side_effect=fake_get), \
+         patch.object(vpn_service._ctrl_session, "put", return_value=put_resp) as mock_put, \
+         patch("service.wishes.vpn_service.socket.getaddrinfo", return_value=[(2, 1, 6, "", ("93.184.216.34", 443))]):
+        resp = client.post(
+            "/api/wishes/vpn-subscription",
+            json={"url": "https://sub.example.com/clash.yaml"},
+            headers={"X-Admin-Token": "test-secret-token"},
+        )
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["last_hit"] is None
+    assert data["subscription_update"]["mode"] == "anti_abuse"
+    assert data["subscription_update"]["selected_count"] == 2
+    assert cfg_file.exists()
+    assert (cfg_file.stat().st_mode & 0o777) == 0o600
+    mock_put.assert_called_once()
+    assert mock_put.call_args.kwargs["json"] == {"path": "/srv/host/.mihomo-config.yaml"}

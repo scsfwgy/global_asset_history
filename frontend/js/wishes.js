@@ -435,7 +435,7 @@ function _renderVpnData(data) {
 }
 
 function _setVpnBusy(busy) {
-    ["wishVpnRefreshBtn", "wishVpnProbeBtn", "wishVpnSpeedtestBtn"].forEach(id => {
+    ["wishVpnRefreshBtn", "wishVpnProbeBtn", "wishVpnSpeedtestBtn", "wishVpnSubBtn", "wishVpnSubUrl"].forEach(id => {
         const el = _wishEl(id);
         if (el) el.disabled = busy;
     });
@@ -484,6 +484,49 @@ function probeVpn(refreshDelays) {
         .finally(() => _setVpnBusy(false));
 }
 
+function updateVpnSubscription() {
+    const token = _getAdminToken();
+    const input = _wishEl("wishVpnSubUrl");
+    const msg = _wishEl("wishVpnStatusMsg");
+    if (!token || !input) return;
+    const url = input.value.trim();
+    if (!url || !/^https?:\/\//i.test(url)) {
+        _showWishMsg(__("wishes.vpnSubInvalidUrl"), true, msg);
+        return;
+    }
+    _setVpnBusy(true);
+    _showWishMsg(__("wishes.vpnUpdatingSub"), false, msg);
+    fetch(WISH_VPN_SUBSCRIPTION_ENDPOINT, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Admin-Token": token,
+        },
+        body: JSON.stringify({ url }),
+    })
+        .then(async r => {
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(data.error || __("wishes.vpnSubFailed"));
+            return data;
+        })
+        .then(data => {
+            _renderVpnData(data);
+            if (!data || !data.configured) return;
+            input.value = "";
+            const info = data.subscription_update || {};
+            _showWishMsg(
+                __("wishes.vpnSubSuccess", {
+                    selected: info.selected_count ?? (data.group ? data.group.total_nodes : 0),
+                    total: info.total_in_subscription ?? (data.group ? data.group.total_nodes : 0),
+                }),
+                false,
+                msg
+            );
+        })
+        .catch(err => _showWishMsg(err.message || __("wishes.vpnSubFailed"), true, msg))
+        .finally(() => _setVpnBusy(false));
+}
+
 function _syncVpnPanel() {
     const panel = _wishEl("wishVpnPanel");
     if (!panel) return;
@@ -505,9 +548,16 @@ function _initWishVpn() {
     const refreshBtn = _wishEl("wishVpnRefreshBtn");
     const probeBtn = _wishEl("wishVpnProbeBtn");
     const speedBtn = _wishEl("wishVpnSpeedtestBtn");
+    const subForm = _wishEl("wishVpnSubForm");
     if (refreshBtn) refreshBtn.addEventListener("click", loadVpnStatus);
     if (probeBtn) probeBtn.addEventListener("click", () => probeVpn(false));
     if (speedBtn) speedBtn.addEventListener("click", () => probeVpn(true));
+    if (subForm) {
+        subForm.addEventListener("submit", event => {
+            event.preventDefault();
+            updateVpnSubscription();
+        });
+    }
     _syncVpnPanel();
 }
 

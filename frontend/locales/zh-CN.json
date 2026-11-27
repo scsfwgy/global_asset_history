@@ -1028,7 +1028,14 @@
     "vpnNoHit": "尚未探测（点击「探测命中节点」）",
     "vpnNotConfigured": "当前环境未启用 mihomo 控制器",
     "vpnLoadFailed": "获取 VPN 状态失败",
-    "vpnHitTag": "命中"
+    "vpnHitTag": "命中",
+    "vpnSubPlaceholder": "粘贴新的 Clash 订阅地址（HTTPS）...",
+    "vpnUpdateSub": "更新订阅",
+    "vpnUpdatingSub": "正在拉取订阅并热重载（防风控模式）...",
+    "vpnSubSuccess": "订阅已更新（防风控模式：已精选 {{selected}} / {{total}} 个节点）",
+    "vpnSubFailed": "更新订阅失败",
+    "vpnSubInvalidUrl": "请输入有效的 http/https 订阅地址",
+    "vpnAntiAbuseHint": "防风控模式：更新后自动精选 5 个多地区节点，采用按需故障转移（lazy + 30 分钟检测），降低机场风控风险。"
   },
   "chart": {
     "monthlyTrend": "年月度涨跌幅走势",

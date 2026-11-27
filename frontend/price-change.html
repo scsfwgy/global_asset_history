@@ -2934,6 +2934,21 @@
         }
         .wish-vpn-badge.is-ok { background: rgba(52, 199, 89, 0.16); color: var(--apple-green, #28a745); }
         .wish-vpn-badge.is-down { background: rgba(255, 59, 48, 0.14); color: var(--apple-red, #dc3545); }
+        .wish-vpn-sub-form {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: center;
+        }
+        .wish-vpn-sub-hint {
+            margin: 0;
+            font-size: var(--text-xs, 12px);
+            color: var(--apple-text-secondary);
+            line-height: 1.5;
+        }
+        @media (max-width: 560px) {
+            .wish-vpn-sub-form { grid-template-columns: 1fr; }
+        }
 
         .wish-state {
             padding: 28px 16px;
@@ -7799,6 +7814,11 @@
                                 <button type="button" id="wishVpnSpeedtestBtn" class="pc-btn" data-i18n="wishes.vpnSpeedtest">全节点测速</button>
                                 <span id="wishVpnStatusMsg" class="wish-msg" role="status"></span>
                             </div>
+                            <form class="wish-vpn-sub-form" id="wishVpnSubForm" novalidate>
+                                <input type="url" id="wishVpnSubUrl" class="pc-bt-input" autocomplete="off" data-i18n-attr="placeholder|wishes.vpnSubPlaceholder" placeholder="粘贴新的 Clash 订阅地址（HTTPS）...">
+                                <button type="submit" id="wishVpnSubBtn" class="pc-btn" data-i18n="wishes.vpnUpdateSub">更新订阅</button>
+                            </form>
+                            <p class="wish-vpn-sub-hint" data-i18n="wishes.vpnAntiAbuseHint">防风控模式：更新后自动精选 5 个多地区节点，采用按需故障转移（lazy + 30 分钟检测），降低机场风控风险。</p>
                             <div class="wish-vpn-cards" id="wishVpnCards"></div>
                             <div class="wish-vpn-table-wrap">
                                 <table class="wish-vpn-table">

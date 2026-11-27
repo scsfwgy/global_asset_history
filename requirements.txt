@@ -11,3 +11,4 @@ qrcode==8.2
 
 # Offline country lookup for self-hosted visit statistics.
 maxminddb==3.2.0
+PyYAML==6.0.2

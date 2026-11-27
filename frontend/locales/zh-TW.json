@@ -1028,7 +1028,14 @@
     "vpnNoHit": "尚未探測（點擊「探測命中節點」）",
     "vpnNotConfigured": "目前環境未啟用 mihomo 控制器",
     "vpnLoadFailed": "取得 VPN 狀態失敗",
-    "vpnHitTag": "命中"
+    "vpnHitTag": "命中",
+    "vpnSubPlaceholder": "貼上新的 Clash 訂閱網址（HTTPS）...",
+    "vpnUpdateSub": "更新訂閱",
+    "vpnUpdatingSub": "正在拉取訂閱並熱重載（防風控模式）...",
+    "vpnSubSuccess": "訂閱已更新（防風控模式：已精選 {{selected}} / {{total}} 個節點）",
+    "vpnSubFailed": "更新訂閱失敗",
+    "vpnSubInvalidUrl": "請輸入有效的 http/https 訂閱網址",
+    "vpnAntiAbuseHint": "防風控模式：更新後自動精選 5 個多地區節點，採用按需故障轉移（lazy + 30 分鐘檢測），降低機場風控風險。"
   },
   "chart": {
     "monthlyTrend": "年月度漲跌幅走勢",
